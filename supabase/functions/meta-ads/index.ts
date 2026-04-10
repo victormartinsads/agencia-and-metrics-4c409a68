@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
         const primaryActionType: string = camp.primaryResultKey ||
           camp._primaryActionTypes?.[0] || "link_click";
         const adsUrl =
-          `${GRAPH_API}/${camp.id}/ads?fields=name,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
+          `${GRAPH_API}/${camp.id}/ads?fields=name,permalink_url,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         let ads: any[] = [];
 
         try {
@@ -369,6 +369,7 @@ Deno.serve(async (req) => {
               id: ad.id,
               adsetName: ad.adset?.name || "",
               name: ad.name,
+              permalinkUrl: ad.permalink_url || "",
               type: ad.creative?.object_type === "VIDEO"
                 ? "video"
                 : ad.creative?.object_type === "CAROUSEL"

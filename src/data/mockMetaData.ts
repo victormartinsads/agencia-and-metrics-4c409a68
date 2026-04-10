@@ -31,6 +31,7 @@ export interface Creative {
   conversions: number;
   roas: number;
   primaryResult?: number;
+  permalinkUrl?: string;
 }
 
 export interface DailyMetric {
