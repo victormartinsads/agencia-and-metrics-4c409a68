@@ -60,17 +60,17 @@ function getActionTypePriority(objective: string, campaignName: string): string[
 
   // WhatsApp campaigns → messaging conversations
   if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
-    return ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"];
+    return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
   }
 
   // Sales / conversion campaigns → purchases or checkouts
   if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
-    return ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase", "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout", "link_click"];
+    return ["purchase", "initiate_checkout", "link_click"];
   }
 
   // Lead campaigns
   if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
-    return ["lead", "offsite_conversion.fb_pixel_lead", "complete_registration", "link_click"];
+    return ["lead", "link_click"];
   }
 
   // Traffic campaigns
