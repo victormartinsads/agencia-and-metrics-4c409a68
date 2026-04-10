@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
         for (const camp of campData.data) {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
           const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
-          const primary = getPrimaryResult(insight?.actions, actionPriority);
+          const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
 
           // Log for debugging
           console.log(`Campaign: ${camp.name} | Objective: ${camp.objective} | Actions: ${JSON.stringify(insight?.actions?.map((a: any) => `${a.action_type}:${a.value}`))} | Primary: ${primary.label} (${primary.value})`);
