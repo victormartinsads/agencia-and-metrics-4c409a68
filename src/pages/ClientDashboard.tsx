@@ -181,12 +181,12 @@ export default function ClientDashboard() {
             </TabsContent>
 
             <TabsContent value="creatives" className="space-y-6">
-              {campaigns.filter(c => c.status === "active" && c.creatives.length > 0).map(c => (
+              {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).map(c => (
                 <CreativeGrid key={c.id} campaign={c} />
               ))}
-              {campaigns.filter(c => c.status === "active" && c.creatives.length > 0).length === 0 && (
+              {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).length === 0 && (
                 <div className="text-center py-16 text-muted-foreground text-sm">
-                  Nenhum criativo encontrado para campanhas ativas
+                  Nenhum criativo encontrado para campanhas ativas ou com gasto no período
                 </div>
               )}
             </TabsContent>
