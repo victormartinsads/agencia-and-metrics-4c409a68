@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
           const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
           const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
+          const resolvedPrimaryActionType = primary.actionType || actionPriority[0] || "link_click";
 
           // Log for debugging
           console.log(`Campaign: ${camp.name} | Objective: ${camp.objective} | Actions: ${JSON.stringify(insight?.actions?.map((a: any) => `${a.action_type}:${a.value}`))} | Primary: ${primary.label} (${primary.value})`);
@@ -192,7 +193,7 @@ Deno.serve(async (req) => {
             frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
             creatives: [],
             primaryResultLabel: primary.label,
-            primaryResultKey: primary.actionType,
+            primaryResultKey: resolvedPrimaryActionType,
             _primaryActionTypes: actionPriority,
           });
         }
@@ -219,7 +220,7 @@ Deno.serve(async (req) => {
 
       // Get top ads (creatives) for each campaign
       for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
-        const primaryActionTypes: string[] = camp._primaryActionTypes;
+        const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
         const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
@@ -228,7 +229,7 @@ Deno.serve(async (req) => {
           camp.creatives = adsData.data.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
-            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes, adInsight as MetaInsight | undefined);
+            const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
             const adRevenue = adPrimary.value * 50;
             return {
               id: ad.id,
