@@ -4,6 +4,7 @@ import {
   DollarSign, Eye, MousePointerClick, TrendingUp,
   Target, Users, Percent, AlertCircle, Loader2,
 } from "lucide-react";
+
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
@@ -68,8 +69,7 @@ export function DashboardContent({ metaData, metaLoading, metaError }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <KpiCard title="CTR Médio" value={`${overview.avgCTR}%`} icon={Percent} delay={0.2} />
               <KpiCard title="CPC Médio" value={`R$ ${overview.avgCPC.toFixed(2)}`} icon={DollarSign} delay={0.25} />
-              <KpiCard title="ROAS Médio" value={`${overview.avgROAS}x`} icon={TrendingUp} delay={0.3} />
-              <KpiCard title="Alcance Total" value={overview.totalReach >= 1000000 ? `${(overview.totalReach / 1000000).toFixed(1)}M` : overview.totalReach.toLocaleString("pt-BR")} icon={Users} delay={0.35} />
+              <KpiCard title="Alcance Total" value={overview.totalReach >= 1000000 ? `${(overview.totalReach / 1000000).toFixed(1)}M` : overview.totalReach.toLocaleString("pt-BR")} icon={Users} delay={0.3} />
             </div>
             {dailyMetrics.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
