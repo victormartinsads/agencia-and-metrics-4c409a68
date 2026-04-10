@@ -24,15 +24,9 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
 // Action type to human-readable label map
 const ACTION_LABELS: Record<string, string> = {
   "onsite_conversion.messaging_conversation_started_7d": "Conversas por Mensagem Iniciadas",
-  "onsite_conversion.messaging_first_reply": "Conversas por Mensagem Iniciadas",
-  "offsite_conversion.fb_pixel_purchase": "Compras",
   "purchase": "Compras",
-  "omni_purchase": "Compras",
-  "offsite_conversion.fb_pixel_initiate_checkout": "Finalizações de Compra",
   "initiate_checkout": "Finalizações de Compra",
   "lead": "Leads",
-  "offsite_conversion.fb_pixel_lead": "Leads",
-  "complete_registration": "Registros Completos",
   "link_click": "Cliques no Link",
   "landing_page_view": "Visualizações da Página",
   "post_engagement": "Engajamento",
@@ -218,7 +212,7 @@ Deno.serve(async (req) => {
           dailySpend[date].spend += Number(day.spend || 0);
           dailySpend[date].impressions += Number(day.impressions || 0);
           dailySpend[date].clicks += Number(day.clicks || 0);
-          const conv = getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase") + getActionValue(day.actions, "purchase") + getActionValue(day.actions, "omni_purchase");
+          const conv = getActionValue(day.actions, "purchase");
           dailySpend[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
         }
       }
