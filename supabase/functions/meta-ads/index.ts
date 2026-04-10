@@ -210,8 +210,8 @@ Deno.serve(async (req) => {
           camp.creatives = adsData.data.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
-            const adPrimaryResult = getPrimaryResultValue(adInsight?.actions, primaryActionTypes);
-            const adRevenue = adPrimaryResult * 50;
+            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes);
+            const adRevenue = adPrimary.value * 50;
             return {
               id: ad.id,
               name: ad.name,
@@ -221,8 +221,8 @@ Deno.serve(async (req) => {
               clicks: Number(adInsight?.clicks || 0),
               ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
               spend: adSpend,
-              conversions: adPrimaryResult,
-              primaryResult: adPrimaryResult,
+              conversions: adPrimary.value,
+              primaryResult: adPrimary.value,
               roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
             };
           });
