@@ -93,14 +93,26 @@ function getActionTypePriority(objective: string, campaignName: string): string[
 }
 
 // Get the first matching action value AND its label from a priority list
-function getPrimaryResult(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[]): { value: number; label: string; actionType: string } {
-  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
+// Special types: _reach (uses reach field), _profile_visit (uses link_click but labeled as profile visit)
+function getPrimaryResult(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[], insight?: MetaInsight): { value: number; label: string; actionType: string } {
   for (const type of actionTypes) {
+    // Special: reach metric (not in actions array)
+    if (type === "_reach") {
+      const reachVal = Number(insight?.reach || 0);
+      return { value: reachVal, label: ACTION_LABELS["_reach"] || "Alcance", actionType: "_reach" };
+    }
+    // Special: profile visit (uses link_click value but different label)
+    if (type === "_profile_visit") {
+      const linkClicks = getActionValue(actions, "link_click");
+      return { value: linkClicks, label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
+    }
+    if (!actions) continue;
     const val = getActionValue(actions, type);
     if (val > 0) {
       return { value: val, label: ACTION_LABELS[type] || type, actionType: type };
     }
   }
+  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
   return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
