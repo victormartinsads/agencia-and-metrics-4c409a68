@@ -24,15 +24,9 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
 // Action type to human-readable label map
 const ACTION_LABELS: Record<string, string> = {
   "onsite_conversion.messaging_conversation_started_7d": "Conversas por Mensagem Iniciadas",
-  "onsite_conversion.messaging_first_reply": "Conversas por Mensagem Iniciadas",
-  "offsite_conversion.fb_pixel_purchase": "Compras",
   "purchase": "Compras",
-  "omni_purchase": "Compras",
-  "offsite_conversion.fb_pixel_initiate_checkout": "Finalizações de Compra",
   "initiate_checkout": "Finalizações de Compra",
   "lead": "Leads",
-  "offsite_conversion.fb_pixel_lead": "Leads",
-  "complete_registration": "Registros Completos",
   "link_click": "Cliques no Link",
   "landing_page_view": "Visualizações da Página",
   "post_engagement": "Engajamento",
@@ -60,17 +54,17 @@ function getActionTypePriority(objective: string, campaignName: string): string[
 
   // WhatsApp campaigns → messaging conversations
   if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
-    return ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"];
+    return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
   }
 
   // Sales / conversion campaigns → purchases or checkouts
   if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
-    return ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase", "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout", "link_click"];
+    return ["purchase", "initiate_checkout", "link_click"];
   }
 
   // Lead campaigns
   if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
-    return ["lead", "offsite_conversion.fb_pixel_lead", "complete_registration", "link_click"];
+    return ["lead", "link_click"];
   }
 
   // Traffic campaigns
@@ -218,7 +212,7 @@ Deno.serve(async (req) => {
           dailySpend[date].spend += Number(day.spend || 0);
           dailySpend[date].impressions += Number(day.impressions || 0);
           dailySpend[date].clicks += Number(day.clicks || 0);
-          const conv = getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase") + getActionValue(day.actions, "purchase") + getActionValue(day.actions, "omni_purchase");
+          const conv = getActionValue(day.actions, "purchase");
           dailySpend[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
         }
       }
