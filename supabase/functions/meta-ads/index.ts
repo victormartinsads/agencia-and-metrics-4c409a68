@@ -21,81 +21,75 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
   return Number(actions?.find((a) => a.action_type === type)?.value || 0);
 }
 
-// Determine primary result metric based on campaign objective and name
-function determinePrimaryResult(objective: string, campaignName: string): { actionTypes: string[]; label: string; key: string } {
+// Action type to human-readable label map
+const ACTION_LABELS: Record<string, string> = {
+  "onsite_conversion.messaging_conversation_started_7d": "Conversas Iniciadas",
+  "onsite_conversion.messaging_first_reply": "Conversas Iniciadas",
+  "offsite_conversion.fb_pixel_purchase": "Compras",
+  "purchase": "Compras",
+  "omni_purchase": "Compras",
+  "offsite_conversion.fb_pixel_initiate_checkout": "Finalizações de Compra",
+  "initiate_checkout": "Finalizações de Compra",
+  "lead": "Leads",
+  "offsite_conversion.fb_pixel_lead": "Leads",
+  "complete_registration": "Registros Completos",
+  "link_click": "Cliques no Link",
+  "landing_page_view": "Visualizações da Página",
+  "post_engagement": "Engajamento",
+  "page_engagement": "Engajamento",
+  "app_install": "Instalações do App",
+  "mobile_app_install": "Instalações do App",
+};
+
+// Determine priority list of action types based on campaign objective/name
+function getActionTypePriority(objective: string, campaignName: string): string[] {
   const nameLower = campaignName.toLowerCase();
+  const objLower = objective.toLowerCase();
 
   // WhatsApp campaigns → messaging conversations
   if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap")) {
-    return {
-      actionTypes: ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"],
-      label: "Conversas Iniciadas",
-      key: "messaging",
-    };
+    return ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"];
   }
 
   // Sales / conversion campaigns → purchases or checkouts
-  const objLower = objective.toLowerCase();
   if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
-    return {
-      actionTypes: ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase", "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout", "link_click"],
-      label: "Vendas",
-      key: "sales",
-    };
+    return ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase", "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout", "link_click"];
   }
 
   // Lead campaigns
   if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
-    return {
-      actionTypes: ["lead", "offsite_conversion.fb_pixel_lead", "complete_registration", "link_click"],
-      label: "Leads",
-      key: "leads",
-    };
+    return ["lead", "offsite_conversion.fb_pixel_lead", "complete_registration", "link_click"];
   }
 
   // Traffic campaigns
   if (objLower.includes("link_clicks") || objLower.includes("outcome_traffic") || nameLower.includes("tráfego") || nameLower.includes("traffic")) {
-    return {
-      actionTypes: ["link_click"],
-      label: "Cliques no Link",
-      key: "link_clicks",
-    };
+    return ["link_click", "landing_page_view"];
   }
 
   // Engagement campaigns
   if (objLower.includes("engagement") || objLower.includes("post_engagement") || nameLower.includes("engajamento")) {
-    return {
-      actionTypes: ["post_engagement", "page_engagement", "link_click"],
-      label: "Engajamento",
-      key: "engagement",
-    };
+    return ["post_engagement", "page_engagement", "link_click"];
   }
 
   // App install
   if (objLower.includes("app_installs") || objLower.includes("outcome_app_promotion")) {
-    return {
-      actionTypes: ["app_install", "mobile_app_install", "link_click"],
-      label: "Instalações",
-      key: "app_installs",
-    };
+    return ["app_install", "mobile_app_install", "link_click"];
   }
 
   // Default: link clicks
-  return {
-    actionTypes: ["link_click", "landing_page_view"],
-    label: "Cliques no Link",
-    key: "link_clicks",
-  };
+  return ["link_click", "landing_page_view"];
 }
 
-// Get the first matching action value from a priority list
-function getPrimaryResultValue(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[]): number {
-  if (!actions) return 0;
+// Get the first matching action value AND its label from a priority list
+function getPrimaryResult(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[]): { value: number; label: string; actionType: string } {
+  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
   for (const type of actionTypes) {
     const val = getActionValue(actions, type);
-    if (val > 0) return val;
+    if (val > 0) {
+      return { value: val, label: ACTION_LABELS[type] || type, actionType: type };
+    }
   }
-  return 0;
+  return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
 Deno.serve(async (req) => {
