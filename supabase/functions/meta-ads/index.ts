@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
               id: ad.id,
               adsetName: ad.adset?.name || "",
               name: ad.name,
-              permalinkUrl: ad.permalink_url || "",
+              permalinkUrl: ad.permalink_url || `https://www.facebook.com/ads/library/?id=${ad.id}`,
               type: ad.creative?.object_type === "VIDEO"
                 ? "video"
                 : ad.creative?.object_type === "CAROUSEL"
