@@ -1,12 +1,16 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { dailyMetrics } from "@/data/mockMetaData";
+import { DailyMetric } from "@/data/mockMetaData";
 
-export function SpendChart() {
+interface ChartProps {
+  data: DailyMetric[];
+}
+
+export function SpendChart({ data }: ChartProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <h3 className="text-sm font-semibold text-card-foreground mb-4">Investimento Diário (R$)</h3>
       <ResponsiveContainer width="100%" height={260}>
-        <AreaChart data={dailyMetrics}>
+        <AreaChart data={data}>
           <defs>
             <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="hsl(214, 89%, 52%)" stopOpacity={0.3} />
@@ -27,12 +31,12 @@ export function SpendChart() {
   );
 }
 
-export function ConversionsChart() {
+export function ConversionsChart({ data }: ChartProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <h3 className="text-sm font-semibold text-card-foreground mb-4">Conversões Diárias</h3>
       <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={dailyMetrics}>
+        <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 90%)" />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" />
           <YAxis tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" />
