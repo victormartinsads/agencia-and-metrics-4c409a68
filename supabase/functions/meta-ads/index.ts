@@ -348,13 +348,34 @@ Deno.serve(async (req) => {
         const primaryActionType: string = camp.primaryResultKey ||
           camp._primaryActionTypes?.[0] || "link_click";
         const adsUrl =
-          `${GRAPH_API}/${camp.id}/ads?fields=name,permalink_url,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
+          `${GRAPH_API}/${camp.id}/ads?fields=name,permalink_url,adset{name},creative{thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         let ads: any[] = [];
 
         try {
           ads = await fetchAllMetaPages<any>(adsUrl);
         } catch (error) {
           console.error(`Meta ads error for campaign ${camp.id}:`, error);
+        }
+
+        // Fetch real post permalinks for ads that have effective_object_story_id
+        const storyPermalinks: Record<string, string> = {};
+        const storyIds = ads
+          .map((ad: any) => ad.creative?.effective_object_story_id)
+          .filter(Boolean);
+        
+        // Batch fetch permalinks (up to 50 at a time via Graph API batch)
+        for (const storyId of storyIds) {
+          try {
+            const storyRes = await fetch(
+              `${GRAPH_API}/${storyId}?fields=permalink_url&access_token=${token}`
+            );
+            const storyData = await storyRes.json();
+            if (storyData.permalink_url) {
+              storyPermalinks[storyId] = storyData.permalink_url;
+            }
+          } catch (_) {
+            // ignore individual failures
+          }
         }
 
         if (ads.length > 0) {
@@ -365,11 +386,19 @@ Deno.serve(async (req) => {
               primaryActionType,
             ], adInsight as MetaInsight | undefined);
             const adRevenue = adPrimary.value * 50;
+            
+            // Priority: instagram_permalink_url > story permalink > permalink_url > ads library
+            const storyId = ad.creative?.effective_object_story_id;
+            const postUrl = ad.creative?.instagram_permalink_url
+              || (storyId && storyPermalinks[storyId])
+              || ad.permalink_url
+              || `https://www.facebook.com/ads/library/?id=${ad.id}`;
+            
             return {
               id: ad.id,
               adsetName: ad.adset?.name || "",
               name: ad.name,
-              permalinkUrl: ad.permalink_url || `https://www.facebook.com/ads/library/?id=${ad.id}`,
+              permalinkUrl: postUrl,
               type: ad.creative?.object_type === "VIDEO"
                 ? "video"
                 : ad.creative?.object_type === "CAROUSEL"
