@@ -23,8 +23,8 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
 
 // Action type to human-readable label map
 const ACTION_LABELS: Record<string, string> = {
-  "onsite_conversion.messaging_conversation_started_7d": "Conversas Iniciadas",
-  "onsite_conversion.messaging_first_reply": "Conversas Iniciadas",
+  "onsite_conversion.messaging_conversation_started_7d": "Conversas por Mensagem Iniciadas",
+  "onsite_conversion.messaging_first_reply": "Conversas por Mensagem Iniciadas",
   "offsite_conversion.fb_pixel_purchase": "Compras",
   "purchase": "Compras",
   "omni_purchase": "Compras",
@@ -39,6 +39,8 @@ const ACTION_LABELS: Record<string, string> = {
   "page_engagement": "Engajamento",
   "app_install": "Instalações do App",
   "mobile_app_install": "Instalações do App",
+  "_reach": "Alcance",
+  "_profile_visit": "Visitas ao Perfil",
 };
 
 // Determine priority list of action types based on campaign objective/name
@@ -46,8 +48,18 @@ function getActionTypePriority(objective: string, campaignName: string): string[
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
+  // Captação de seguidores → profile visits (uses link_click but labeled differently)
+  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores")) {
+    return ["_profile_visit"];
+  }
+
+  // Corredor Japonês → reach metric
+  if (nameLower.includes("corredor_japones") || nameLower.includes("corredor japonês") || nameLower.includes("corredor japones")) {
+    return ["_reach"];
+  }
+
   // WhatsApp campaigns → messaging conversations
-  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap")) {
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
     return ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"];
   }
 
@@ -81,14 +93,26 @@ function getActionTypePriority(objective: string, campaignName: string): string[
 }
 
 // Get the first matching action value AND its label from a priority list
-function getPrimaryResult(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[]): { value: number; label: string; actionType: string } {
-  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
+// Special types: _reach (uses reach field), _profile_visit (uses link_click but labeled as profile visit)
+function getPrimaryResult(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[], insight?: MetaInsight): { value: number; label: string; actionType: string } {
   for (const type of actionTypes) {
+    // Special: reach metric (not in actions array)
+    if (type === "_reach") {
+      const reachVal = Number(insight?.reach || 0);
+      return { value: reachVal, label: ACTION_LABELS["_reach"] || "Alcance", actionType: "_reach" };
+    }
+    // Special: profile visit (uses link_click value but different label)
+    if (type === "_profile_visit") {
+      const linkClicks = getActionValue(actions, "link_click");
+      return { value: linkClicks, label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
+    }
+    if (!actions) continue;
     const val = getActionValue(actions, type);
     if (val > 0) {
       return { value: val, label: ACTION_LABELS[type] || type, actionType: type };
     }
   }
+  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
   return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
@@ -147,7 +171,7 @@ Deno.serve(async (req) => {
         for (const camp of campData.data) {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
           const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
-          const primary = getPrimaryResult(insight?.actions, actionPriority);
+          const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
 
           // Log for debugging
           console.log(`Campaign: ${camp.name} | Objective: ${camp.objective} | Actions: ${JSON.stringify(insight?.actions?.map((a: any) => `${a.action_type}:${a.value}`))} | Primary: ${primary.label} (${primary.value})`);
@@ -202,7 +226,7 @@ Deno.serve(async (req) => {
       // Get top ads (creatives) for each campaign
       for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
         const primaryActionTypes: string[] = camp._primaryActionTypes;
-        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions}&access_token=${token}&limit=50`;
+        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
@@ -210,7 +234,7 @@ Deno.serve(async (req) => {
           camp.creatives = adsData.data.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
-            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes);
+            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes, adInsight as MetaInsight | undefined);
             const adRevenue = adPrimary.value * 50;
             return {
               id: ad.id,
