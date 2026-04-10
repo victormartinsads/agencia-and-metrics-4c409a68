@@ -14,8 +14,8 @@ export interface Campaign {
   reach: number;
   frequency: number;
   creatives: Creative[];
-  primaryResultLabel: string;
-  primaryResultKey: string;
+  primaryResultLabel?: string;
+  primaryResultKey?: string;
 }
 
 export interface Creative {
@@ -29,7 +29,7 @@ export interface Creative {
   spend: number;
   conversions: number;
   roas: number;
-  primaryResult: number;
+  primaryResult?: number;
 }
 
 export interface DailyMetric {
