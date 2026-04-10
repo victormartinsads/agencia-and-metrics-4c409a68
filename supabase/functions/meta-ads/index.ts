@@ -146,12 +146,15 @@ Deno.serve(async (req) => {
       if (campData.data) {
         for (const camp of campData.data) {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
-          const primaryMeta = determinePrimaryResult(camp.objective || "", camp.name || "");
-          const primaryResultValue = getPrimaryResultValue(insight?.actions, primaryMeta.actionTypes);
+          const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
+          const primary = getPrimaryResult(insight?.actions, actionPriority);
+
+          // Log for debugging
+          console.log(`Campaign: ${camp.name} | Objective: ${camp.objective} | Actions: ${JSON.stringify(insight?.actions?.map((a: any) => `${a.action_type}:${a.value}`))} | Primary: ${primary.label} (${primary.value})`);
 
           const spend = Number(insight?.spend || 0);
-          const costPerConversion = primaryResultValue > 0 ? spend / primaryResultValue : 0;
-          const estimatedRevenue = primaryResultValue * 50;
+          const costPerConversion = primary.value > 0 ? spend / primary.value : 0;
+          const estimatedRevenue = primary.value * 50;
           const roas = spend > 0 ? Number((estimatedRevenue / spend).toFixed(2)) : 0;
 
           allCampaigns.push({
@@ -164,15 +167,15 @@ Deno.serve(async (req) => {
             clicks: Number(insight?.clicks || 0),
             ctr: Number(Number(insight?.ctr || 0).toFixed(2)),
             cpc: Number(Number(insight?.cpc || 0).toFixed(2)),
-            conversions: primaryResultValue,
+            conversions: primary.value,
             costPerConversion: Number(costPerConversion.toFixed(2)),
             roas,
             reach: Number(insight?.reach || 0),
             frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
             creatives: [],
-            primaryResultLabel: primaryMeta.label,
-            primaryResultKey: primaryMeta.key,
-            _primaryActionTypes: primaryMeta.actionTypes, // internal, for creatives
+            primaryResultLabel: primary.label,
+            primaryResultKey: primary.actionType,
+            _primaryActionTypes: actionPriority,
           });
         }
       }
