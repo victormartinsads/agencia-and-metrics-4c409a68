@@ -1,6 +1,6 @@
 import { Campaign } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
-import { Image, Video, Layers } from "lucide-react";
+import { Image, Video, Layers, ExternalLink } from "lucide-react";
 
 const typeIcon = { image: Image, video: Video, carousel: Layers };
 const rankBadge = [
@@ -91,6 +91,17 @@ export function CreativeGrid({ campaign }: Props) {
               </div>
               <div className="p-3 space-y-2">
                 <p className="text-sm font-medium text-white truncate">{cr.name}</p>
+                {cr.permalinkUrl && (
+                  <a
+                    href={cr.permalinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-[hsl(82,85%,55%)] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-3 w-3" /> Ver publicação
+                  </a>
+                )}
                 {cr.adsetName && (
                   <p className="text-[10px] text-white/40 truncate">Conjunto: {cr.adsetName}</p>
                 )}
