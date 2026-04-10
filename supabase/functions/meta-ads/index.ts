@@ -48,8 +48,18 @@ function getActionTypePriority(objective: string, campaignName: string): string[
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
+  // Captação de seguidores → profile visits (uses link_click but labeled differently)
+  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores")) {
+    return ["_profile_visit"];
+  }
+
+  // Corredor Japonês → reach metric
+  if (nameLower.includes("corredor_japones") || nameLower.includes("corredor japonês") || nameLower.includes("corredor japones")) {
+    return ["_reach"];
+  }
+
   // WhatsApp campaigns → messaging conversations
-  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap")) {
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
     return ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"];
   }
 
