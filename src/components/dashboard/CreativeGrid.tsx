@@ -1,6 +1,6 @@
 import { Campaign } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
-import { Image, Video, Layers, Trophy, Medal } from "lucide-react";
+import { Image, Video, Layers } from "lucide-react";
 
 const typeIcon = { image: Image, video: Video, carousel: Layers };
 const rankBadge = [
@@ -29,6 +29,12 @@ export function CreativeGrid({ campaign }: Props) {
     })
     .slice(0, 3); // Only top 3
 
+  const top3Total = sorted.reduce((sum, creative) => {
+    return sum + (creative.primaryResult ?? creative.conversions);
+  }, 0);
+
+  const remainingResults = Math.max(campaign.conversions - top3Total, 0);
+
   if (sorted.length === 0) return null;
 
   return (
@@ -39,9 +45,15 @@ export function CreativeGrid({ campaign }: Props) {
       className="rounded-xl border border-border bg-card shadow-sm"
     >
       <div className="p-5 border-b border-border flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-card-foreground">
-          Top 3 Criativos — {campaign.name}
-        </h3>
+        <div>
+          <h3 className="text-sm font-semibold text-card-foreground">
+            Top 3 Criativos — {campaign.name}
+          </h3>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Top 3 somam {top3Total} de {campaign.conversions} {resultLabel.toLowerCase()}
+            {remainingResults > 0 ? ` • outros criativos: ${remainingResults}` : ""}
+          </p>
+        </div>
         <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
           Métrica: {resultLabel}
         </span>

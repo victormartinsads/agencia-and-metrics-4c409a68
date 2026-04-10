@@ -3,6 +3,30 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 
+async function fetchAllMetaPages<T>(url: string): Promise<T[]> {
+  const items: T[] = [];
+  let nextUrl: string | undefined = url;
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 100) {
+    const response = await fetch(nextUrl);
+    const payload = await response.json();
+
+    if (payload.error) {
+      throw new Error(payload.error.message || "Meta API error");
+    }
+
+    if (Array.isArray(payload.data)) {
+      items.push(...payload.data);
+    }
+
+    nextUrl = payload.paging?.next;
+    pageCount += 1;
+  }
+
+  return items;
+}
+
 interface MetaInsight {
   date_start: string;
   date_stop: string;
@@ -221,16 +245,17 @@ Deno.serve(async (req) => {
       // Get campaigns with insights
       const campaignsUrl =
         `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=50`;
-      const campRes = await fetch(campaignsUrl);
-      const campData = await campRes.json();
+      let campaigns: any[] = [];
 
-      if (campData.error) {
-        console.error(`Meta API error for ${actId}:`, campData.error);
+      try {
+        campaigns = await fetchAllMetaPages<any>(campaignsUrl);
+      } catch (error) {
+        console.error(`Meta API error for ${actId}:`, error);
         continue;
       }
 
-      if (campData.data) {
-        for (const camp of campData.data) {
+      if (campaigns.length > 0) {
+        for (const camp of campaigns) {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
           const actionPriority = getActionTypePriority(
             camp.objective || "",
@@ -324,11 +349,16 @@ Deno.serve(async (req) => {
           camp._primaryActionTypes?.[0] || "link_click";
         const adsUrl =
           `${GRAPH_API}/${camp.id}/ads?fields=name,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
-        const adsRes = await fetch(adsUrl);
-        const adsData = await adsRes.json();
+        let ads: any[] = [];
 
-        if (adsData.data) {
-          camp.creatives = adsData.data.map((ad: any) => {
+        try {
+          ads = await fetchAllMetaPages<any>(adsUrl);
+        } catch (error) {
+          console.error(`Meta ads error for campaign ${camp.id}:`, error);
+        }
+
+        if (ads.length > 0) {
+          camp.creatives = ads.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
             const adPrimary = getPrimaryResult(adInsight?.actions, [
