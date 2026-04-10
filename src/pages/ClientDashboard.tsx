@@ -86,7 +86,7 @@ export default function ClientDashboard() {
               <BarChart3 className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">{client.name}</h1>
+              <h1 className="text-lg font-bold text-foreground uppercase">{client.name}</h1>
               <p className="text-xs text-muted-foreground">
                 {client.ad_account_ids.length} conta(s) de anúncio • Dashboard Meta Ads
               </p>
