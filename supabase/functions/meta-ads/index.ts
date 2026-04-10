@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
           camp.creatives = adsData.data.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
-            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes);
+            const adPrimary = getPrimaryResult(adInsight?.actions, primaryActionTypes, adInsight as MetaInsight | undefined);
             const adRevenue = adPrimary.value * 50;
             return {
               id: ad.id,
