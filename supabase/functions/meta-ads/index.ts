@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 
