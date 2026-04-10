@@ -229,7 +229,7 @@ export default function ClientsPage() {
                         to={`/dashboard/${c.id}`}
                         className="text-base font-semibold text-card-foreground hover:text-primary transition-colors"
                       >
-                        {c.name}
+                        {c.name.toUpperCase()}
                       </Link>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="text-xs bg-accent/50">

@@ -61,7 +61,7 @@ const Index = () => {
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <h3 className="font-semibold text-card-foreground mb-1">{c.name}</h3>
+                    <h3 className="font-semibold text-card-foreground mb-1 uppercase">{c.name}</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {c.ad_account_ids.map((aid) => (
                         <Badge key={aid} variant="secondary" className="text-[10px] font-mono">
