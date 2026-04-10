@@ -9,7 +9,10 @@ interface Props {
 }
 
 export function CreativeGrid({ campaign }: Props) {
-  const sorted = [...campaign.creatives].sort((a, b) => b.roas - a.roas);
+  const resultLabel = campaign.primaryResultLabel || "Conversões";
+  const sorted = [...campaign.creatives].sort(
+    (a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions)
+  );
 
   return (
     <motion.div
@@ -18,14 +21,18 @@ export function CreativeGrid({ campaign }: Props) {
       transition={{ duration: 0.4 }}
       className="rounded-xl border border-border bg-card shadow-sm"
     >
-      <div className="p-5 border-b border-border">
+      <div className="p-5 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-card-foreground">
           Top Criativos — {campaign.name}
         </h3>
+        <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+          Ordenado por: {resultLabel}
+        </span>
       </div>
       <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sorted.map((cr, i) => {
           const Icon = typeIcon[cr.type];
+          const primaryVal = cr.primaryResult ?? cr.conversions;
           return (
             <motion.div
               key={cr.id}
@@ -53,6 +60,10 @@ export function CreativeGrid({ campaign }: Props) {
               <div className="p-3 space-y-2">
                 <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="col-span-2 bg-primary/5 rounded-md p-1.5">
+                    <span className="text-muted-foreground">{resultLabel}</span>
+                    <p className="font-bold text-primary text-sm">{primaryVal}</p>
+                  </div>
                   <div>
                     <span className="text-muted-foreground">CTR</span>
                     <p className="font-semibold text-card-foreground">{cr.ctr}%</p>
@@ -66,8 +77,8 @@ export function CreativeGrid({ campaign }: Props) {
                     <p className="font-semibold text-card-foreground">R$ {cr.spend}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Conv.</span>
-                    <p className="font-semibold text-card-foreground">{cr.conversions}</p>
+                    <span className="text-muted-foreground">Cliques</span>
+                    <p className="font-semibold text-card-foreground">{cr.clicks}</p>
                   </div>
                 </div>
               </div>

@@ -21,6 +21,83 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
   return Number(actions?.find((a) => a.action_type === type)?.value || 0);
 }
 
+// Determine primary result metric based on campaign objective and name
+function determinePrimaryResult(objective: string, campaignName: string): { actionTypes: string[]; label: string; key: string } {
+  const nameLower = campaignName.toLowerCase();
+
+  // WhatsApp campaigns → messaging conversations
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap")) {
+    return {
+      actionTypes: ["onsite_conversion.messaging_conversation_started_7d", "onsite_conversion.messaging_first_reply", "link_click"],
+      label: "Conversas Iniciadas",
+      key: "messaging",
+    };
+  }
+
+  // Sales / conversion campaigns → purchases or checkouts
+  const objLower = objective.toLowerCase();
+  if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
+    return {
+      actionTypes: ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase", "offsite_conversion.fb_pixel_initiate_checkout", "initiate_checkout", "link_click"],
+      label: "Vendas",
+      key: "sales",
+    };
+  }
+
+  // Lead campaigns
+  if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
+    return {
+      actionTypes: ["lead", "offsite_conversion.fb_pixel_lead", "complete_registration", "link_click"],
+      label: "Leads",
+      key: "leads",
+    };
+  }
+
+  // Traffic campaigns
+  if (objLower.includes("link_clicks") || objLower.includes("outcome_traffic") || nameLower.includes("tráfego") || nameLower.includes("traffic")) {
+    return {
+      actionTypes: ["link_click"],
+      label: "Cliques no Link",
+      key: "link_clicks",
+    };
+  }
+
+  // Engagement campaigns
+  if (objLower.includes("engagement") || objLower.includes("post_engagement") || nameLower.includes("engajamento")) {
+    return {
+      actionTypes: ["post_engagement", "page_engagement", "link_click"],
+      label: "Engajamento",
+      key: "engagement",
+    };
+  }
+
+  // App install
+  if (objLower.includes("app_installs") || objLower.includes("outcome_app_promotion")) {
+    return {
+      actionTypes: ["app_install", "mobile_app_install", "link_click"],
+      label: "Instalações",
+      key: "app_installs",
+    };
+  }
+
+  // Default: link clicks
+  return {
+    actionTypes: ["link_click", "landing_page_view"],
+    label: "Cliques no Link",
+    key: "link_clicks",
+  };
+}
+
+// Get the first matching action value from a priority list
+function getPrimaryResultValue(actions: { action_type: string; value: string }[] | undefined, actionTypes: string[]): number {
+  if (!actions) return 0;
+  for (const type of actionTypes) {
+    const val = getActionValue(actions, type);
+    if (val > 0) return val;
+  }
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -56,7 +133,6 @@ Deno.serve(async (req) => {
     const adAccountIds: string[] = client.ad_account_ids;
     const preset = datePreset || "last_7d";
 
-    // Fetch campaigns and insights for all ad accounts
     const allCampaigns: any[] = [];
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
 
@@ -76,12 +152,12 @@ Deno.serve(async (req) => {
       if (campData.data) {
         for (const camp of campData.data) {
           const insight: MetaInsight | undefined = camp.insights?.data?.[0];
-          const conversions = insight ? getActionValue(insight.actions, "offsite_conversion.fb_pixel_purchase") + getActionValue(insight.actions, "purchase") + getActionValue(insight.actions, "omni_purchase") : 0;
-          const totalConversions = conversions || getActionValue(insight?.actions, "lead") || getActionValue(insight?.actions, "complete_registration") || getActionValue(insight?.actions, "link_click");
+          const primaryMeta = determinePrimaryResult(camp.objective || "", camp.name || "");
+          const primaryResultValue = getPrimaryResultValue(insight?.actions, primaryMeta.actionTypes);
+
           const spend = Number(insight?.spend || 0);
-          const costPerConversion = totalConversions > 0 ? spend / totalConversions : 0;
-          // Estimate revenue as conversions * average order value (placeholder)
-          const estimatedRevenue = totalConversions * 50;
+          const costPerConversion = primaryResultValue > 0 ? spend / primaryResultValue : 0;
+          const estimatedRevenue = primaryResultValue * 50;
           const roas = spend > 0 ? Number((estimatedRevenue / spend).toFixed(2)) : 0;
 
           allCampaigns.push({
@@ -94,12 +170,15 @@ Deno.serve(async (req) => {
             clicks: Number(insight?.clicks || 0),
             ctr: Number(Number(insight?.ctr || 0).toFixed(2)),
             cpc: Number(Number(insight?.cpc || 0).toFixed(2)),
-            conversions: totalConversions,
+            conversions: primaryResultValue,
             costPerConversion: Number(costPerConversion.toFixed(2)),
             roas,
             reach: Number(insight?.reach || 0),
             frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
             creatives: [],
+            primaryResultLabel: primaryMeta.label,
+            primaryResultKey: primaryMeta.key,
+            _primaryActionTypes: primaryMeta.actionTypes, // internal, for creatives
           });
         }
       }
@@ -125,6 +204,7 @@ Deno.serve(async (req) => {
 
       // Get top ads (creatives) for each campaign
       for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
+        const primaryActionTypes: string[] = camp._primaryActionTypes;
         const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions}&access_token=${token}&limit=10`;
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
@@ -133,9 +213,8 @@ Deno.serve(async (req) => {
           camp.creatives = adsData.data.map((ad: any) => {
             const adInsight = ad.insights?.data?.[0];
             const adSpend = Number(adInsight?.spend || 0);
-            const adConversions = adInsight ? getActionValue(adInsight.actions, "offsite_conversion.fb_pixel_purchase") + getActionValue(adInsight.actions, "purchase") + getActionValue(adInsight.actions, "omni_purchase") : 0;
-            const totalAdConv = adConversions || getActionValue(adInsight?.actions, "lead") || getActionValue(adInsight?.actions, "link_click");
-            const adRevenue = totalAdConv * 50;
+            const adPrimaryResult = getPrimaryResultValue(adInsight?.actions, primaryActionTypes);
+            const adRevenue = adPrimaryResult * 50;
             return {
               id: ad.id,
               name: ad.name,
@@ -145,11 +224,14 @@ Deno.serve(async (req) => {
               clicks: Number(adInsight?.clicks || 0),
               ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
               spend: adSpend,
-              conversions: totalAdConv,
+              conversions: adPrimaryResult,
+              primaryResult: adPrimaryResult,
               roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
             };
           });
         }
+        // Remove internal field
+        delete camp._primaryActionTypes;
       }
     }
 
