@@ -21,6 +21,7 @@ export interface Campaign {
 export interface Creative {
   id: string;
   name: string;
+  adsetName?: string;
   type: "image" | "video" | "carousel";
   thumbnail: string;
   impressions: number;
