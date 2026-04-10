@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       // Get top ads (creatives) for each campaign
       for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
         const primaryActionTypes: string[] = camp._primaryActionTypes;
-        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions}&access_token=${token}&limit=50`;
+        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
