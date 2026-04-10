@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       // Get top ads (creatives) for each campaign
       for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
         const primaryActionTypes: string[] = camp._primaryActionTypes;
-        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
+        const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset{name},creative{thumbnail_url,object_type},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
@@ -238,6 +238,7 @@ Deno.serve(async (req) => {
             const adRevenue = adPrimary.value * 50;
             return {
               id: ad.id,
+              adsetName: ad.adset?.name || "",
               name: ad.name,
               type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
               thumbnail: ad.creative?.thumbnail_url || `https://picsum.photos/seed/${ad.id}/300/300`,
