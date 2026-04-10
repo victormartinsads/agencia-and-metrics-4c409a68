@@ -23,8 +23,8 @@ function getActionValue(actions: { action_type: string; value: string }[] | unde
 
 // Action type to human-readable label map
 const ACTION_LABELS: Record<string, string> = {
-  "onsite_conversion.messaging_conversation_started_7d": "Conversas Iniciadas",
-  "onsite_conversion.messaging_first_reply": "Conversas Iniciadas",
+  "onsite_conversion.messaging_conversation_started_7d": "Conversas por Mensagem Iniciadas",
+  "onsite_conversion.messaging_first_reply": "Conversas por Mensagem Iniciadas",
   "offsite_conversion.fb_pixel_purchase": "Compras",
   "purchase": "Compras",
   "omni_purchase": "Compras",
@@ -39,6 +39,8 @@ const ACTION_LABELS: Record<string, string> = {
   "page_engagement": "Engajamento",
   "app_install": "Instalações do App",
   "mobile_app_install": "Instalações do App",
+  "_reach": "Alcance",
+  "_profile_visit": "Visitas ao Perfil",
 };
 
 // Determine priority list of action types based on campaign objective/name
