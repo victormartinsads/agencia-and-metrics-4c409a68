@@ -3,12 +3,15 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 
-async function fetchAllMetaPages<T>(url: string): Promise<T[]> {
+// Simple delay helper to avoid rate limits
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchMeta<T>(url: string): Promise<T[]> {
   const items: T[] = [];
   let nextUrl: string | undefined = url;
   let pageCount = 0;
 
-  while (nextUrl && pageCount < 100) {
+  while (nextUrl && pageCount < 10) {
     const response = await fetch(nextUrl);
     const payload = await response.json();
 
@@ -48,10 +51,8 @@ function getActionValue(
   return Number(actions?.find((a) => a.action_type === type)?.value || 0);
 }
 
-// Action type to human-readable label map
 const ACTION_LABELS: Record<string, string> = {
-  "onsite_conversion.messaging_conversation_started_7d":
-    "Conversas por Mensagem Iniciadas",
+  "onsite_conversion.messaging_conversation_started_7d": "Conversas por Mensagem Iniciadas",
   "purchase": "Compras",
   "initiate_checkout": "Finalizações de Compra",
   "lead": "Leads",
@@ -65,130 +66,57 @@ const ACTION_LABELS: Record<string, string> = {
   "_profile_visit": "Visitas ao Perfil",
 };
 
-// Determine priority list of action types based on campaign objective/name
-function getActionTypePriority(
-  objective: string,
-  campaignName: string,
-): string[] {
+function getActionTypePriority(objective: string, campaignName: string): string[] {
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
-  // Captação de seguidores → profile visits (uses link_click but labeled differently)
-  if (
-    nameLower.includes("captacao_de_seguidores") ||
-    nameLower.includes("captação de seguidores")
-  ) {
+  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores")) {
     return ["_profile_visit"];
   }
-
-  // Corredor Japonês → reach metric
-  if (
-    nameLower.includes("corredor_japones") ||
-    nameLower.includes("corredor japonês") ||
-    nameLower.includes("corredor japones")
-  ) {
+  if (nameLower.includes("corredor_japones") || nameLower.includes("corredor japonês") || nameLower.includes("corredor japones")) {
     return ["_reach"];
   }
-
-  // WhatsApp campaigns → messaging conversations
-  if (
-    nameLower.includes("whatsapp") || nameLower.includes("wpp") ||
-    nameLower.includes("zap") || nameLower.includes("_wpp")
-  ) {
-    return [
-      "onsite_conversion.messaging_conversation_started_7d",
-      "link_click",
-    ];
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
+    return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
   }
-
-  // Sales / conversion campaigns → purchases or checkouts
-  if (
-    objLower.includes("outcome_sales") || objLower.includes("conversions") ||
-    objLower.includes("product_catalog_sales") ||
-    nameLower.includes("vendas") || nameLower.includes("sales") ||
-    nameLower.includes("compra")
-  ) {
+  if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
     return ["purchase", "initiate_checkout", "link_click"];
   }
-
-  // Lead campaigns
-  if (
-    objLower.includes("lead") || objLower.includes("outcome_leads") ||
-    nameLower.includes("lead")
-  ) {
+  if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
     return ["lead", "link_click"];
   }
-
-  // Traffic campaigns
-  if (
-    objLower.includes("link_clicks") || objLower.includes("outcome_traffic") ||
-    nameLower.includes("tráfego") || nameLower.includes("traffic")
-  ) {
+  if (objLower.includes("link_clicks") || objLower.includes("outcome_traffic") || nameLower.includes("tráfego") || nameLower.includes("traffic")) {
     return ["link_click", "landing_page_view"];
   }
-
-  // Engagement campaigns
-  if (
-    objLower.includes("engagement") || objLower.includes("post_engagement") ||
-    nameLower.includes("engajamento")
-  ) {
+  if (objLower.includes("engagement") || objLower.includes("post_engagement") || nameLower.includes("engajamento")) {
     return ["post_engagement", "page_engagement", "link_click"];
   }
-
-  // App install
-  if (
-    objLower.includes("app_installs") ||
-    objLower.includes("outcome_app_promotion")
-  ) {
+  if (objLower.includes("app_installs") || objLower.includes("outcome_app_promotion")) {
     return ["app_install", "mobile_app_install", "link_click"];
   }
-
-  // Default: link clicks
   return ["link_click", "landing_page_view"];
 }
 
-// Get the first matching action value AND its label from a priority list
-// Special types: _reach (uses reach field), _profile_visit (uses link_click but labeled as profile visit)
 function getPrimaryResult(
   actions: { action_type: string; value: string }[] | undefined,
   actionTypes: string[],
   insight?: MetaInsight,
 ): { value: number; label: string; actionType: string } {
   for (const type of actionTypes) {
-    // Special: reach metric (not in actions array)
     if (type === "_reach") {
-      const reachVal = Number(insight?.reach || 0);
-      return {
-        value: reachVal,
-        label: ACTION_LABELS["_reach"] || "Alcance",
-        actionType: "_reach",
-      };
+      return { value: Number(insight?.reach || 0), label: ACTION_LABELS["_reach"] || "Alcance", actionType: "_reach" };
     }
-    // Special: profile visit (uses link_click value but different label)
     if (type === "_profile_visit") {
-      const linkClicks = getActionValue(actions, "link_click");
-      return {
-        value: linkClicks,
-        label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil",
-        actionType: "_profile_visit",
-      };
+      return { value: getActionValue(actions, "link_click"), label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
     }
     if (!actions) continue;
     const val = getActionValue(actions, type);
     if (val > 0) {
-      return {
-        value: val,
-        label: ACTION_LABELS[type] || type,
-        actionType: type,
-      };
+      return { value: val, label: ACTION_LABELS[type] || type, actionType: type };
     }
   }
   if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
-  return {
-    value: 0,
-    label: ACTION_LABELS[actionTypes[0]] || "Resultados",
-    actionType: "",
-  };
+  return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
 Deno.serve(async (req) => {
@@ -227,208 +155,160 @@ Deno.serve(async (req) => {
     const preset = datePreset || "last_7d";
 
     const allCampaigns: any[] = [];
-    const dailySpend: Record<
-      string,
-      {
-        spend: number;
-        impressions: number;
-        clicks: number;
-        conversions: number;
-      }
-    > = {};
+    const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
 
     for (const accountId of adAccountIds) {
-      const actId = accountId.startsWith("act_")
-        ? accountId
-        : `act_${accountId}`;
+      const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
 
-      // Get campaigns with insights
-      const campaignsUrl =
-        `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=50`;
+      // 1. Get campaigns with insights (single call)
+      const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
       let campaigns: any[] = [];
 
       try {
-        campaigns = await fetchAllMetaPages<any>(campaignsUrl);
+        campaigns = await fetchMeta<any>(campaignsUrl);
       } catch (error) {
         console.error(`Meta API error for ${actId}:`, error);
         continue;
       }
 
-      if (campaigns.length > 0) {
-        for (const camp of campaigns) {
-          const insight: MetaInsight | undefined = camp.insights?.data?.[0];
-          const actionPriority = getActionTypePriority(
-            camp.objective || "",
-            camp.name || "",
-          );
-          const primary = getPrimaryResult(
-            insight?.actions,
-            actionPriority,
-            insight,
-          );
-          const resolvedPrimaryActionType = primary.actionType ||
-            actionPriority[0] || "link_click";
+      // Process campaigns
+      for (const camp of campaigns) {
+        const insight: MetaInsight | undefined = camp.insights?.data?.[0];
+        const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
+        const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
+        const resolvedPrimaryActionType = primary.actionType || actionPriority[0] || "link_click";
 
-          // Log for debugging
-          console.log(
-            `Campaign: ${camp.name} | Objective: ${camp.objective} | Actions: ${
-              JSON.stringify(
-                insight?.actions?.map((a: any) =>
-                  `${a.action_type}:${a.value}`
-                ),
-              )
-            } | Primary: ${primary.label} (${primary.value})`,
-          );
+        const spend = Number(insight?.spend || 0);
+        const costPerConversion = primary.value > 0 ? spend / primary.value : 0;
+        const estimatedRevenue = primary.value * 50;
+        const roas = spend > 0 ? Number((estimatedRevenue / spend).toFixed(2)) : 0;
 
-          const spend = Number(insight?.spend || 0);
-          const costPerConversion = primary.value > 0
-            ? spend / primary.value
-            : 0;
-          const estimatedRevenue = primary.value * 50;
-          const roas = spend > 0
-            ? Number((estimatedRevenue / spend).toFixed(2))
-            : 0;
-
-          allCampaigns.push({
-            id: camp.id,
-            name: camp.name,
-            status: camp.status === "ACTIVE"
-              ? "active"
-              : camp.status === "PAUSED"
-              ? "paused"
-              : "completed",
-            objective: camp.objective || "",
-            spend,
-            impressions: Number(insight?.impressions || 0),
-            clicks: Number(insight?.clicks || 0),
-            ctr: Number(Number(insight?.ctr || 0).toFixed(2)),
-            cpc: Number(Number(insight?.cpc || 0).toFixed(2)),
-            conversions: primary.value,
-            costPerConversion: Number(costPerConversion.toFixed(2)),
-            roas,
-            reach: Number(insight?.reach || 0),
-            frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
-            creatives: [],
-            primaryResultLabel: primary.label,
-            primaryResultKey: resolvedPrimaryActionType,
-            _primaryActionTypes: actionPriority,
-          });
-        }
+        allCampaigns.push({
+          id: camp.id,
+          name: camp.name,
+          status: camp.status === "ACTIVE" ? "active" : camp.status === "PAUSED" ? "paused" : "completed",
+          objective: camp.objective || "",
+          spend,
+          impressions: Number(insight?.impressions || 0),
+          clicks: Number(insight?.clicks || 0),
+          ctr: Number(Number(insight?.ctr || 0).toFixed(2)),
+          cpc: Number(Number(insight?.cpc || 0).toFixed(2)),
+          conversions: primary.value,
+          costPerConversion: Number(costPerConversion.toFixed(2)),
+          roas,
+          reach: Number(insight?.reach || 0),
+          frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
+          creatives: [],
+          primaryResultLabel: primary.label,
+          primaryResultKey: resolvedPrimaryActionType,
+          _primaryActionTypes: actionPriority,
+        });
       }
 
-      // Get daily insights for charts
-      const dailyUrl =
-        `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
-      const dailyRes = await fetch(dailyUrl);
-      const dailyData = await dailyRes.json();
-
-      if (dailyData.data) {
-        for (const day of dailyData.data) {
-          const date = day.date_start;
-          if (!dailySpend[date]) {
-            dailySpend[date] = {
-              spend: 0,
-              impressions: 0,
-              clicks: 0,
-              conversions: 0,
-            };
-          }
-          dailySpend[date].spend += Number(day.spend || 0);
-          dailySpend[date].impressions += Number(day.impressions || 0);
-          dailySpend[date].clicks += Number(day.clicks || 0);
-          const conv = getActionValue(day.actions, "purchase");
-          dailySpend[date].conversions += conv ||
-            getActionValue(day.actions, "lead") ||
-            getActionValue(day.actions, "link_click");
-        }
-      }
-
-      // Get top ads (creatives) for each campaign
-      for (const camp of allCampaigns.filter((c) => c.creatives.length === 0)) {
-        const primaryActionType: string = camp.primaryResultKey ||
-          camp._primaryActionTypes?.[0] || "link_click";
-        const adsUrl =
-          `${GRAPH_API}/${camp.id}/ads?fields=name,permalink_url,adset{name},creative{thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
-        let ads: any[] = [];
-
-        try {
-          ads = await fetchAllMetaPages<any>(adsUrl);
-        } catch (error) {
-          console.error(`Meta ads error for campaign ${camp.id}:`, error);
-        }
-
-        // Fetch real post permalinks for ads that have effective_object_story_id
-        const storyPermalinks: Record<string, string> = {};
-        const storyIds = ads
-          .map((ad: any) => ad.creative?.effective_object_story_id)
-          .filter(Boolean);
-        
-        // Batch fetch permalinks (up to 50 at a time via Graph API batch)
-        for (const storyId of storyIds) {
-          try {
-            const storyRes = await fetch(
-              `${GRAPH_API}/${storyId}?fields=permalink_url&access_token=${token}`
-            );
-            const storyData = await storyRes.json();
-            if (storyData.permalink_url) {
-              storyPermalinks[storyId] = storyData.permalink_url;
+      // 2. Daily insights (single call per account)
+      await delay(200);
+      const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
+      try {
+        const dailyRes = await fetch(dailyUrl);
+        const dailyData = await dailyRes.json();
+        if (dailyData.data) {
+          for (const day of dailyData.data) {
+            const date = day.date_start;
+            if (!dailySpend[date]) {
+              dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
             }
-          } catch (_) {
-            // ignore individual failures
+            dailySpend[date].spend += Number(day.spend || 0);
+            dailySpend[date].impressions += Number(day.impressions || 0);
+            dailySpend[date].clicks += Number(day.clicks || 0);
+            const conv = getActionValue(day.actions, "purchase");
+            dailySpend[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
           }
         }
-
-        if (ads.length > 0) {
-          camp.creatives = ads.map((ad: any) => {
-            const adInsight = ad.insights?.data?.[0];
-            const adSpend = Number(adInsight?.spend || 0);
-            const adPrimary = getPrimaryResult(adInsight?.actions, [
-              primaryActionType,
-            ], adInsight as MetaInsight | undefined);
-            const adRevenue = adPrimary.value * 50;
-            
-            // Priority: instagram_permalink_url > story permalink > permalink_url > ads library
-            const storyId = ad.creative?.effective_object_story_id;
-            const postUrl = ad.creative?.instagram_permalink_url
-              || (storyId && storyPermalinks[storyId])
-              || ad.permalink_url
-              || `https://www.facebook.com/ads/library/?id=${ad.id}`;
-            
-            return {
-              id: ad.id,
-              adsetName: ad.adset?.name || "",
-              name: ad.name,
-              permalinkUrl: postUrl,
-              type: ad.creative?.object_type === "VIDEO"
-                ? "video"
-                : ad.creative?.object_type === "CAROUSEL"
-                ? "carousel"
-                : "image",
-              thumbnail: ad.creative?.thumbnail_url ||
-                `https://picsum.photos/seed/${ad.id}/300/300`,
-              impressions: Number(adInsight?.impressions || 0),
-              clicks: Number(adInsight?.clicks || 0),
-              ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
-              spend: adSpend,
-              conversions: adPrimary.value,
-              primaryResult: adPrimary.value,
-              roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
-            };
-          });
-        }
-        // Remove internal field
-        delete camp._primaryActionTypes;
+      } catch (e) {
+        console.error(`Daily insights error for ${actId}:`, e);
       }
     }
 
-    // Build daily metrics sorted
+    // 3. Fetch creatives ONLY for campaigns with spend > 0 (max 10 campaigns)
+    const campaignsWithSpend = allCampaigns
+      .filter((c) => c.spend > 0)
+      .sort((a, b) => b.spend - a.spend)
+      .slice(0, 10);
+
+    for (const camp of campaignsWithSpend) {
+      await delay(300);
+      const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
+      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
+
+      let ads: any[] = [];
+      try {
+        ads = await fetchMeta<any>(adsUrl);
+      } catch (error) {
+        console.error(`Ads error for campaign ${camp.id}:`, error);
+        continue;
+      }
+
+      // Batch fetch story permalinks (only for ads missing instagram_permalink_url)
+      const adsNeedingPermalink = ads.filter(
+        (ad: any) => !ad.creative?.instagram_permalink_url && ad.creative?.effective_object_story_id
+      );
+
+      const storyPermalinks: Record<string, string> = {};
+      // Fetch up to 5 permalinks to limit API calls
+      for (const ad of adsNeedingPermalink.slice(0, 5)) {
+        const storyId = ad.creative.effective_object_story_id;
+        try {
+          await delay(100);
+          const storyRes = await fetch(`${GRAPH_API}/${storyId}?fields=permalink_url&access_token=${token}`);
+          const storyData = await storyRes.json();
+          if (storyData.permalink_url) {
+            storyPermalinks[storyId] = storyData.permalink_url;
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      camp.creatives = ads.map((ad: any) => {
+        const adInsight = ad.insights?.data?.[0];
+        const adSpend = Number(adInsight?.spend || 0);
+        const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
+        const adRevenue = adPrimary.value * 50;
+
+        const storyId = ad.creative?.effective_object_story_id;
+        const postUrl = ad.creative?.instagram_permalink_url
+          || (storyId && storyPermalinks[storyId])
+          || `https://www.facebook.com/ads/library/?id=${ad.id}`;
+
+        return {
+          id: ad.id,
+          name: ad.name,
+          permalinkUrl: postUrl,
+          type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
+          thumbnail: ad.creative?.thumbnail_url || `https://picsum.photos/seed/${ad.id}/300/300`,
+          impressions: Number(adInsight?.impressions || 0),
+          clicks: Number(adInsight?.clicks || 0),
+          ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
+          spend: adSpend,
+          conversions: adPrimary.value,
+          primaryResult: adPrimary.value,
+          roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
+        };
+      });
+
+      delete camp._primaryActionTypes;
+    }
+
+    // Clean up remaining campaigns
+    for (const camp of allCampaigns) {
+      if (camp._primaryActionTypes) delete camp._primaryActionTypes;
+    }
+
+    // Build daily metrics
     const dailyMetrics = Object.entries(dailySpend)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, m]) => ({
-        date: new Date(date).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-        }),
+        date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
         spend: Number(m.spend.toFixed(2)),
         impressions: m.impressions,
         clicks: m.clicks,
@@ -437,48 +317,20 @@ Deno.serve(async (req) => {
 
     // Overview metrics
     const totalSpend = allCampaigns.reduce((s, c) => s + c.spend, 0);
-    const totalImpressions = allCampaigns.reduce(
-      (s, c) => s + c.impressions,
-      0,
-    );
+    const totalImpressions = allCampaigns.reduce((s, c) => s + c.impressions, 0);
     const totalClicks = allCampaigns.reduce((s, c) => s + c.clicks, 0);
-    const totalConversions = allCampaigns.reduce(
-      (s, c) => s + c.conversions,
-      0,
-    );
+    const totalConversions = allCampaigns.reduce((s, c) => s + c.conversions, 0);
     const totalReach = allCampaigns.reduce((s, c) => s + c.reach, 0);
-    const avgCTR = allCampaigns.length > 0
-      ? Number(
-        (allCampaigns.reduce((s, c) => s + c.ctr, 0) / allCampaigns.length)
-          .toFixed(2),
-      )
-      : 0;
-    const avgCPC = allCampaigns.length > 0
-      ? Number(
-        (allCampaigns.reduce((s, c) => s + c.cpc, 0) / allCampaigns.length)
-          .toFixed(2),
-      )
-      : 0;
-    const avgROAS = allCampaigns.length > 0
-      ? Number(
-        (allCampaigns.reduce((s, c) => s + c.roas, 0) / allCampaigns.length)
-          .toFixed(2),
-      )
-      : 0;
+    const activeCampaigns = allCampaigns.filter((c) => c.spend > 0);
+    const count = activeCampaigns.length || 1;
+    const avgCTR = Number((activeCampaigns.reduce((s, c) => s + c.ctr, 0) / count).toFixed(2));
+    const avgCPC = Number((activeCampaigns.reduce((s, c) => s + c.cpc, 0) / count).toFixed(2));
+    const avgROAS = Number((activeCampaigns.reduce((s, c) => s + c.roas, 0) / count).toFixed(2));
 
     const result = {
       campaigns: allCampaigns,
       dailyMetrics,
-      overviewMetrics: {
-        totalSpend,
-        totalImpressions,
-        totalClicks,
-        totalConversions,
-        avgCTR,
-        avgCPC,
-        avgROAS,
-        totalReach,
-      },
+      overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
     };
 
     return new Response(JSON.stringify(result), {
