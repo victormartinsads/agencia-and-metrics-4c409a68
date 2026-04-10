@@ -29,7 +29,7 @@ export function CampaignTable({ campaigns, onSelect, selectedId }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              {["Campanha", "Status", "Investimento", "Impressões", "Cliques", "CTR", "CPC", "Conversões", "ROAS"].map(h => (
+              {["Campanha", "Status", "Investimento", "Impressões", "Cliques", "CTR", "CPC", "Resultado", "ROAS"].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -52,7 +52,14 @@ export function CampaignTable({ campaigns, onSelect, selectedId }: Props) {
                   <td className="px-4 py-3 text-card-foreground">{c.clicks.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 text-card-foreground">{c.ctr}%</td>
                   <td className="px-4 py-3 text-card-foreground">R$ {c.cpc.toFixed(2)}</td>
-                  <td className="px-4 py-3 font-semibold text-card-foreground">{c.conversions}</td>
+                  <td className="px-4 py-3 font-semibold text-card-foreground">
+                    <div className="flex flex-col">
+                      <span>{c.conversions}</span>
+                      {c.primaryResultLabel && (
+                        <span className="text-[10px] font-normal text-muted-foreground">{c.primaryResultLabel}</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={c.roas >= 4 ? "text-meta-green font-semibold" : "text-card-foreground"}>{c.roas}x</span>
                   </td>
