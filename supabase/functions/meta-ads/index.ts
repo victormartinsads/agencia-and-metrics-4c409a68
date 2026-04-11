@@ -297,6 +297,29 @@ Deno.serve(async (req) => {
         };
       });
 
+      // Fetch hi-res thumbnails (1080px) for ALL creatives via creative endpoint
+      const hiResCache: Record<string, string> = {};
+      for (const cr of camp.creatives) {
+        if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
+        try {
+          await delay(80);
+          const res = await fetch(
+            `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`
+          );
+          const data = await res.json();
+          if (data.thumbnail_url) {
+            hiResCache[cr.creativeId] = data.thumbnail_url;
+          }
+        } catch (_) {
+          // keep low-res fallback
+        }
+      }
+      // Apply hi-res thumbnails
+      for (const cr of camp.creatives) {
+        if (cr.creativeId && hiResCache[cr.creativeId]) {
+          cr.thumbnail = hiResCache[cr.creativeId];
+        }
+      }
 
       delete camp._primaryActionTypes;
     }
