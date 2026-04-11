@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     for (const camp of campaignsWithSpend) {
       await delay(300);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
-      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,effective_image_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
+      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,image_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
       let ads: any[] = [];
       try {
