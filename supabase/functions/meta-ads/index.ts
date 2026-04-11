@@ -120,6 +120,22 @@ function getPrimaryResult(
     if (type === "_profile_visit") {
       return { value: getActionValue(actions, "link_click"), label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
     }
+    if (type === "_custom_whatsapp") {
+      if (!actions) continue;
+      // Scan for any custom conversion containing "whatsapp" or "click_whatsapp" or "clickwhatsapp"
+      const customAction = actions.find((a) => {
+        const t = a.action_type.toLowerCase();
+        return (t.includes("whatsapp") || t.includes("click_whatsapp") || t.includes("clickwhatsapp")) 
+          && (t.includes("offsite_conversion") || t.includes("onsite_conversion") || t.includes("custom"));
+      });
+      if (customAction) {
+        const val = Number(customAction.value || 0);
+        if (val > 0) {
+          return { value: val, label: ACTION_LABELS["_custom_whatsapp"] || "Cliques no WhatsApp", actionType: customAction.action_type };
+        }
+      }
+      continue;
+    }
     if (!actions) continue;
     const val = getActionValue(actions, type);
     if (val > 0) {
