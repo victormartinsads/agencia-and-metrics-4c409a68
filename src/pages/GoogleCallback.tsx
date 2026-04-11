@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useExchangeGoogleCode } from "@/hooks/useGoogleAnalytics";
+import { getGoogleOAuthRedirectUri } from "@/lib/googleOAuth";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function GoogleCallback() {
@@ -18,7 +19,7 @@ export default function GoogleCallback() {
       return;
     }
 
-    const redirectUri = `${window.location.origin}/google/callback`;
+    const redirectUri = getGoogleOAuthRedirectUri();
 
     exchangeCode.mutate(
       { clientId, code, redirectUri },
@@ -30,7 +31,7 @@ export default function GoogleCallback() {
         onError: () => setStatus("error"),
       }
     );
-  }, []);
+  }, [exchangeCode, navigate, searchParams]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
