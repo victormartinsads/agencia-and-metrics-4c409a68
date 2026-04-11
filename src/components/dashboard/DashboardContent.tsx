@@ -62,6 +62,7 @@ export function DashboardContent({ clientId, metaData, metaLoading, metaError }:
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
