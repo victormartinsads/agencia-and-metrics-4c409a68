@@ -303,25 +303,6 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Fetch hi-res thumbnails for top 3 creatives per campaign
-      const sorted = [...camp.creatives]
-        .sort((a: any, b: any) => (b.primaryResult || 0) - (a.primaryResult || 0))
-        .slice(0, 3);
-
-      for (const cr of sorted) {
-        if (!cr.creativeId) continue;
-        try {
-          await delay(100);
-          const hiResUrl = `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`;
-          const res = await fetch(hiResUrl);
-          const data = await res.json();
-          if (data.thumbnail_url) {
-            cr.thumbnail = data.thumbnail_url;
-          }
-        } catch (_) {
-          // keep original thumbnail
-        }
-      }
 
       delete camp._primaryActionTypes;
     }
