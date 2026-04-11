@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import Clients from "./pages/Clients.tsx";
 import ClientDashboard from "./pages/ClientDashboard.tsx";
 import SharedDashboard from "./pages/SharedDashboard.tsx";
+import SharedCreatives from "./pages/SharedCreatives.tsx";
 import GoogleCallback from "./pages/GoogleCallback.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
