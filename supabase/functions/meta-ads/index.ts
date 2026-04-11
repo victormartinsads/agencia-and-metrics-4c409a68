@@ -290,6 +290,7 @@ Deno.serve(async (req) => {
         const adSpend = Number(adInsight?.spend || 0);
         const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
         const adRevenue = adPrimary.value * 50;
+        const bestCreativeImage = getBestCreativeImage(ad.creative);
 
         const storyId = ad.creative?.effective_object_story_id;
         const postUrl = ad.creative?.instagram_permalink_url
@@ -301,7 +302,7 @@ Deno.serve(async (req) => {
           name: ad.name,
           permalinkUrl: postUrl,
           type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
-          thumbnail: ad.creative?.image_url || ad.creative?.thumbnail_url || `https://picsum.photos/seed/${ad.id}/300/300`,
+          thumbnail: bestCreativeImage || `https://picsum.photos/seed/${ad.id}/300/300`,
           impressions: Number(adInsight?.impressions || 0),
           clicks: Number(adInsight?.clicks || 0),
           ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
