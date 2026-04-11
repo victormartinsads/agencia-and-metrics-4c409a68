@@ -52,7 +52,7 @@ export function useGoogleConnectionStatus(clientId?: string) {
   });
 }
 
-export function useGoogleAnalytics(clientId?: string, dateRange?: string) {
+export function useGoogleAnalytics(clientId?: string, dateRange?: string, enabled = true) {
   return useQuery({
     queryKey: ["google-analytics", clientId, dateRange],
     queryFn: async () => {
@@ -76,7 +76,7 @@ export function useGoogleAnalytics(clientId?: string, dateRange?: string) {
       if (error) throw error;
       return data as GAData;
     },
-    enabled: !!clientId,
+    enabled: !!clientId && enabled,
   });
 }
 
