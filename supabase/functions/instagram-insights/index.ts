@@ -107,19 +107,7 @@ Deno.serve(async (req) => {
       // Continue without IG organic data - we'll still return ad metrics
     }
 
-    // 2. Get IG account info
-    try {
-      const infoRes = await fetch(
-        `${GRAPH_API}/${igAccountId}?fields=username,name,followers_count,media_count&access_token=${token}`
-      );
-      const infoData = await infoRes.json();
-      igAccountName = infoData.username || infoData.name || "";
-      followersCount = infoData.followers_count || 0;
-    } catch (e) {
-      console.error("Error fetching IG account info:", e);
-    }
-
-    // 3. Fetch account insights (last 30 days, daily)
+    // 2. Get IG account info + insights (only if IG account found)
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const since = Math.floor(thirtyDaysAgo.getTime() / 1000);
@@ -130,37 +118,50 @@ Deno.serve(async (req) => {
     let dailyImpressions: { date: string; value: number }[] = [];
     let dailyProfileViews: { date: string; value: number }[] = [];
 
-    try {
-      const insightsRes = await fetch(
-        `${GRAPH_API}/${igAccountId}/insights?metric=follower_count,reach,impressions,profile_views&period=day&since=${since}&until=${until}&access_token=${token}`
-      );
-      const insightsData = await insightsRes.json();
+    if (igAccountId) {
+      try {
+        const infoRes = await fetch(
+          `${GRAPH_API}/${igAccountId}?fields=username,name,followers_count,media_count&access_token=${token}`
+        );
+        const infoData = await infoRes.json();
+        igAccountName = infoData.username || infoData.name || "";
+        followersCount = infoData.followers_count || 0;
+      } catch (e) {
+        console.error("Error fetching IG account info:", e);
+      }
 
-      if (insightsData.data) {
-        for (const metric of insightsData.data) {
-          const values = (metric.values || []).map((v: any) => ({
-            date: v.end_time?.split("T")[0] || "",
-            value: v.value || 0,
-          }));
+      try {
+        const insightsRes = await fetch(
+          `${GRAPH_API}/${igAccountId}/insights?metric=follower_count,reach,impressions,profile_views&period=day&since=${since}&until=${until}&access_token=${token}`
+        );
+        const insightsData = await insightsRes.json();
 
-          switch (metric.name) {
-            case "follower_count":
-              dailyFollowers = values;
-              break;
-            case "reach":
-              dailyReach = values;
-              break;
-            case "impressions":
-              dailyImpressions = values;
-              break;
-            case "profile_views":
-              dailyProfileViews = values;
-              break;
+        if (insightsData.data) {
+          for (const metric of insightsData.data) {
+            const values = (metric.values || []).map((v: any) => ({
+              date: v.end_time?.split("T")[0] || "",
+              value: v.value || 0,
+            }));
+
+            switch (metric.name) {
+              case "follower_count":
+                dailyFollowers = values;
+                break;
+              case "reach":
+                dailyReach = values;
+                break;
+              case "impressions":
+                dailyImpressions = values;
+                break;
+              case "profile_views":
+                dailyProfileViews = values;
+                break;
+            }
           }
         }
+      } catch (e) {
+        console.error("Error fetching IG insights:", e);
       }
-    } catch (e) {
-      console.error("Error fetching IG insights:", e);
     }
 
     // 4. Aggregate by day of week
