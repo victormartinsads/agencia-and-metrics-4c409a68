@@ -65,19 +65,29 @@ const ACTION_LABELS: Record<string, string> = {
   "mobile_app_install": "Instalações do App",
   "_reach": "Alcance",
   "_profile_visit": "Visitas ao Perfil",
+  "_custom_whatsapp": "Cliques no WhatsApp",
 };
 
 function getActionTypePriority(objective: string, campaignName: string): string[] {
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
-  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores")) {
+  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores") || nameLower.includes("captacao_seguidores")) {
     return ["_profile_visit"];
   }
   if (nameLower.includes("corredor_japones") || nameLower.includes("corredor japonês") || nameLower.includes("corredor japones")) {
     return ["_reach"];
   }
-  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp")) {
+  if (nameLower.includes("forms_nativo") || nameLower.includes("formulario_nativo") || nameLower.includes("formulário_nativo")) {
+    return ["lead", "link_click"];
+  }
+  if (nameLower.includes("call_vendas") || nameLower.includes("call_de_vendas")) {
+    return ["_custom_whatsapp", "onsite_conversion.messaging_conversation_started_7d", "purchase", "initiate_checkout", "link_click"];
+  }
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp") || nameLower.includes("call_mensagem")) {
+    return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
+  }
+  if (nameLower.includes("servicos_mensagens") || nameLower.includes("serviços_mensagens")) {
     return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
   }
   if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
