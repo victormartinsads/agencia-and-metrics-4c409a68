@@ -46,9 +46,11 @@ interface Props {
 
 export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
   const { data: status, isLoading: statusLoading } = useGoogleConnectionStatus(clientId);
+  const isConnected = status?.connected === true;
   const { data: gaData, isLoading: gaLoading, error: gaError } = useGoogleAnalytics(
     clientId,
-    status?.connected ? datePreset : undefined
+    datePreset,
+    isConnected
   );
   const connectGoogle = useConnectGoogle();
   const disconnectGoogle = useDisconnectGoogle();
