@@ -6,6 +6,13 @@ const GRAPH_API = "https://graph.facebook.com/v21.0";
 // Simple delay helper to avoid rate limits
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Upscale Meta thumbnail URL by replacing the size in the stp parameter
+function upscaleThumbnail(url: string): string {
+  if (!url) return url;
+  // Replace p{W}x{H} with p1080x1080 in the stp parameter
+  return url.replace(/p\d+x\d+/g, "p1080x1080");
+}
+
 async function fetchMeta<T>(url: string): Promise<T[]> {
   const items: T[] = [];
   let nextUrl: string | undefined = url;
@@ -285,7 +292,7 @@ Deno.serve(async (req) => {
           creativeId: ad.creative?.id,
           permalinkUrl: postUrl,
           type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
-          thumbnail: ad.creative?.thumbnail_url || "",
+          thumbnail: upscaleThumbnail(ad.creative?.thumbnail_url || ""),
           impressions: Number(adInsight?.impressions || 0),
           clicks: Number(adInsight?.clicks || 0),
           ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
