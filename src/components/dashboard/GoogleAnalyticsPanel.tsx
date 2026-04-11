@@ -8,6 +8,7 @@ import {
 } from "@/hooks/useGoogleAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { getGoogleOAuthRedirectUri } from "@/lib/googleOAuth";
 import {
   Users, Eye, Clock, TrendingUp, Loader2, Link2, Unlink,
   BarChart3, Globe, ArrowUpRight, MousePointerClick,
@@ -59,7 +60,7 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
 
   const handleConnect = async () => {
     if (!clientId) return;
-    const redirectUri = `${window.location.origin}/google/callback`;
+    const redirectUri = getGoogleOAuthRedirectUri();
     try {
       const result = await connectGoogle.mutateAsync({ clientId, redirectUri });
       window.location.href = result.authUrl;
