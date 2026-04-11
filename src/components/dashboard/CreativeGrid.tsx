@@ -10,17 +10,17 @@ const rankBadge = [
 ];
 
 const FUNNEL_MAP: [RegExp, string][] = [
-  [/CAPTACAO_DE_SEGUIDORES|CAPTAÇÃO_DE_SEGUIDORES/i, "Captação de Seguidores"],
-  [/CORREDOR_JAPONES|CORREDOR_JAPONÊS/i, "Corredor Japonês"],
-  [/CALL_MENSAGEM_IG/i, "Call de Vendas | Mensagens"],
-  [/CALL_PC/i, "Call de Vendas | Página de Captura"],
-  [/MINI_TREINAMENTO_PC/i, "Mini Treinamento | Página de Captura"],
-  [/ISCA_PC/i, "Isca | Página de Captura"],
-  [/SERVICOS_MENSAGENS_WPP|SERVIÇOS_MENSAGENS_WPP/i, "Serviços | Mensagens"],
-  [/MEDIUM_TICKET_PV/i, "Medium Ticket | Página de Vendas"],
-  [/LOW_TICKET_PV/i, "Low Ticket | Página de Vendas"],
-  [/FORMS_NATIVO/i, "Formulário Nativo"],
-  [/IMERSÃO_PAGA|IMERSAO_PAGA/i, "Imersão Paga"],
+  [/CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i, "Captação de Seguidores"],
+  [/CORREDOR_?JAPONES|CORREDOR_?JAPONÊS/i, "Corredor Japonês"],
+  [/CALL_?MENSAGEM_?IG/i, "Call de Vendas | Mensagens"],
+  [/CALL_?PC/i, "Call de Vendas | Página de Captura"],
+  [/MINI_?TREINAMENTO_?PC/i, "Mini Treinamento | Página de Captura"],
+  [/ISCA_?PC/i, "Isca | Página de Captura"],
+  [/SERVICOS_?MENSAGENS_?WPP|SERVIÇOS_?MENSAGENS_?WPP/i, "Serviços | Mensagens"],
+  [/MEDIUM_?TICKET_?PV/i, "Medium Ticket | Página de Vendas"],
+  [/LOW_?TICKET_?PV/i, "Low Ticket | Página de Vendas"],
+  [/FORMS_?NATIVO/i, "Formulário Nativo"],
+  [/IMERSÃO_?PAGA|IMERSAO_?PAGA/i, "Imersão Paga"],
   [/WORKSHOP/i, "Workshop"],
 ];
 
