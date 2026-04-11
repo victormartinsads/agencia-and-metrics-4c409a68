@@ -9,18 +9,22 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
 import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
+import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 
 interface Props {
+  clientId?: string;
   metaData: MetaAdsData | undefined;
   metaLoading: boolean;
   metaError: Error | null;
 }
 
-export function DashboardContent({ metaData, metaLoading, metaError }: Props) {
+export function DashboardContent({ clientId, metaData, metaLoading, metaError }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
 
   const overview = metaData?.overviewMetrics;
   const campaigns = metaData?.campaigns || [];
@@ -57,6 +61,7 @@ export function DashboardContent({ metaData, metaLoading, metaError }: Props) {
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="branding">Branding</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -106,6 +111,10 @@ export function DashboardContent({ metaData, metaLoading, metaError }: Props) {
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="branding" className="space-y-6">
+            <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} />
           </TabsContent>
         </Tabs>
       )}
