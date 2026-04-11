@@ -69,7 +69,7 @@ export function CreativeGrid({ campaign }: Props) {
       <div className="p-5 border-b border-border flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-card-foreground">
-            Top 3 Criativos — {getFunnelLabel(campaign.name)}
+            {getFunnelLabel(campaign.name)}
           </h3>
           <p className="mt-1 text-[11px] text-muted-foreground">
             Top 3 somam {top3Total} de {campaign.conversions} {resultLabel.toLowerCase()}
