@@ -202,6 +202,12 @@ Deno.serve(async (req) => {
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
         const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
+        
+        // Debug: log actions for CALL_VENDAS campaigns
+        if ((camp.name || "").toLowerCase().includes("call_vendas") && insight?.actions) {
+          console.log(`[DEBUG] Campaign "${camp.name}" actions:`, JSON.stringify(insight.actions.map((a: any) => ({ type: a.action_type, val: a.value }))));
+        }
+        
         const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
         const resolvedPrimaryActionType = primary.actionType || actionPriority[0] || "link_click";
 
