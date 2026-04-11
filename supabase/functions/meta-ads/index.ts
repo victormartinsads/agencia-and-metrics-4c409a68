@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
-const CACHE_TTL_MINUTES = 60; // 1 hour cache
+const CACHE_TTL_MINUTES = 120; // 2 hour cache
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -208,21 +208,53 @@ Deno.serve(async (req) => {
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
     let hitRateLimit = false;
 
-    for (const accountId of adAccountIds) {
-      const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+    // Process all ad accounts concurrently (batched)
+    const accountResults = await Promise.allSettled(
+      adAccountIds.map(async (accountId) => {
+        const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+        const campaigns: any[] = [];
 
-      const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
-      let campaigns: any[] = [];
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
 
-      try {
-        campaigns = await fetchMeta<any>(campaignsUrl);
-      } catch (error) {
-        console.error(`Meta API error for ${actId}:`, error);
-        if (String(error).includes("request limit") || String(error).includes("too many calls")) {
-          hitRateLimit = true;
+        try {
+          const fetched = await fetchMeta<any>(campaignsUrl);
+          campaigns.push(...fetched);
+        } catch (error) {
+          console.error(`Meta API error for ${actId}:`, error);
+          if (String(error).includes("request limit") || String(error).includes("too many calls")) {
+            hitRateLimit = true;
+          }
         }
-        continue;
-      }
+
+        // Daily insights
+        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+        try {
+          await delay(100);
+          const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
+          const dailyRes = await fetch(dailyUrl);
+          const dailyJson = await dailyRes.json();
+          if (dailyJson.data) {
+            for (const day of dailyJson.data) {
+              const date = day.date_start;
+              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+              dailyData[date].spend += Number(day.spend || 0);
+              dailyData[date].impressions += Number(day.impressions || 0);
+              dailyData[date].clicks += Number(day.clicks || 0);
+              const conv = getActionValue(day.actions, "purchase");
+              dailyData[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
+            }
+          }
+        } catch (e) {
+          console.error(`Daily insights error for ${actId}:`, e);
+        }
+
+        return { campaigns, dailyData };
+      })
+    );
+
+    for (const result of accountResults) {
+      if (result.status !== "fulfilled") continue;
+      const { campaigns, dailyData } = result.value;
 
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
@@ -257,30 +289,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      await delay(200);
-      const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
-      try {
-        const dailyRes = await fetch(dailyUrl);
-        const dailyData = await dailyRes.json();
-        if (dailyData.data) {
-          for (const day of dailyData.data) {
-            const date = day.date_start;
-            if (!dailySpend[date]) {
-              dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
-            }
-            dailySpend[date].spend += Number(day.spend || 0);
-            dailySpend[date].impressions += Number(day.impressions || 0);
-            dailySpend[date].clicks += Number(day.clicks || 0);
-            const conv = getActionValue(day.actions, "purchase");
-            dailySpend[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
-          }
-        }
-      } catch (e) {
-        console.error(`Daily insights error for ${actId}:`, e);
+      for (const [date, m] of Object.entries(dailyData)) {
+        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        dailySpend[date].spend += m.spend;
+        dailySpend[date].impressions += m.impressions;
+        dailySpend[date].clicks += m.clicks;
+        dailySpend[date].conversions += m.conversions;
       }
     }
 
-    // If we hit rate limit and got NO data, return stale cache
+    // If we hit rate limit and got NO data, return stale cache (even if expired)
     if (hitRateLimit && allCampaigns.length === 0 && cached) {
       console.log(`Rate limited, returning STALE cache for ${clientId}/${preset}`);
       return new Response(JSON.stringify(cached.response_data), {
@@ -292,10 +310,10 @@ Deno.serve(async (req) => {
     const campaignsWithSpend = allCampaigns
       .filter((c) => c.spend > 0)
       .sort((a, b) => b.spend - a.spend)
-      .slice(0, 10);
+      .slice(0, 5);
 
     for (const camp of campaignsWithSpend) {
-      await delay(300);
+      await delay(150);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
       const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset_name,creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
@@ -315,7 +333,7 @@ Deno.serve(async (req) => {
       );
 
       const storyPermalinks: Record<string, string> = {};
-      for (const ad of adsNeedingPermalink.slice(0, 5)) {
+      for (const ad of adsNeedingPermalink.slice(0, 3)) {
         const storyId = ad.creative.effective_object_story_id;
         try {
           await delay(100);
@@ -356,12 +374,13 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Fetch hi-res thumbnails
+      // Fetch hi-res thumbnails for top 3 creatives only
       const hiResCache: Record<string, string> = {};
-      for (const cr of camp.creatives) {
+      const topCreatives = [...camp.creatives].sort((a: any, b: any) => b.spend - a.spend).slice(0, 3);
+      for (const cr of topCreatives) {
         if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
         try {
-          await delay(80);
+          await delay(50);
           const res = await fetch(
             `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`
           );
@@ -411,10 +430,12 @@ Deno.serve(async (req) => {
       overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
     };
 
-    // 4. Save to cache (don't await - fire and forget)
-    saveCacheData(supabase, clientId, preset, result).catch((e) =>
-      console.error("Cache save error:", e)
-    );
+    // 4. Save to cache only if we got actual data (don't cache empty results)
+    if (allCampaigns.length > 0) {
+      saveCacheData(supabase, clientId, preset, result).catch((e) =>
+        console.error("Cache save error:", e)
+      );
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
