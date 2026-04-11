@@ -61,7 +61,7 @@ export function DashboardContent({ clientId, metaData, metaLoading, metaError }:
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
-          </TabsList>
+            <TabsTrigger value="branding">Branding</TabsTrigger>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -110,6 +110,10 @@ export function DashboardContent({ clientId, metaData, metaLoading, metaError }:
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="branding" className="space-y-6">
+            <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} />
           </TabsContent>
         </Tabs>
       )}
