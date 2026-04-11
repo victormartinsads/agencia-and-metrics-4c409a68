@@ -8,6 +8,9 @@ import {
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
+import { CampaignDetail } from "@/components/dashboard/CampaignDetail";
+import { AdSetTable } from "@/components/dashboard/AdSetTable";
+import { CampaignInsights } from "@/components/dashboard/CampaignInsights";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
 import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
 import { Campaign } from "@/data/mockMetaData";
@@ -90,12 +93,19 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           <TabsContent value="campaigns" className="space-y-6">
             {campaigns.length > 0 ? (
               <>
-                <CampaignTable campaigns={campaigns} onSelect={setSelectedCampaign} selectedId={selectedCampaign?.id} />
-                {selectedCampaign && <CreativeGrid campaign={selectedCampaign} />}
                 {!selectedCampaign && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 text-muted-foreground text-sm">
-                    Clique em uma campanha para ver os criativos
-                  </motion.div>
+                  <>
+                    <CampaignTable campaigns={campaigns} onSelect={setSelectedCampaign} selectedId={selectedCampaign?.id} />
+                    <CampaignInsights campaigns={campaigns} />
+                  </>
+                )}
+
+                {selectedCampaign && (
+                  <>
+                    <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} />
+                    <AdSetTable campaign={selectedCampaign} />
+                    <CreativeGrid campaign={selectedCampaign} />
+                  </>
                 )}
               </>
             ) : (
