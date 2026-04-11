@@ -5,8 +5,6 @@ import {
   useGoogleAnalytics,
   useConnectGoogle,
   useDisconnectGoogle,
-  useSelectGAProperty,
-  GAData,
 } from "@/hooks/useGoogleAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
