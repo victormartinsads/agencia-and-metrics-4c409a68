@@ -3,23 +3,14 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 
-type MetaCreativeImage = { hash?: string; url?: string; width?: number; height?: number };
-
 // Simple delay helper to avoid rate limits
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function getBestCreativeImage(creative: { image_url?: string; thumbnail_url?: string; images?: Record<string, MetaCreativeImage> | MetaCreativeImage[] } | undefined) {
-  const imageCandidates = Array.isArray(creative?.images)
-    ? creative.images
-    : creative?.images
-      ? Object.values(creative.images)
-      : [];
-
-  const bestFromImages = imageCandidates
-    .filter((image): image is MetaCreativeImage & { url: string } => Boolean(image?.url))
-    .sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))[0]?.url;
-
-  return bestFromImages || creative?.image_url || creative?.thumbnail_url;
+// Upscale Meta thumbnail URL by replacing the size in the stp parameter
+function upscaleThumbnail(url: string): string {
+  if (!url) return url;
+  // Replace p{W}x{H} with p1080x1080 in the stp parameter
+  return url.replace(/p\d+x\d+/g, "p1080x1080");
 }
 
 async function fetchMeta<T>(url: string): Promise<T[]> {
@@ -254,7 +245,7 @@ Deno.serve(async (req) => {
     for (const camp of campaignsWithSpend) {
       await delay(300);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
-      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,image_url,images,url_tags,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&thumbnail_width=1024&thumbnail_height=1024&access_token=${token}&limit=25`;
+      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
       let ads: any[] = [];
       try {
@@ -270,7 +261,6 @@ Deno.serve(async (req) => {
       );
 
       const storyPermalinks: Record<string, string> = {};
-      // Fetch up to 5 permalinks to limit API calls
       for (const ad of adsNeedingPermalink.slice(0, 5)) {
         const storyId = ad.creative.effective_object_story_id;
         try {
@@ -290,7 +280,6 @@ Deno.serve(async (req) => {
         const adSpend = Number(adInsight?.spend || 0);
         const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
         const adRevenue = adPrimary.value * 50;
-        const bestCreativeImage = getBestCreativeImage(ad.creative);
 
         const storyId = ad.creative?.effective_object_story_id;
         const postUrl = ad.creative?.instagram_permalink_url
@@ -300,9 +289,10 @@ Deno.serve(async (req) => {
         return {
           id: ad.id,
           name: ad.name,
+          creativeId: ad.creative?.id,
           permalinkUrl: postUrl,
           type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
-          thumbnail: bestCreativeImage || `https://picsum.photos/seed/${ad.id}/300/300`,
+          thumbnail: upscaleThumbnail(ad.creative?.thumbnail_url || ""),
           impressions: Number(adInsight?.impressions || 0),
           clicks: Number(adInsight?.clicks || 0),
           ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
@@ -312,6 +302,7 @@ Deno.serve(async (req) => {
           roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
         };
       });
+
 
       delete camp._primaryActionTypes;
     }
