@@ -14,6 +14,7 @@ export type ClientInsert = {
   name: string;
   meta_access_token: string;
   ad_account_ids: string[];
+  slug: string;
 };
 
 export function useClients() {
