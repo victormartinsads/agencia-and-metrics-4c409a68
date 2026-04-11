@@ -1,0 +1,1 @@
+DELETE FROM public.meta_ads_cache WHERE client_id = '47002802-d9d0-48ed-8d61-570aed89d160';
