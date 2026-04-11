@@ -84,7 +84,7 @@ function getActionTypePriority(objective: string, campaignName: string): string[
   if (nameLower.includes("call_vendas") || nameLower.includes("call_de_vendas")) {
     return ["offsite_conversion.fb_pixel_custom", "onsite_conversion.messaging_conversation_started_7d", "purchase", "initiate_checkout", "link_click"];
   }
-  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp") || nameLower.includes("call_mensagem")) {
+  if (nameLower.includes("whatsapp") || nameLower.includes("wpp") || nameLower.includes("zap") || nameLower.includes("_wpp") || nameLower.includes("call_mensagem") || nameLower.includes("palavra_chave")) {
     return ["onsite_conversion.messaging_conversation_started_7d", "link_click"];
   }
   if (nameLower.includes("servicos_mensagens") || nameLower.includes("serviços_mensagens")) {
