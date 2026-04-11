@@ -14,15 +14,17 @@ import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
+import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 
 interface Props {
   clientId?: string;
+  datePreset?: string;
   metaData: MetaAdsData | undefined;
   metaLoading: boolean;
   metaError: Error | null;
 }
 
-export function DashboardContent({ clientId, metaData, metaLoading, metaError }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
 
