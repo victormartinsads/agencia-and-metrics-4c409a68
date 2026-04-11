@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 export interface Client {
   id: string;
   name: string;
+  slug: string;
   meta_access_token: string;
   ad_account_ids: string[];
   created_at: string;
@@ -15,6 +16,17 @@ export type ClientInsert = {
   meta_access_token: string;
   ad_account_ids: string[];
 };
+
+function generateSlug(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
 export function useClients() {
   return useQuery({
@@ -36,7 +48,7 @@ export function useCreateClient() {
     mutationFn: async (client: ClientInsert) => {
       const { data, error } = await supabase
         .from("clients")
-        .insert(client)
+        .insert({ ...client, slug: generateSlug(client.name) })
         .select()
         .single();
       if (error) throw error;
