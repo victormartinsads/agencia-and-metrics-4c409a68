@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     for (const camp of campaignsWithSpend) {
       await delay(300);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
-      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{thumbnail_url,image_url,images,url_tags,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&thumbnail_width=1024&thumbnail_height=1024&access_token=${token}&limit=25`;
+      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
       let ads: any[] = [];
       try {
@@ -254,7 +254,6 @@ Deno.serve(async (req) => {
       );
 
       const storyPermalinks: Record<string, string> = {};
-      // Fetch up to 5 permalinks to limit API calls
       for (const ad of adsNeedingPermalink.slice(0, 5)) {
         const storyId = ad.creative.effective_object_story_id;
         try {
@@ -274,7 +273,6 @@ Deno.serve(async (req) => {
         const adSpend = Number(adInsight?.spend || 0);
         const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
         const adRevenue = adPrimary.value * 50;
-        const bestCreativeImage = getBestCreativeImage(ad.creative);
 
         const storyId = ad.creative?.effective_object_story_id;
         const postUrl = ad.creative?.instagram_permalink_url
@@ -284,9 +282,10 @@ Deno.serve(async (req) => {
         return {
           id: ad.id,
           name: ad.name,
+          creativeId: ad.creative?.id,
           permalinkUrl: postUrl,
           type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
-          thumbnail: bestCreativeImage || `https://picsum.photos/seed/${ad.id}/300/300`,
+          thumbnail: ad.creative?.thumbnail_url || "",
           impressions: Number(adInsight?.impressions || 0),
           clicks: Number(adInsight?.clicks || 0),
           ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
@@ -296,6 +295,26 @@ Deno.serve(async (req) => {
           roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
         };
       });
+
+      // Fetch hi-res thumbnails for top 3 creatives per campaign
+      const sorted = [...camp.creatives]
+        .sort((a: any, b: any) => (b.primaryResult || 0) - (a.primaryResult || 0))
+        .slice(0, 3);
+
+      for (const cr of sorted) {
+        if (!cr.creativeId) continue;
+        try {
+          await delay(100);
+          const hiResUrl = `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`;
+          const res = await fetch(hiResUrl);
+          const data = await res.json();
+          if (data.thumbnail_url) {
+            cr.thumbnail = data.thumbnail_url;
+          }
+        } catch (_) {
+          // keep original thumbnail
+        }
+      }
 
       delete camp._primaryActionTypes;
     }
