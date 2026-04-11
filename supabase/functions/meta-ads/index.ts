@@ -3,24 +3,8 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 
-type MetaCreativeImage = { hash?: string; url?: string; width?: number; height?: number };
-
 // Simple delay helper to avoid rate limits
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-function getBestCreativeImage(creative: { image_url?: string; thumbnail_url?: string; images?: Record<string, MetaCreativeImage> | MetaCreativeImage[] } | undefined) {
-  const imageCandidates = Array.isArray(creative?.images)
-    ? creative.images
-    : creative?.images
-      ? Object.values(creative.images)
-      : [];
-
-  const bestFromImages = imageCandidates
-    .filter((image): image is MetaCreativeImage & { url: string } => Boolean(image?.url))
-    .sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))[0]?.url;
-
-  return bestFromImages || creative?.image_url || creative?.thumbnail_url;
-}
 
 async function fetchMeta<T>(url: string): Promise<T[]> {
   const items: T[] = [];
