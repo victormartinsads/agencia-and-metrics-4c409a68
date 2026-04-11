@@ -88,6 +88,41 @@ export type Database = {
           },
         ]
       }
+      meta_ads_cache: {
+        Row: {
+          client_id: string
+          created_at: string
+          date_preset: string
+          expires_at: string
+          id: string
+          response_data: Json
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date_preset?: string
+          expires_at?: string
+          id?: string
+          response_data?: Json
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date_preset?: string
+          expires_at?: string
+          id?: string
+          response_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ads_cache_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
