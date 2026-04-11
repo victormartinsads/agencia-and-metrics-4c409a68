@@ -63,6 +63,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
           </TabsList>
 
@@ -113,6 +114,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-6">
