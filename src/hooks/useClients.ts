@@ -48,7 +48,7 @@ export function useCreateClient() {
     mutationFn: async (client: ClientInsert) => {
       const { data, error } = await supabase
         .from("clients")
-        .insert(client)
+        .insert({ ...client, slug: generateSlug(client.name) })
         .select()
         .single();
       if (error) throw error;
