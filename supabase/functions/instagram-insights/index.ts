@@ -103,10 +103,8 @@ Deno.serve(async (req) => {
     }
 
     if (!igAccountId) {
-      return new Response(JSON.stringify({ error: "Instagram Business Account not found. Verify token permissions (instagram_basic, instagram_manage_insights, pages_show_list)." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("No IG account found, returning ad-only metrics");
+      // Continue without IG organic data - we'll still return ad metrics
     }
 
     // 2. Get IG account info
