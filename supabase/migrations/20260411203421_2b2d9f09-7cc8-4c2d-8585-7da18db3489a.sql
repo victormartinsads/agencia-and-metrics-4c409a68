@@ -1,0 +1,1 @@
+DELETE FROM public.meta_ads_cache;

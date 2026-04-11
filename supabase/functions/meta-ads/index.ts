@@ -310,7 +310,7 @@ Deno.serve(async (req) => {
     const campaignsWithSpend = allCampaigns
       .filter((c) => c.spend > 0)
       .sort((a, b) => b.spend - a.spend)
-      .slice(0, 5);
+      .slice(0, 15);
 
     for (const camp of campaignsWithSpend) {
       await delay(150);
