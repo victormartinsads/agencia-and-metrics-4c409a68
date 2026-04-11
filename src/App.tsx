@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import Clients from "./pages/Clients.tsx";
 import ClientDashboard from "./pages/ClientDashboard.tsx";
 import SharedDashboard from "./pages/SharedDashboard.tsx";
+import GoogleCallback from "./pages/GoogleCallback.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/clients" element={<Clients />} />
           <Route path="/dashboard/:clientId" element={<ClientDashboard />} />
           <Route path="/share/:clientId" element={<SharedDashboard />} />
+          <Route path="/google/callback" element={<GoogleCallback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
