@@ -430,10 +430,12 @@ Deno.serve(async (req) => {
       overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
     };
 
-    // 4. Save to cache (don't await - fire and forget)
-    saveCacheData(supabase, clientId, preset, result).catch((e) =>
-      console.error("Cache save error:", e)
-    );
+    // 4. Save to cache only if we got actual data (don't cache empty results)
+    if (allCampaigns.length > 0) {
+      saveCacheData(supabase, clientId, preset, result).catch((e) =>
+        console.error("Cache save error:", e)
+      );
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
