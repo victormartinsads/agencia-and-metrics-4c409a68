@@ -42,43 +42,54 @@ Deno.serve(async (req) => {
     const token = client.meta_access_token;
     const adAccountIds: string[] = client.ad_account_ids;
 
-    // 1. Discover Instagram Business Account from ad account pages
+    // 1. Discover Instagram Business Account
     let igAccountId: string | null = null;
     let igAccountName = "";
     let followersCount = 0;
 
-    for (const accountId of adAccountIds) {
-      if (igAccountId) break;
-      const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+    // Strategy 1: Get all pages the user manages, then check each for IG business account
+    try {
+      const userPagesRes = await fetch(
+        `${GRAPH_API}/me/accounts?fields=id,name,access_token&access_token=${token}&limit=50`
+      );
+      const userPagesData = await userPagesRes.json();
+      console.log("Pages found:", userPagesData.data?.length || 0);
 
-      try {
-        // Get pages promoted by this ad account
-        const pagesRes = await fetch(
-          `${GRAPH_API}/${actId}?fields=promote_pages{instagram_business_account}&access_token=${token}`
-        );
-        const pagesData = await pagesRes.json();
-
-        if (pagesData.promote_pages?.data) {
-          for (const page of pagesData.promote_pages.data) {
-            if (page.instagram_business_account?.id) {
-              igAccountId = page.instagram_business_account.id;
-              break;
+      if (userPagesData.data) {
+        for (const page of userPagesData.data) {
+          if (igAccountId) break;
+          try {
+            // Use the page's own access token to query for instagram_business_account
+            const pageToken = page.access_token || token;
+            const igRes = await fetch(
+              `${GRAPH_API}/${page.id}?fields=instagram_business_account&access_token=${pageToken}`
+            );
+            const igData = await igRes.json();
+            console.log(`Page ${page.name} (${page.id}): IG account =`, igData.instagram_business_account?.id || "none");
+            if (igData.instagram_business_account?.id) {
+              igAccountId = igData.instagram_business_account.id;
             }
+          } catch (e) {
+            console.error(`Error checking page ${page.id}:`, e);
           }
         }
-      } catch (e) {
-        console.error(`Error discovering IG account from ${actId}:`, e);
       }
+    } catch (e) {
+      console.error("Error fetching user pages:", e);
+    }
 
-      if (!igAccountId) {
-        // Try alternative: get pages connected to user
+    // Strategy 2: Try via ad account's promote_pages
+    if (!igAccountId) {
+      for (const accountId of adAccountIds) {
+        if (igAccountId) break;
+        const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
         try {
-          const userPagesRes = await fetch(
-            `${GRAPH_API}/me/accounts?fields=instagram_business_account&access_token=${token}&limit=10`
+          const pagesRes = await fetch(
+            `${GRAPH_API}/${actId}?fields=promote_pages{instagram_business_account}&access_token=${token}`
           );
-          const userPagesData = await userPagesRes.json();
-          if (userPagesData.data) {
-            for (const page of userPagesData.data) {
+          const pagesData = await pagesRes.json();
+          if (pagesData.promote_pages?.data) {
+            for (const page of pagesData.promote_pages.data) {
               if (page.instagram_business_account?.id) {
                 igAccountId = page.instagram_business_account.id;
                 break;
@@ -86,7 +97,7 @@ Deno.serve(async (req) => {
             }
           }
         } catch (e) {
-          console.error("Error fetching user pages:", e);
+          console.error(`Error from promote_pages ${actId}:`, e);
         }
       }
     }
