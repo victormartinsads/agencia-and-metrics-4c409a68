@@ -123,6 +123,7 @@ export default function ClientDashboard() {
       <main className="max-w-[1400px] mx-auto px-6 py-6">
         <DashboardContent
           clientId={clientId}
+          datePreset={datePreset}
           metaData={metaData}
           metaLoading={metaLoading}
           metaError={metaError as Error | null}

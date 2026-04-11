@@ -14,15 +14,17 @@ import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
+import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 
 interface Props {
   clientId?: string;
+  datePreset?: string;
   metaData: MetaAdsData | undefined;
   metaLoading: boolean;
   metaError: Error | null;
 }
 
-export function DashboardContent({ clientId, metaData, metaLoading, metaError }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
 
@@ -61,6 +63,7 @@ export function DashboardContent({ clientId, metaData, metaLoading, metaError }:
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
           </TabsList>
 
@@ -111,6 +114,10 @@ export function DashboardContent({ clientId, metaData, metaLoading, metaError }:
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-6">
