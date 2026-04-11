@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -38,43 +42,54 @@ Deno.serve(async (req) => {
     const token = client.meta_access_token;
     const adAccountIds: string[] = client.ad_account_ids;
 
-    // 1. Discover Instagram Business Account from ad account pages
+    // 1. Discover Instagram Business Account
     let igAccountId: string | null = null;
     let igAccountName = "";
     let followersCount = 0;
 
-    for (const accountId of adAccountIds) {
-      if (igAccountId) break;
-      const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+    // Strategy 1: Get all pages the user manages, then check each for IG business account
+    try {
+      const userPagesRes = await fetch(
+        `${GRAPH_API}/me/accounts?fields=id,name,access_token&access_token=${token}&limit=50`
+      );
+      const userPagesData = await userPagesRes.json();
+      console.log("Pages found:", userPagesData.data?.length || 0);
 
-      try {
-        // Get pages promoted by this ad account
-        const pagesRes = await fetch(
-          `${GRAPH_API}/${actId}?fields=promote_pages{instagram_business_account}&access_token=${token}`
-        );
-        const pagesData = await pagesRes.json();
-
-        if (pagesData.promote_pages?.data) {
-          for (const page of pagesData.promote_pages.data) {
-            if (page.instagram_business_account?.id) {
-              igAccountId = page.instagram_business_account.id;
-              break;
+      if (userPagesData.data) {
+        for (const page of userPagesData.data) {
+          if (igAccountId) break;
+          try {
+            // Use the page's own access token to query for instagram_business_account
+            const pageToken = page.access_token || token;
+            const igRes = await fetch(
+              `${GRAPH_API}/${page.id}?fields=instagram_business_account&access_token=${pageToken}`
+            );
+            const igData = await igRes.json();
+            console.log(`Page ${page.name} (${page.id}): IG account =`, igData.instagram_business_account?.id || "none");
+            if (igData.instagram_business_account?.id) {
+              igAccountId = igData.instagram_business_account.id;
             }
+          } catch (e) {
+            console.error(`Error checking page ${page.id}:`, e);
           }
         }
-      } catch (e) {
-        console.error(`Error discovering IG account from ${actId}:`, e);
       }
+    } catch (e) {
+      console.error("Error fetching user pages:", e);
+    }
 
-      if (!igAccountId) {
-        // Try alternative: get pages connected to user
+    // Strategy 2: Try via ad account's promote_pages
+    if (!igAccountId) {
+      for (const accountId of adAccountIds) {
+        if (igAccountId) break;
+        const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
         try {
-          const userPagesRes = await fetch(
-            `${GRAPH_API}/me/accounts?fields=instagram_business_account&access_token=${token}&limit=10`
+          const pagesRes = await fetch(
+            `${GRAPH_API}/${actId}?fields=promote_pages{instagram_business_account}&access_token=${token}`
           );
-          const userPagesData = await userPagesRes.json();
-          if (userPagesData.data) {
-            for (const page of userPagesData.data) {
+          const pagesData = await pagesRes.json();
+          if (pagesData.promote_pages?.data) {
+            for (const page of pagesData.promote_pages.data) {
               if (page.instagram_business_account?.id) {
                 igAccountId = page.instagram_business_account.id;
                 break;
@@ -82,31 +97,17 @@ Deno.serve(async (req) => {
             }
           }
         } catch (e) {
-          console.error("Error fetching user pages:", e);
+          console.error(`Error from promote_pages ${actId}:`, e);
         }
       }
     }
 
     if (!igAccountId) {
-      return new Response(JSON.stringify({ error: "Instagram Business Account not found. Verify token permissions (instagram_basic, instagram_manage_insights, pages_show_list)." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("No IG account found, returning ad-only metrics");
+      // Continue without IG organic data - we'll still return ad metrics
     }
 
-    // 2. Get IG account info
-    try {
-      const infoRes = await fetch(
-        `${GRAPH_API}/${igAccountId}?fields=username,name,followers_count,media_count&access_token=${token}`
-      );
-      const infoData = await infoRes.json();
-      igAccountName = infoData.username || infoData.name || "";
-      followersCount = infoData.followers_count || 0;
-    } catch (e) {
-      console.error("Error fetching IG account info:", e);
-    }
-
-    // 3. Fetch account insights (last 30 days, daily)
+    // 2. Get IG account info + insights (only if IG account found)
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const since = Math.floor(thirtyDaysAgo.getTime() / 1000);
@@ -117,37 +118,50 @@ Deno.serve(async (req) => {
     let dailyImpressions: { date: string; value: number }[] = [];
     let dailyProfileViews: { date: string; value: number }[] = [];
 
-    try {
-      const insightsRes = await fetch(
-        `${GRAPH_API}/${igAccountId}/insights?metric=follower_count,reach,impressions,profile_views&period=day&since=${since}&until=${until}&access_token=${token}`
-      );
-      const insightsData = await insightsRes.json();
+    if (igAccountId) {
+      try {
+        const infoRes = await fetch(
+          `${GRAPH_API}/${igAccountId}?fields=username,name,followers_count,media_count&access_token=${token}`
+        );
+        const infoData = await infoRes.json();
+        igAccountName = infoData.username || infoData.name || "";
+        followersCount = infoData.followers_count || 0;
+      } catch (e) {
+        console.error("Error fetching IG account info:", e);
+      }
 
-      if (insightsData.data) {
-        for (const metric of insightsData.data) {
-          const values = (metric.values || []).map((v: any) => ({
-            date: v.end_time?.split("T")[0] || "",
-            value: v.value || 0,
-          }));
+      try {
+        const insightsRes = await fetch(
+          `${GRAPH_API}/${igAccountId}/insights?metric=follower_count,reach,impressions,profile_views&period=day&since=${since}&until=${until}&access_token=${token}`
+        );
+        const insightsData = await insightsRes.json();
 
-          switch (metric.name) {
-            case "follower_count":
-              dailyFollowers = values;
-              break;
-            case "reach":
-              dailyReach = values;
-              break;
-            case "impressions":
-              dailyImpressions = values;
-              break;
-            case "profile_views":
-              dailyProfileViews = values;
-              break;
+        if (insightsData.data) {
+          for (const metric of insightsData.data) {
+            const values = (metric.values || []).map((v: any) => ({
+              date: v.end_time?.split("T")[0] || "",
+              value: v.value || 0,
+            }));
+
+            switch (metric.name) {
+              case "follower_count":
+                dailyFollowers = values;
+                break;
+              case "reach":
+                dailyReach = values;
+                break;
+              case "impressions":
+                dailyImpressions = values;
+                break;
+              case "profile_views":
+                dailyProfileViews = values;
+                break;
+            }
           }
         }
+      } catch (e) {
+        console.error("Error fetching IG insights:", e);
       }
-    } catch (e) {
-      console.error("Error fetching IG insights:", e);
     }
 
     // 4. Aggregate by day of week
