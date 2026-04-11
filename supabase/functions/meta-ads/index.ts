@@ -333,7 +333,7 @@ Deno.serve(async (req) => {
       );
 
       const storyPermalinks: Record<string, string> = {};
-      for (const ad of adsNeedingPermalink.slice(0, 5)) {
+      for (const ad of adsNeedingPermalink.slice(0, 3)) {
         const storyId = ad.creative.effective_object_story_id;
         try {
           await delay(100);
@@ -374,12 +374,13 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Fetch hi-res thumbnails
+      // Fetch hi-res thumbnails for top 3 creatives only
       const hiResCache: Record<string, string> = {};
-      for (const cr of camp.creatives) {
+      const topCreatives = [...camp.creatives].sort((a: any, b: any) => b.spend - a.spend).slice(0, 3);
+      for (const cr of topCreatives) {
         if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
         try {
-          await delay(80);
+          await delay(50);
           const res = await fetch(
             `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`
           );
