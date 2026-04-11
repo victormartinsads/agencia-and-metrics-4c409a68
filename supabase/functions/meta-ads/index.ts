@@ -310,10 +310,10 @@ Deno.serve(async (req) => {
     const campaignsWithSpend = allCampaigns
       .filter((c) => c.spend > 0)
       .sort((a, b) => b.spend - a.spend)
-      .slice(0, 10);
+      .slice(0, 5);
 
     for (const camp of campaignsWithSpend) {
-      await delay(300);
+      await delay(150);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
       const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset_name,creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
