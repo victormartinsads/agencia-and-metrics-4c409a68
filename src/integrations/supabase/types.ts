@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           ad_account_ids: string[]
           created_at: string
+          ga_property_id: string | null
           id: string
           meta_access_token: string
           name: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           ad_account_ids?: string[]
           created_at?: string
+          ga_property_id?: string | null
           id?: string
           meta_access_token: string
           name: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           ad_account_ids?: string[]
           created_at?: string
+          ga_property_id?: string | null
           id?: string
           meta_access_token?: string
           name?: string

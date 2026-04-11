@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN ga_property_id TEXT;
