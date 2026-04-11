@@ -24,6 +24,7 @@ const App = () => (
           <Route path="/clients" element={<Clients />} />
           <Route path="/dashboard/:clientId" element={<ClientDashboard />} />
           <Route path="/share/:clientId" element={<SharedDashboard />} />
+          <Route path="/criativos/:clientId" element={<SharedCreatives />} />
           <Route path="/google/callback" element={<GoogleCallback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
