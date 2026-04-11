@@ -65,7 +65,7 @@ const ACTION_LABELS: Record<string, string> = {
   "mobile_app_install": "Instalações do App",
   "_reach": "Alcance",
   "_profile_visit": "Visitas ao Perfil",
-  "_custom_whatsapp": "Cliques no WhatsApp",
+  "offsite_conversion.fb_pixel_custom": "Evento Personalizado",
 };
 
 function getActionTypePriority(objective: string, campaignName: string): string[] {
