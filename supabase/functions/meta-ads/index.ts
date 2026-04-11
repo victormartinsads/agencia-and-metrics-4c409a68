@@ -208,21 +208,53 @@ Deno.serve(async (req) => {
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
     let hitRateLimit = false;
 
-    for (const accountId of adAccountIds) {
-      const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+    // Process all ad accounts concurrently (batched)
+    const accountResults = await Promise.allSettled(
+      adAccountIds.map(async (accountId) => {
+        const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
+        const campaigns: any[] = [];
 
-      const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
-      let campaigns: any[] = [];
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
 
-      try {
-        campaigns = await fetchMeta<any>(campaignsUrl);
-      } catch (error) {
-        console.error(`Meta API error for ${actId}:`, error);
-        if (String(error).includes("request limit") || String(error).includes("too many calls")) {
-          hitRateLimit = true;
+        try {
+          const fetched = await fetchMeta<any>(campaignsUrl);
+          campaigns.push(...fetched);
+        } catch (error) {
+          console.error(`Meta API error for ${actId}:`, error);
+          if (String(error).includes("request limit") || String(error).includes("too many calls")) {
+            hitRateLimit = true;
+          }
         }
-        continue;
-      }
+
+        // Daily insights
+        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+        try {
+          await delay(100);
+          const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
+          const dailyRes = await fetch(dailyUrl);
+          const dailyJson = await dailyRes.json();
+          if (dailyJson.data) {
+            for (const day of dailyJson.data) {
+              const date = day.date_start;
+              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+              dailyData[date].spend += Number(day.spend || 0);
+              dailyData[date].impressions += Number(day.impressions || 0);
+              dailyData[date].clicks += Number(day.clicks || 0);
+              const conv = getActionValue(day.actions, "purchase");
+              dailyData[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
+            }
+          }
+        } catch (e) {
+          console.error(`Daily insights error for ${actId}:`, e);
+        }
+
+        return { campaigns, dailyData };
+      })
+    );
+
+    for (const result of accountResults) {
+      if (result.status !== "fulfilled") continue;
+      const { campaigns, dailyData } = result.value;
 
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
@@ -257,30 +289,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      await delay(200);
-      const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
-      try {
-        const dailyRes = await fetch(dailyUrl);
-        const dailyData = await dailyRes.json();
-        if (dailyData.data) {
-          for (const day of dailyData.data) {
-            const date = day.date_start;
-            if (!dailySpend[date]) {
-              dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
-            }
-            dailySpend[date].spend += Number(day.spend || 0);
-            dailySpend[date].impressions += Number(day.impressions || 0);
-            dailySpend[date].clicks += Number(day.clicks || 0);
-            const conv = getActionValue(day.actions, "purchase");
-            dailySpend[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
-          }
-        }
-      } catch (e) {
-        console.error(`Daily insights error for ${actId}:`, e);
+      for (const [date, m] of Object.entries(dailyData)) {
+        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        dailySpend[date].spend += m.spend;
+        dailySpend[date].impressions += m.impressions;
+        dailySpend[date].clicks += m.clicks;
+        dailySpend[date].conversions += m.conversions;
       }
     }
 
-    // If we hit rate limit and got NO data, return stale cache
+    // If we hit rate limit and got NO data, return stale cache (even if expired)
     if (hitRateLimit && allCampaigns.length === 0 && cached) {
       console.log(`Rate limited, returning STALE cache for ${clientId}/${preset}`);
       return new Response(JSON.stringify(cached.response_data), {
