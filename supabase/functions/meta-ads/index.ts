@@ -2,10 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
+const CACHE_TTL_MINUTES = 60; // 1 hour cache
 
-// Simple delay helper to avoid rate limits
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 
 async function fetchMeta<T>(url: string): Promise<T[]> {
   const items: T[] = [];
@@ -130,6 +129,34 @@ function getPrimaryResult(
   return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
+// ===== CACHE HELPERS =====
+
+async function getCachedData(supabase: any, clientId: string, datePreset: string) {
+  const { data, error } = await supabase
+    .from("meta_ads_cache")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("date_preset", datePreset)
+    .single();
+
+  if (error || !data) return null;
+  return data;
+}
+
+async function saveCacheData(supabase: any, clientId: string, datePreset: string, responseData: any) {
+  const expiresAt = new Date(Date.now() + CACHE_TTL_MINUTES * 60 * 1000).toISOString();
+  
+  await supabase
+    .from("meta_ads_cache")
+    .upsert({
+      client_id: clientId,
+      date_preset: datePreset,
+      response_data: responseData,
+      created_at: new Date().toISOString(),
+      expires_at: expiresAt,
+    }, { onConflict: "client_id,date_preset" });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -148,6 +175,19 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    const preset = datePreset || "last_7d";
+
+    // 1. Check cache first
+    const cached = await getCachedData(supabase, clientId, preset);
+    if (cached && new Date(cached.expires_at) > new Date()) {
+      console.log(`Cache HIT for ${clientId}/${preset}`);
+      return new Response(JSON.stringify(cached.response_data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+      });
+    }
+    console.log(`Cache MISS for ${clientId}/${preset}`);
+
+    // 2. Fetch from Meta API
     const { data: client, error: dbError } = await supabase
       .from("clients")
       .select("*")
@@ -163,15 +203,14 @@ Deno.serve(async (req) => {
 
     const token = client.meta_access_token;
     const adAccountIds: string[] = client.ad_account_ids;
-    const preset = datePreset || "last_7d";
 
     const allCampaigns: any[] = [];
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+    let hitRateLimit = false;
 
     for (const accountId of adAccountIds) {
       const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
 
-      // 1. Get campaigns with insights (single call)
       const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
       let campaigns: any[] = [];
 
@@ -179,10 +218,12 @@ Deno.serve(async (req) => {
         campaigns = await fetchMeta<any>(campaignsUrl);
       } catch (error) {
         console.error(`Meta API error for ${actId}:`, error);
+        if (String(error).includes("request limit") || String(error).includes("too many calls")) {
+          hitRateLimit = true;
+        }
         continue;
       }
 
-      // Process campaigns
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
         const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
@@ -216,7 +257,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 2. Daily insights (single call per account)
       await delay(200);
       const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
       try {
@@ -240,7 +280,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Fetch creatives ONLY for campaigns with spend > 0 (max 10 campaigns)
+    // If we hit rate limit and got NO data, return stale cache
+    if (hitRateLimit && allCampaigns.length === 0 && cached) {
+      console.log(`Rate limited, returning STALE cache for ${clientId}/${preset}`);
+      return new Response(JSON.stringify(cached.response_data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "STALE" },
+      });
+    }
+
+    // 3. Fetch creatives for top campaigns
     const campaignsWithSpend = allCampaigns
       .filter((c) => c.spend > 0)
       .sort((a, b) => b.spend - a.spend)
@@ -256,10 +304,12 @@ Deno.serve(async (req) => {
         ads = await fetchMeta<any>(adsUrl);
       } catch (error) {
         console.error(`Ads error for campaign ${camp.id}:`, error);
+        if (String(error).includes("request limit") || String(error).includes("too many calls")) {
+          hitRateLimit = true;
+        }
         continue;
       }
 
-      // Batch fetch story permalinks (only for ads missing instagram_permalink_url)
       const adsNeedingPermalink = ads.filter(
         (ad: any) => !ad.creative?.instagram_permalink_url && ad.creative?.effective_object_story_id
       );
@@ -274,9 +324,7 @@ Deno.serve(async (req) => {
           if (storyData.permalink_url) {
             storyPermalinks[storyId] = storyData.permalink_url;
           }
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
       }
 
       camp.creatives = ads.map((ad: any) => {
@@ -308,7 +356,7 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Fetch hi-res thumbnails (1080px) for ALL creatives via creative endpoint
+      // Fetch hi-res thumbnails
       const hiResCache: Record<string, string> = {};
       for (const cr of camp.creatives) {
         if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
@@ -321,11 +369,8 @@ Deno.serve(async (req) => {
           if (data.thumbnail_url) {
             hiResCache[cr.creativeId] = data.thumbnail_url;
           }
-        } catch (_) {
-          // keep low-res fallback
-        }
+        } catch (_) {}
       }
-      // Apply hi-res thumbnails
       for (const cr of camp.creatives) {
         if (cr.creativeId && hiResCache[cr.creativeId]) {
           cr.thumbnail = hiResCache[cr.creativeId];
@@ -335,12 +380,10 @@ Deno.serve(async (req) => {
       delete camp._primaryActionTypes;
     }
 
-    // Clean up remaining campaigns
     for (const camp of allCampaigns) {
       if (camp._primaryActionTypes) delete camp._primaryActionTypes;
     }
 
-    // Build daily metrics
     const dailyMetrics = Object.entries(dailySpend)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, m]) => ({
@@ -351,7 +394,6 @@ Deno.serve(async (req) => {
         conversions: m.conversions,
       }));
 
-    // Overview metrics
     const totalSpend = allCampaigns.reduce((s, c) => s + c.spend, 0);
     const totalImpressions = allCampaigns.reduce((s, c) => s + c.impressions, 0);
     const totalClicks = allCampaigns.reduce((s, c) => s + c.clicks, 0);
@@ -369,8 +411,13 @@ Deno.serve(async (req) => {
       overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
     };
 
+    // 4. Save to cache (don't await - fire and forget)
+    saveCacheData(supabase, clientId, preset, result).catch((e) =>
+      console.error("Cache save error:", e)
+    );
+
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
     });
   } catch (err) {
     console.error("Edge function error:", err);
