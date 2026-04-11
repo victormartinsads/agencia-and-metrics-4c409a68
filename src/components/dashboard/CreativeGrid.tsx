@@ -9,6 +9,28 @@ const rankBadge = [
   { label: "🥉 TOP 3", className: "bg-primary/60 text-primary-foreground font-bold" },
 ];
 
+const FUNNEL_MAP: [RegExp, string][] = [
+  [/CAPTACAO_DE_SEGUIDORES|CAPTAÇÃO_DE_SEGUIDORES/i, "Captação de Seguidores"],
+  [/CORREDOR_JAPONES|CORREDOR_JAPONÊS/i, "Corredor Japonês"],
+  [/CALL_MENSAGEM_IG/i, "Call de Vendas | Mensagens"],
+  [/CALL_PC/i, "Call de Vendas | Página de Captura"],
+  [/MINI_TREINAMENTO_PC/i, "Mini Treinamento | Página de Captura"],
+  [/ISCA_PC/i, "Isca | Página de Captura"],
+  [/SERVICOS_MENSAGENS_WPP|SERVIÇOS_MENSAGENS_WPP/i, "Serviços | Mensagens"],
+  [/MEDIUM_TICKET_PV/i, "Medium Ticket | Página de Vendas"],
+  [/LOW_TICKET_PV/i, "Low Ticket | Página de Vendas"],
+  [/FORMS_NATIVO/i, "Formulário Nativo"],
+  [/IMERSÃO_PAGA|IMERSAO_PAGA/i, "Imersão Paga"],
+  [/WORKSHOP/i, "Workshop"],
+];
+
+function getFunnelLabel(campaignName: string): string {
+  for (const [regex, label] of FUNNEL_MAP) {
+    if (regex.test(campaignName)) return `Funil: ${label}`;
+  }
+  return campaignName;
+}
+
 interface Props {
   campaign: Campaign;
 }
@@ -47,7 +69,7 @@ export function CreativeGrid({ campaign }: Props) {
       <div className="p-5 border-b border-border flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-card-foreground">
-            Top 3 Criativos — {campaign.name}
+            Top 3 Criativos — {getFunnelLabel(campaign.name)}
           </h3>
           <p className="mt-1 text-[11px] text-muted-foreground">
             Top 3 somam {top3Total} de {campaign.conversions} {resultLabel.toLowerCase()}
