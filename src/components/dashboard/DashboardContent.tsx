@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
+import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 
 interface Props {
   clientId?: string;
@@ -64,6 +65,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="funnel">Funil</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -88,6 +90,15 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 <ConversionsChart data={dailyMetrics} />
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="funnel" className="space-y-6">
+            <FunnelAnalysisTab
+              clientId={clientId || ""}
+              campaigns={campaigns}
+              dailyMetrics={dailyMetrics}
+              datePreset={datePreset || "last_7d"}
+            />
           </TabsContent>
 
           <TabsContent value="campaigns" className="space-y-6">
