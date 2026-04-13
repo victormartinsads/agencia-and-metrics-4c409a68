@@ -8,6 +8,7 @@ export interface Campaign {
   clicks: number;
   ctr: number;
   cpc: number;
+  cpm?: number;
   conversions: number;
   costPerConversion: number;
   roas: number;
@@ -16,6 +17,12 @@ export interface Campaign {
   creatives: Creative[];
   primaryResultLabel?: string;
   primaryResultKey?: string;
+  // Funnel metrics
+  landingPageViews?: number;
+  addToCart?: number;
+  initiateCheckout?: number;
+  purchases?: number;
+  purchaseValue?: number;
 }
 
 export interface Creative {

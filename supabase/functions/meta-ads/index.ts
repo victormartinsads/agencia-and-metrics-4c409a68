@@ -38,7 +38,9 @@ interface MetaInsight {
   clicks?: string;
   ctr?: string;
   cpc?: string;
+  cpm?: string;
   actions?: { action_type: string; value: string }[];
+  action_values?: { action_type: string; value: string }[];
   reach?: string;
   frequency?: string;
   cost_per_action_type?: { action_type: string; value: string }[];
@@ -214,7 +216,7 @@ Deno.serve(async (req) => {
         const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
         const campaigns: any[] = [];
 
-        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,actions,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
 
         try {
           const fetched = await fetchMeta<any>(campaignsUrl);
@@ -267,6 +269,13 @@ Deno.serve(async (req) => {
         const estimatedRevenue = primary.value * 50;
         const roas = spend > 0 ? Number((estimatedRevenue / spend).toFixed(2)) : 0;
 
+        // Funnel metrics from actions
+        const landingPageViews = getActionValue(insight?.actions, "landing_page_view");
+        const addToCart = getActionValue(insight?.actions, "add_to_cart") || getActionValue(insight?.actions, "offsite_conversion.fb_pixel_add_to_cart");
+        const initiateCheckout = getActionValue(insight?.actions, "initiate_checkout") || getActionValue(insight?.actions, "offsite_conversion.fb_pixel_initiate_checkout");
+        const purchases = getActionValue(insight?.actions, "purchase") || getActionValue(insight?.actions, "offsite_conversion.fb_pixel_purchase");
+        const purchaseValue = Number(insight?.action_values?.find((a) => a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase")?.value || 0);
+
         allCampaigns.push({
           id: camp.id,
           name: camp.name,
@@ -277,6 +286,7 @@ Deno.serve(async (req) => {
           clicks: Number(insight?.clicks || 0),
           ctr: Number(Number(insight?.ctr || 0).toFixed(2)),
           cpc: Number(Number(insight?.cpc || 0).toFixed(2)),
+          cpm: Number(Number(insight?.cpm || 0).toFixed(2)),
           conversions: primary.value,
           costPerConversion: Number(costPerConversion.toFixed(2)),
           roas,
@@ -286,6 +296,12 @@ Deno.serve(async (req) => {
           primaryResultLabel: primary.label,
           primaryResultKey: resolvedPrimaryActionType,
           _primaryActionTypes: actionPriority,
+          // Funnel metrics
+          landingPageViews,
+          addToCart,
+          initiateCheckout,
+          purchases,
+          purchaseValue,
         });
       }
 
