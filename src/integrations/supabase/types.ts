@@ -176,6 +176,44 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_notes: {
+        Row: {
+          client_id: string
+          created_at: string
+          date_preset: string
+          id: string
+          next_actions: string
+          updated_at: string
+          what_we_did: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          next_actions?: string
+          updated_at?: string
+          what_we_did?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          next_actions?: string
+          updated_at?: string
+          what_we_did?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
