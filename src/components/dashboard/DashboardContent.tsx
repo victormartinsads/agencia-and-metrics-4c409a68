@@ -19,6 +19,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
+import { ComoEstamosTab } from "@/components/como-estamos/ComoEstamosTab";
 
 interface Props {
   clientId?: string;
