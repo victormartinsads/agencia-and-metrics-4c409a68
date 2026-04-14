@@ -94,6 +94,15 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             )}
           </TabsContent>
 
+          <TabsContent value="como-estamos" className="space-y-6">
+            <ComoEstamosTab
+              clientId={clientId || ""}
+              campaigns={campaigns}
+              dailyMetrics={dailyMetrics}
+              datePreset={datePreset || "last_7d"}
+            />
+          </TabsContent>
+
           <TabsContent value="funnel" className="space-y-6">
             <FunnelAnalysisTab
               clientId={clientId || ""}
