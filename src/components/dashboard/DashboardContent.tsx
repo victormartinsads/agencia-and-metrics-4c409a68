@@ -64,8 +64,9 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
       {!metaLoading && !metaError && overview && (
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-card border border-border">
+          <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="como-estamos">Como Estamos</TabsTrigger>
             <TabsTrigger value="funnel">Funil</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
