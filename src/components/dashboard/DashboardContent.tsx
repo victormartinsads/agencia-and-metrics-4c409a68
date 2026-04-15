@@ -27,9 +27,10 @@ interface Props {
   metaData: MetaAdsData | undefined;
   metaLoading: boolean;
   metaError: Error | null;
+  currencySymbol?: string;
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$" }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
 
@@ -76,14 +77,14 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard title="Investimento Total" value={`R$ ${overview.totalSpend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} delay={0} />
+              <KpiCard title="Investimento Total" value={`${currencySymbol} ${overview.totalSpend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} delay={0} />
               <KpiCard title="Impressões" value={overview.totalImpressions >= 1000000 ? `${(overview.totalImpressions / 1000000).toFixed(1)}M` : overview.totalImpressions.toLocaleString("pt-BR")} icon={Eye} delay={0.05} />
               <KpiCard title="Cliques" value={overview.totalClicks.toLocaleString("pt-BR")} icon={MousePointerClick} delay={0.1} />
               <KpiCard title="Conversões" value={overview.totalConversions.toLocaleString("pt-BR")} icon={Target} delay={0.15} />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <KpiCard title="CTR Médio" value={`${overview.avgCTR}%`} icon={Percent} delay={0.2} />
-              <KpiCard title="CPC Médio" value={`R$ ${overview.avgCPC.toFixed(2)}`} icon={DollarSign} delay={0.25} />
+              <KpiCard title="CPC Médio" value={`${currencySymbol} ${overview.avgCPC.toFixed(2)}`} icon={DollarSign} delay={0.25} />
               <KpiCard title="Alcance Total" value={overview.totalReach >= 1000000 ? `${(overview.totalReach / 1000000).toFixed(1)}M` : overview.totalReach.toLocaleString("pt-BR")} icon={Users} delay={0.3} />
             </div>
             {dailyMetrics.length > 0 && (
@@ -100,6 +101,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               campaigns={campaigns}
               dailyMetrics={dailyMetrics}
               datePreset={datePreset || "last_7d"}
+              currencySymbol={currencySymbol}
             />
           </TabsContent>
 
@@ -126,7 +128,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                   <>
                     <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} />
                     <AdSetTable campaign={selectedCampaign} />
-                    <CreativeGrid campaign={selectedCampaign} />
+                    <CreativeGrid campaign={selectedCampaign} clientId={clientId} currencySymbol={currencySymbol} />
                   </>
                 )}
               </>
@@ -139,7 +141,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           <TabsContent value="creatives" className="space-y-6">
             {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).map(c => (
-              <CreativeGrid key={c.id} campaign={c} />
+              <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} />
             ))}
             {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).length === 0 && (
               <div className="text-center py-16 text-muted-foreground text-sm">

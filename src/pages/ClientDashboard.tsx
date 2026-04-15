@@ -127,6 +127,7 @@ export default function ClientDashboard() {
           metaData={metaData}
           metaLoading={metaLoading}
           metaError={metaError as Error | null}
+          currencySymbol={client.currency_symbol || "R$"}
         />
       </main>
     </div>

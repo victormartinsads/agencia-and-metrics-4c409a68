@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           ad_account_ids: string[]
           created_at: string
+          currency_symbol: string
           ga_property_id: string | null
           id: string
           meta_access_token: string
@@ -28,6 +29,7 @@ export type Database = {
         Insert: {
           ad_account_ids?: string[]
           created_at?: string
+          currency_symbol?: string
           ga_property_id?: string | null
           id?: string
           meta_access_token: string
@@ -38,6 +40,7 @@ export type Database = {
         Update: {
           ad_account_ids?: string[]
           created_at?: string
+          currency_symbol?: string
           ga_property_id?: string | null
           id?: string
           meta_access_token?: string
@@ -46,6 +49,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      creative_metric_overrides: {
+        Row: {
+          client_id: string
+          created_at: string
+          creative_id: string
+          id: string
+          metric_name: string
+          metric_value: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          creative_id: string
+          id?: string
+          metric_name: string
+          metric_value: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          creative_id?: string
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_metric_overrides_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       funnel_notes: {
         Row: {

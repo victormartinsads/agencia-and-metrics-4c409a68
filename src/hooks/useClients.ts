@@ -7,6 +7,7 @@ export interface Client {
   slug: string;
   meta_access_token: string;
   ad_account_ids: string[];
+  currency_symbol: string;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export type ClientInsert = {
   name: string;
   meta_access_token: string;
   ad_account_ids: string[];
+  currency_symbol?: string;
 };
 
 function generateSlug(name: string): string {

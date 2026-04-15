@@ -20,6 +20,7 @@ interface Props {
   dailyMetrics: DailyMetric[];
   datePreset: string;
   previousCampaigns?: Campaign[];
+  currencySymbol?: string;
 }
 
 const DEFAULT_METRICS = [
@@ -27,7 +28,7 @@ const DEFAULT_METRICS = [
   "cpl", "cpa", "roas", "ctr", "cpc", "cpm", "conversionRate",
 ];
 
-export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, previousCampaigns }: Props) {
+export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, previousCampaigns, currencySymbol = "R$" }: Props) {
   const [visibleMetrics, setVisibleMetrics] = useState<string[]>(DEFAULT_METRICS);
   const analysis = useComoEstamos(campaigns, previousCampaigns);
 
@@ -58,6 +59,8 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
         byCPA={analysis.topCreativesByCPA}
         byCTR={analysis.topCreativesByCTR}
         byConversions={analysis.topCreativesByConv}
+        clientId={clientId}
+        currencySymbol={currencySymbol}
       />
 
       {/* Objective Analysis */}

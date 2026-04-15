@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Creative } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Pencil } from "lucide-react";
+import { useCreativeOverrides, applyOverrides } from "@/hooks/useCreativeOverrides";
+import { CreativeEditModal } from "@/components/dashboard/CreativeEditModal";
 
 interface CreativeWithCampaign extends Creative {
   campaignName: string;
@@ -10,11 +14,18 @@ interface Props {
   byCPA: CreativeWithCampaign[];
   byCTR: CreativeWithCampaign[];
   byConversions: CreativeWithCampaign[];
+  clientId?: string;
+  currencySymbol?: string;
 }
 
-function PodiumCard({ creative, rank, metric, metricLabel }: { creative: CreativeWithCampaign; rank: number; metric: string; metricLabel: string }) {
-  const heights = ["h-36", "h-28", "h-24"];
-  const colors = ["border-yellow-500/50 bg-yellow-500/10", "border-muted bg-muted/30", "border-orange-700/50 bg-orange-700/10"];
+function PodiumCard({ creative, rank, metric, metricLabel, onEdit, hasOverride }: {
+  creative: CreativeWithCampaign;
+  rank: number;
+  metric: string;
+  metricLabel: string;
+  onEdit?: () => void;
+  hasOverride?: boolean;
+}) {
   const medals = ["🥇", "🥈", "🥉"];
 
   return (
@@ -22,8 +33,20 @@ function PodiumCard({ creative, rank, metric, metricLabel }: { creative: Creativ
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: rank * 0.1 }}
-      className={`flex flex-col items-center gap-2 ${rank === 0 ? "order-2" : rank === 1 ? "order-1 mt-4" : "order-3 mt-6"}`}
+      className={`flex flex-col items-center gap-2 relative group ${rank === 0 ? "order-2" : rank === 1 ? "order-1 mt-4" : "order-3 mt-6"}`}
     >
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="absolute -top-1 -right-1 z-10 bg-card/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
+          title="Editar métricas"
+        >
+          <Pencil className="h-3 w-3 text-primary" />
+        </button>
+      )}
+      {hasOverride && (
+        <span className="absolute -top-1 -left-1 z-10 text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full font-medium">editado</span>
+      )}
       <div className="relative">
         <img
           src={creative.thumbnail}
@@ -43,39 +66,87 @@ function PodiumCard({ creative, rank, metric, metricLabel }: { creative: Creativ
   );
 }
 
-export function CreativePodium({ byCPA, byCTR, byConversions }: Props) {
+export function CreativePodium({ byCPA, byCTR, byConversions, clientId, currencySymbol = "R$" }: Props) {
+  const { data: overrides = [] } = useCreativeOverrides(clientId);
+  const [editingCreative, setEditingCreative] = useState<CreativeWithCampaign | null>(null);
+
+  const getOv = (c: CreativeWithCampaign) => applyOverrides(c.id, {
+    conversions: c.conversions,
+    spend: c.spend,
+    ctr: c.ctr,
+    impressions: c.impressions,
+    clicks: c.clicks,
+    roas: c.roas,
+  }, overrides);
+
   const renderPodium = (items: CreativeWithCampaign[], metricFn: (c: CreativeWithCampaign) => string, label: string) => {
     if (items.length === 0) return <p className="text-center text-muted-foreground text-sm py-8">Sem criativos com dados suficientes</p>;
     return (
       <div className="flex justify-center gap-6 py-4">
-        {items.slice(0, 3).map((c, i) => (
-          <PodiumCard key={c.id} creative={c} rank={i} metric={metricFn(c)} metricLabel={label} />
-        ))}
+        {items.slice(0, 3).map((c, i) => {
+          const hasOv = overrides.some(o => o.creative_id === c.id);
+          return (
+            <PodiumCard
+              key={c.id}
+              creative={c}
+              rank={i}
+              metric={metricFn(c)}
+              metricLabel={label}
+              onEdit={clientId ? () => setEditingCreative(c) : undefined}
+              hasOverride={hasOv}
+            />
+          );
+        })}
       </div>
     );
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-      <h3 className="text-lg font-bold text-card-foreground">🏅 Pódio de Criativos</h3>
-      <div className="rounded-xl border border-border bg-card p-4">
-        <Tabs defaultValue="cpa">
-          <TabsList className="bg-secondary/50">
-            <TabsTrigger value="cpa">Menor CPA</TabsTrigger>
-            <TabsTrigger value="ctr">Maior CTR</TabsTrigger>
-            <TabsTrigger value="conv">Mais Conversões</TabsTrigger>
-          </TabsList>
-          <TabsContent value="cpa">
-            {renderPodium(byCPA, c => `R$ ${(c.spend / c.conversions).toFixed(2)}`, "CPA")}
-          </TabsContent>
-          <TabsContent value="ctr">
-            {renderPodium(byCTR, c => `${c.ctr.toFixed(2)}%`, "CTR")}
-          </TabsContent>
-          <TabsContent value="conv">
-            {renderPodium(byConversions, c => `${c.conversions}`, "Conversões")}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </motion.div>
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+        <h3 className="text-lg font-bold text-card-foreground">🏅 Pódio de Criativos</h3>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <Tabs defaultValue="cpa">
+            <TabsList className="bg-secondary/50">
+              <TabsTrigger value="cpa">Menor CPA</TabsTrigger>
+              <TabsTrigger value="ctr">Maior CTR</TabsTrigger>
+              <TabsTrigger value="conv">Mais Conversões</TabsTrigger>
+            </TabsList>
+            <TabsContent value="cpa">
+              {renderPodium(byCPA, c => {
+                const ov = getOv(c);
+                const cpa = ov.conversions > 0 ? ov.spend / ov.conversions : 0;
+                return `${currencySymbol} ${cpa.toFixed(2)}`;
+              }, "CPA")}
+            </TabsContent>
+            <TabsContent value="ctr">
+              {renderPodium(byCTR, c => `${getOv(c).ctr.toFixed(2)}%`, "CTR")}
+            </TabsContent>
+            <TabsContent value="conv">
+              {renderPodium(byConversions, c => `${getOv(c).conversions}`, "Conversões")}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </motion.div>
+
+      {editingCreative && clientId && (
+        <CreativeEditModal
+          open={!!editingCreative}
+          onOpenChange={(open) => !open && setEditingCreative(null)}
+          clientId={clientId}
+          creativeId={editingCreative.id}
+          creativeName={editingCreative.name}
+          existingOverrides={overrides}
+          metrics={[
+            { key: "conversions", label: "Conversões", original: editingCreative.conversions },
+            { key: "spend", label: "Investimento", original: editingCreative.spend },
+            { key: "ctr", label: "CTR (%)", original: editingCreative.ctr },
+            { key: "impressions", label: "Impressões", original: editingCreative.impressions },
+            { key: "clicks", label: "Cliques", original: editingCreative.clicks },
+            { key: "roas", label: "ROAS", original: editingCreative.roas },
+          ]}
+        />
+      )}
+    </>
   );
 }

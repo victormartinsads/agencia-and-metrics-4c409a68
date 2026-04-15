@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -22,10 +22,11 @@ export default function ClientsPage() {
     name: "",
     meta_access_token: "",
     ad_account_ids: [""],
+    currency_symbol: "R$",
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""] });
+    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -35,6 +36,7 @@ export default function ClientsPage() {
       name: c.name,
       meta_access_token: c.meta_access_token,
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
+      currency_symbol: c.currency_symbol || "R$",
     });
     setEditingId(c.id);
     setShowForm(true);
@@ -189,6 +191,26 @@ export default function ClientsPage() {
                       </Button>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5" /> Símbolo da Moeda
+                  </Label>
+                  <select
+                    value={form.currency_symbol || "R$"}
+                    onChange={(e) => setForm({ ...form, currency_symbol: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="R$">R$ (Real)</option>
+                    <option value="$">$ (Dólar)</option>
+                    <option value="€">€ (Euro)</option>
+                    <option value="£">£ (Libra)</option>
+                    <option value="¥">¥ (Iene)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Símbolo exibido nos valores monetários do dashboard
+                  </p>
                 </div>
 
                 <div className="flex gap-2 pt-2">
