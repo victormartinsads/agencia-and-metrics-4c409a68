@@ -6,9 +6,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { summary } = await req.json();
-    if (!summary) {
-      return new Response(JSON.stringify({ error: "summary required" }), {
+    const body = await req.json();
+    const { summary, prompt, clientId } = body;
+    if (!summary && !prompt) {
+      return new Response(JSON.stringify({ error: "summary or prompt required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -22,6 +23,39 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Free-form prompt mode (used by ComoEstamos insights/report)
+    if (prompt) {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: "Você é um especialista em marketing digital e Meta Ads. Responda em português brasileiro de forma clara e acionável." },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const t = await response.text();
+        console.error("AI error:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const aiData = await response.json();
+      const text = aiData.choices?.[0]?.message?.content || "";
+      return new Response(JSON.stringify({ insights: text, text }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Structured tool-calling mode (used by FunnelAIInsights)
     const systemPrompt = `Você é um especialista em marketing digital e análise de funil Meta Ads. 
 Analise os dados fornecidos e gere insights estratégicos em português brasileiro.
 
@@ -81,24 +115,11 @@ Seja direto e prático. Use números dos dados.`;
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const t = await response.text();
       console.error("AI error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "AI error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const aiData = await response.json();
