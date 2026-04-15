@@ -190,7 +190,26 @@ export default function ClientsPage() {
                         <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Conta
                       </Button>
                     )}
-                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5" /> Símbolo da Moeda
+                  </Label>
+                  <select
+                    value={form.currency_symbol || "R$"}
+                    onChange={(e) => setForm({ ...form, currency_symbol: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="R$">R$ (Real)</option>
+                    <option value="$">$ (Dólar)</option>
+                    <option value="€">€ (Euro)</option>
+                    <option value="£">£ (Libra)</option>
+                    <option value="¥">¥ (Iene)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Símbolo exibido nos valores monetários do dashboard
+                  </p>
                 </div>
 
                 <div className="flex gap-2 pt-2">
