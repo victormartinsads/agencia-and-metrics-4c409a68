@@ -190,6 +190,7 @@ export default function ClientsPage() {
                         <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Conta
                       </Button>
                     )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
