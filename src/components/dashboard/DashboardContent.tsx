@@ -27,9 +27,10 @@ interface Props {
   metaData: MetaAdsData | undefined;
   metaLoading: boolean;
   metaError: Error | null;
+  currencySymbol?: string;
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$" }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
 
