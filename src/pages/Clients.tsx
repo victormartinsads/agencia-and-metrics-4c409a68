@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -22,10 +22,11 @@ export default function ClientsPage() {
     name: "",
     meta_access_token: "",
     ad_account_ids: [""],
+    currency_symbol: "R$",
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""] });
+    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -35,6 +36,7 @@ export default function ClientsPage() {
       name: c.name,
       meta_access_token: c.meta_access_token,
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
+      currency_symbol: c.currency_symbol || "R$",
     });
     setEditingId(c.id);
     setShowForm(true);
