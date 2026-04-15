@@ -101,6 +101,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               campaigns={campaigns}
               dailyMetrics={dailyMetrics}
               datePreset={datePreset || "last_7d"}
+              currencySymbol={currencySymbol}
             />
           </TabsContent>
 
