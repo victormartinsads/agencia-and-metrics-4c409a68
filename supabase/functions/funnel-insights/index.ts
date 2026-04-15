@@ -6,9 +6,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { summary } = await req.json();
-    if (!summary) {
-      return new Response(JSON.stringify({ error: "summary required" }), {
+    const body = await req.json();
+    const { summary, prompt, clientId } = body;
+    if (!summary && !prompt) {
+      return new Response(JSON.stringify({ error: "summary or prompt required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
