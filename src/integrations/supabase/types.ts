@@ -22,6 +22,7 @@ export type Database = {
           ga_property_id: string | null
           id: string
           meta_access_token: string
+          monthly_revenue: number | null
           name: string
           slug: string
           updated_at: string
@@ -33,6 +34,7 @@ export type Database = {
           ga_property_id?: string | null
           id?: string
           meta_access_token: string
+          monthly_revenue?: number | null
           name: string
           slug: string
           updated_at?: string
@@ -44,6 +46,7 @@ export type Database = {
           ga_property_id?: string | null
           id?: string
           meta_access_token?: string
+          monthly_revenue?: number | null
           name?: string
           slug?: string
           updated_at?: string
@@ -123,6 +126,47 @@ export type Database = {
           },
         ]
       }
+      funnel_stages: {
+        Row: {
+          campaign_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          metric_key: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          metric_key?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          metric_key?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_stages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_tokens: {
         Row: {
           access_token: string
@@ -192,6 +236,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "meta_ads_cache_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_insights: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          date_preset: string
+          id: string
+          is_manual: boolean
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content?: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          is_manual?: boolean
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          is_manual?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_insights_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
