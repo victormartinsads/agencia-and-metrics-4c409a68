@@ -15,6 +15,7 @@ export interface MetaAdsData {
     avgROAS: number;
     totalReach: number;
   };
+  accountErrors?: { accountId: string; message: string }[];
 }
 
 export function useMetaAds(clientId: string | undefined, datePreset = "last_7d") {
