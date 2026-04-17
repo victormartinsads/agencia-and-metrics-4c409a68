@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Campaign, DailyMetric } from "@/data/mockMetaData";
 
@@ -32,4 +32,17 @@ export function useMetaAds(clientId: string | undefined, datePreset = "last_7d")
     staleTime: 5 * 60 * 1000, // 5 min cache
     retry: 1,
   });
+}
+
+export function useRefreshMetaAds() {
+  const qc = useQueryClient();
+  return async (clientId: string, datePreset = "last_7d") => {
+    const { data, error } = await supabase.functions.invoke("meta-ads", {
+      body: { clientId, datePreset, forceRefresh: true },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    qc.setQueryData(["meta-ads", clientId, datePreset], data);
+    return data as MetaAdsData;
+  };
 }

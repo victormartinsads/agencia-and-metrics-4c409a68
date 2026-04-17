@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId, datePreset } = await req.json();
+    const { clientId, datePreset, forceRefresh } = await req.json();
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
         status: 400,
@@ -179,15 +179,15 @@ Deno.serve(async (req) => {
 
     const preset = datePreset || "last_7d";
 
-    // 1. Check cache first
+    // 1. Check cache first (skip if forceRefresh)
     const cached = await getCachedData(supabase, clientId, preset);
-    if (cached && new Date(cached.expires_at) > new Date()) {
+    if (!forceRefresh && cached && new Date(cached.expires_at) > new Date()) {
       console.log(`Cache HIT for ${clientId}/${preset}`);
       return new Response(JSON.stringify(cached.response_data), {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
       });
     }
-    console.log(`Cache MISS for ${clientId}/${preset}`);
+    console.log(`Cache ${forceRefresh ? "BYPASS (force refresh)" : "MISS"} for ${clientId}/${preset}`);
 
     // 2. Fetch from Meta API
     const { data: client, error: dbError } = await supabase
