@@ -3,9 +3,10 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Loader2, Trophy } from "lucide-react";
+import { Loader2, Trophy, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { Client } from "@/hooks/useClients";
-import { useMetaAds } from "@/hooks/useMetaAds";
+import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -23,6 +24,8 @@ const DATE_PRESETS = [
 export default function PodioCreatives() {
   const { slug } = useParams<{ slug: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: ["client-by-slug", slug],
@@ -39,6 +42,19 @@ export default function PodioCreatives() {
   });
 
   const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(client?.id, datePreset);
+
+  const handleRefresh = async () => {
+    if (!client?.id || refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshMetaAds(client.id, datePreset);
+      toast.success("Dados atualizados!");
+    } catch (e: any) {
+      toast.error("Erro ao atualizar", { description: e.message });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (clientLoading) {
     return (
@@ -74,16 +90,27 @@ export default function PodioCreatives() {
               <p className="text-xs text-muted-foreground">Ranking de Criativos • Meta Ads</p>
             </div>
           </div>
-          <Select value={datePreset} onValueChange={setDatePreset}>
-            <SelectTrigger className="w-[180px] h-9 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_PRESETS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || metaLoading}
+              className="h-9 px-3 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              title="Forçar atualização dos dados (ignora cache)"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Atualizando..." : "Atualizar"}
+            </button>
+            <Select value={datePreset} onValueChange={setDatePreset}>
+              <SelectTrigger className="w-[180px] h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_PRESETS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </header>
 
