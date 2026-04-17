@@ -131,7 +131,25 @@ export default function SharedCreatives() {
           </motion.div>
         )}
 
-        {!metaLoading && !metaError && campaignsWithCreatives.length === 0 && (
+        {!metaLoading && metaData?.accountErrors && metaData.accountErrors.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-2"
+          >
+            <p className="text-sm font-semibold text-yellow-400">⚠️ Problemas de acesso à Meta Ads</p>
+            {metaData.accountErrors.map((e, i) => (
+              <p key={i} className="text-xs text-yellow-200/80">
+                <strong>{e.accountId}:</strong> {e.message}
+              </p>
+            ))}
+            <p className="text-[10px] text-muted-foreground pt-1">
+              O token de acesso pode ter expirado ou perdido as permissões necessárias. Acesse as configurações do cliente para renovar.
+            </p>
+          </motion.div>
+        )}
+
+        {!metaLoading && !metaError && campaignsWithCreatives.length === 0 && (!metaData?.accountErrors || metaData.accountErrors.length === 0) && (
           <div className="text-center py-20 text-muted-foreground text-sm">
             Nenhum criativo encontrado para campanhas ativas no período
           </div>
