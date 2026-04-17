@@ -208,6 +208,7 @@ Deno.serve(async (req) => {
 
     const allCampaigns: any[] = [];
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+    const accountErrors: { accountId: string; message: string }[] = [];
     let hitRateLimit = false;
 
     // Process all ad accounts concurrently (batched)
@@ -215,6 +216,7 @@ Deno.serve(async (req) => {
       adAccountIds.map(async (accountId) => {
         const actId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
         const campaigns: any[] = [];
+        let accountError: string | null = null;
 
         const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
 
@@ -222,8 +224,10 @@ Deno.serve(async (req) => {
           const fetched = await fetchMeta<any>(campaignsUrl);
           campaigns.push(...fetched);
         } catch (error) {
-          console.error(`Meta API error for ${actId}:`, error);
-          if (String(error).includes("request limit") || String(error).includes("too many calls")) {
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`Meta API error for ${actId}:`, msg);
+          accountError = msg;
+          if (msg.includes("request limit") || msg.includes("too many calls")) {
             hitRateLimit = true;
           }
         }
@@ -250,13 +254,16 @@ Deno.serve(async (req) => {
           console.error(`Daily insights error for ${actId}:`, e);
         }
 
-        return { campaigns, dailyData };
+        return { campaigns, dailyData, accountId: actId, accountError };
       })
     );
 
     for (const result of accountResults) {
       if (result.status !== "fulfilled") continue;
-      const { campaigns, dailyData } = result.value;
+      const { campaigns, dailyData, accountId: aId, accountError } = result.value;
+      if (accountError) {
+        accountErrors.push({ accountId: aId, message: accountError });
+      }
 
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
@@ -444,6 +451,7 @@ Deno.serve(async (req) => {
       campaigns: allCampaigns,
       dailyMetrics,
       overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
+      accountErrors,
     };
 
     // 4. Save to cache only if we got actual data (don't cache empty results)
