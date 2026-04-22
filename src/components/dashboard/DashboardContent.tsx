@@ -89,7 +89,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             </div>
             {dailyMetrics.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SpendChart data={dailyMetrics} />
+                <SpendChart data={dailyMetrics} currencySymbol={currencySymbol} />
                 <ConversionsChart data={dailyMetrics} />
               </div>
             )}
@@ -119,15 +119,15 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               <>
                 {!selectedCampaign && (
                   <>
-                    <CampaignTable campaigns={campaigns} onSelect={setSelectedCampaign} selectedId={selectedCampaign?.id} />
-                    <CampaignInsights campaigns={campaigns} />
+                    <CampaignTable campaigns={campaigns} onSelect={setSelectedCampaign} selectedId={selectedCampaign?.id} currencySymbol={currencySymbol} />
+                    <CampaignInsights campaigns={campaigns} currencySymbol={currencySymbol} />
                   </>
                 )}
 
                 {selectedCampaign && (
                   <>
-                    <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} />
-                    <AdSetTable campaign={selectedCampaign} />
+                    <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} currencySymbol={currencySymbol} />
+                    <AdSetTable campaign={selectedCampaign} currencySymbol={currencySymbol} />
                     <CreativeGrid campaign={selectedCampaign} clientId={clientId} currencySymbol={currencySymbol} />
                   </>
                 )}
@@ -155,7 +155,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-6">
-            <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} />
+            <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} currencySymbol={currencySymbol} />
           </TabsContent>
         </Tabs>
       )}
