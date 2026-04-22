@@ -12,23 +12,27 @@ interface Props {
   metrics: ComoEstamosMetrics;
   variations: Record<string, Variation>;
   visible: string[];
+  currencySymbol?: string;
 }
 
-const METRIC_CONFIG: Record<string, { label: string; icon: any; format: (v: number) => string; invertTrend?: boolean }> = {
-  totalSpend: { label: "Investimento Total", icon: DollarSign, format: v => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-  totalResults: { label: "Resultados", icon: Target, format: v => v.toLocaleString("pt-BR") },
-  totalLeads: { label: "Leads", icon: Users, format: v => v.toLocaleString("pt-BR") },
-  totalConversations: { label: "Conversas Iniciadas", icon: MessageSquare, format: v => v.toLocaleString("pt-BR") },
-  cpl: { label: "CPL", icon: DollarSign, format: v => `R$ ${v.toFixed(2)}`, invertTrend: true },
-  cpa: { label: "CPA", icon: DollarSign, format: v => `R$ ${v.toFixed(2)}`, invertTrend: true },
-  roas: { label: "ROAS", icon: TrendingUp, format: v => `${v.toFixed(2)}x` },
-  ctr: { label: "CTR", icon: Percent, format: v => `${v.toFixed(2)}%` },
-  cpc: { label: "CPC", icon: MousePointerClick, format: v => `R$ ${v.toFixed(2)}`, invertTrend: true },
-  cpm: { label: "CPM", icon: Eye, format: v => `R$ ${v.toFixed(2)}`, invertTrend: true },
-  conversionRate: { label: "Taxa de Conversão", icon: Target, format: v => `${v.toFixed(2)}%` },
-};
+function buildMetricConfig(currencySymbol: string): Record<string, { label: string; icon: any; format: (v: number) => string; invertTrend?: boolean }> {
+  return {
+    totalSpend: { label: "Investimento Total", icon: DollarSign, format: v => `${currencySymbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+    totalResults: { label: "Resultados", icon: Target, format: v => v.toLocaleString("pt-BR") },
+    totalLeads: { label: "Leads", icon: Users, format: v => v.toLocaleString("pt-BR") },
+    totalConversations: { label: "Conversas Iniciadas", icon: MessageSquare, format: v => v.toLocaleString("pt-BR") },
+    cpl: { label: "CPL", icon: DollarSign, format: v => `${currencySymbol} ${v.toFixed(2)}`, invertTrend: true },
+    cpa: { label: "CPA", icon: DollarSign, format: v => `${currencySymbol} ${v.toFixed(2)}`, invertTrend: true },
+    roas: { label: "ROAS", icon: TrendingUp, format: v => `${v.toFixed(2)}x` },
+    ctr: { label: "CTR", icon: Percent, format: v => `${v.toFixed(2)}%` },
+    cpc: { label: "CPC", icon: MousePointerClick, format: v => `${currencySymbol} ${v.toFixed(2)}`, invertTrend: true },
+    cpm: { label: "CPM", icon: Eye, format: v => `${currencySymbol} ${v.toFixed(2)}`, invertTrend: true },
+    conversionRate: { label: "Taxa de Conversão", icon: Target, format: v => `${v.toFixed(2)}%` },
+  };
+}
 
-export function KPIOverview({ metrics, variations, visible }: Props) {
+export function KPIOverview({ metrics, variations, visible, currencySymbol = "R$" }: Props) {
+  const METRIC_CONFIG = buildMetricConfig(currencySymbol);
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {visible.map((key, i) => {

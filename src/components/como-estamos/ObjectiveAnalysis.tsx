@@ -3,9 +3,10 @@ import type { ObjectiveGroup } from "@/hooks/useComoEstamos";
 
 interface Props {
   groups: ObjectiveGroup[];
+  currencySymbol?: string;
 }
 
-export function ObjectiveAnalysis({ groups }: Props) {
+export function ObjectiveAnalysis({ groups, currencySymbol = "R$" }: Props) {
   if (groups.length === 0) return null;
 
   return (
@@ -21,7 +22,7 @@ export function ObjectiveAnalysis({ groups }: Props) {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Investimento</p>
-                <p className="font-semibold">R$ {g.totalSpend.toFixed(2)}</p>
+                <p className="font-semibold">{currencySymbol} {g.totalSpend.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Resultados</p>
@@ -29,7 +30,7 @@ export function ObjectiveAnalysis({ groups }: Props) {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">CPA Médio</p>
-                <p className="font-semibold">R$ {g.avgCPA.toFixed(2)}</p>
+                <p className="font-semibold">{currencySymbol} {g.avgCPA.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">CTR Médio</p>
