@@ -32,11 +32,11 @@ export default function PodioCreatives() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, slug")
+        .select("id, name, slug, currency_symbol")
         .eq("slug", slug!)
         .single();
       if (error) throw error;
-      return data as Pick<Client, "id" | "name" | "slug">;
+      return data as Pick<Client, "id" | "name" | "slug" | "currency_symbol">;
     },
     enabled: !!slug,
   });
@@ -156,7 +156,7 @@ export default function PodioCreatives() {
         )}
 
         {campaignsWithCreatives.map((campaign) => (
-          <CreativeGrid key={campaign.id} campaign={campaign} />
+          <CreativeGrid key={campaign.id} campaign={campaign} clientId={client.id} currencySymbol={client.currency_symbol || "R$"} />
         ))}
       </main>
 
