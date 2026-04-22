@@ -14,6 +14,7 @@ interface Props {
   data: InstagramInsightsData | undefined;
   isLoading: boolean;
   error: Error | null;
+  currencySymbol?: string;
 }
 
 function MetricBar({ label, value, maxValue }: { label: string; value: number; maxValue: number }) {
@@ -101,7 +102,7 @@ function HorizontalBarChart({ data, title, legend }: { data: { day: string; valu
   );
 }
 
-export function BrandingPanel({ data, isLoading, error }: Props) {
+export function BrandingPanel({ data, isLoading, error, currencySymbol = "R$" }: Props) {
   if (error) {
     return (
       <motion.div
@@ -201,7 +202,7 @@ export function BrandingPanel({ data, isLoading, error }: Props) {
       {/* Row 2: KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard title="Video Plays" value={m.totalVideoPlays.toLocaleString("pt-BR")} icon={Play} delay={0} />
-        <KpiCard title="C/Video Play" value={`R$ ${m.costPerVideoPlay.toFixed(2)}`} icon={TrendingUp} delay={0.05} />
+        <KpiCard title="C/Video Play" value={`${currencySymbol} ${m.costPerVideoPlay.toFixed(2)}`} icon={TrendingUp} delay={0.05} />
         <KpiCard title="Alcance Ads (30d)" value={m.totalAdReach >= 1000000 ? `${(m.totalAdReach / 1000000).toFixed(1)}M` : m.totalAdReach.toLocaleString("pt-BR")} icon={Users} delay={0.1} />
         <KpiCard title="CTR" value={`${m.avgCTR}%`} icon={Percent} delay={0.15} />
       </div>

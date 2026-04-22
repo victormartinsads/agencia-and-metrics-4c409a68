@@ -6,9 +6,10 @@ import type { AdSetPerformance } from "@/hooks/useComoEstamos";
 
 interface Props {
   adSets: AdSetPerformance[];
+  currencySymbol?: string;
 }
 
-export function WinningAdSets({ adSets }: Props) {
+export function WinningAdSets({ adSets, currencySymbol = "R$" }: Props) {
   if (adSets.length === 0) return null;
 
   return (
@@ -40,9 +41,9 @@ export function WinningAdSets({ adSets }: Props) {
                 </TableCell>
                 <TableCell className="font-medium text-sm max-w-[200px] truncate">{a.name}</TableCell>
                 <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate">{a.campaignName}</TableCell>
-                <TableCell className="text-sm">R$ {a.spend.toFixed(2)}</TableCell>
+                <TableCell className="text-sm">{currencySymbol} {a.spend.toFixed(2)}</TableCell>
                 <TableCell className="text-sm">{a.conversions}</TableCell>
-                <TableCell className="text-sm">R$ {a.cpa.toFixed(2)}</TableCell>
+                <TableCell className="text-sm">{currencySymbol} {a.cpa.toFixed(2)}</TableCell>
                 <TableCell className="text-sm">{a.ctr.toFixed(2)}%</TableCell>
               </TableRow>
             ))}

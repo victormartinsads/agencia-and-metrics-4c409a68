@@ -5,19 +5,20 @@ import { ArrowLeft, DollarSign, Eye, MousePointerClick, Target, Users, Percent, 
 interface Props {
   campaign: Campaign;
   onBack: () => void;
+  currencySymbol?: string;
 }
 
-export function CampaignDetail({ campaign, onBack }: Props) {
+export function CampaignDetail({ campaign, onBack, currencySymbol = "R$" }: Props) {
   const resultLabel = campaign.primaryResultLabel || "Conversões";
 
   const metrics = [
-    { label: "Investimento", value: `R$ ${campaign.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign },
+    { label: "Investimento", value: `${currencySymbol} ${campaign.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign },
     { label: "Impressões", value: campaign.impressions >= 1000000 ? `${(campaign.impressions / 1000000).toFixed(1)}M` : campaign.impressions.toLocaleString("pt-BR"), icon: Eye },
     { label: "Cliques", value: campaign.clicks.toLocaleString("pt-BR"), icon: MousePointerClick },
     { label: resultLabel, value: campaign.conversions.toLocaleString("pt-BR"), icon: Target },
     { label: "CTR", value: `${campaign.ctr}%`, icon: Percent },
-    { label: "CPC", value: `R$ ${campaign.cpc.toFixed(2)}`, icon: DollarSign },
-    { label: "CPA", value: campaign.costPerConversion > 0 ? `R$ ${campaign.costPerConversion.toFixed(2)}` : "—", icon: BarChart3 },
+    { label: "CPC", value: `${currencySymbol} ${campaign.cpc.toFixed(2)}`, icon: DollarSign },
+    { label: "CPA", value: campaign.costPerConversion > 0 ? `${currencySymbol} ${campaign.costPerConversion.toFixed(2)}` : "—", icon: BarChart3 },
     { label: "ROAS", value: campaign.roas > 0 ? `${campaign.roas}x` : "—", icon: BarChart3 },
     { label: "Alcance", value: campaign.reach >= 1000000 ? `${(campaign.reach / 1000000).toFixed(1)}M` : campaign.reach.toLocaleString("pt-BR"), icon: Users },
     { label: "Frequência", value: `${campaign.frequency}x`, icon: RefreshCw },

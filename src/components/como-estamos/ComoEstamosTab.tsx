@@ -136,13 +136,13 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
       )}
 
       {/* KPI Cards */}
-      <KPIOverview metrics={analysis.metrics} variations={analysis.variations} visible={visibleMetrics} />
+      <KPIOverview metrics={analysis.metrics} variations={analysis.variations} visible={visibleMetrics} currencySymbol={currencySymbol} />
 
       {/* Campaign Analysis Table */}
-      <CampaignAnalysisTable campaigns={analysis.classified} />
+      <CampaignAnalysisTable campaigns={analysis.classified} currencySymbol={currencySymbol} />
 
       {/* Winning Ad Sets */}
-      <WinningAdSets adSets={analysis.topAdSets} />
+      <WinningAdSets adSets={analysis.topAdSets} currencySymbol={currencySymbol} />
 
       {/* Creative Podium with campaign filter */}
       <div className="space-y-3">
@@ -170,7 +170,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
       </div>
 
       {/* Objective Analysis */}
-      <ObjectiveAnalysis groups={analysis.objectiveGroups} />
+      <ObjectiveAnalysis groups={analysis.objectiveGroups} currencySymbol={currencySymbol} />
 
       {/* Editable Funnel */}
       <EditableFunnel

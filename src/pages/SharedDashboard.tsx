@@ -29,11 +29,11 @@ export default function SharedDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name")
+        .select("id, name, currency_symbol")
         .eq("id", clientId!)
         .single();
       if (error) throw error;
-      return data as Pick<Client, "id" | "name">;
+      return data as Pick<Client, "id" | "name" | "currency_symbol">;
     },
     enabled: !!clientId,
   });
@@ -89,6 +89,7 @@ export default function SharedDashboard() {
           metaData={metaData}
           metaLoading={metaLoading}
           metaError={metaError as Error | null}
+          currencySymbol={client.currency_symbol || "R$"}
         />
       </main>
 

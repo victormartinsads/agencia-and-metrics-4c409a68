@@ -8,7 +8,7 @@ interface Insight {
   description: string;
 }
 
-function generateInsights(campaigns: Campaign[]): Insight[] {
+function generateInsights(campaigns: Campaign[], currencySymbol: string = "R$"): Insight[] {
   const insights: Insight[] = [];
   const active = campaigns.filter((c) => c.status === "active" && c.spend > 0);
 
@@ -26,7 +26,7 @@ function generateInsights(campaigns: Campaign[]): Insight[] {
       insights.push({
         type: "alert",
         title: `CPC alto em "${c.name}"`,
-        description: `CPC de R$ ${c.cpc.toFixed(2)} está ${((c.cpc / avgCpc - 1) * 100).toFixed(0)}% acima da média (R$ ${avgCpc.toFixed(2)}). Considere revisar segmentação ou criativos.`,
+        description: `CPC de ${currencySymbol} ${c.cpc.toFixed(2)} está ${((c.cpc / avgCpc - 1) * 100).toFixed(0)}% acima da média (${currencySymbol} ${avgCpc.toFixed(2)}). Considere revisar segmentação ou criativos.`,
       });
     }
 
@@ -80,7 +80,7 @@ function generateInsights(campaigns: Campaign[]): Insight[] {
       insights.push({
         type: "alert",
         title: `Sem conversões em "${c.name}"`,
-        description: `R$ ${c.spend.toFixed(2)} investidos sem resultado. Avalie a landing page, pixel e configuração de eventos.`,
+        description: `${currencySymbol} ${c.spend.toFixed(2)} investidos sem resultado. Avalie a landing page, pixel e configuração de eventos.`,
       });
     }
 
@@ -91,7 +91,7 @@ function generateInsights(campaigns: Campaign[]): Insight[] {
         insights.push({
           type: "improvement",
           title: `CPA elevado em "${c.name}"`,
-          description: `CPA de R$ ${c.costPerConversion.toFixed(2)} é ${((c.costPerConversion / avgCpa - 1) * 100).toFixed(0)}% acima da média. Otimize públicos e lance.`,
+          description: `CPA de ${currencySymbol} ${c.costPerConversion.toFixed(2)} é ${((c.costPerConversion / avgCpa - 1) * 100).toFixed(0)}% acima da média. Otimize públicos e lance.`,
         });
       }
     }
@@ -117,10 +117,11 @@ const iconMap = {
 
 interface Props {
   campaigns: Campaign[];
+  currencySymbol?: string;
 }
 
-export function CampaignInsights({ campaigns }: Props) {
-  const insights = generateInsights(campaigns);
+export function CampaignInsights({ campaigns, currencySymbol = "R$" }: Props) {
+  const insights = generateInsights(campaigns, currencySymbol);
 
   const alerts = insights.filter((i) => i.type === "alert");
   const improvements = insights.filter((i) => i.type === "improvement");

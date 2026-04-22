@@ -14,9 +14,10 @@ interface AdSetMetrics {
 
 interface Props {
   campaign: Campaign;
+  currencySymbol?: string;
 }
 
-export function AdSetTable({ campaign }: Props) {
+export function AdSetTable({ campaign, currencySymbol = "R$" }: Props) {
   const adSetMap = new Map<string, AdSetMetrics>();
 
   for (const cr of campaign.creatives) {
@@ -90,14 +91,14 @@ export function AdSetTable({ campaign }: Props) {
               <tr key={s.name} className="border-b border-border hover:bg-accent/50 transition-colors">
                 <td className="px-4 py-3 font-medium text-card-foreground max-w-[250px] truncate">{s.name}</td>
                 <td className="px-4 py-3 text-card-foreground">{s.adsCount}</td>
-                <td className="px-4 py-3 text-card-foreground">R$ {s.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="px-4 py-3 text-card-foreground">{currencySymbol} {s.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className="px-4 py-3 text-card-foreground">{s.impressions >= 1000 ? `${(s.impressions / 1000).toFixed(0)}K` : s.impressions}</td>
                 <td className="px-4 py-3 text-card-foreground">{s.clicks.toLocaleString("pt-BR")}</td>
                 <td className="px-4 py-3 text-card-foreground">{s.ctr}%</td>
                 <td className="px-4 py-3 font-semibold text-card-foreground">{s.conversions}</td>
                 <td className="px-4 py-3 text-card-foreground">
                   <span className={s.cpa === bestCpa && s.cpa > 0 ? "text-meta-green font-semibold" : ""}>
-                    R$ {s.cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol} {s.cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </td>
               </tr>

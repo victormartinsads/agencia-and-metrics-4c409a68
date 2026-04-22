@@ -17,11 +17,12 @@ const CLASSIFICATION_CONFIG: Record<CampaignClassification, { emoji: string; lab
 
 interface Props {
   campaigns: ClassifiedCampaign[];
+  currencySymbol?: string;
 }
 
 type SortKey = "name" | "spend" | "conversions" | "ctr" | "cpc" | "cpm" | "costPerConversion" | "roas" | "reach" | "frequency";
 
-export function CampaignAnalysisTable({ campaigns }: Props) {
+export function CampaignAnalysisTable({ campaigns, currencySymbol = "R$" }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
@@ -111,12 +112,12 @@ export function CampaignAnalysisTable({ campaigns }: Props) {
                         {c.status === "active" ? "Ativa" : c.status === "paused" ? "Pausada" : "Concluída"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm">R$ {c.spend.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{currencySymbol} {c.spend.toFixed(2)}</TableCell>
                     <TableCell className="text-sm">{c.conversions}</TableCell>
                     <TableCell className="text-sm">{c.ctr.toFixed(2)}%</TableCell>
-                    <TableCell className="text-sm">R$ {c.cpc.toFixed(2)}</TableCell>
-                    <TableCell className="text-sm">R$ {(c.cpm || 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-sm">R$ {c.costPerConversion.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{currencySymbol} {c.cpc.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{currencySymbol} {(c.cpm || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{currencySymbol} {c.costPerConversion.toFixed(2)}</TableCell>
                     <TableCell className="text-sm">{c.roas.toFixed(2)}x</TableCell>
                     <TableCell className="text-sm">{c.reach.toLocaleString("pt-BR")}</TableCell>
                     <TableCell className="text-sm">{c.frequency.toFixed(1)}x</TableCell>
