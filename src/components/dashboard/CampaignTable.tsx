@@ -9,6 +9,7 @@ interface Props {
   campaigns: Campaign[];
   onSelect: (campaign: Campaign) => void;
   selectedId?: string;
+  currencySymbol?: string;
 }
 
 const statusMap = {
@@ -17,7 +18,7 @@ const statusMap = {
   completed: { label: "Finalizada", className: "bg-muted text-muted-foreground border-border" },
 };
 
-export function CampaignTable({ campaigns, onSelect, selectedId }: Props) {
+export function CampaignTable({ campaigns, onSelect, selectedId, currencySymbol = "R$" }: Props) {
   const [activeOnly, setActiveOnly] = useState(false);
 
   const filtered = activeOnly ? campaigns.filter((c) => c.status === "active") : campaigns;
@@ -62,11 +63,11 @@ export function CampaignTable({ campaigns, onSelect, selectedId }: Props) {
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={st.className}>{st.label}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-card-foreground">R$ {c.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-3 text-card-foreground">{currencySymbol} {c.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3 text-card-foreground">{c.impressions >= 1000000 ? `${(c.impressions / 1000000).toFixed(1)}M` : `${(c.impressions / 1000).toFixed(0)}K`}</td>
                   <td className="px-4 py-3 text-card-foreground">{c.clicks.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 text-card-foreground">{c.ctr}%</td>
-                  <td className="px-4 py-3 text-card-foreground">R$ {c.cpc.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-card-foreground">{currencySymbol} {c.cpc.toFixed(2)}</td>
                   <td className="px-4 py-3 font-semibold text-card-foreground">
                     <div className="flex flex-col">
                       <span>{c.conversions}</span>
@@ -76,7 +77,7 @@ export function CampaignTable({ campaigns, onSelect, selectedId }: Props) {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-card-foreground">
-                    {c.costPerConversion > 0 ? `R$ ${c.costPerConversion.toFixed(2)}` : "—"}
+                    {c.costPerConversion > 0 ? `${currencySymbol} ${c.costPerConversion.toFixed(2)}` : "—"}
                   </td>
                   <td className="px-4 py-3 text-card-foreground">
                     {c.reach >= 1000000 ? `${(c.reach / 1000000).toFixed(1)}M` : `${(c.reach / 1000).toFixed(0)}K`}

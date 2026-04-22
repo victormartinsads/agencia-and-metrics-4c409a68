@@ -14,6 +14,7 @@ interface Props {
   data: InstagramInsightsData | undefined;
   isLoading: boolean;
   error: Error | null;
+  currencySymbol?: string;
 }
 
 function MetricBar({ label, value, maxValue }: { label: string; value: number; maxValue: number }) {

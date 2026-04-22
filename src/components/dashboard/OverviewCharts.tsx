@@ -3,12 +3,13 @@ import { DailyMetric } from "@/data/mockMetaData";
 
 interface ChartProps {
   data: DailyMetric[];
+  currencySymbol?: string;
 }
 
-export function SpendChart({ data }: ChartProps) {
+export function SpendChart({ data, currencySymbol = "R$" }: ChartProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">Investimento Diário (R$)</h3>
+      <h3 className="text-sm font-semibold text-card-foreground mb-4">Investimento Diário ({currencySymbol})</h3>
       <ResponsiveContainer width="100%" height={260}>
         <AreaChart data={data}>
           <defs>
@@ -22,7 +23,7 @@ export function SpendChart({ data }: ChartProps) {
           <YAxis tick={{ fontSize: 12 }} stroke="hsl(220, 10%, 46%)" />
           <Tooltip
             contentStyle={{ borderRadius: 12, border: "1px solid hsl(220, 15%, 90%)", fontSize: 13 }}
-            formatter={(v: number) => [`R$ ${v}`, "Investimento"]}
+            formatter={(v: number) => [`${currencySymbol} ${v}`, "Investimento"]}
           />
           <Area type="monotone" dataKey="spend" stroke="hsl(214, 89%, 52%)" fill="url(#spendGrad)" strokeWidth={2} />
         </AreaChart>
