@@ -161,8 +161,26 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
             <Unlink className="h-3.5 w-3.5" /> Desconectar
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {gaData.properties.map((prop) => (
+        {gaData.properties.length === 0 ? (
+          <Card className="p-6 space-y-3 border-dashed">
+            <p className="text-sm text-foreground font-medium">
+              Nenhuma propriedade GA4 encontrada nesta conta Google.
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Possíveis causas:
+              <br />• A conta Google autenticada não tem acesso a nenhuma propriedade do Google Analytics 4.
+              <br />• A propriedade existe em outra conta Google — desconecte e reconecte com a conta correta.
+              <br />• A conta tem apenas Universal Analytics (UA), que foi descontinuado. Crie uma propriedade GA4.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleDisconnect} className="gap-1">
+                <Unlink className="h-3.5 w-3.5" /> Desconectar e tentar outra conta
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {gaData.properties.map((prop) => (
             <Card
               key={prop.id}
               className="p-4 cursor-pointer hover:border-primary transition-colors"
@@ -178,8 +196,9 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
                 </div>
               </div>
             </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     );
   }
