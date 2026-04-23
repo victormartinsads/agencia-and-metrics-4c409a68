@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileSpreadsheet, AlertCircle, Wrench } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, Wrench, Sparkles } from "lucide-react";
 
 import { SectionCard } from "./SectionCard";
 import { ProgressMetric } from "./ProgressMetric";
@@ -20,6 +20,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
+import { MetricBinding } from "./MetricSourceEditor";
 
 interface Props {
   clientId?: string;
@@ -58,6 +59,48 @@ const MQL_METRIC_OPTIONS: MetricOption[] = [
   { key: "smql", label: "sMQL" },
   { key: "qualified_messages", label: "Mensagens Qualif." },
   { key: "qualified_followers", label: "Seguidores Qualif." },
+];
+
+/**
+ * Bindings: each metric_key here is what gets persisted in metric_data_sources.
+ * `allowed` restricts which source types make sense for that metric.
+ */
+const RESULTS_BINDINGS: MetricBinding[] = [
+  { key: "investment", label: "Investimento Total", allowed: ["sheet", "meta", "manual"] },
+  { key: "revenue", label: "Faturamento", allowed: ["sheet", "manual"] },
+  { key: "sales", label: "Vendas", allowed: ["sheet", "meta", "manual"] },
+];
+
+const COST_BINDINGS: MetricBinding[] = [
+  { key: "cps", label: "Custo Por Venda", allowed: ["sheet", "meta", "manual"] },
+  { key: "cpl", label: "Custo Por Lead", allowed: ["sheet", "meta", "manual"] },
+  { key: "cpc", label: "Custo Por Clique", allowed: ["meta", "manual"] },
+  { key: "cpm", label: "CPM", allowed: ["meta", "manual"] },
+  { key: "product_sales", label: "Vendas Por Produto", allowed: ["sheet"] },
+];
+
+const FUNNEL_BINDINGS: MetricBinding[] = [
+  { key: "clicks", label: "Cliques", allowed: ["meta", "manual"] },
+  { key: "pageviews", label: "Visitas Página", allowed: ["ga", "manual"] },
+  { key: "leads", label: "Leads", allowed: ["sheet", "meta", "manual"] },
+  { key: "meetings", label: "Reuniões / sMQL", allowed: ["sheet", "manual"] },
+  { key: "sales", label: "Vendas", allowed: ["sheet", "meta", "manual"] },
+];
+
+const LOWTICKET_BINDINGS: MetricBinding[] = [
+  { key: "low_ticket_meta", label: "Vendas LowTicket Meta", allowed: ["sheet", "manual"] },
+  { key: "low_ticket_google", label: "Vendas LowTicket Google", allowed: ["sheet", "manual"] },
+];
+
+const LEADS_BINDINGS: MetricBinding[] = [
+  { key: "leads_total", label: "Leads Gerados", allowed: ["sheet", "meta", "manual"] },
+];
+
+const MQL_BINDINGS: MetricBinding[] = [
+  { key: "mql", label: "MQL", allowed: ["sheet", "manual"] },
+  { key: "smql", label: "sMQL", allowed: ["sheet", "manual"] },
+  { key: "qualified_messages", label: "Mensagens Qualif.", allowed: ["sheet", "manual"] },
+  { key: "qualified_followers", label: "Seguidores Qualif.", allowed: ["sheet", "manual"] },
 ];
 
 export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbol }: Props) {
