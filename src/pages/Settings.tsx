@@ -1,0 +1,381 @@
+import { Link, Navigate } from "react-router-dom";
+import { useState } from "react";
+import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useClients } from "@/hooks/useClients";
+import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  useMembers,
+  useInviteMember,
+  useSetMemberRole,
+  useRemoveMember,
+} from "@/hooks/useMembers";
+import { toast } from "sonner";
+import { Trash2, UserPlus, Mail } from "lucide-react";
+
+export default function SettingsPage() {
+  const { data: role, isLoading: roleLoading } = useUserRole();
+
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!role?.isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card sticky top-0 z-10">
+        <div className="max-w-[1100px] mx-auto px-6 py-4 flex items-center gap-3">
+          <Link
+            to="/"
+            className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
+          </Link>
+          <div>
+            <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" /> Configurações Gerais
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Painel exclusivo para administradores
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-[1100px] mx-auto px-6 py-6">
+        <Tabs defaultValue="google" className="space-y-6">
+          <TabsList className="bg-card border border-border">
+            <TabsTrigger value="google" className="gap-1.5">
+              <Globe className="h-3.5 w-3.5" /> Google Analytics
+            </TabsTrigger>
+            <TabsTrigger value="members" className="gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Membros
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="gap-1.5">
+              <Shield className="h-3.5 w-3.5" /> Permissões
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="google">
+            <GoogleAnalyticsSection />
+          </TabsContent>
+
+          <TabsContent value="members">
+            <MembersSection />
+          </TabsContent>
+
+          <TabsContent value="permissions">
+            <PermissionsSection />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+function GoogleAnalyticsSection() {
+  const { data: clients, isLoading } = useClients();
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  return (
+    <Card className="p-6 space-y-5">
+      <div>
+        <h2 className="text-base font-semibold text-card-foreground">
+          Conexão Google Analytics por Cliente
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Selecione um cliente para conectar ou trocar a propriedade GA4
+          vinculada.
+        </p>
+      </div>
+
+      <div className="space-y-2 max-w-md">
+        <Label>Cliente</Label>
+        <Select
+          value={selectedClientId}
+          onValueChange={setSelectedClientId}
+          disabled={isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um cliente..." />
+          </SelectTrigger>
+          <SelectContent>
+            {(clients || []).map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name.toUpperCase()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedClientId && (
+        <div className="border-t border-border pt-5">
+          <GoogleAnalyticsPanel clientId={selectedClientId} datePreset="last_7d" />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function MembersSection() {
+  const { data: members, isLoading } = useMembers();
+  const invite = useInviteMember();
+  const setRole = useSetMemberRole();
+  const remove = useRemoveMember();
+  const [email, setEmail] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "editor">("editor");
+
+  const handleInvite = async () => {
+    if (!email.trim()) {
+      toast.error("Informe um email");
+      return;
+    }
+    try {
+      await invite.mutateAsync({ email: email.trim(), role: newRole });
+      toast.success(`Convite enviado para ${email}`);
+      setEmail("");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao convidar");
+    }
+  };
+
+  const handleRoleChange = async (userId: string, role: "admin" | "editor") => {
+    try {
+      await setRole.mutateAsync({ userId, role });
+      toast.success("Função atualizada");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao atualizar função");
+    }
+  };
+
+  const handleRemove = async (userId: string, email: string) => {
+    if (!confirm(`Remover ${email}? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await remove.mutateAsync(userId);
+      toast.success("Membro removido");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">
+            Convidar Novo Membro
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            O usuário receberá um email para definir sua senha e acessar o
+            painel.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_auto] gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Função</Label>
+            <Select value={newRole} onValueChange={(v) => setNewRole(v as any)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button
+              onClick={handleInvite}
+              disabled={invite.isPending}
+              className="gap-1.5 w-full md:w-auto"
+            >
+              {invite.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <UserPlus className="h-3.5 w-3.5" />
+              )}
+              Convidar
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">
+            Membros Ativos ({members?.length || 0})
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Apenas usuários com função atribuída conseguem acessar o sistema.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        ) : !members?.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum membro encontrado.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m) => {
+              const currentRole = m.roles.includes("admin")
+                ? "admin"
+                : m.roles.includes("editor")
+                ? "editor"
+                : null;
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-border bg-background/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {m.email}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {currentRole ? (
+                        <Badge
+                          variant={currentRole === "admin" ? "default" : "secondary"}
+                          className="text-[10px]"
+                        >
+                          {currentRole === "admin" ? "Administrador" : "Editor"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">
+                          Sem função
+                        </Badge>
+                      )}
+                      {m.last_sign_in_at && (
+                        <span className="text-[10px] text-muted-foreground">
+                          Último acesso:{" "}
+                          {new Date(m.last_sign_in_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Select
+                      value={currentRole || ""}
+                      onValueChange={(v) =>
+                        handleRoleChange(m.id, v as "admin" | "editor")
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-32 text-xs">
+                        <SelectValue placeholder="Atribuir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="editor">Editor</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(m.id, m.email)}
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function PermissionsSection() {
+  return (
+    <Card className="p-6 space-y-5">
+      <div>
+        <h2 className="text-base font-semibold text-card-foreground">
+          Níveis de Permissão
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Resumo das ações permitidas para cada função do sistema.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-border bg-background/50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-foreground">Administrador</h3>
+          </div>
+          <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
+            <li>Acesso total ao painel</li>
+            <li>Gerenciar clientes (criar, editar, excluir)</li>
+            <li>Conectar Google Analytics</li>
+            <li>Convidar e remover membros</li>
+            <li>Atribuir funções a outros usuários</li>
+            <li>Acesso a esta tela de configurações</li>
+          </ul>
+        </div>
+        <div className="rounded-lg border border-border bg-background/50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-foreground">Editor</h3>
+          </div>
+          <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
+            <li>Visualizar todos os dashboards</li>
+            <li>Editar dados e anotações dos clientes</li>
+            <li>Sincronizar planilhas e métricas</li>
+            <li>Gerenciar criativos e funis</li>
+            <li>
+              <span className="text-destructive">Sem</span> acesso a configurações de membros ou Google Analytics
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground space-y-2">
+        <p className="font-medium text-foreground">Como funciona</p>
+        <p>
+          As funções são aplicadas via Row-Level Security (RLS) no banco de dados.
+          Ações sensíveis (gestão de membros, conexão Google) usam Edge Functions
+          que validam a função <code className="text-primary">admin</code> antes de executar.
+        </p>
+      </div>
+    </Card>
+  );
+}

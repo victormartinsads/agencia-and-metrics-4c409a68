@@ -1,13 +1,15 @@
 import { Link } from "react-router-dom";
 import { useClients } from "@/hooks/useClients";
+import { useUserRole } from "@/hooks/useUserRole";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, Settings, ArrowRight } from "lucide-react";
+import { BarChart3, Plus, Users, Settings, ArrowRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const { data: clients, isLoading } = useClients();
+  const { data: role } = useUserRole();
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,11 +24,20 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Selecione um cliente para ver o dashboard</p>
             </div>
           </div>
-          <Link to="/clients">
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-1" /> Gerenciar Clientes
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {role?.isAdmin && (
+              <Link to="/settings">
+                <Button variant="outline" size="sm">
+                  <Shield className="h-4 w-4 mr-1" /> Configurações
+                </Button>
+              </Link>
+            )}
+            <Link to="/clients">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1" /> Gerenciar Clientes
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
