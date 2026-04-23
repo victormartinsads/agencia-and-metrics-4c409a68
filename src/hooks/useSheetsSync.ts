@@ -65,7 +65,7 @@ export function useUpsertSheetsConfig() {
     mutationFn: async (config: Partial<SheetsConfig> & { client_id: string }) => {
       const { data, error } = await supabase
         .from("client_sheets_config")
-        .upsert(config, { onConflict: "client_id" })
+        .upsert([config as any], { onConflict: "client_id" })
         .select()
         .single();
       if (error) throw error;
