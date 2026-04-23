@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  DollarSign, Eye, MousePointerClick, TrendingUp,
-  Target, Users, Percent, AlertCircle, Loader2,
-} from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
-import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
 import { OverviewRedesign } from "@/components/dashboard/overview/OverviewRedesign";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
