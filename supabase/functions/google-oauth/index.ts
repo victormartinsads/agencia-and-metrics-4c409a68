@@ -10,7 +10,6 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/analytics.readonly",
-  "https://www.googleapis.com/auth/adwords",
 ].join(" ");
 
 Deno.serve(async (req) => {
