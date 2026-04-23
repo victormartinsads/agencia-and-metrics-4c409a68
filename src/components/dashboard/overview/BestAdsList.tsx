@@ -50,24 +50,32 @@ function CreativeRowItem({
   currencySymbol: string;
 }) {
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0">
+    <div className="group flex items-center gap-3 p-2.5 rounded-xl border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-colors">
       {cr.thumbnail ? (
-        <img src={cr.thumbnail} alt="" className="h-12 w-12 rounded object-cover shrink-0" loading="lazy" />
+        <img
+          src={cr.thumbnail}
+          alt=""
+          className="h-14 w-14 rounded-lg object-cover shrink-0 ring-1 ring-border/60 group-hover:ring-primary/40 transition"
+          loading="lazy"
+        />
       ) : (
-        <div className="h-12 w-12 rounded bg-muted flex items-center justify-center shrink-0">
+        <div className="h-14 w-14 rounded-lg bg-muted/60 flex items-center justify-center shrink-0 ring-1 ring-border/60">
           <ImageIcon className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-medium text-card-foreground truncate" title={cr.name}>
+        <p className="text-[12px] font-semibold text-card-foreground truncate" title={cr.name}>
           {cr.name}
         </p>
-        <p className="text-[10px] text-muted-foreground truncate">{cr.campaignName}</p>
-        <div className="flex items-center gap-3 mt-1 flex-wrap">
+        <p className="text-[10px] text-muted-foreground truncate mb-1.5">{cr.campaignName}</p>
+        <div className="flex items-center gap-2 flex-wrap">
           {metrics.map((m) => (
-            <span key={m.key} className="text-[10px] text-muted-foreground">
-              <span className="uppercase tracking-wider">{m.label}: </span>
-              <span className="text-card-foreground font-semibold">
+            <span
+              key={m.key}
+              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-muted/40 border border-border/40"
+            >
+              <span className="uppercase tracking-wider text-muted-foreground/80">{m.label}</span>
+              <span className="text-card-foreground font-semibold tabular-nums">
                 {fmt((cr as any)[m.key], m.format, currencySymbol)}
               </span>
             </span>
@@ -79,7 +87,7 @@ function CreativeRowItem({
           href={cr.permalinkUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-primary hover:text-primary/80 shrink-0"
+          className="text-primary hover:text-primary/80 shrink-0 p-1.5 rounded-md hover:bg-primary/10 transition"
           title="Ver publicação"
         >
           <ExternalLink className="h-4 w-4" />
