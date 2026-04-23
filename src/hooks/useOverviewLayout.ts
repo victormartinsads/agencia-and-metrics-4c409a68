@@ -7,7 +7,8 @@ export type OverviewBlockId =
   | "lowticket"
   | "leads"
   | "mql"
-  | "best-ads";
+  | "best-ads"
+  | "utm-traffic";
 
 export interface BlockConfig {
   id: OverviewBlockId;
@@ -26,7 +27,7 @@ export interface OverviewLayout {
 }
 
 const DEFAULT_LAYOUT: OverviewLayout = {
-  order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads"],
+  order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "utm-traffic"],
   blocks: {
     resultados: { id: "resultados", visible: true, title: "Resultados Gerais" },
     custos: { id: "custos", visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"] },
@@ -39,6 +40,11 @@ const DEFAULT_LAYOUT: OverviewLayout = {
       visible: true,
       title: "Melhores Anúncios",
       metrics: ["primaryResult", "conversions"],
+    },
+    "utm-traffic": {
+      id: "utm-traffic",
+      visible: true,
+      title: "Fontes de Tráfego (UTMs)",
     },
   },
 };
