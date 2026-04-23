@@ -37,6 +37,8 @@ export interface GAData {
   needsPropertySelection?: boolean;
   properties?: GAProperty[];
   notConnected?: boolean;
+  apiError?: { error?: { message?: string; status?: string; details?: any[] } };
+  scopes?: string[];
 }
 
 export function useGoogleConnectionStatus(clientId?: string) {

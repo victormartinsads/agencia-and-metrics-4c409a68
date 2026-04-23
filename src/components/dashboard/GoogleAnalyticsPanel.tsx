@@ -162,6 +162,44 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
           </Button>
         </div>
         {gaData.properties.length === 0 ? (
+          gaData.apiError?.error ? (
+            <Card className="p-6 space-y-3 border-dashed border-destructive/40">
+              <p className="text-sm text-destructive font-semibold">
+                A API Google Analytics Admin não está ativada no seu projeto do Google Cloud.
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Para listar suas propriedades GA4, você precisa habilitar a API <strong>Google Analytics Admin API</strong> no projeto Google Cloud que criou as credenciais OAuth.
+              </p>
+              <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1 leading-relaxed">
+                <li>Clique no botão abaixo para abrir a página da API.</li>
+                <li>Clique em <strong>"Ativar"</strong> (Enable).</li>
+                <li>Aguarde cerca de 1 minuto para propagar.</li>
+                <li>Volte aqui e atualize a página.</li>
+              </ol>
+              <div className="flex gap-2 flex-wrap pt-1">
+                <Button asChild size="sm" variant="default" className="gap-1">
+                  <a
+                    href={
+                      gaData.apiError.error.details?.find((d: any) => d.metadata?.activationUrl)
+                        ?.metadata?.activationUrl ||
+                      "https://console.developers.google.com/apis/api/analyticsadmin.googleapis.com"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Link2 className="h-3.5 w-3.5" /> Ativar API no Google Cloud
+                  </a>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => qc.invalidateQueries({ queryKey: ["google-analytics", clientId] })}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            </Card>
+          ) : (
           <Card className="p-6 space-y-3 border-dashed">
             <p className="text-sm text-foreground font-medium">
               Nenhuma propriedade GA4 encontrada nesta conta Google.
@@ -178,6 +216,7 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
               </Button>
             </div>
           </Card>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {gaData.properties.map((prop) => (
