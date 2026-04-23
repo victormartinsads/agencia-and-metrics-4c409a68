@@ -235,7 +235,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   // ============ Block renderers ============
   const visibleOrder = layout.order.filter((id) => layout.blocks[id].visible);
 
-  const cardProps = (id: OverviewBlockId, metricOptions?: MetricOption[]) => {
+  const cardProps = (id: OverviewBlockId, metricOptions?: MetricOption[], bindings?: MetricBinding[]) => {
     const cfg = layout.blocks[id];
     const idx = visibleOrder.indexOf(id);
     return {
@@ -244,7 +244,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       onMoveUp: idx > 0 ? () => moveBlock(id, -1) : undefined,
       onMoveDown: idx < visibleOrder.length - 1 ? () => moveBlock(id, 1) : undefined,
       onHide: () => toggleVisibility(id),
-      onConfigure: metricOptions ? () => setSettingsBlock(cfg) : undefined,
+      onConfigure: (metricOptions || bindings) ? () => setSettingsBlock(cfg) : undefined,
     };
   };
 
@@ -255,7 +255,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     switch (id) {
       case "resultados":
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id, undefined, RESULTS_BINDINGS)} className="xl:col-span-2">
             <div className="grid grid-cols-3 gap-4 mb-4">
               <ProgressMetric
                 label="Investimento Total"
@@ -292,7 +292,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "custos": {
         const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : COST_METRIC_OPTIONS.map((o) => o.key);
         return (
-          <SectionCard key={id} {...cardProps(id, COST_METRIC_OPTIONS)}>
+          <SectionCard key={id} {...cardProps(id, COST_METRIC_OPTIONS, COST_BINDINGS)}>
             <div className="grid grid-cols-2 gap-x-4 gap-y-5">
               {picked.includes("cps") && (
                 <MiniMetric label="Custo Por Venda" value={formatCurrency(cps, currencySymbol)} delta={prevCps ? pctDelta(cps, prevCps) : null} />
@@ -313,7 +313,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "funil":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, FUNNEL_BINDINGS)}>
             <HorizontalFunnel
               clicks={clicks}
               pageviews={pageviews}
@@ -331,7 +331,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "lowticket":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, LOWTICKET_BINDINGS)}>
             <div className="grid grid-cols-3 gap-2 mb-3">
               <MiniMetric label="Total" value={String(lowTicketTotals.total)} delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)} />
               <MiniMetric label="Meta Ads" value={String(lowTicketTotals.meta)} delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)} />
@@ -343,7 +343,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "leads":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, LEADS_BINDINGS)}>
             <div className="mb-3">
               <MiniMetric label="Leads Gerados" value={leads.toLocaleString("pt-BR")} delta={pctDelta(leads, prev.leads || prev.mql)} />
             </div>
@@ -354,7 +354,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "mql": {
         const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : MQL_METRIC_OPTIONS.map((o) => o.key);
         return (
-          <SectionCard key={id} {...cardProps(id, MQL_METRIC_OPTIONS)}>
+          <SectionCard key={id} {...cardProps(id, MQL_METRIC_OPTIONS, MQL_BINDINGS)}>
             <div className="grid grid-cols-2 gap-3 mb-3">
               {picked.includes("mql") && (
                 <MiniMetric label="MQL" value={curr.mql.toLocaleString("pt-BR")} delta={pctDelta(curr.mql, prev.mql)} />
