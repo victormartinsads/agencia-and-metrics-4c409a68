@@ -11,6 +11,7 @@ import { ProductSalesChart } from "./ProductSalesChart";
 import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
 import { BestAdsList, AD_METRIC_OPTIONS } from "./BestAdsList";
+import { UtmTrafficTable } from "./UtmTrafficTable";
 import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 
@@ -412,6 +413,13 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
             {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}
           >
             <BestAdsList campaigns={campaigns} limit={3} metrics={cfg.metrics} currencySymbol={currencySymbol} />
+          </SectionCard>
+        );
+
+      case "utm-traffic":
+        return (
+          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+            <UtmTrafficTable utms={ga?.utms || []} />
           </SectionCard>
         );
 

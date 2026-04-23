@@ -210,6 +210,34 @@ Deno.serve(async (req) => {
     );
     const sourcesData = await sourcesRes.json();
 
+    // UTM breakdown: source / medium / campaign
+    const utmRes = await fetch(
+      `${GA4_API}/properties/${gaPropertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [{ startDate, endDate }],
+          dimensions: [
+            { name: "sessionSource" },
+            { name: "sessionMedium" },
+            { name: "sessionCampaignName" },
+          ],
+          metrics: [
+            { name: "sessions" },
+            { name: "totalUsers" },
+            { name: "engagedSessions" },
+          ],
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+          limit: 50,
+        }),
+      }
+    );
+    const utmData = await utmRes.json();
+
     // Parse overview
     const overviewRow = reportData.rows?.[0]?.metricValues || [];
     const overview = {
@@ -241,7 +269,17 @@ Deno.serve(async (req) => {
       users: Number(row.metricValues[1].value || 0),
     }));
 
-    return new Response(JSON.stringify({ overview, daily, sources }), {
+    // Parse UTMs
+    const utms = (utmData.rows || []).map((row: any) => ({
+      source: row.dimensionValues[0].value || "(not set)",
+      medium: row.dimensionValues[1].value || "(not set)",
+      campaign: row.dimensionValues[2].value || "(not set)",
+      sessions: Number(row.metricValues[0].value || 0),
+      users: Number(row.metricValues[1].value || 0),
+      engagedSessions: Number(row.metricValues[2].value || 0),
+    }));
+
+    return new Response(JSON.stringify({ overview, daily, sources, utms }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
