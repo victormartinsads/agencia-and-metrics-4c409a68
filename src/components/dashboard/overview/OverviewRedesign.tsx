@@ -11,7 +11,6 @@ import { ProductSalesChart } from "./ProductSalesChart";
 import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
 import { BestAdsList } from "./BestAdsList";
-import { EditableMetric } from "./EditableMetric";
 
 import { useWeeklyMetrics, useSheetsConfig } from "@/hooks/useSheetsSync";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
@@ -213,29 +212,25 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         {/* Resultados Gerais (3 KPIs + chart) */}
         <SectionCard title="Resultados Gerais">
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <EditableMetric clientId={clientId} metricKey="investment">
-              <ProgressMetric
-                label="Investimento Total"
-                value={fmtNum(totalSpend)}
-                delta={pctDelta(totalSpend, prevSpend)}
-                current={totalSpend}
-                goal={monthlyInvestmentBudget}
-                goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
-                tone="warn"
-              />
-            </EditableMetric>
-            <EditableMetric clientId={clientId} metricKey="revenue">
-              <ProgressMetric
-                label="Faturamento"
-                value={fmtNum(curr.revenue)}
-                delta={pctDelta(curr.revenue, prev.revenue)}
-                current={curr.revenue}
-                goal={monthlyRevenueGoal}
-                goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
-                tone="primary"
-              />
-            </EditableMetric>
-            <div className="space-y-2 relative">
+            <ProgressMetric
+              label="Investimento Total"
+              value={fmtNum(totalSpend)}
+              delta={pctDelta(totalSpend, prevSpend)}
+              current={totalSpend}
+              goal={monthlyInvestmentBudget}
+              goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
+              tone="warn"
+            />
+            <ProgressMetric
+              label="Faturamento"
+              value={fmtNum(curr.revenue)}
+              delta={pctDelta(curr.revenue, prev.revenue)}
+              current={curr.revenue}
+              goal={monthlyRevenueGoal}
+              goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
+              tone="primary"
+            />
+            <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">ROAS</p>
               <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-card border border-border text-2xl font-bold">
                 {roas.toFixed(1)}
@@ -297,53 +292,43 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
               value={String(lowTicketTotals.total)}
               delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)}
             />
-            <EditableMetric clientId={clientId} metricKey="low_ticket_meta">
-              <MiniMetric
-                label="Meta Ads"
-                value={String(lowTicketTotals.meta)}
-                delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)}
-              />
-            </EditableMetric>
-            <EditableMetric clientId={clientId} metricKey="low_ticket_google">
-              <MiniMetric
-                label="Google Ads"
-                value={String(lowTicketTotals.google)}
-                delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)}
-              />
-            </EditableMetric>
+            <MiniMetric
+              label="Meta Ads"
+              value={String(lowTicketTotals.meta)}
+              delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)}
+            />
+            <MiniMetric
+              label="Google Ads"
+              value={String(lowTicketTotals.google)}
+              delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)}
+            />
           </div>
           <LowTicketChart data={lowTicketData} />
         </SectionCard>
 
         <SectionCard title="Leads">
           <div className="mb-3">
-            <EditableMetric clientId={clientId} metricKey="leads">
-              <MiniMetric
-                label="Leads Gerados"
-                value={leads.toLocaleString("pt-BR")}
-                delta={pctDelta(leads, prev.leads || prev.mql)}
-              />
-            </EditableMetric>
+            <MiniMetric
+              label="Leads Gerados"
+              value={leads.toLocaleString("pt-BR")}
+              delta={pctDelta(leads, prev.leads || prev.mql)}
+            />
           </div>
           <LeadsChart data={leadsData} />
         </SectionCard>
 
         <SectionCard title="MQL & sMQL">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <EditableMetric clientId={clientId} metricKey="mql">
-              <MiniMetric
-                label="MQL"
-                value={curr.mql.toLocaleString("pt-BR")}
-                delta={pctDelta(curr.mql, prev.mql)}
-              />
-            </EditableMetric>
-            <EditableMetric clientId={clientId} metricKey="smql">
-              <MiniMetric
-                label="sMQL"
-                value={curr.smql.toLocaleString("pt-BR")}
-                delta={pctDelta(curr.smql, prev.smql)}
-              />
-            </EditableMetric>
+            <MiniMetric
+              label="MQL"
+              value={curr.mql.toLocaleString("pt-BR")}
+              delta={pctDelta(curr.mql, prev.mql)}
+            />
+            <MiniMetric
+              label="sMQL"
+              value={curr.smql.toLocaleString("pt-BR")}
+              delta={pctDelta(curr.smql, prev.smql)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <PlaceholderBox label="Detalhes MQL" />

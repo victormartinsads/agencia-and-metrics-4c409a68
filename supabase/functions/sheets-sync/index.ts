@@ -111,37 +111,6 @@ serve(async (req) => {
       });
     }
 
-    if (action === "headers") {
-      // Return the header row + a sample row so the user can pick columns visually.
-      const range = `${config.sheet_name}!${config.range_notation}`;
-      const url = `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values/${range}`;
-      const r = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "X-Connection-Api-Key": SHEETS_KEY,
-        },
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(`Sheets API ${r.status}: ${JSON.stringify(data)}`);
-      const rows: string[][] = data.values || [];
-      const headerIdx = Math.max(0, (config.header_row || 1) - 1);
-      const headers = rows[headerIdx] || [];
-      const sample = rows[headerIdx + 1] || [];
-      const columns = headers.map((h, i) => {
-        // Convert index to letter (A, B, ..., Z, AA, ...)
-        let n = i;
-        let letter = "";
-        do {
-          letter = String.fromCharCode(65 + (n % 26)) + letter;
-          n = Math.floor(n / 26) - 1;
-        } while (n >= 0);
-        return { letter, header: String(h || "").trim(), sample: String(sample[i] || "").trim() };
-      });
-      return new Response(JSON.stringify({ ok: true, columns }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Sync
     const range = `${config.sheet_name}!${config.range_notation}`;
     const url = `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values/${range}`;
