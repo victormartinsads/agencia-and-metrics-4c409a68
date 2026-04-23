@@ -24,6 +24,15 @@ export interface GASource {
   users: number;
 }
 
+export interface GAUtm {
+  source: string;
+  medium: string;
+  campaign: string;
+  sessions: number;
+  users: number;
+  engagedSessions: number;
+}
+
 export interface GAProperty {
   id: string;
   name: string;
@@ -34,6 +43,7 @@ export interface GAData {
   overview: GAOverview;
   daily: GADaily[];
   sources: GASource[];
+  utms?: GAUtm[];
   needsPropertySelection?: boolean;
   properties?: GAProperty[];
   notConnected?: boolean;
