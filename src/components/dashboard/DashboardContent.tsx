@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
 import { OverviewRedesign } from "@/components/dashboard/overview/OverviewRedesign";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { CampaignDetail } from "@/components/dashboard/CampaignDetail";
@@ -79,12 +78,6 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               metaData={metaData}
               currencySymbol={currencySymbol}
             />
-            {dailyMetrics.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SpendChart data={dailyMetrics} currencySymbol={currencySymbol} />
-                <ConversionsChart data={dailyMetrics} />
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="como-estamos" className="space-y-6">
