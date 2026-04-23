@@ -36,6 +36,7 @@ export interface GAData {
   sources: GASource[];
   needsPropertySelection?: boolean;
   properties?: GAProperty[];
+  notConnected?: boolean;
 }
 
 export function useGoogleConnectionStatus(clientId?: string) {

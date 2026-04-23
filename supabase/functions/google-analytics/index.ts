@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (tokenError || !tokenRow) {
-      return new Response(JSON.stringify({ error: "Google not connected for this client" }), {
-        status: 404,
+      return new Response(JSON.stringify({ notConnected: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
