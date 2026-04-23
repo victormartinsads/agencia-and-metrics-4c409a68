@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
-import { Image, Video, Layers, ExternalLink, Pencil } from "lucide-react";
+import { Image, Video, Layers, ExternalLink, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCreativeOverrides, applyOverrides } from "@/hooks/useCreativeOverrides";
 import { CreativeEditModal } from "@/components/dashboard/CreativeEditModal";
 
@@ -43,6 +43,7 @@ interface Props {
 export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const resultLabel = campaign.primaryResultLabel || "Conversões";
 
@@ -63,15 +64,19 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
       const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
       const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
       return aCpa - bCpa;
-    })
-    .slice(0, 3);
+    });
 
-  const top3Total = sorted.reduce((sum, cr) => sum + cr._ov.conversions, 0);
+  const PAGE_SIZE = 3;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
+  const top3Total = sorted.slice(0, 3).reduce((sum, cr) => sum + cr._ov.conversions, 0);
   const remainingResults = Math.max(campaign.conversions - top3Total, 0);
 
   if (sorted.length === 0) return null;
 
-  const editCreative = sorted.find(s => s.id === editingCreative);
+  const editCreative = sorted.find((s) => s.id === editingCreative);
 
   return (
     <>
@@ -91,26 +96,52 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
               {remainingResults > 0 ? ` • outros criativos: ${remainingResults}` : ""}
             </p>
           </div>
-          <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-0.5 rounded-full">
-            Métrica: {resultLabel}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-0.5 rounded-full">
+              Métrica: {resultLabel}
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                  className="h-8 w-8 rounded-md border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                  aria-label="Anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-[11px] text-muted-foreground tabular-nums min-w-[60px] text-center">
+                  {safePage + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage >= totalPages - 1}
+                  className="h-8 w-8 rounded-md border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                  aria-label="Próximo"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {sorted.map((cr, i) => {
+        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {visible.map((cr, i) => {
+            const absoluteRank = safePage * PAGE_SIZE + i;
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
             const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
-            const badge = rankBadge[i];
+            const badge = rankBadge[absoluteRank];
             const hasOverride = overrides.some(o => o.creative_id === cr.id);
 
             return (
               <motion.div
-                key={cr.id}
+                key={`${cr.id}-${safePage}`}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.08 }}
                 className={`rounded-lg border overflow-hidden transition-shadow group relative ${
-                  i === 0 ? "border-primary/40 shadow-md" : "border-border hover:shadow-md"
+                  absoluteRank === 0 ? "border-primary/40 shadow-md" : "border-border hover:shadow-md"
                 }`}
               >
                 {clientId && (
@@ -141,14 +172,20 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
                       target.src = `https://picsum.photos/seed/${cr.id}/600/600`;
                     }}
                   />
-                  <div className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.className}`}>
-                    {badge.label}
-                  </div>
-                  <div className="absolute top-2 right-2 bg-card/80 backdrop-blur-sm rounded-md p-1">
-                    <Icon className="h-3.5 w-3.5 text-card-foreground/70" />
+                  {badge ? (
+                    <div className={`absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-full ${badge.className}`}>
+                      {badge.label}
+                    </div>
+                  ) : (
+                    <div className="absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-full bg-card/80 backdrop-blur-sm text-card-foreground">
+                      #{absoluteRank + 1}
+                    </div>
+                  )}
+                  <div className="absolute top-3 right-3 bg-card/80 backdrop-blur-sm rounded-md p-1.5">
+                    <Icon className="h-4 w-4 text-card-foreground/70" />
                   </div>
                 </div>
-                <div className="p-3 space-y-2">
+                <div className="p-4 space-y-2.5">
                   <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
                   {cr.permalinkUrl && (
                     <a
