@@ -121,6 +121,71 @@ export type Database = {
           },
         ]
       }
+      client_spreadsheets: {
+        Row: {
+          client_id: string
+          created_at: string
+          date_format: string
+          decimal_separator: string
+          header_row: number
+          id: string
+          is_primary: boolean
+          label: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          range_notation: string
+          sheet_name: string
+          spreadsheet_id: string
+          spreadsheet_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date_format?: string
+          decimal_separator?: string
+          header_row?: number
+          id?: string
+          is_primary?: boolean
+          label?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          range_notation?: string
+          sheet_name?: string
+          spreadsheet_id: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date_format?: string
+          decimal_separator?: string
+          header_row?: number
+          id?: string
+          is_primary?: boolean
+          label?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          range_notation?: string
+          sheet_name?: string
+          spreadsheet_id?: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_spreadsheets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           ad_account_ids: string[]
@@ -391,6 +456,60 @@ export type Database = {
           },
         ]
       }
+      metric_data_sources: {
+        Row: {
+          client_id: string
+          column_letter: string | null
+          created_at: string
+          id: string
+          manual_value: number | null
+          metric_key: string
+          notes: string | null
+          source_type: string
+          spreadsheet_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          column_letter?: string | null
+          created_at?: string
+          id?: string
+          manual_value?: number | null
+          metric_key: string
+          notes?: string | null
+          source_type?: string
+          spreadsheet_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          column_letter?: string | null
+          created_at?: string
+          id?: string
+          manual_value?: number | null
+          metric_key?: string
+          notes?: string | null
+          source_type?: string
+          spreadsheet_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metric_data_sources_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metric_data_sources_spreadsheet_id_fkey"
+            columns: ["spreadsheet_id"]
+            isOneToOne: false
+            referencedRelation: "client_spreadsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_insights: {
         Row: {
           client_id: string
@@ -468,6 +587,7 @@ export type Database = {
           sales: number | null
           smql: number | null
           source: string
+          spreadsheet_id: string | null
           updated_at: string
         }
         Insert: {
@@ -490,6 +610,7 @@ export type Database = {
           sales?: number | null
           smql?: number | null
           source?: string
+          spreadsheet_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -512,6 +633,7 @@ export type Database = {
           sales?: number | null
           smql?: number | null
           source?: string
+          spreadsheet_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -520,6 +642,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_metrics_spreadsheet_id_fkey"
+            columns: ["spreadsheet_id"]
+            isOneToOne: false
+            referencedRelation: "client_spreadsheets"
             referencedColumns: ["id"]
           },
         ]
