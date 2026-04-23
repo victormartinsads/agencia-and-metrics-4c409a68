@@ -15,6 +15,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 import { ComoEstamosTab } from "@/components/como-estamos/ComoEstamosTab";
+import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 
 interface Props {
   clientId?: string;
@@ -66,6 +67,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             <TabsTrigger value="funnel">Funil</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
           </TabsList>
 
@@ -131,6 +133,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-6">
