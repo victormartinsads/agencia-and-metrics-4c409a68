@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_sheets_config: {
+        Row: {
+          client_id: string
+          column_avg_ticket: string | null
+          column_date: string | null
+          column_ltv: string | null
+          column_mql: string | null
+          column_revenue: string | null
+          column_sales: string | null
+          column_smql: string | null
+          created_at: string
+          date_format: string
+          decimal_separator: string
+          header_row: number
+          id: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          range_notation: string
+          sheet_name: string
+          spreadsheet_id: string
+          spreadsheet_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          column_avg_ticket?: string | null
+          column_date?: string | null
+          column_ltv?: string | null
+          column_mql?: string | null
+          column_revenue?: string | null
+          column_sales?: string | null
+          column_smql?: string | null
+          created_at?: string
+          date_format?: string
+          decimal_separator?: string
+          header_row?: number
+          id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          range_notation?: string
+          sheet_name?: string
+          spreadsheet_id: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          column_avg_ticket?: string | null
+          column_date?: string | null
+          column_ltv?: string | null
+          column_mql?: string | null
+          column_revenue?: string | null
+          column_sales?: string | null
+          column_smql?: string | null
+          created_at?: string
+          date_format?: string
+          decimal_separator?: string
+          header_row?: number
+          id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          range_notation?: string
+          sheet_name?: string
+          spreadsheet_id?: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_sheets_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           ad_account_ids: string[]
@@ -298,6 +378,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      weekly_metrics: {
+        Row: {
+          avg_ticket: number | null
+          client_id: string
+          created_at: string
+          id: string
+          ltv: number | null
+          mql: number | null
+          raw_row: Json | null
+          reference_date: string
+          revenue: number | null
+          sales: number | null
+          smql: number | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          avg_ticket?: number | null
+          client_id: string
+          created_at?: string
+          id?: string
+          ltv?: number | null
+          mql?: number | null
+          raw_row?: Json | null
+          reference_date: string
+          revenue?: number | null
+          sales?: number | null
+          smql?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          avg_ticket?: number | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          ltv?: number | null
+          mql?: number | null
+          raw_row?: Json | null
+          reference_date?: string
+          revenue?: number | null
+          sales?: number | null
+          smql?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_notes: {
         Row: {

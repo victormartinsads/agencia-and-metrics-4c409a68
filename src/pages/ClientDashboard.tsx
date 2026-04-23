@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  BarChart3, ArrowLeft, Settings, Loader2, Share2, Check,
+  BarChart3, ArrowLeft, Settings, Loader2, Share2, Check, FileSpreadsheet,
 } from "lucide-react";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
@@ -115,6 +115,12 @@ export default function ClientDashboard() {
               className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1"
             >
               <Settings className="h-3.5 w-3.5" /> Configurações
+            </Link>
+            <Link
+              to={`/dashboard/${clientId}/sheets`}
+              className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Planilha
             </Link>
           </div>
         </div>
