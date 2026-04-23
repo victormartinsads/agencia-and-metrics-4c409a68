@@ -11,6 +11,7 @@ import { ProductSalesChart } from "./ProductSalesChart";
 import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
 import { BestAdsList } from "./BestAdsList";
+import { EditableMetric } from "./EditableMetric";
 
 import { useWeeklyMetrics, useSheetsConfig } from "@/hooks/useSheetsSync";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
