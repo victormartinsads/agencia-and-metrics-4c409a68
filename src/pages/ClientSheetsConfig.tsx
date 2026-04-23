@@ -17,7 +17,7 @@ import {
   extractSpreadsheetId,
 } from "@/hooks/useSheetsSync";
 
-const METRIC_FIELDS = [
+const METRIC_FIELDS: { key: string; label: string; required?: boolean }[] = [
   { key: "column_date", label: "Data (semana de referência)", required: true },
   { key: "column_revenue", label: "Faturamento" },
   { key: "column_sales", label: "Vendas" },
@@ -25,7 +25,7 @@ const METRIC_FIELDS = [
   { key: "column_smql", label: "sMQL" },
   { key: "column_avg_ticket", label: "Ticket médio" },
   { key: "column_ltv", label: "LTV" },
-] as const;
+];
 
 export default function ClientSheetsConfig() {
   const { clientId } = useParams<{ clientId: string }>();
