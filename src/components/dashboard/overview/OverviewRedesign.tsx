@@ -407,7 +407,10 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "best-ads":
         return (
-          <SectionCard key={id} {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}>
+          <SectionCard
+            key={id}
+            {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}
+          >
             <BestAdsList campaigns={campaigns} limit={3} metrics={cfg.metrics} currencySymbol={currencySymbol} />
           </SectionCard>
         );
@@ -426,20 +429,34 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     return undefined;
   };
 
+  const metricBindingsFor = (id: OverviewBlockId | undefined): MetricBinding[] | undefined => {
+    if (!id) return undefined;
+    switch (id) {
+      case "resultados": return RESULTS_BINDINGS;
+      case "custos": return COST_BINDINGS;
+      case "funil": return FUNNEL_BINDINGS;
+      case "lowticket": return LOWTICKET_BINDINGS;
+      case "leads": return LEADS_BINDINGS;
+      case "mql": return MQL_BINDINGS;
+      default: return undefined;
+    }
+  };
+
   return (
     <div className="space-y-4">
       {!hasSheets && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 glass-card p-5 flex items-start gap-3">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+          <AlertCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold">Configure a planilha deste cliente</p>
+            <p className="text-sm font-semibold">Configure suas planilhas</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Para ver Faturamento, Vendas, MQL/sMQL, LTV, Low Ticket e produtos, conecte a planilha do cliente.
+              Cadastre uma ou mais planilhas e mapeie de qual coluna cada métrica vai puxar dados.
             </p>
           </div>
           <Link
             to={`/dashboard/${clientId}/sheets`}
-            className="text-xs bg-primary text-primary-foreground px-3 py-2 rounded-lg font-medium hover:bg-primary/90 flex items-center gap-1.5"
+            className="text-xs bg-primary text-primary-foreground px-3 py-2 rounded-lg font-semibold hover:bg-primary/90 flex items-center gap-1.5 neon-glow"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" /> Configurar
           </Link>
@@ -447,7 +464,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       )}
 
       {hasSheets && !hasData && (
-        <div className="rounded-2xl border border-border bg-muted/30 p-4 text-center">
+        <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 text-center backdrop-blur">
           <p className="text-xs text-muted-foreground">
             Planilha configurada mas ainda sem dados sincronizados.{" "}
             <Link to={`/dashboard/${clientId}/sheets`} className="text-primary underline font-medium">
@@ -457,13 +474,20 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       )}
 
-      <LayoutToolbar
-        editMode={editMode}
-        onToggleEdit={() => setEditMode((v) => !v)}
-        onReset={reset}
-        layout={layout}
-        onShowBlock={(id) => toggleVisibility(id)}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary neon-glow" />
+          <h2 className="text-sm font-semibold tracking-tight">Visão Geral</h2>
+          <span className="text-[11px] text-muted-foreground">— layout personalizável por cliente</span>
+        </div>
+        <LayoutToolbar
+          editMode={editMode}
+          onToggleEdit={() => setEditMode((v) => !v)}
+          onReset={reset}
+          layout={layout}
+          onShowBlock={(id) => toggleVisibility(id)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 auto-rows-min">
         {visibleOrder.map((id) => renderBlock(id))}
@@ -474,6 +498,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         onOpenChange={(open) => !open && setSettingsBlock(null)}
         block={settingsBlock}
         metricOptions={metricOptionsFor(settingsBlock?.id)}
+        metricBindings={metricBindingsFor(settingsBlock?.id)}
+        clientId={clientId}
         onSave={(patch) => settingsBlock && updateBlock(settingsBlock.id, patch)}
       />
     </div>
