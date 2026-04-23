@@ -19,12 +19,19 @@ import {
 
 const METRIC_FIELDS: { key: string; label: string; required?: boolean }[] = [
   { key: "column_date", label: "Data (semana de referência)", required: true },
+  { key: "column_investment", label: "Investimento total" },
   { key: "column_revenue", label: "Faturamento" },
   { key: "column_sales", label: "Vendas" },
+  { key: "column_leads", label: "Leads" },
   { key: "column_mql", label: "MQL" },
   { key: "column_smql", label: "sMQL" },
   { key: "column_avg_ticket", label: "Ticket médio" },
   { key: "column_ltv", label: "LTV" },
+  { key: "column_low_ticket_meta", label: "Low Ticket Meta" },
+  { key: "column_low_ticket_google", label: "Low Ticket Google" },
+  { key: "column_product_code", label: "Código do produto" },
+  { key: "column_qualified_messages", label: "Mensagens qualificadas" },
+  { key: "column_qualified_followers", label: "Seguidores qualificados" },
 ];
 
 export default function ClientSheetsConfig() {
@@ -48,6 +55,15 @@ export default function ClientSheetsConfig() {
     column_smql: "",
     column_avg_ticket: "",
     column_ltv: "",
+    column_investment: "",
+    column_leads: "",
+    column_low_ticket_meta: "",
+    column_low_ticket_google: "",
+    column_product_code: "",
+    column_qualified_messages: "",
+    column_qualified_followers: "",
+    monthly_revenue_goal: 0,
+    monthly_investment_budget: 0,
     header_row: 1,
     decimal_separator: ",",
     date_format: "DD/MM/YYYY",
@@ -66,6 +82,15 @@ export default function ClientSheetsConfig() {
         column_smql: config.column_smql || "",
         column_avg_ticket: config.column_avg_ticket || "",
         column_ltv: config.column_ltv || "",
+        column_investment: config.column_investment || "",
+        column_leads: config.column_leads || "",
+        column_low_ticket_meta: config.column_low_ticket_meta || "",
+        column_low_ticket_google: config.column_low_ticket_google || "",
+        column_product_code: config.column_product_code || "",
+        column_qualified_messages: config.column_qualified_messages || "",
+        column_qualified_followers: config.column_qualified_followers || "",
+        monthly_revenue_goal: Number(config.monthly_revenue_goal || 0),
+        monthly_investment_budget: Number(config.monthly_investment_budget || 0),
         header_row: config.header_row,
         decimal_separator: config.decimal_separator,
         date_format: config.date_format,
@@ -98,6 +123,15 @@ export default function ClientSheetsConfig() {
         column_smql: form.column_smql.toUpperCase() || null,
         column_avg_ticket: form.column_avg_ticket.toUpperCase() || null,
         column_ltv: form.column_ltv.toUpperCase() || null,
+        column_investment: form.column_investment.toUpperCase() || null,
+        column_leads: form.column_leads.toUpperCase() || null,
+        column_low_ticket_meta: form.column_low_ticket_meta.toUpperCase() || null,
+        column_low_ticket_google: form.column_low_ticket_google.toUpperCase() || null,
+        column_product_code: form.column_product_code.toUpperCase() || null,
+        column_qualified_messages: form.column_qualified_messages.toUpperCase() || null,
+        column_qualified_followers: form.column_qualified_followers.toUpperCase() || null,
+        monthly_revenue_goal: Number(form.monthly_revenue_goal) || 0,
+        monthly_investment_budget: Number(form.monthly_investment_budget) || 0,
         header_row: Number(form.header_row),
         decimal_separator: form.decimal_separator,
         date_format: form.date_format,
@@ -235,6 +269,34 @@ export default function ClientSheetsConfig() {
                     <SelectItem value="YYYY-MM-DD">AAAA-MM-DD</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-background/50 p-4">
+              <p className="text-xs font-semibold mb-3">Metas mensais (para barras de progresso)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[11px]">Meta de Faturamento (mensal)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="28928.39"
+                    value={form.monthly_revenue_goal}
+                    onChange={(e) => setForm({ ...form, monthly_revenue_goal: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Orçamento de Investimento (mensal)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="21689.71"
+                    value={form.monthly_investment_budget}
+                    onChange={(e) => setForm({ ...form, monthly_investment_budget: Number(e.target.value) })}
+                  />
+                </div>
               </div>
             </div>
 
