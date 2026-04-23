@@ -15,6 +15,15 @@ export interface SheetsConfig {
   column_smql: string | null;
   column_avg_ticket: string | null;
   column_ltv: string | null;
+  column_investment: string | null;
+  column_leads: string | null;
+  column_low_ticket_meta: string | null;
+  column_low_ticket_google: string | null;
+  column_product_code: string | null;
+  column_qualified_messages: string | null;
+  column_qualified_followers: string | null;
+  monthly_revenue_goal: number | null;
+  monthly_investment_budget: number | null;
   header_row: number;
   decimal_separator: string;
   date_format: string;
@@ -33,6 +42,13 @@ export interface WeeklyMetric {
   smql: number;
   avg_ticket: number;
   ltv: number;
+  investment: number;
+  leads: number;
+  low_ticket_meta: number;
+  low_ticket_google: number;
+  product_code: string | null;
+  qualified_messages: number;
+  qualified_followers: number;
 }
 
 export function extractSpreadsheetId(url: string): string | null {

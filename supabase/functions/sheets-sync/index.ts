@@ -135,6 +135,13 @@ serve(async (req) => {
       smql: colLetterToIndex(config.column_smql),
       avg_ticket: colLetterToIndex(config.column_avg_ticket),
       ltv: colLetterToIndex(config.column_ltv),
+      investment: colLetterToIndex(config.column_investment),
+      leads: colLetterToIndex(config.column_leads),
+      low_ticket_meta: colLetterToIndex(config.column_low_ticket_meta),
+      low_ticket_google: colLetterToIndex(config.column_low_ticket_google),
+      product_code: colLetterToIndex(config.column_product_code),
+      qualified_messages: colLetterToIndex(config.column_qualified_messages),
+      qualified_followers: colLetterToIndex(config.column_qualified_followers),
     };
 
     if (map.date === null) throw new Error("Coluna de data não configurada.");
@@ -153,6 +160,13 @@ serve(async (req) => {
         smql: map.smql !== null ? Math.round(parseNumber(row[map.smql], config.decimal_separator)) : 0,
         avg_ticket: map.avg_ticket !== null ? parseNumber(row[map.avg_ticket], config.decimal_separator) : 0,
         ltv: map.ltv !== null ? parseNumber(row[map.ltv], config.decimal_separator) : 0,
+        investment: map.investment !== null ? parseNumber(row[map.investment], config.decimal_separator) : 0,
+        leads: map.leads !== null ? Math.round(parseNumber(row[map.leads], config.decimal_separator)) : 0,
+        low_ticket_meta: map.low_ticket_meta !== null ? Math.round(parseNumber(row[map.low_ticket_meta], config.decimal_separator)) : 0,
+        low_ticket_google: map.low_ticket_google !== null ? Math.round(parseNumber(row[map.low_ticket_google], config.decimal_separator)) : 0,
+        product_code: map.product_code !== null ? String(row[map.product_code] || "").trim() || null : null,
+        qualified_messages: map.qualified_messages !== null ? Math.round(parseNumber(row[map.qualified_messages], config.decimal_separator)) : 0,
+        qualified_followers: map.qualified_followers !== null ? Math.round(parseNumber(row[map.qualified_followers], config.decimal_separator)) : 0,
         raw_row: row,
         source: "google_sheets",
       });
