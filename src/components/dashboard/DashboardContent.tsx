@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  DollarSign, Eye, MousePointerClick, TrendingUp,
-  Target, Users, Percent, AlertCircle, Loader2,
-} from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
-import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SpendChart, ConversionsChart } from "@/components/dashboard/OverviewCharts";
+import { OverviewRedesign } from "@/components/dashboard/overview/OverviewRedesign";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { CampaignDetail } from "@/components/dashboard/CampaignDetail";
 import { AdSetTable } from "@/components/dashboard/AdSetTable";
@@ -76,17 +73,12 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard title="Investimento Total" value={`${currencySymbol} ${overview.totalSpend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} delay={0} />
-              <KpiCard title="Impressões" value={overview.totalImpressions >= 1000000 ? `${(overview.totalImpressions / 1000000).toFixed(1)}M` : overview.totalImpressions.toLocaleString("pt-BR")} icon={Eye} delay={0.05} />
-              <KpiCard title="Cliques" value={overview.totalClicks.toLocaleString("pt-BR")} icon={MousePointerClick} delay={0.1} />
-              <KpiCard title="Conversões" value={overview.totalConversions.toLocaleString("pt-BR")} icon={Target} delay={0.15} />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard title="CTR Médio" value={`${overview.avgCTR}%`} icon={Percent} delay={0.2} />
-              <KpiCard title="CPC Médio" value={`${currencySymbol} ${overview.avgCPC.toFixed(2)}`} icon={DollarSign} delay={0.25} />
-              <KpiCard title="Alcance Total" value={overview.totalReach >= 1000000 ? `${(overview.totalReach / 1000000).toFixed(1)}M` : overview.totalReach.toLocaleString("pt-BR")} icon={Users} delay={0.3} />
-            </div>
+            <OverviewRedesign
+              clientId={clientId}
+              datePreset={datePreset || "last_7d"}
+              metaData={metaData}
+              currencySymbol={currencySymbol}
+            />
             {dailyMetrics.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <SpendChart data={dailyMetrics} currencySymbol={currencySymbol} />
