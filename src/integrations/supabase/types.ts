@@ -19,8 +19,15 @@ export type Database = {
           client_id: string
           column_avg_ticket: string | null
           column_date: string | null
+          column_investment: string | null
+          column_leads: string | null
+          column_low_ticket_google: string | null
+          column_low_ticket_meta: string | null
           column_ltv: string | null
           column_mql: string | null
+          column_product_code: string | null
+          column_qualified_followers: string | null
+          column_qualified_messages: string | null
           column_revenue: string | null
           column_sales: string | null
           column_smql: string | null
@@ -32,6 +39,8 @@ export type Database = {
           last_sync_error: string | null
           last_sync_status: string | null
           last_synced_at: string | null
+          monthly_investment_budget: number | null
+          monthly_revenue_goal: number | null
           range_notation: string
           sheet_name: string
           spreadsheet_id: string
@@ -42,8 +51,15 @@ export type Database = {
           client_id: string
           column_avg_ticket?: string | null
           column_date?: string | null
+          column_investment?: string | null
+          column_leads?: string | null
+          column_low_ticket_google?: string | null
+          column_low_ticket_meta?: string | null
           column_ltv?: string | null
           column_mql?: string | null
+          column_product_code?: string | null
+          column_qualified_followers?: string | null
+          column_qualified_messages?: string | null
           column_revenue?: string | null
           column_sales?: string | null
           column_smql?: string | null
@@ -55,6 +71,8 @@ export type Database = {
           last_sync_error?: string | null
           last_sync_status?: string | null
           last_synced_at?: string | null
+          monthly_investment_budget?: number | null
+          monthly_revenue_goal?: number | null
           range_notation?: string
           sheet_name?: string
           spreadsheet_id: string
@@ -65,8 +83,15 @@ export type Database = {
           client_id?: string
           column_avg_ticket?: string | null
           column_date?: string | null
+          column_investment?: string | null
+          column_leads?: string | null
+          column_low_ticket_google?: string | null
+          column_low_ticket_meta?: string | null
           column_ltv?: string | null
           column_mql?: string | null
+          column_product_code?: string | null
+          column_qualified_followers?: string | null
+          column_qualified_messages?: string | null
           column_revenue?: string | null
           column_sales?: string | null
           column_smql?: string | null
@@ -78,6 +103,8 @@ export type Database = {
           last_sync_error?: string | null
           last_sync_status?: string | null
           last_synced_at?: string | null
+          monthly_investment_budget?: number | null
+          monthly_revenue_goal?: number | null
           range_notation?: string
           sheet_name?: string
           spreadsheet_id?: string
@@ -385,8 +412,15 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
+          investment: number | null
+          leads: number | null
+          low_ticket_google: number | null
+          low_ticket_meta: number | null
           ltv: number | null
           mql: number | null
+          product_code: string | null
+          qualified_followers: number | null
+          qualified_messages: number | null
           raw_row: Json | null
           reference_date: string
           revenue: number | null
@@ -400,8 +434,15 @@ export type Database = {
           client_id: string
           created_at?: string
           id?: string
+          investment?: number | null
+          leads?: number | null
+          low_ticket_google?: number | null
+          low_ticket_meta?: number | null
           ltv?: number | null
           mql?: number | null
+          product_code?: string | null
+          qualified_followers?: number | null
+          qualified_messages?: number | null
           raw_row?: Json | null
           reference_date: string
           revenue?: number | null
@@ -415,8 +456,15 @@ export type Database = {
           client_id?: string
           created_at?: string
           id?: string
+          investment?: number | null
+          leads?: number | null
+          low_ticket_google?: number | null
+          low_ticket_meta?: number | null
           ltv?: number | null
           mql?: number | null
+          product_code?: string | null
+          qualified_followers?: number | null
+          qualified_messages?: number | null
           raw_row?: Json | null
           reference_date?: string
           revenue?: number | null
