@@ -213,25 +213,29 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         {/* Resultados Gerais (3 KPIs + chart) */}
         <SectionCard title="Resultados Gerais">
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <ProgressMetric
-              label="Investimento Total"
-              value={fmtNum(totalSpend)}
-              delta={pctDelta(totalSpend, prevSpend)}
-              current={totalSpend}
-              goal={monthlyInvestmentBudget}
-              goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
-              tone="warn"
-            />
-            <ProgressMetric
-              label="Faturamento"
-              value={fmtNum(curr.revenue)}
-              delta={pctDelta(curr.revenue, prev.revenue)}
-              current={curr.revenue}
-              goal={monthlyRevenueGoal}
-              goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
-              tone="primary"
-            />
-            <div className="space-y-2">
+            <EditableMetric clientId={clientId} metricKey="investment">
+              <ProgressMetric
+                label="Investimento Total"
+                value={fmtNum(totalSpend)}
+                delta={pctDelta(totalSpend, prevSpend)}
+                current={totalSpend}
+                goal={monthlyInvestmentBudget}
+                goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
+                tone="warn"
+              />
+            </EditableMetric>
+            <EditableMetric clientId={clientId} metricKey="revenue">
+              <ProgressMetric
+                label="Faturamento"
+                value={fmtNum(curr.revenue)}
+                delta={pctDelta(curr.revenue, prev.revenue)}
+                current={curr.revenue}
+                goal={monthlyRevenueGoal}
+                goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
+                tone="primary"
+              />
+            </EditableMetric>
+            <div className="space-y-2 relative">
               <p className="text-xs font-medium text-muted-foreground">ROAS</p>
               <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-card border border-border text-2xl font-bold">
                 {roas.toFixed(1)}
@@ -293,16 +297,20 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
               value={String(lowTicketTotals.total)}
               delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)}
             />
-            <MiniMetric
-              label="Meta Ads"
-              value={String(lowTicketTotals.meta)}
-              delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)}
-            />
-            <MiniMetric
-              label="Google Ads"
-              value={String(lowTicketTotals.google)}
-              delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)}
-            />
+            <EditableMetric clientId={clientId} metricKey="low_ticket_meta">
+              <MiniMetric
+                label="Meta Ads"
+                value={String(lowTicketTotals.meta)}
+                delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)}
+              />
+            </EditableMetric>
+            <EditableMetric clientId={clientId} metricKey="low_ticket_google">
+              <MiniMetric
+                label="Google Ads"
+                value={String(lowTicketTotals.google)}
+                delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)}
+              />
+            </EditableMetric>
           </div>
           <LowTicketChart data={lowTicketData} />
         </SectionCard>
