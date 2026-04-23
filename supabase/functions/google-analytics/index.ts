@@ -111,9 +111,20 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ needsPropertySelection: true, properties }), {
+      console.log("accountSummaries response:", JSON.stringify(accountsData).slice(0, 500));
+      console.log("Properties found:", properties.length);
+
+      return new Response(
+        JSON.stringify({
+          needsPropertySelection: true,
+          properties,
+          scopes: tokenRow.scopes,
+          apiError: !accountsRes.ok ? accountsData : undefined,
+        }),
+        {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        }
+      );
     }
 
     // Fetch GA4 data
