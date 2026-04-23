@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileSpreadsheet, AlertCircle, Wrench } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, Wrench, Sparkles } from "lucide-react";
 
 import { SectionCard } from "./SectionCard";
 import { ProgressMetric } from "./ProgressMetric";
@@ -20,6 +20,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
+import { MetricBinding } from "./MetricSourceEditor";
 
 interface Props {
   clientId?: string;
@@ -58,6 +59,48 @@ const MQL_METRIC_OPTIONS: MetricOption[] = [
   { key: "smql", label: "sMQL" },
   { key: "qualified_messages", label: "Mensagens Qualif." },
   { key: "qualified_followers", label: "Seguidores Qualif." },
+];
+
+/**
+ * Bindings: each metric_key here is what gets persisted in metric_data_sources.
+ * `allowed` restricts which source types make sense for that metric.
+ */
+const RESULTS_BINDINGS: MetricBinding[] = [
+  { key: "investment", label: "Investimento Total", allowed: ["sheet", "meta", "manual"] },
+  { key: "revenue", label: "Faturamento", allowed: ["sheet", "manual"] },
+  { key: "sales", label: "Vendas", allowed: ["sheet", "meta", "manual"] },
+];
+
+const COST_BINDINGS: MetricBinding[] = [
+  { key: "cps", label: "Custo Por Venda", allowed: ["sheet", "meta", "manual"] },
+  { key: "cpl", label: "Custo Por Lead", allowed: ["sheet", "meta", "manual"] },
+  { key: "cpc", label: "Custo Por Clique", allowed: ["meta", "manual"] },
+  { key: "cpm", label: "CPM", allowed: ["meta", "manual"] },
+  { key: "product_sales", label: "Vendas Por Produto", allowed: ["sheet"] },
+];
+
+const FUNNEL_BINDINGS: MetricBinding[] = [
+  { key: "clicks", label: "Cliques", allowed: ["meta", "manual"] },
+  { key: "pageviews", label: "Visitas Página", allowed: ["ga", "manual"] },
+  { key: "leads", label: "Leads", allowed: ["sheet", "meta", "manual"] },
+  { key: "meetings", label: "Reuniões / sMQL", allowed: ["sheet", "manual"] },
+  { key: "sales", label: "Vendas", allowed: ["sheet", "meta", "manual"] },
+];
+
+const LOWTICKET_BINDINGS: MetricBinding[] = [
+  { key: "low_ticket_meta", label: "Vendas LowTicket Meta", allowed: ["sheet", "manual"] },
+  { key: "low_ticket_google", label: "Vendas LowTicket Google", allowed: ["sheet", "manual"] },
+];
+
+const LEADS_BINDINGS: MetricBinding[] = [
+  { key: "leads_total", label: "Leads Gerados", allowed: ["sheet", "meta", "manual"] },
+];
+
+const MQL_BINDINGS: MetricBinding[] = [
+  { key: "mql", label: "MQL", allowed: ["sheet", "manual"] },
+  { key: "smql", label: "sMQL", allowed: ["sheet", "manual"] },
+  { key: "qualified_messages", label: "Mensagens Qualif.", allowed: ["sheet", "manual"] },
+  { key: "qualified_followers", label: "Seguidores Qualif.", allowed: ["sheet", "manual"] },
 ];
 
 export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbol }: Props) {
@@ -192,7 +235,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   // ============ Block renderers ============
   const visibleOrder = layout.order.filter((id) => layout.blocks[id].visible);
 
-  const cardProps = (id: OverviewBlockId, metricOptions?: MetricOption[]) => {
+  const cardProps = (id: OverviewBlockId, metricOptions?: MetricOption[], bindings?: MetricBinding[]) => {
     const cfg = layout.blocks[id];
     const idx = visibleOrder.indexOf(id);
     return {
@@ -201,7 +244,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       onMoveUp: idx > 0 ? () => moveBlock(id, -1) : undefined,
       onMoveDown: idx < visibleOrder.length - 1 ? () => moveBlock(id, 1) : undefined,
       onHide: () => toggleVisibility(id),
-      onConfigure: metricOptions ? () => setSettingsBlock(cfg) : undefined,
+      onConfigure: (metricOptions || bindings) ? () => setSettingsBlock(cfg) : undefined,
     };
   };
 
@@ -212,7 +255,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     switch (id) {
       case "resultados":
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id, undefined, RESULTS_BINDINGS)} className="xl:col-span-2">
             <div className="grid grid-cols-3 gap-4 mb-4">
               <ProgressMetric
                 label="Investimento Total"
@@ -249,7 +292,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "custos": {
         const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : COST_METRIC_OPTIONS.map((o) => o.key);
         return (
-          <SectionCard key={id} {...cardProps(id, COST_METRIC_OPTIONS)}>
+          <SectionCard key={id} {...cardProps(id, COST_METRIC_OPTIONS, COST_BINDINGS)}>
             <div className="grid grid-cols-2 gap-x-4 gap-y-5">
               {picked.includes("cps") && (
                 <MiniMetric label="Custo Por Venda" value={formatCurrency(cps, currencySymbol)} delta={prevCps ? pctDelta(cps, prevCps) : null} />
@@ -270,7 +313,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "funil":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, FUNNEL_BINDINGS)}>
             <HorizontalFunnel
               clicks={clicks}
               pageviews={pageviews}
@@ -288,7 +331,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "lowticket":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, LOWTICKET_BINDINGS)}>
             <div className="grid grid-cols-3 gap-2 mb-3">
               <MiniMetric label="Total" value={String(lowTicketTotals.total)} delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)} />
               <MiniMetric label="Meta Ads" value={String(lowTicketTotals.meta)} delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)} />
@@ -300,7 +343,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "leads":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
+          <SectionCard key={id} {...cardProps(id, undefined, LEADS_BINDINGS)}>
             <div className="mb-3">
               <MiniMetric label="Leads Gerados" value={leads.toLocaleString("pt-BR")} delta={pctDelta(leads, prev.leads || prev.mql)} />
             </div>
@@ -311,7 +354,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "mql": {
         const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : MQL_METRIC_OPTIONS.map((o) => o.key);
         return (
-          <SectionCard key={id} {...cardProps(id, MQL_METRIC_OPTIONS)}>
+          <SectionCard key={id} {...cardProps(id, MQL_METRIC_OPTIONS, MQL_BINDINGS)}>
             <div className="grid grid-cols-2 gap-3 mb-3">
               {picked.includes("mql") && (
                 <MiniMetric label="MQL" value={curr.mql.toLocaleString("pt-BR")} delta={pctDelta(curr.mql, prev.mql)} />
@@ -364,7 +407,10 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "best-ads":
         return (
-          <SectionCard key={id} {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}>
+          <SectionCard
+            key={id}
+            {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}
+          >
             <BestAdsList campaigns={campaigns} limit={3} metrics={cfg.metrics} currencySymbol={currencySymbol} />
           </SectionCard>
         );
@@ -383,20 +429,34 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     return undefined;
   };
 
+  const metricBindingsFor = (id: OverviewBlockId | undefined): MetricBinding[] | undefined => {
+    if (!id) return undefined;
+    switch (id) {
+      case "resultados": return RESULTS_BINDINGS;
+      case "custos": return COST_BINDINGS;
+      case "funil": return FUNNEL_BINDINGS;
+      case "lowticket": return LOWTICKET_BINDINGS;
+      case "leads": return LEADS_BINDINGS;
+      case "mql": return MQL_BINDINGS;
+      default: return undefined;
+    }
+  };
+
   return (
     <div className="space-y-4">
       {!hasSheets && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 glass-card p-5 flex items-start gap-3">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+          <AlertCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold">Configure a planilha deste cliente</p>
+            <p className="text-sm font-semibold">Configure suas planilhas</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Para ver Faturamento, Vendas, MQL/sMQL, LTV, Low Ticket e produtos, conecte a planilha do cliente.
+              Cadastre uma ou mais planilhas e mapeie de qual coluna cada métrica vai puxar dados.
             </p>
           </div>
           <Link
             to={`/dashboard/${clientId}/sheets`}
-            className="text-xs bg-primary text-primary-foreground px-3 py-2 rounded-lg font-medium hover:bg-primary/90 flex items-center gap-1.5"
+            className="text-xs bg-primary text-primary-foreground px-3 py-2 rounded-lg font-semibold hover:bg-primary/90 flex items-center gap-1.5 neon-glow"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" /> Configurar
           </Link>
@@ -404,7 +464,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       )}
 
       {hasSheets && !hasData && (
-        <div className="rounded-2xl border border-border bg-muted/30 p-4 text-center">
+        <div className="rounded-2xl border border-border/60 bg-muted/30 p-3 text-center backdrop-blur">
           <p className="text-xs text-muted-foreground">
             Planilha configurada mas ainda sem dados sincronizados.{" "}
             <Link to={`/dashboard/${clientId}/sheets`} className="text-primary underline font-medium">
@@ -414,13 +474,20 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       )}
 
-      <LayoutToolbar
-        editMode={editMode}
-        onToggleEdit={() => setEditMode((v) => !v)}
-        onReset={reset}
-        layout={layout}
-        onShowBlock={(id) => toggleVisibility(id)}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary neon-glow" />
+          <h2 className="text-sm font-semibold tracking-tight">Visão Geral</h2>
+          <span className="text-[11px] text-muted-foreground">— layout personalizável por cliente</span>
+        </div>
+        <LayoutToolbar
+          editMode={editMode}
+          onToggleEdit={() => setEditMode((v) => !v)}
+          onReset={reset}
+          layout={layout}
+          onShowBlock={(id) => toggleVisibility(id)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 auto-rows-min">
         {visibleOrder.map((id) => renderBlock(id))}
@@ -431,6 +498,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         onOpenChange={(open) => !open && setSettingsBlock(null)}
         block={settingsBlock}
         metricOptions={metricOptionsFor(settingsBlock?.id)}
+        metricBindings={metricBindingsFor(settingsBlock?.id)}
+        clientId={clientId}
         onSave={(patch) => settingsBlock && updateBlock(settingsBlock.id, patch)}
       />
     </div>

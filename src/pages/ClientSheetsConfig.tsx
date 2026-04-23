@@ -16,6 +16,7 @@ import {
   useWeeklyMetrics,
   extractSpreadsheetId,
 } from "@/hooks/useSheetsSync";
+import { SpreadsheetsManager } from "@/components/dashboard/overview/SpreadsheetsManager";
 
 const METRIC_FIELDS: { key: string; label: string; required?: boolean }[] = [
   { key: "column_date", label: "Data (semana de referência)", required: true },
@@ -169,14 +170,18 @@ export default function ClientSheetsConfig() {
           )}
         </div>
 
+        {clientId && <SpreadsheetsManager clientId={clientId} />}
+
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileSpreadsheet className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Configuração da Planilha</h2>
-              <p className="text-xs text-muted-foreground">Conecte uma planilha do Google Sheets para sincronizar métricas semanais</p>
+              <h2 className="text-lg font-bold">Configuração da Planilha Principal (legacy)</h2>
+              <p className="text-xs text-muted-foreground">
+                Mapeamento clássico de colunas. Você pode preferir usar o novo sistema de "Fontes de Dados" via cada bloco do dashboard.
+              </p>
             </div>
           </div>
 
