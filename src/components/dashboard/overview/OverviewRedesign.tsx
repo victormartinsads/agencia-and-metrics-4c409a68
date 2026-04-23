@@ -317,27 +317,33 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
         <SectionCard title="Leads">
           <div className="mb-3">
-            <MiniMetric
-              label="Leads Gerados"
-              value={leads.toLocaleString("pt-BR")}
-              delta={pctDelta(leads, prev.leads || prev.mql)}
-            />
+            <EditableMetric clientId={clientId} metricKey="leads">
+              <MiniMetric
+                label="Leads Gerados"
+                value={leads.toLocaleString("pt-BR")}
+                delta={pctDelta(leads, prev.leads || prev.mql)}
+              />
+            </EditableMetric>
           </div>
           <LeadsChart data={leadsData} />
         </SectionCard>
 
         <SectionCard title="MQL & sMQL">
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <MiniMetric
-              label="MQL"
-              value={curr.mql.toLocaleString("pt-BR")}
-              delta={pctDelta(curr.mql, prev.mql)}
-            />
-            <MiniMetric
-              label="sMQL"
-              value={curr.smql.toLocaleString("pt-BR")}
-              delta={pctDelta(curr.smql, prev.smql)}
-            />
+            <EditableMetric clientId={clientId} metricKey="mql">
+              <MiniMetric
+                label="MQL"
+                value={curr.mql.toLocaleString("pt-BR")}
+                delta={pctDelta(curr.mql, prev.mql)}
+              />
+            </EditableMetric>
+            <EditableMetric clientId={clientId} metricKey="smql">
+              <MiniMetric
+                label="sMQL"
+                value={curr.smql.toLocaleString("pt-BR")}
+                delta={pctDelta(curr.smql, prev.smql)}
+              />
+            </EditableMetric>
           </div>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <PlaceholderBox label="Detalhes MQL" />
