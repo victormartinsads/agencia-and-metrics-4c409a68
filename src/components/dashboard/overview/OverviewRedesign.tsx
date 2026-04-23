@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileSpreadsheet, AlertCircle, Wrench } from "lucide-react";
 
@@ -10,13 +10,16 @@ import { HorizontalFunnel } from "./HorizontalFunnel";
 import { ProductSalesChart } from "./ProductSalesChart";
 import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
-import { BestAdsList } from "./BestAdsList";
+import { BestAdsList, AD_METRIC_OPTIONS } from "./BestAdsList";
+import { LayoutToolbar } from "./LayoutToolbar";
+import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 
 import { useWeeklyMetrics, useSheetsConfig } from "@/hooks/useSheetsSync";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
+import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
 
 interface Props {
   clientId?: string;
@@ -34,7 +37,6 @@ function fmtNum(n: number) {
   return n.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 }
 
-/** Placeholder for blocks that have no underlying data yet (MQL/sMQL details, qualified messages/followers). */
 function PlaceholderBox({ label = "Mais detalhes" }: { label?: string }) {
   return (
     <div className="rounded-xl bg-muted/40 border border-dashed border-border h-20 flex items-center justify-center gap-1.5 text-xs text-primary/80">
@@ -44,10 +46,28 @@ function PlaceholderBox({ label = "Mais detalhes" }: { label?: string }) {
   );
 }
 
+const COST_METRIC_OPTIONS: MetricOption[] = [
+  { key: "cps", label: "Custo Por Venda" },
+  { key: "cpl", label: "Custo Por Lead" },
+  { key: "cpc", label: "Custo Por Clique" },
+  { key: "cpm", label: "CPM" },
+];
+
+const MQL_METRIC_OPTIONS: MetricOption[] = [
+  { key: "mql", label: "MQL" },
+  { key: "smql", label: "sMQL" },
+  { key: "qualified_messages", label: "Mensagens Qualif." },
+  { key: "qualified_followers", label: "Seguidores Qualif." },
+];
+
 export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbol }: Props) {
   const { data: sheetsConfig } = useSheetsConfig(clientId);
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
+
+  const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
+  const [editMode, setEditMode] = useState(false);
+  const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
 
   const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
 
@@ -88,7 +108,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     qualified_followers: sumKey(inPrev, "qualified_followers"),
   };
 
-  // Investment: sheets > meta fallback
   const totalSpend = curr.investment > 0 ? curr.investment : (metaData?.overviewMetrics?.totalSpend || 0);
   const prevSpend = prev.investment;
 
@@ -103,18 +122,15 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const totalImpressions = metaData?.overviewMetrics?.totalImpressions || 0;
   const cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
 
-  // Funnel
   const clicks = totalClicks;
   const pageviews = ga?.overview?.pageViews || 0;
   const leads = curr.leads || curr.mql;
   const meetings = curr.smql;
   const sales = curr.sales;
 
-  // Goals
   const monthlyRevenueGoal = Number(sheetsConfig?.monthly_revenue_goal || 0);
   const monthlyInvestmentBudget = Number(sheetsConfig?.monthly_investment_budget || 0);
 
-  // Combined chart data
   const combinedData = useMemo(() => {
     return [...inCurr]
       .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
@@ -125,7 +141,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       }));
   }, [inCurr]);
 
-  // Vendas por produto (agregado por product_code)
   const productData = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of inCurr) {
@@ -139,7 +154,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       .slice(0, 10);
   }, [inCurr]);
 
-  // Low ticket per day
   const lowTicketData = useMemo(
     () =>
       [...inCurr]
@@ -163,7 +177,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     google: prev.low_ticket_google,
   };
 
-  // Leads per day
   const leadsData = useMemo(
     () =>
       [...inCurr]
@@ -175,6 +188,200 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const hasSheets = !!sheetsConfig;
   const hasData = (weekly?.length || 0) > 0;
   const campaigns = metaData?.campaigns || [];
+
+  // ============ Block renderers ============
+  const visibleOrder = layout.order.filter((id) => layout.blocks[id].visible);
+
+  const cardProps = (id: OverviewBlockId, metricOptions?: MetricOption[]) => {
+    const cfg = layout.blocks[id];
+    const idx = visibleOrder.indexOf(id);
+    return {
+      title: cfg.title,
+      editMode,
+      onMoveUp: idx > 0 ? () => moveBlock(id, -1) : undefined,
+      onMoveDown: idx < visibleOrder.length - 1 ? () => moveBlock(id, 1) : undefined,
+      onHide: () => toggleVisibility(id),
+      onConfigure: metricOptions ? () => setSettingsBlock(cfg) : undefined,
+    };
+  };
+
+  const renderBlock = (id: OverviewBlockId) => {
+    const cfg = layout.blocks[id];
+    if (!cfg.visible) return null;
+
+    switch (id) {
+      case "resultados":
+        return (
+          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <ProgressMetric
+                label="Investimento Total"
+                value={fmtNum(totalSpend)}
+                delta={pctDelta(totalSpend, prevSpend)}
+                current={totalSpend}
+                goal={monthlyInvestmentBudget}
+                goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
+                tone="warn"
+              />
+              <ProgressMetric
+                label="Faturamento"
+                value={fmtNum(curr.revenue)}
+                delta={pctDelta(curr.revenue, prev.revenue)}
+                current={curr.revenue}
+                goal={monthlyRevenueGoal}
+                goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
+                tone="primary"
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">ROAS</p>
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-card border border-border text-2xl font-bold">
+                  {roas.toFixed(1)}
+                </div>
+                {prevRoas > 0 && (
+                  <p className="text-[10px] text-muted-foreground">vs {prevRoas.toFixed(1)} anterior</p>
+                )}
+              </div>
+            </div>
+            <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
+          </SectionCard>
+        );
+
+      case "custos": {
+        const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : COST_METRIC_OPTIONS.map((o) => o.key);
+        return (
+          <SectionCard key={id} {...cardProps(id, COST_METRIC_OPTIONS)}>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+              {picked.includes("cps") && (
+                <MiniMetric label="Custo Por Venda" value={formatCurrency(cps, currencySymbol)} delta={prevCps ? pctDelta(cps, prevCps) : null} />
+              )}
+              {picked.includes("cpl") && (
+                <MiniMetric label="Custo Por Lead" value={cpl > 0 ? formatCurrency(cpl, currencySymbol) : "0"} delta={prevCpl ? pctDelta(cpl, prevCpl) : null} />
+              )}
+              {picked.includes("cpc") && <MiniMetric label="Custo Por Clique" value={formatCurrency(cpc, currencySymbol)} />}
+              {picked.includes("cpm") && <MiniMetric label="CPM" value={formatCurrency(cpm, currencySymbol)} />}
+            </div>
+            <div className="mt-5 pt-4 border-t border-border">
+              <p className="text-[13px] font-bold text-card-foreground mb-3">Vendas Por Produto</p>
+              <ProductSalesChart data={productData} />
+            </div>
+          </SectionCard>
+        );
+      }
+
+      case "funil":
+        return (
+          <SectionCard key={id} {...cardProps(id)}>
+            <HorizontalFunnel
+              clicks={clicks}
+              pageviews={pageviews}
+              leads={leads}
+              meetings={meetings}
+              sales={sales}
+              prevClicks={metaData?.overviewMetrics?.totalClicks ? Math.round(clicks * 0.85) : 0}
+              prevPageviews={pageviews ? Math.round(pageviews * 0.7) : 0}
+              prevLeads={prev.leads || prev.mql}
+              prevMeetings={prev.smql}
+              prevSales={prev.sales}
+            />
+          </SectionCard>
+        );
+
+      case "lowticket":
+        return (
+          <SectionCard key={id} {...cardProps(id)}>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <MiniMetric label="Total" value={String(lowTicketTotals.total)} delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)} />
+              <MiniMetric label="Meta Ads" value={String(lowTicketTotals.meta)} delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)} />
+              <MiniMetric label="Google Ads" value={String(lowTicketTotals.google)} delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)} />
+            </div>
+            <LowTicketChart data={lowTicketData} />
+          </SectionCard>
+        );
+
+      case "leads":
+        return (
+          <SectionCard key={id} {...cardProps(id)}>
+            <div className="mb-3">
+              <MiniMetric label="Leads Gerados" value={leads.toLocaleString("pt-BR")} delta={pctDelta(leads, prev.leads || prev.mql)} />
+            </div>
+            <LeadsChart data={leadsData} />
+          </SectionCard>
+        );
+
+      case "mql": {
+        const picked = cfg.metrics && cfg.metrics.length > 0 ? cfg.metrics : MQL_METRIC_OPTIONS.map((o) => o.key);
+        return (
+          <SectionCard key={id} {...cardProps(id, MQL_METRIC_OPTIONS)}>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {picked.includes("mql") && (
+                <MiniMetric label="MQL" value={curr.mql.toLocaleString("pt-BR")} delta={pctDelta(curr.mql, prev.mql)} />
+              )}
+              {picked.includes("smql") && (
+                <MiniMetric label="sMQL" value={curr.smql.toLocaleString("pt-BR")} delta={pctDelta(curr.smql, prev.smql)} />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <PlaceholderBox label="Detalhes MQL" />
+              <PlaceholderBox label="Detalhes sMQL" />
+            </div>
+            <div className="pt-3 border-t border-border space-y-2">
+              {picked.includes("qualified_messages") && (
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Mensagens Qualif.</p>
+                    <p className="text-sm font-bold">{curr.qualified_messages || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">% Mensagens</p>
+                    <p className="text-sm font-bold">—</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Amostragem</p>
+                    <p className="text-sm font-bold">{inCurr.length}</p>
+                  </div>
+                </div>
+              )}
+              {picked.includes("qualified_followers") && (
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Seguidores Qualif.</p>
+                    <p className="text-sm font-bold">{curr.qualified_followers || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">% Seguidores</p>
+                    <p className="text-sm font-bold">—</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Amostragem</p>
+                    <p className="text-sm font-bold">{inCurr.length}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        );
+      }
+
+      case "best-ads":
+        return (
+          <SectionCard key={id} {...cardProps(id, AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label })))}>
+            <BestAdsList campaigns={campaigns} limit={3} metrics={cfg.metrics} currencySymbol={currencySymbol} />
+          </SectionCard>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // metric options lookup for the settings dialog
+  const metricOptionsFor = (id: OverviewBlockId | undefined): MetricOption[] | undefined => {
+    if (!id) return undefined;
+    if (id === "custos") return COST_METRIC_OPTIONS;
+    if (id === "mql") return MQL_METRIC_OPTIONS;
+    if (id === "best-ads") return AD_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label }));
+    return undefined;
+  };
 
   return (
     <div className="space-y-4">
@@ -207,169 +414,25 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       )}
 
-      {/* === ROW 1: Resultados Gerais + Custos + Funnel === */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr_1.4fr] gap-4">
-        {/* Resultados Gerais (3 KPIs + chart) */}
-        <SectionCard title="Resultados Gerais">
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <ProgressMetric
-              label="Investimento Total"
-              value={fmtNum(totalSpend)}
-              delta={pctDelta(totalSpend, prevSpend)}
-              current={totalSpend}
-              goal={monthlyInvestmentBudget}
-              goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
-              tone="warn"
-            />
-            <ProgressMetric
-              label="Faturamento"
-              value={fmtNum(curr.revenue)}
-              delta={pctDelta(curr.revenue, prev.revenue)}
-              current={curr.revenue}
-              goal={monthlyRevenueGoal}
-              goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
-              tone="primary"
-            />
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">ROAS</p>
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-card border border-border text-2xl font-bold">
-                {roas.toFixed(1)}
-              </div>
-              {prevRoas > 0 && (
-                <p className="text-[10px] text-muted-foreground">vs {prevRoas.toFixed(1)} anterior</p>
-              )}
-            </div>
-          </div>
-          <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
-        </SectionCard>
+      <LayoutToolbar
+        editMode={editMode}
+        onToggleEdit={() => setEditMode((v) => !v)}
+        onReset={reset}
+        layout={layout}
+        onShowBlock={(id) => toggleVisibility(id)}
+      />
 
-        {/* Custos */}
-        <SectionCard title="Custos">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-            <MiniMetric
-              label="Custo Por Venda"
-              value={formatCurrency(cps, currencySymbol)}
-              delta={prevCps ? pctDelta(cps, prevCps) : null}
-            />
-            <MiniMetric
-              label="Custo Por Lead"
-              value={cpl > 0 ? formatCurrency(cpl, currencySymbol) : "0"}
-              delta={prevCpl ? pctDelta(cpl, prevCpl) : null}
-            />
-            <MiniMetric label="Custo Por Clique" value={formatCurrency(cpc, currencySymbol)} />
-            <MiniMetric label="CPM" value={formatCurrency(cpm, currencySymbol)} />
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-border">
-            <p className="text-[13px] font-bold text-card-foreground mb-3">Vendas Por Produto</p>
-            <ProductSalesChart data={productData} />
-          </div>
-        </SectionCard>
-
-        {/* Funil */}
-        <SectionCard>
-          <HorizontalFunnel
-            clicks={clicks}
-            pageviews={pageviews}
-            leads={leads}
-            meetings={meetings}
-            sales={sales}
-            prevClicks={metaData?.overviewMetrics?.totalClicks ? Math.round(clicks * 0.85) : 0}
-            prevPageviews={pageviews ? Math.round(pageviews * 0.7) : 0}
-            prevLeads={prev.leads || prev.mql}
-            prevMeetings={prev.smql}
-            prevSales={prev.sales}
-          />
-        </SectionCard>
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 auto-rows-min">
+        {visibleOrder.map((id) => renderBlock(id))}
       </div>
 
-      {/* === ROW 2: Low Ticket + Leads + MQL/sMQL + Best Ads === */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-        <SectionCard title="Vendas LowTicket">
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <MiniMetric
-              label="Total"
-              value={String(lowTicketTotals.total)}
-              delta={pctDelta(lowTicketTotals.total, prevLowTicket.total)}
-            />
-            <MiniMetric
-              label="Meta Ads"
-              value={String(lowTicketTotals.meta)}
-              delta={pctDelta(lowTicketTotals.meta, prevLowTicket.meta)}
-            />
-            <MiniMetric
-              label="Google Ads"
-              value={String(lowTicketTotals.google)}
-              delta={pctDelta(lowTicketTotals.google, prevLowTicket.google)}
-            />
-          </div>
-          <LowTicketChart data={lowTicketData} />
-        </SectionCard>
-
-        <SectionCard title="Leads">
-          <div className="mb-3">
-            <MiniMetric
-              label="Leads Gerados"
-              value={leads.toLocaleString("pt-BR")}
-              delta={pctDelta(leads, prev.leads || prev.mql)}
-            />
-          </div>
-          <LeadsChart data={leadsData} />
-        </SectionCard>
-
-        <SectionCard title="MQL & sMQL">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <MiniMetric
-              label="MQL"
-              value={curr.mql.toLocaleString("pt-BR")}
-              delta={pctDelta(curr.mql, prev.mql)}
-            />
-            <MiniMetric
-              label="sMQL"
-              value={curr.smql.toLocaleString("pt-BR")}
-              delta={pctDelta(curr.smql, prev.smql)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <PlaceholderBox label="Detalhes MQL" />
-            <PlaceholderBox label="Detalhes sMQL" />
-          </div>
-          <div className="pt-3 border-t border-border space-y-2">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-[10px] text-muted-foreground">Mensagens Qualif.</p>
-                <p className="text-sm font-bold">{curr.qualified_messages || "—"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">% Mensagens</p>
-                <p className="text-sm font-bold">—</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Amostragem</p>
-                <p className="text-sm font-bold">{inCurr.length}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-[10px] text-muted-foreground">Seguidores Qualif.</p>
-                <p className="text-sm font-bold">{curr.qualified_followers || "—"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">% Seguidores</p>
-                <p className="text-sm font-bold">—</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Amostragem</p>
-                <p className="text-sm font-bold">{inCurr.length}</p>
-              </div>
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Melhores Anúncios">
-          <BestAdsList campaigns={campaigns} limit={8} />
-        </SectionCard>
-      </div>
+      <BlockSettingsDialog
+        open={!!settingsBlock}
+        onOpenChange={(open) => !open && setSettingsBlock(null)}
+        block={settingsBlock}
+        metricOptions={metricOptionsFor(settingsBlock?.id)}
+        onSave={(patch) => settingsBlock && updateBlock(settingsBlock.id, patch)}
+      />
     </div>
   );
 }

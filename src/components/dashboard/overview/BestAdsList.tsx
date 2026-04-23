@@ -1,24 +1,111 @@
-import { ImageIcon } from "lucide-react";
-import { Campaign } from "@/data/mockMetaData";
+import { useState } from "react";
+import { ImageIcon, ExternalLink } from "lucide-react";
+import { Campaign, Creative } from "@/data/mockMetaData";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatCurrency } from "@/lib/format";
+
+export const AD_METRIC_OPTIONS: { key: string; label: string; format?: "currency" | "number" | "percent" }[] = [
+  { key: "primaryResult", label: "Resultado", format: "number" },
+  { key: "conversions", label: "Vendas", format: "number" },
+  { key: "spend", label: "Investimento", format: "currency" },
+  { key: "impressions", label: "Impressões", format: "number" },
+  { key: "clicks", label: "Cliques", format: "number" },
+  { key: "ctr", label: "CTR", format: "percent" },
+  { key: "roas", label: "ROAS", format: "number" },
+];
+
+interface CreativeRow extends Creative {
+  campaignName: string;
+}
 
 interface Props {
   campaigns: Campaign[];
   limit?: number;
+  metrics?: string[]; // metric keys to display (defaults to ["primaryResult","conversions"])
+  currencySymbol?: string;
 }
 
-/** Ranks creatives across all campaigns by primary result volume; shows thumb + leads + sales. */
-export function BestAdsList({ campaigns, limit = 8 }: Props) {
-  const all = campaigns.flatMap((c) =>
-    (c.creatives || []).map((cr) => ({
-      campaignName: c.name,
-      ...cr,
-    })),
+function fmt(value: number | undefined, format?: string, currencySymbol = "R$") {
+  const v = Number(value || 0);
+  if (format === "currency") return formatCurrency(v, currencySymbol);
+  if (format === "percent") return `${v.toFixed(2)}%`;
+  return v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
+function CreativeRowItem({
+  cr,
+  metrics,
+  currencySymbol,
+}: {
+  cr: CreativeRow;
+  metrics: typeof AD_METRIC_OPTIONS;
+  currencySymbol: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0">
+      {cr.thumbnail ? (
+        <img src={cr.thumbnail} alt="" className="h-12 w-12 rounded object-cover shrink-0" loading="lazy" />
+      ) : (
+        <div className="h-12 w-12 rounded bg-muted flex items-center justify-center shrink-0">
+          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-medium text-card-foreground truncate" title={cr.name}>
+          {cr.name}
+        </p>
+        <p className="text-[10px] text-muted-foreground truncate">{cr.campaignName}</p>
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          {metrics.map((m) => (
+            <span key={m.key} className="text-[10px] text-muted-foreground">
+              <span className="uppercase tracking-wider">{m.label}: </span>
+              <span className="text-card-foreground font-semibold">
+                {fmt((cr as any)[m.key], m.format, currencySymbol)}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+      {cr.permalinkUrl && (
+        <a
+          href={cr.permalinkUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary hover:text-primary/80 shrink-0"
+          title="Ver publicação"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Ranks creatives across all campaigns; shows top N + "ver todos" modal. */
+export function BestAdsList({ campaigns, limit = 3, metrics, currencySymbol = "R$" }: Props) {
+  const [open, setOpen] = useState(false);
+
+  const selectedMetrics = AD_METRIC_OPTIONS.filter((m) =>
+    (metrics && metrics.length > 0 ? metrics : ["primaryResult", "conversions"]).includes(m.key),
+  );
+
+  const all: CreativeRow[] = campaigns.flatMap((c) =>
+    (c.creatives || []).map((cr) => ({ ...cr, campaignName: c.name })),
   );
 
   const ranked = [...all]
     .filter((c) => (c.primaryResult || 0) > 0 || (c.spend || 0) > 0)
-    .sort((a, b) => (b.primaryResult || 0) - (a.primaryResult || 0))
-    .slice(0, limit);
+    .sort((a, b) => (b.primaryResult || 0) - (a.primaryResult || 0));
+
+  const top = ranked.slice(0, limit);
 
   if (ranked.length === 0) {
     return (
@@ -27,29 +114,35 @@ export function BestAdsList({ campaigns, limit = 8 }: Props) {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-[1fr_60px_60px] text-[10px] uppercase tracking-wider text-muted-foreground font-semibold pb-1 border-b border-border">
-        <span>Anúncio</span>
-        <span className="text-right">Leads</span>
-        <span className="text-right">Vendas</span>
-      </div>
-      {ranked.map((cr, i) => (
-        <div key={`${cr.id}-${i}`} className="grid grid-cols-[1fr_60px_60px] items-center gap-2 py-1.5 border-b border-border/30 last:border-0">
-          <div className="flex items-center gap-2 min-w-0">
-            {cr.thumbnail ? (
-              <img src={cr.thumbnail} alt="" className="h-10 w-10 rounded object-cover shrink-0" loading="lazy" />
-            ) : (
-              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
-            <p className="text-[11px] text-card-foreground truncate" title={cr.name}>{cr.name}</p>
-          </div>
-          <p className="text-xs font-semibold text-card-foreground text-right">{cr.primaryResult || 0}</p>
-          <p className="text-xs font-semibold text-card-foreground text-right">{cr.conversions || 0}</p>
-        </div>
+    <div className="space-y-1">
+      {top.map((cr) => (
+        <CreativeRowItem key={cr.id} cr={cr} metrics={selectedMetrics} currencySymbol={currencySymbol} />
       ))}
-      <p className="text-[10px] text-muted-foreground text-right pt-1">{ranked.length} de {all.length}</p>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="w-full mt-3 text-xs">
+            Ver todos os criativos ativos ({ranked.length})
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criativos Ativos</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] pr-3">
+            <div className="space-y-1">
+              {ranked.map((cr) => (
+                <CreativeRowItem
+                  key={`all-${cr.id}`}
+                  cr={cr}
+                  metrics={selectedMetrics}
+                  currencySymbol={currencySymbol}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
