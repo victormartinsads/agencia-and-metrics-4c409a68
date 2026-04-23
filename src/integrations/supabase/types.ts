@@ -198,6 +198,47 @@ export type Database = {
           },
         ]
       }
+      dashboard_metric_sources: {
+        Row: {
+          client_id: string
+          column_letter: string | null
+          created_at: string
+          field_key: string | null
+          id: string
+          metric_key: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          column_letter?: string | null
+          created_at?: string
+          field_key?: string | null
+          id?: string
+          metric_key: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          column_letter?: string | null
+          created_at?: string
+          field_key?: string | null
+          id?: string
+          metric_key?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_metric_sources_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_notes: {
         Row: {
           client_id: string
