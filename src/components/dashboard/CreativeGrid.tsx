@@ -170,6 +170,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
                 </div>
                 <div className="p-3 space-y-2">
                   <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
+                  {cr.adsetName && (
+                    <p className="text-[10px] text-muted-foreground truncate">Conjunto: {cr.adsetName}</p>
+                  )}
                   {cr.permalinkUrl && (
                     <a
                       href={cr.permalinkUrl}
@@ -180,9 +183,6 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
                     >
                       <ExternalLink className="h-3 w-3" /> Ver publicação
                     </a>
-                  )}
-                  {cr.adsetName && (
-                    <p className="text-[10px] text-muted-foreground truncate">Conjunto: {cr.adsetName}</p>
                   )}
                   <div className="space-y-1.5">
                     <div className="bg-primary/10 rounded-md p-2 flex items-center justify-between">
