@@ -58,11 +58,26 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
       }, overrides);
       return { ...cr, _ov: ov };
     })
+    // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
+    // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
+    .filter((cr) => {
+      const hasDelivery =
+        (cr._ov.impressions || 0) > 0 ||
+        (cr._ov.clicks || 0) > 0 ||
+        (cr._ov.conversions || 0) > 0 ||
+        (cr._ov.spend || 0) > 0;
+      return hasDelivery;
+    })
     .sort((a, b) => {
+      // Ranking em cascata: 1) resultado primário; 2) menor CPA;
+      // 3) impressões; 4) cliques. Garante que 2º/3º façam sentido
+      // mesmo quando só 1 criativo teve conversões.
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
       const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
       const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
-      return aCpa - bCpa;
+      if (aCpa !== bCpa) return aCpa - bCpa;
+      if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
+      return b._ov.clicks - a._ov.clicks;
     })
     .slice(0, 3);
 
