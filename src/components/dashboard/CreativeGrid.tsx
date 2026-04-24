@@ -34,6 +34,11 @@ function getFunnelLabel(campaignName: string): string {
   return campaignName;
 }
 
+// Helper para identificar campanhas de Captação de Seguidores (usado para agrupar pódio)
+export function isCaptacaoSeguidores(campaignName: string): boolean {
+  return /CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i.test(campaignName);
+}
+
 interface Props {
   campaign: Campaign;
   clientId?: string;
