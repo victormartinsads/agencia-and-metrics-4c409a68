@@ -157,9 +157,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                 </div>
                 <div className="p-3 space-y-2">
                   <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
-                  {cr.adsetName && (
-                    <p className="text-[10px] text-muted-foreground truncate">Conjunto: {cr.adsetName}</p>
-                  )}
+                  <p className="text-[10px] text-muted-foreground truncate" title={cr.adsetName || undefined}>
+                    Conjunto: {cr.adsetName || "—"}
+                  </p>
                   <p className="text-[10px] text-muted-foreground truncate" title={cr._campaignName}>
                     Campanha: {cr._campaignName}
                   </p>
