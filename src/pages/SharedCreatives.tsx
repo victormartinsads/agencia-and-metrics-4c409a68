@@ -7,7 +7,8 @@ import { Loader2, Trophy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
-import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
+import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const DATE_PRESETS = [
@@ -155,9 +156,25 @@ export default function SharedCreatives() {
           </div>
         )}
 
-        {campaignsWithCreatives.map((campaign) => (
-          <CreativeGrid key={campaign.id} campaign={campaign} clientId={clientId} currencySymbol={client.currency_symbol || "R$"} />
-        ))}
+        {(() => {
+          const captacao = campaignsWithCreatives.filter(c => isCaptacaoSeguidores(c.name));
+          const others = campaignsWithCreatives.filter(c => !isCaptacaoSeguidores(c.name));
+          return (
+            <>
+              {captacao.length > 0 && (
+                <AggregatedCreativeGrid
+                  campaigns={captacao}
+                  funnelLabel="Captação de Seguidores"
+                  clientId={clientId}
+                  currencySymbol={client.currency_symbol || "R$"}
+                />
+              )}
+              {others.map((campaign) => (
+                <CreativeGrid key={campaign.id} campaign={campaign} clientId={clientId} currencySymbol={client.currency_symbol || "R$"} />
+              ))}
+            </>
+          );
+        })()}
       </main>
 
       <footer className="border-t border-border py-4 text-center">
