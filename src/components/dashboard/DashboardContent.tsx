@@ -7,7 +7,8 @@ import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { CampaignDetail } from "@/components/dashboard/CampaignDetail";
 import { AdSetTable } from "@/components/dashboard/AdSetTable";
 import { CampaignInsights } from "@/components/dashboard/CampaignInsights";
-import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
+import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
 import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -125,9 +126,26 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           </TabsContent>
 
           <TabsContent value="creatives" className="space-y-6">
-            {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).map(c => (
-              <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} />
-            ))}
+            {(() => {
+              const eligible = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0);
+              const captacao = eligible.filter(c => isCaptacaoSeguidores(c.name));
+              const others = eligible.filter(c => !isCaptacaoSeguidores(c.name));
+              return (
+                <>
+                  {captacao.length > 0 && (
+                    <AggregatedCreativeGrid
+                      campaigns={captacao}
+                      funnelLabel="Captação de Seguidores"
+                      clientId={clientId}
+                      currencySymbol={currencySymbol}
+                    />
+                  )}
+                  {others.map(c => (
+                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} />
+                  ))}
+                </>
+              );
+            })()}
             {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).length === 0 && (
               <div className="text-center py-16 text-muted-foreground text-sm">
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período

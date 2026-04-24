@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
 import { Image, Video, Layers, ExternalLink, Pencil } from "lucide-react";
@@ -12,46 +12,37 @@ const rankBadge = [
   { label: "🥉 TOP 3", className: "bg-primary/60 text-primary-foreground font-bold" },
 ];
 
-const FUNNEL_MAP: [RegExp, string][] = [
-  [/CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i, "Captação de Seguidores"],
-  [/CORREDOR_?JAPONES|CORREDOR_?JAPONÊS/i, "Corredor Japonês"],
-  [/CALL_?MENSAGEM_?IG/i, "Call de Vendas | Mensagens"],
-  [/CALL_?PC/i, "Call de Vendas | Página de Captura"],
-  [/MINI_?TREINAMENTO_?PC/i, "Mini Treinamento | Página de Captura"],
-  [/ISCA_?PC/i, "Isca | Página de Captura"],
-  [/SERVICOS_?MENSAGENS_?WPP|SERVIÇOS_?MENSAGENS_?WPP/i, "Serviços | Mensagens"],
-  [/MEDIUM_?TICKET_?PV/i, "Medium Ticket | Página de Vendas"],
-  [/LOW_?TICKET_?PV/i, "Low Ticket | Página de Vendas"],
-  [/FORMS_?NATIVO/i, "Formulário Nativo"],
-  [/IMERSÃO_?PAGA|IMERSAO_?PAGA/i, "Imersão Paga"],
-  [/WORKSHOP/i, "Workshop"],
-];
-
-function getFunnelLabel(campaignName: string): string {
-  for (const [regex, label] of FUNNEL_MAP) {
-    if (regex.test(campaignName)) return `Funil: ${label}`;
-  }
-  return campaignName;
-}
-
-// Helper para identificar campanhas de Captação de Seguidores (usado para agrupar pódio)
-export function isCaptacaoSeguidores(campaignName: string): boolean {
-  return /CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i.test(campaignName);
-}
-
 interface Props {
-  campaign: Campaign;
+  campaigns: Campaign[];
+  funnelLabel: string;
   clientId?: string;
   currencySymbol?: string;
 }
 
-export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Props) {
+/**
+ * Pódio agregado: junta criativos de várias campanhas do mesmo funil
+ * (ex: 4 campanhas de Captação de Seguidores -> 1 pódio com top 3 dentre todos os criativos).
+ * Mesma lógica de ranking em cascata do CreativeGrid (resultado -> CPA -> impressões -> cliques).
+ */
+export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$" }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
 
-  const resultLabel = campaign.primaryResultLabel || "Conversões";
+  // Métrica primária: usa o label da primeira campanha que tiver
+  const resultLabel = campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Conversões";
 
-  const sorted = [...campaign.creatives]
+  // Junta criativos de TODAS as campanhas, marcando origem
+  const allCreatives = useMemo(() => {
+    return campaigns.flatMap(camp =>
+      camp.creatives.map(cr => ({
+        ...cr,
+        _campaignName: camp.name,
+        _campaignId: camp.id,
+      }))
+    );
+  }, [campaigns]);
+
+  const sorted = allCreatives
     .map((cr) => {
       const ov = applyOverrides(cr.id, {
         conversions: cr.primaryResult ?? cr.conversions,
@@ -63,8 +54,6 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
       }, overrides);
       return { ...cr, _ov: ov };
     })
-    // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
-    // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
     .filter((cr) => {
       const hasDelivery =
         (cr._ov.impressions || 0) > 0 ||
@@ -74,9 +63,6 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
       return hasDelivery;
     })
     .sort((a, b) => {
-      // Ranking em cascata: 1) resultado primário; 2) menor CPA;
-      // 3) impressões; 4) cliques. Garante que 2º/3º façam sentido
-      // mesmo quando só 1 criativo teve conversões.
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
       const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
       const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
@@ -86,8 +72,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
     })
     .slice(0, 3);
 
+  const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0);
   const top3Total = sorted.reduce((sum, cr) => sum + cr._ov.conversions, 0);
-  const remainingResults = Math.max(campaign.conversions - top3Total, 0);
+  const remainingResults = Math.max(totalConversions - top3Total, 0);
 
   if (sorted.length === 0) return null;
 
@@ -104,10 +91,10 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-card-foreground">
-              {getFunnelLabel(campaign.name)}
+              Funil: {funnelLabel}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Top 3 somam {top3Total} de {campaign.conversions} {resultLabel.toLowerCase()}
+              {campaigns.length} campanhas agrupadas • Top 3 somam {top3Total} de {totalConversions} {resultLabel.toLowerCase()}
               {remainingResults > 0 ? ` • outros criativos: ${remainingResults}` : ""}
             </p>
           </div>
@@ -170,6 +157,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
                 </div>
                 <div className="p-3 space-y-2">
                   <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate" title={cr._campaignName}>
+                    Campanha: {cr._campaignName}
+                  </p>
                   {cr.permalinkUrl && (
                     <a
                       href={cr.permalinkUrl}
