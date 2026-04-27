@@ -4,6 +4,12 @@ import { FunnelGroup } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
 import { Layers, Target } from "lucide-react";
+import { MetricsCustomizer } from "./MetricsCustomizer";
+import {
+  AVAILABLE_METRICS,
+  formatCustomValue,
+  useDiagnosticMetricsConfig,
+} from "@/hooks/useDiagnosticMetricsConfig";
 
 interface Props {
   group: FunnelGroup;
@@ -67,6 +73,35 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
+  const { config } = useDiagnosticMetricsConfig(
+    clientId || "",
+    "current",
+    group.key,
+  );
+
+  const renderMetricValue = (key: string): string => {
+    switch (key) {
+      case "spend": return formatMoney(totals.spend, currencySymbol);
+      case "conversions": return totals.conversions.toLocaleString("pt-BR");
+      case "cpa": return totals.cpa > 0 ? formatMoney(totals.cpa, currencySymbol) : "—";
+      case "ctr": return `${totals.ctr.toFixed(2)}%`;
+      case "cpc": return totals.cpc > 0 ? formatMoney(totals.cpc, currencySymbol) : "—";
+      case "cpm": return formatMoney(totals.cpm, currencySymbol);
+      case "reach": return totals.reach.toLocaleString("pt-BR");
+      case "impressions": return totals.impressions.toLocaleString("pt-BR");
+      case "clicks": return totals.clicks.toLocaleString("pt-BR");
+      case "roas": return totals.roas > 0 ? `${totals.roas.toFixed(2)}x` : "—";
+      default: return "—";
+    }
+  };
+
+  const getMetricLabel = (key: string): string => {
+    if (key === "conversions") return resultLabel;
+    return AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
+  };
+
+  const isHighlight = (key: string) => key === "spend" || key === "conversions";
+
   return (
     <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
       {/* Cabeçalho */}
@@ -88,19 +123,34 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
               : "Campanha individual"}
           </p>
         </div>
-        <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-1 rounded-full self-start">
-          Métrica primária: {resultLabel}
-        </span>
+        <div className="flex items-center gap-2 self-start">
+          <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-1 rounded-full">
+            Métrica primária: {resultLabel}
+          </span>
+          {clientId && (
+            <MetricsCustomizer clientId={clientId} datePreset="current" groupKey={group.key} />
+          )}
+        </div>
       </header>
 
-      {/* KPIs consolidados */}
+      {/* KPIs consolidados — personalizáveis */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Investimento" value={formatMoney(totals.spend, currencySymbol)} highlight />
-        <Kpi label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} highlight />
-        <Kpi label="CPA" value={totals.cpa > 0 ? formatMoney(totals.cpa, currencySymbol) : "—"} />
-        <Kpi label="CTR" value={`${totals.ctr.toFixed(2)}%`} />
-        <Kpi label="CPM" value={formatMoney(totals.cpm, currencySymbol)} />
-        <Kpi label="Alcance" value={totals.reach.toLocaleString("pt-BR")} />
+        {config.visible_metrics.map(key => (
+          <Kpi
+            key={key}
+            label={getMetricLabel(key)}
+            value={renderMetricValue(key)}
+            highlight={isHighlight(key)}
+          />
+        ))}
+        {config.custom_metrics.map(m => (
+          <Kpi
+            key={m.id}
+            label={m.label}
+            value={formatCustomValue(m, currencySymbol)}
+            custom
+          />
+        ))}
       </div>
 
       {/* Quando é funil agrupando várias campanhas, lista as campanhas */}
@@ -199,13 +249,22 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
   );
 }
 
-function Kpi({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function Kpi({ label, value, highlight, custom }: { label: string; value: string; highlight?: boolean; custom?: boolean }) {
   return (
     <div className={`rounded-lg border p-3 ${
-      highlight ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"
+      custom
+        ? "border-amber-500/30 bg-amber-500/5"
+        : highlight
+          ? "border-primary/30 bg-primary/5"
+          : "border-border bg-muted/20"
     }`}>
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-base font-bold ${highlight ? "text-primary" : "text-card-foreground"}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+        {custom && <span className="text-amber-500">✦</span>}
+        {label}
+      </div>
+      <div className={`mt-1 text-base font-bold ${
+        custom ? "text-amber-500" : highlight ? "text-primary" : "text-card-foreground"
+      }`}>{value}</div>
     </div>
   );
 }
