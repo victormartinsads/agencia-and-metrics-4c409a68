@@ -289,12 +289,14 @@ export function DiagnosticoSemanal({
         <DiagnosticoPresentMode
           clientName={clientName}
           datePreset={DATE_LABEL[datePreset] || datePreset}
+          datePresetKey={datePreset}
           groups={groups}
           blocks={blocks}
           whatWeDid={whatWeDid}
           nextActions={nextActions}
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
+          clientId={clientId}
         />
       )}
     </>

@@ -5,6 +5,11 @@ import { ChevronLeft, ChevronRight, X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FunnelGroup } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
+import {
+  AVAILABLE_METRICS,
+  formatCustomValue,
+  useDiagnosticMetricsConfig,
+} from "@/hooks/useDiagnosticMetricsConfig";
 
 interface Props {
   clientName: string;
@@ -15,6 +20,9 @@ interface Props {
   nextActions: string;
   currencySymbol?: string;
   onClose: () => void;
+  clientId?: string;
+  /** Chave bruta do período (ex: "last_7d") usada para ler/persistir config no banco. */
+  datePresetKey?: string;
 }
 
 type Slide =
@@ -33,7 +41,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose,
+  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -127,7 +135,14 @@ export function DiagnosticoPresentMode({
               </div>
             )}
 
-            {slide.kind === "group" && <GroupSlide group={slide.group} currencySymbol={currencySymbol} />}
+            {slide.kind === "group" && (
+              <GroupSlide
+                group={slide.group}
+                currencySymbol={currencySymbol}
+                clientId={clientId}
+                datePreset={datePresetKey || datePreset}
+              />
+            )}
 
             {slide.kind === "diagnostic" && (
               <div className={`rounded-3xl bg-gradient-to-br ${slide.accent} to-transparent p-10 border border-border h-full`}>
@@ -160,22 +175,57 @@ export function DiagnosticoPresentMode({
   );
 }
 
-function GroupSlide({ group, currencySymbol }: { group: FunnelGroup; currencySymbol: string }) {
+function GroupSlide({
+  group,
+  currencySymbol,
+  clientId,
+  datePreset,
+}: {
+  group: FunnelGroup;
+  currencySymbol: string;
+  clientId?: string;
+  datePreset: string;
+}) {
   const totals = group.campaigns.reduce(
     (acc, c) => {
       acc.spend += c.spend;
       acc.impressions += c.impressions;
       acc.clicks += c.clicks;
       acc.conversions += c.conversions;
+      acc.reach += c.reach || 0;
       return acc;
     },
-    { spend: 0, impressions: 0, clicks: 0, conversions: 0 }
+    { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0 }
   );
   const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
   const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
   const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0;
+  const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
+  const purchaseValue = group.campaigns.reduce((s, c) => s + (c.purchaseValue || 0), 0);
+  const roas = totals.spend > 0 && purchaseValue > 0 ? purchaseValue / totals.spend : 0;
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
+
+  const { config } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
+
+  const renderMetricValue = (key: string): string => {
+    switch (key) {
+      case "spend": return fmtMoney(totals.spend, currencySymbol);
+      case "conversions": return totals.conversions.toLocaleString("pt-BR");
+      case "cpa": return cpa > 0 ? fmtMoney(cpa, currencySymbol) : "—";
+      case "ctr": return `${ctr.toFixed(2)}%`;
+      case "cpc": return cpc > 0 ? fmtMoney(cpc, currencySymbol) : "—";
+      case "cpm": return fmtMoney(cpm, currencySymbol);
+      case "reach": return totals.reach.toLocaleString("pt-BR");
+      case "impressions": return totals.impressions.toLocaleString("pt-BR");
+      case "clicks": return totals.clicks.toLocaleString("pt-BR");
+      case "roas": return roas > 0 ? `${roas.toFixed(2)}x` : "—";
+      default: return "—";
+    }
+  };
+  const metricLabel = (key: string) =>
+    key === "conversions" ? resultLabel : AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
+  const isHighlight = (key: string) => key === "spend" || key === "conversions";
 
   // Top 3 criativos do grupo
   const top = group.campaigns
@@ -198,12 +248,23 @@ function GroupSlide({ group, currencySymbol }: { group: FunnelGroup; currencySym
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <BigKpi label="Investimento" value={fmtMoney(totals.spend, currencySymbol)} highlight />
-        <BigKpi label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} highlight />
-        <BigKpi label="CPA" value={cpa > 0 ? fmtMoney(cpa, currencySymbol) : "—"} />
-        <BigKpi label="CTR" value={`${ctr.toFixed(2)}%`} />
-        <BigKpi label="CPM" value={fmtMoney(cpm, currencySymbol)} />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {config.visible_metrics.map(key => (
+          <BigKpi
+            key={key}
+            label={metricLabel(key)}
+            value={renderMetricValue(key)}
+            highlight={isHighlight(key)}
+          />
+        ))}
+        {config.custom_metrics.map(m => (
+          <BigKpi
+            key={m.id}
+            label={m.label}
+            value={formatCustomValue(m, currencySymbol)}
+            custom
+          />
+        ))}
       </div>
 
       {top.length > 0 && (
@@ -254,13 +315,32 @@ function GroupSlide({ group, currencySymbol }: { group: FunnelGroup; currencySym
   );
 }
 
-function BigKpi({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function BigKpi({
+  label,
+  value,
+  highlight,
+  custom,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  custom?: boolean;
+}) {
   return (
     <div className={`rounded-xl border p-4 ${
-      highlight ? "border-primary/40 bg-primary/10" : "border-border bg-muted/30"
+      custom
+        ? "border-amber-500/40 bg-amber-500/10"
+        : highlight
+          ? "border-primary/40 bg-primary/10"
+          : "border-border bg-muted/30"
     }`}>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-2xl font-bold ${highlight ? "text-primary" : "text-card-foreground"}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+        {custom && <span className="text-amber-500">✦</span>}
+        {label}
+      </div>
+      <div className={`mt-1 text-2xl font-bold ${
+        custom ? "text-amber-500" : highlight ? "text-primary" : "text-card-foreground"
+      }`}>{value}</div>
     </div>
   );
 }
