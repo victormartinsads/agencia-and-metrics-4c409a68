@@ -8,9 +8,11 @@ import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Save, Loader2, Presentation, FileDown, ClipboardList, ArrowRight } from "lucide-react";
+import { Sparkles, Save, Loader2, Presentation, FileDown, ClipboardList, ArrowRight, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   clientId: string;
@@ -35,6 +37,34 @@ export function DiagnosticoSemanal({
   datePreset,
   currencySymbol = "R$",
 }: Props) {
+  // Slug do cliente para gerar o link público
+  const { data: clientSlug } = useQuery({
+    queryKey: ["client-slug", clientId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("slug")
+        .eq("id", clientId)
+        .maybeSingle();
+      return data?.slug || null;
+    },
+    enabled: !!clientId,
+  });
+
+  const handleCopyPublicLink = async () => {
+    if (!clientSlug) {
+      toast.error("Este cliente ainda não tem slug configurado.");
+      return;
+    }
+    const url = `${window.location.origin}/como-estamos/${clientSlug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado!", { description: url });
+    } catch {
+      toast.error("Não consegui copiar. Link: " + url);
+    }
+  };
+
   // Apenas campanhas com gasto no período
   const activeCampaigns = useMemo(
     () => campaigns.filter(c => c.spend > 0),
@@ -178,6 +208,9 @@ export function DiagnosticoSemanal({
           </Button>
           <Button onClick={() => setPresenting(true)} variant="outline" size="sm" className="gap-2">
             <Presentation className="h-4 w-4" /> Apresentar
+          </Button>
+          <Button onClick={handleCopyPublicLink} variant="outline" size="sm" className="gap-2" disabled={!clientSlug}>
+            <Link2 className="h-4 w-4" /> Copiar link do cliente
           </Button>
           <Button onClick={handleExportPDF} disabled={exporting} variant="outline" size="sm" className="gap-2">
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}

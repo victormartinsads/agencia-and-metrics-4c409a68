@@ -19,10 +19,12 @@ interface Props {
   whatWeDid: string;
   nextActions: string;
   currencySymbol?: string;
-  onClose: () => void;
+  onClose?: () => void;
   clientId?: string;
   /** Chave bruta do período (ex: "last_7d") usada para ler/persistir config no banco. */
   datePresetKey?: string;
+  /** Se true, esconde o botão "Sair" (uso em página pública compartilhada). */
+  publicMode?: boolean;
 }
 
 type Slide =
@@ -41,7 +43,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey,
+  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -89,9 +91,11 @@ export function DiagnosticoPresentMode({
           <Button size="sm" variant="ghost" onClick={enterFullscreen} className="gap-2">
             <Maximize2 className="h-4 w-4" /> Tela cheia
           </Button>
-          <Button size="sm" variant="ghost" onClick={onClose} className="gap-2">
-            <X className="h-4 w-4" /> Sair
-          </Button>
+          {!publicMode && onClose && (
+            <Button size="sm" variant="ghost" onClick={onClose} className="gap-2">
+              <X className="h-4 w-4" /> Sair
+            </Button>
+          )}
         </div>
       </div>
 
