@@ -15,6 +15,7 @@ interface Props {
   group: FunnelGroup;
   clientId?: string;
   currencySymbol?: string;
+  datePreset?: string;
 }
 
 function formatMoney(v: number, symbol: string) {
@@ -67,7 +68,7 @@ function aggregateAdsets(campaigns: Campaign[]) {
     .sort((a, b) => b.spend - a.spend);
 }
 
-export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$" }: Props) {
+export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
   const totals = useMemo(() => aggregate(group.campaigns), [group.campaigns]);
   const adsets = useMemo(() => aggregateAdsets(group.campaigns), [group.campaigns]);
   const resultLabel =
@@ -75,7 +76,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
 
   const { config } = useDiagnosticMetricsConfig(
     clientId || "",
-    "current",
+    datePreset,
     group.key,
   );
 
@@ -128,7 +129,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             Métrica primária: {resultLabel}
           </span>
           {clientId && (
-            <MetricsCustomizer clientId={clientId} datePreset="current" groupKey={group.key} />
+            <MetricsCustomizer clientId={clientId} datePreset={datePreset} groupKey={group.key} />
           )}
         </div>
       </header>
