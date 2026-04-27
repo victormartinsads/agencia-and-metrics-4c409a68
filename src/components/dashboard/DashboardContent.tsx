@@ -17,6 +17,9 @@ import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 import { ComoEstamosTab } from "@/components/como-estamos/ComoEstamosTab";
 import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
+import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   clientId?: string;
@@ -30,6 +33,15 @@ interface Props {
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$" }: Props) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
+  const { data: clientInfo } = useQuery({
+    queryKey: ["client-name", clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data } = await supabase.from("clients").select("name").eq("id", clientId).maybeSingle();
+      return data;
+    },
+    enabled: !!clientId,
+  });
 
   const overview = metaData?.overviewMetrics;
   const campaigns = metaData?.campaigns || [];
@@ -65,6 +77,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="como-estamos">Como Estamos</TabsTrigger>
+            <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
             <TabsTrigger value="funnel">Funil</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
             <TabsTrigger value="creatives">Criativos</TabsTrigger>
@@ -86,6 +99,16 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               clientId={clientId || ""}
               campaigns={campaigns}
               dailyMetrics={dailyMetrics}
+              datePreset={datePreset || "last_7d"}
+              currencySymbol={currencySymbol}
+            />
+          </TabsContent>
+
+          <TabsContent value="diagnostico" className="space-y-6">
+            <DiagnosticoSemanal
+              clientId={clientId || ""}
+              clientName={clientInfo?.name}
+              campaigns={campaigns}
               datePreset={datePreset || "last_7d"}
               currencySymbol={currencySymbol}
             />

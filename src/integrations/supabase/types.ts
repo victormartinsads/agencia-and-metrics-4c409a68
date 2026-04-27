@@ -566,6 +566,42 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_diagnostics: {
+        Row: {
+          client_id: string
+          client_requests: string
+          created_at: string
+          date_preset: string
+          id: string
+          manager_actions: string
+          negatives: string
+          positives: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_requests?: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          manager_actions?: string
+          negatives?: string
+          positives?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_requests?: string
+          created_at?: string
+          date_preset?: string
+          id?: string
+          manager_actions?: string
+          negatives?: string
+          positives?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       weekly_metrics: {
         Row: {
           avg_ticket: number | null
