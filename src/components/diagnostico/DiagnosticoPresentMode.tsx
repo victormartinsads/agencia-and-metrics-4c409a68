@@ -21,6 +21,8 @@ interface Props {
   currencySymbol?: string;
   onClose: () => void;
   clientId?: string;
+  /** Chave bruta do período (ex: "last_7d") usada para ler/persistir config no banco. */
+  datePresetKey?: string;
 }
 
 type Slide =
@@ -39,7 +41,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId,
+  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -138,7 +140,7 @@ export function DiagnosticoPresentMode({
                 group={slide.group}
                 currencySymbol={currencySymbol}
                 clientId={clientId}
-                datePreset={datePreset}
+                datePreset={datePresetKey || datePreset}
               />
             )}
 
