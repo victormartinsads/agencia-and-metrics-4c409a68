@@ -289,6 +289,7 @@ export function DiagnosticoSemanal({
         <DiagnosticoPresentMode
           clientName={clientName}
           datePreset={DATE_LABEL[datePreset] || datePreset}
+          datePresetKey={datePreset}
           groups={groups}
           blocks={blocks}
           whatWeDid={whatWeDid}
