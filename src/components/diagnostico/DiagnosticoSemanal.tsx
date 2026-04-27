@@ -238,6 +238,7 @@ export function DiagnosticoSemanal({
               group={g}
               clientId={clientId}
               currencySymbol={currencySymbol}
+              datePreset={datePreset}
             />
           ))}
         </div>

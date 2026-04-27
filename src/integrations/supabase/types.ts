@@ -304,6 +304,39 @@ export type Database = {
           },
         ]
       }
+      diagnostic_metrics_config: {
+        Row: {
+          client_id: string
+          created_at: string
+          custom_metrics: Json
+          date_preset: string
+          group_key: string
+          id: string
+          updated_at: string
+          visible_metrics: Json
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          custom_metrics?: Json
+          date_preset?: string
+          group_key: string
+          id?: string
+          updated_at?: string
+          visible_metrics?: Json
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          custom_metrics?: Json
+          date_preset?: string
+          group_key?: string
+          id?: string
+          updated_at?: string
+          visible_metrics?: Json
+        }
+        Relationships: []
+      }
       funnel_notes: {
         Row: {
           client_id: string
