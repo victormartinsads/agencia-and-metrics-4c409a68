@@ -295,6 +295,7 @@ export function DiagnosticoSemanal({
           nextActions={nextActions}
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
+          clientId={clientId}
         />
       )}
     </>
