@@ -8,11 +8,19 @@ import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Save, Loader2, Presentation, FileDown, ClipboardList, ArrowRight, Link2 } from "lucide-react";
+import { Sparkles, Save, Loader2, Presentation, FileDown, ClipboardList, ArrowRight, Link2, RefreshCw, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshMetaAds } from "@/hooks/useMetaAds";
+import { getPeriodPair } from "@/lib/period";
+
+function formatPeriodRange(preset: string): string {
+  const { current } = getPeriodPair(preset);
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${fmt(current.start)} – ${fmt(current.end)}`;
+}
 
 interface Props {
   clientId: string;
@@ -51,19 +59,45 @@ export function DiagnosticoSemanal({
     enabled: !!clientId,
   });
 
+  const publicUrl = clientSlug
+    ? `${window.location.origin}/como-estamos/${clientSlug}?p=${datePreset}`
+    : null;
+
   const handleCopyPublicLink = async () => {
-    if (!clientSlug) {
+    if (!publicUrl) {
       toast.error("Este cliente ainda não tem slug configurado.");
       return;
     }
-    const url = `${window.location.origin}/como-estamos/${clientSlug}`;
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copiado!", { description: url });
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success("Link público copiado!", { description: publicUrl });
     } catch {
-      toast.error("Não consegui copiar. Link: " + url);
+      toast.error("Não consegui copiar. Link: " + publicUrl);
     }
   };
+
+  const handleOpenPublic = () => {
+    if (!publicUrl) return;
+    window.open(publicUrl, "_blank", "noopener");
+  };
+
+  // Refresh forçado dos dados Meta (bypass cache)
+  const refreshMeta = useRefreshMetaAds();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    if (!clientId) return;
+    setRefreshing(true);
+    try {
+      await refreshMeta(clientId, datePreset);
+      toast.success("Dados atualizados da Meta API!");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar dados");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const periodRange = useMemo(() => formatPeriodRange(datePreset), [datePreset]);
 
   // Apenas campanhas com gasto no período
   const activeCampaigns = useMemo(
@@ -195,13 +229,19 @@ export function DiagnosticoSemanal({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 sticky top-0 z-20">
         <div>
-          <h2 className="text-lg font-bold text-card-foreground">📊 Diagnóstico Semanal</h2>
+          <h2 className="text-lg font-bold text-card-foreground">
+            📊 Diagnóstico — {periodRange}
+          </h2>
           <p className="text-xs text-muted-foreground">
             {clientName} • {DATE_LABEL[datePreset] || datePreset} • {groups.length} funil(s)/campanha(s) ativos
             {saving && <span className="ml-2 text-primary">• salvando...</span>}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleRefresh} disabled={refreshing} variant="outline" size="sm" className="gap-2">
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {refreshing ? "Atualizando..." : "Atualizar dados"}
+          </Button>
           <Button onClick={handleGenerateAI} disabled={generating} size="sm" className="gap-2">
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {generating ? "Gerando..." : "Gerar diagnóstico com IA"}
@@ -209,8 +249,11 @@ export function DiagnosticoSemanal({
           <Button onClick={() => setPresenting(true)} variant="outline" size="sm" className="gap-2">
             <Presentation className="h-4 w-4" /> Apresentar
           </Button>
-          <Button onClick={handleCopyPublicLink} variant="outline" size="sm" className="gap-2" disabled={!clientSlug}>
-            <Link2 className="h-4 w-4" /> Copiar link do cliente
+          <Button onClick={handleOpenPublic} variant="outline" size="sm" className="gap-2" disabled={!publicUrl}>
+            <ExternalLink className="h-4 w-4" /> Abrir link público
+          </Button>
+          <Button onClick={handleCopyPublicLink} variant="outline" size="sm" className="gap-2" disabled={!publicUrl}>
+            <Link2 className="h-4 w-4" /> Copiar link
           </Button>
           <Button onClick={handleExportPDF} disabled={exporting} variant="outline" size="sm" className="gap-2">
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
@@ -223,9 +266,11 @@ export function DiagnosticoSemanal({
       <div ref={docRef} className="space-y-6 mt-6 bg-background p-2">
         {/* Capa */}
         <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-background p-8">
-          <p className="text-xs uppercase tracking-widest text-primary font-semibold">Diagnóstico Semanal</p>
+          <p className="text-xs uppercase tracking-widest text-primary font-semibold">Diagnóstico — {periodRange}</p>
           <h1 className="text-3xl md:text-4xl font-bold text-card-foreground mt-2">{clientName}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{DATE_LABEL[datePreset] || datePreset}</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {DATE_LABEL[datePreset] || datePreset} • {periodRange}
+          </p>
         </section>
 
         {/* Anotações do gestor */}
@@ -322,6 +367,7 @@ export function DiagnosticoSemanal({
         <DiagnosticoPresentMode
           clientName={clientName}
           datePreset={DATE_LABEL[datePreset] || datePreset}
+          periodRange={periodRange}
           datePresetKey={datePreset}
           groups={groups}
           blocks={blocks}

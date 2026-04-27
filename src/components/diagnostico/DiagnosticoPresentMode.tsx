@@ -14,6 +14,8 @@ import {
 interface Props {
   clientName: string;
   datePreset: string;
+  /** Faixa de datas formatada (ex: "01/04 – 07/04"). */
+  periodRange?: string;
   groups: FunnelGroup[];
   blocks: DiagnosticBlocks;
   whatWeDid: string;
@@ -43,7 +45,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode,
+  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -85,7 +87,7 @@ export function DiagnosticoPresentMode({
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/40 backdrop-blur">
         <div className="text-xs text-muted-foreground">
-          {clientName} • {datePreset} • Slide {idx + 1} / {slides.length}
+          {clientName} • {periodRange ? `${periodRange} (${datePreset})` : datePreset} • Slide {idx + 1} / {slides.length}
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={enterFullscreen} className="gap-2">
@@ -112,9 +114,13 @@ export function DiagnosticoPresentMode({
           >
             {slide.kind === "cover" && (
               <div className="h-full flex flex-col justify-center">
-                <p className="text-sm uppercase tracking-[0.3em] text-primary font-semibold">Diagnóstico Semanal</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-primary font-semibold">
+                  {periodRange ? `Diagnóstico ${periodRange}` : "Diagnóstico Semanal"}
+                </p>
                 <h1 className="text-6xl md:text-7xl font-extrabold text-card-foreground mt-4">{clientName}</h1>
-                <p className="text-2xl text-muted-foreground mt-4">{datePreset}</p>
+                <p className="text-2xl text-muted-foreground mt-4">
+                  {periodRange ? `${datePreset} • ${periodRange}` : datePreset}
+                </p>
                 <p className="text-base text-muted-foreground mt-12">{groups.length} funil(s) / campanha(s) com investimento no período</p>
               </div>
             )}

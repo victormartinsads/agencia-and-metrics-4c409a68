@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -8,6 +8,7 @@ import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPresentMode";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
+import { getPeriodPair } from "@/lib/period";
 
 const DATE_PRESETS = [
   { value: "last_7d", label: "Últimos 7 dias" },
@@ -21,9 +22,26 @@ const DATE_LABEL: Record<string, string> = Object.fromEntries(
   DATE_PRESETS.map(p => [p.value, p.label])
 );
 
+function formatPeriodRange(preset: string): string {
+  const { current } = getPeriodPair(preset);
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${fmt(current.start)} – ${fmt(current.end)}`;
+}
+
 export default function ComoEstamosPublic() {
   const { slug } = useParams<{ slug: string }>();
-  const [datePreset, setDatePreset] = useState("last_7d");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPreset = searchParams.get("p") || "last_7d";
+  const [datePreset, setDatePreset] = useState(initialPreset);
+
+  const handleChangePreset = (v: string) => {
+    setDatePreset(v);
+    const next = new URLSearchParams(searchParams);
+    next.set("p", v);
+    setSearchParams(next, { replace: true });
+  };
+
+  const periodRange = useMemo(() => formatPeriodRange(datePreset), [datePreset]);
 
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: ["client-by-slug-public", slug],
@@ -101,13 +119,15 @@ export default function ComoEstamosPublic() {
     <div className="min-h-screen bg-background">
       {/* Seletor de período fixo no topo */}
       <div className="fixed top-3 right-3 z-[110]">
-        <Select value={datePreset} onValueChange={setDatePreset}>
+        <Select value={datePreset} onValueChange={handleChangePreset}>
           <SelectTrigger className="w-[180px] h-8 text-xs bg-card/80 backdrop-blur">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {DATE_PRESETS.map(p => (
-              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+              <SelectItem key={p.value} value={p.value}>
+                {p.label} ({formatPeriodRange(p.value)})
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -125,6 +145,7 @@ export default function ComoEstamosPublic() {
         <DiagnosticoPresentMode
           clientName={client.name.toUpperCase()}
           datePreset={DATE_LABEL[datePreset] || datePreset}
+          periodRange={periodRange}
           datePresetKey={datePreset}
           groups={groups}
           blocks={blocks}
