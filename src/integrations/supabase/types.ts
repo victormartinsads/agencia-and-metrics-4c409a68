@@ -581,6 +581,97 @@ export type Database = {
           },
         ]
       }
+      sheets_sync_log: {
+        Row: {
+          client_id: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          rows_read: number
+          rows_saved: number
+          spreadsheet_id: string | null
+          started_at: string
+          status: string
+          triggered_by: string
+        }
+        Insert: {
+          client_id: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_read?: number
+          rows_saved?: number
+          spreadsheet_id?: string | null
+          started_at?: string
+          status?: string
+          triggered_by?: string
+        }
+        Update: {
+          client_id?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_read?: number
+          rows_saved?: number
+          spreadsheet_id?: string | null
+          started_at?: string
+          status?: string
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheets_sync_log_spreadsheet_id_fkey"
+            columns: ["spreadsheet_id"]
+            isOneToOne: false
+            referencedRelation: "client_spreadsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spreadsheet_field_mappings: {
+        Row: {
+          client_id: string
+          column_letter: string
+          created_at: string
+          id: string
+          metric_key: string
+          notes: string | null
+          spreadsheet_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          column_letter: string
+          created_at?: string
+          id?: string
+          metric_key: string
+          notes?: string | null
+          spreadsheet_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          column_letter?: string
+          created_at?: string
+          id?: string
+          metric_key?: string
+          notes?: string | null
+          spreadsheet_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spreadsheet_field_mappings_spreadsheet_id_fkey"
+            columns: ["spreadsheet_id"]
+            isOneToOne: false
+            referencedRelation: "client_spreadsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
