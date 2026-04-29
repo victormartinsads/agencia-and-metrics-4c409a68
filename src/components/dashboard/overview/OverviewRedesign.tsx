@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileSpreadsheet, AlertCircle, Wrench, Sparkles, Database } from "lucide-react";
+// react-grid-layout default export is the basic grid; named exports are inconsistent across builds.
+// Use require-style namespace import to grab Responsive + WidthProvider safely.
+import RGL from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 import { SectionCard } from "./SectionCard";
 import { ProgressMetric } from "./ProgressMetric";
@@ -26,6 +31,10 @@ import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
+
+const Responsive = (RGL as any).Responsive;
+const WidthProvider = (RGL as any).WidthProvider;
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface Props {
   clientId?: string;
@@ -85,7 +94,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
 
-  const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
+  const { layout, moveBlock, toggleVisibility, updateBlock, updatePositions, reset } = useOverviewLayout(clientId);
   const [editMode, setEditMode] = useState(false);
   const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
   const [sourceEditorOpen, setSourceEditorOpen] = useState(false);
@@ -552,7 +561,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         }
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
-            <UtmTrafficTable utms={ga?.utms || []} />
+            <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />
           </SectionCard>
         );
 
@@ -630,9 +639,45 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 auto-rows-min">
-        {visibleOrder.map((id) => renderBlock(id))}
-      </div>
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={{
+          lg: visibleOrder.map((id) => {
+            const b = layout.blocks[id];
+            return {
+              i: id,
+              x: b.x ?? 0,
+              y: b.y ?? 0,
+              w: b.w ?? 4,
+              h: b.h ?? 4,
+              minW: 3,
+              minH: 3,
+            };
+          }),
+        }}
+        breakpoints={{ lg: 1100, md: 768, sm: 0 }}
+        cols={{ lg: 12, md: 8, sm: 1 }}
+        rowHeight={80}
+        margin={[16, 16]}
+        containerPadding={[0, 0]}
+        isDraggable={editMode}
+        isResizable={editMode}
+        draggableHandle=".grid-drag-handle"
+        onLayoutChange={(curLayout: any[]) => {
+          if (editMode) updatePositions(curLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
+        }}
+      >
+        {visibleOrder.map((id) => (
+          <div key={id} className="overflow-hidden">
+            {editMode && (
+              <div className="grid-drag-handle absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary cursor-move select-none border border-primary/30">
+                ⋮⋮ arrastar
+              </div>
+            )}
+            <div className="h-full">{renderBlock(id)}</div>
+          </div>
+        ))}
+      </ResponsiveGridLayout>
 
       <BlockSettingsDialog
         open={!!settingsBlock}

@@ -28,9 +28,13 @@ export interface GAUtm {
   source: string;
   medium: string;
   campaign: string;
+  content?: string;
+  term?: string;
   sessions: number;
   users: number;
   engagedSessions: number;
+  conversions?: number;
+  revenue?: number;
 }
 
 export interface GAProperty {

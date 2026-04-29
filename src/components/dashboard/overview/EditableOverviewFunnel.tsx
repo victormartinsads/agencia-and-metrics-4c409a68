@@ -24,6 +24,8 @@ interface Props {
   metrics: OverviewFunnelMetricSource;
   /** Extra metric keys (besides AVAILABLE_METRICS) the dashboard can resolve */
   extraMetricLabels?: { key: string; label: string }[];
+  /** Optional scope key (e.g. "F1", "F2") to persist a separate funnel per group. */
+  campaignId?: string | null;
 }
 
 interface StageRow {
@@ -32,8 +34,8 @@ interface StageRow {
   sort_order: number;
 }
 
-export function EditableOverviewFunnel({ clientId, metrics, extraMetricLabels = [] }: Props) {
-  const { data: savedStages } = useFunnelStages(clientId, null);
+export function EditableOverviewFunnel({ clientId, metrics, extraMetricLabels = [], campaignId = null }: Props) {
+  const { data: savedStages } = useFunnelStages(clientId, campaignId);
   const saveMutation = useSaveFunnelStages();
   const [stages, setStages] = useState<StageRow[]>([]);
   const [editing, setEditing] = useState(false);
@@ -70,7 +72,7 @@ export function EditableOverviewFunnel({ clientId, metrics, extraMetricLabels = 
 
   const handleSave = async () => {
     try {
-      await saveMutation.mutateAsync({ clientId, campaignId: null, stages });
+      await saveMutation.mutateAsync({ clientId, campaignId, stages });
       toast.success("Funil salvo");
       setEditing(false);
     } catch {

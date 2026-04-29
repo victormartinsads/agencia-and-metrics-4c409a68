@@ -196,6 +196,39 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_configs: {
+        Row: {
+          client_id: string
+          created_at: string
+          custom_label: string | null
+          funnel_code: string
+          id: string
+          notes: string | null
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          custom_label?: string | null
+          funnel_code: string
+          id?: string
+          notes?: string | null
+          stages?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          custom_label?: string | null
+          funnel_code?: string
+          id?: string
+          notes?: string | null
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_notes: {
         Row: {
           client_id: string
@@ -347,6 +380,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      overview_layouts: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          layout: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          layout?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          layout?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       sales_events: {
         Row: {
