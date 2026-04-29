@@ -40,6 +40,10 @@ async function fetchWithCandidateKeys(
   const errors: string[] = [];
 
   for (const attempt of attempts) {
+    if (!attempt.keys || attempt.keys.length === 0) {
+      errors.push(`${attempt.label} skipped: no credentials available`);
+      continue;
+    }
     for (const key of attempt.keys) {
       const r = await fetch(attempt.url, { headers: getGatewayHeaders(key) });
       const data = await r.json();
