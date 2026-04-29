@@ -19,6 +19,19 @@ import {
   useWeeklyMetrics,
 } from "@/hooks/useDashboardSheet";
 
+function extractSpreadsheetFromInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const urlMatch = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const id = urlMatch?.[1] || (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed) ? trimmed : null);
+  if (!id) return null;
+  return {
+    id,
+    name: urlMatch ? "Planilha manual" : trimmed,
+    url: urlMatch ? trimmed : `https://docs.google.com/spreadsheets/d/${id}/edit`,
+  };
+}
+
 export default function ClientSheetsConfig() {
   const { clientId } = useParams<{ clientId: string }>();
   const { data: clients } = useClients();
@@ -32,6 +45,7 @@ export default function ClientSheetsConfig() {
 
   const [search, setSearch] = useState("");
   const { data: browseRes, isFetching: browsing, refetch: refetchBrowse } = useBrowseSheets(search);
+  const [manualSheetInput, setManualSheetInput] = useState("");
 
   const [picked, setPicked] = useState<{ id: string; name: string; url: string } | null>(null);
   const [sheetName, setSheetName] = useState<string>("");
@@ -74,6 +88,18 @@ export default function ClientSheetsConfig() {
     setPicked({ id: file.id, name: file.name, url: file.webViewLink });
     setSheetName("");
     setMapping({});
+  };
+
+  const handleManualSpreadsheet = () => {
+    const parsed = extractSpreadsheetFromInput(manualSheetInput);
+    if (!parsed) {
+      toast.error("Cole a URL completa da planilha ou o ID dela");
+      return;
+    }
+    setPicked(parsed);
+    setSheetName("");
+    setMapping({});
+    toast.success("Planilha definida manualmente");
   };
 
   const handleSave = async () => {
@@ -182,9 +208,22 @@ export default function ClientSheetsConfig() {
                   className="pl-9"
                 />
               </div>
+              {browseRes?.error && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                  <p className="text-xs text-destructive">A listagem automática falhou no conector. Use a URL/ID abaixo para continuar.</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Cole a URL do Google Sheets ou o ID da planilha"
+                      value={manualSheetInput}
+                      onChange={(e) => setManualSheetInput(e.target.value)}
+                    />
+                    <Button type="button" variant="outline" onClick={handleManualSpreadsheet}>Usar</Button>
+                  </div>
+                </div>
+              )}
               <div className="max-h-72 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
                 {browsing && <p className="text-xs text-muted-foreground p-2">Carregando…</p>}
-                {!browsing && (browseRes?.files.length || 0) === 0 && (
+                {!browsing && !browseRes?.error && (browseRes?.files.length || 0) === 0 && (
                   <p className="text-xs text-muted-foreground p-2">
                     Nenhuma planilha encontrada. Verifique se o conector Google Sheets está ativo.
                   </p>
