@@ -110,6 +110,7 @@ export type Database = {
           metric_sources: Json
           monthly_investment_budget: number | null
           monthly_revenue_goal: number | null
+          row_filters: Json
           sheet_name: string
           spreadsheet_id: string
           spreadsheet_name: string | null
@@ -131,6 +132,7 @@ export type Database = {
           metric_sources?: Json
           monthly_investment_budget?: number | null
           monthly_revenue_goal?: number | null
+          row_filters?: Json
           sheet_name?: string
           spreadsheet_id: string
           spreadsheet_name?: string | null
@@ -152,6 +154,7 @@ export type Database = {
           metric_sources?: Json
           monthly_investment_budget?: number | null
           monthly_revenue_goal?: number | null
+          row_filters?: Json
           sheet_name?: string
           spreadsheet_id?: string
           spreadsheet_name?: string | null
