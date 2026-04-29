@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FileSpreadsheet, AlertCircle, Wrench, Sparkles, Database } from "lucide-react";
 // react-grid-layout default export is the basic grid; named exports are inconsistent across builds.
 // Use require-style namespace import to grab Responsive + WidthProvider safely.
-import RGL from "react-grid-layout";
+import { Responsive, WidthProvider } from "react-grid-layout/legacy";
 import "react-grid-layout/css/styles.css";
 
 import { SectionCard } from "./SectionCard";
@@ -31,8 +31,6 @@ import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOver
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
 
-const Responsive = (RGL as any).Responsive;
-const WidthProvider = (RGL as any).WidthProvider;
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface Props {
