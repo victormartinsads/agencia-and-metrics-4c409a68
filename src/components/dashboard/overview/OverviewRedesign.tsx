@@ -12,6 +12,7 @@ import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
 import { BestAdsList, AD_METRIC_OPTIONS } from "./BestAdsList";
 import { UtmTrafficTable } from "./UtmTrafficTable";
+import { SheetUtmTable, SheetUtmRow } from "./SheetUtmTable";
 import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 import { MetricSourceEditor } from "./MetricSourceEditor";
@@ -245,6 +246,16 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     [inCurr],
   );
 
+  // UTMs from the spreadsheet (aggregated in raw_row.utm_breakdown by sheets-sync-v2)
+  const sheetUtmRows = useMemo<SheetUtmRow[]>(() => {
+    const rows: SheetUtmRow[] = [];
+    for (const r of inCurr) {
+      const breakdown = (r as any).raw_row?.utm_breakdown as SheetUtmRow[] | undefined;
+      if (Array.isArray(breakdown)) rows.push(...breakdown);
+    }
+    return rows;
+  }, [inCurr]);
+
   const hasSheets = !!sheetsConfig;
   const hasData = (weekly?.length || 0) > 0;
   const campaigns = metaData?.campaigns || [];
@@ -433,6 +444,18 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         );
 
       case "utm-traffic":
+        if (sheetUtmRows.length > 0) {
+          return (
+            <SectionCard
+              key={id}
+              {...cardProps(id)}
+              title="Fontes (UTMs da Planilha)"
+              className="xl:col-span-2"
+            >
+              <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
+            </SectionCard>
+          );
+        }
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
             <UtmTrafficTable utms={ga?.utms || []} />
