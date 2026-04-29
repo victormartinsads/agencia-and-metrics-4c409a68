@@ -8,13 +8,33 @@ const corsHeaders = {
 const SHEETS_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 
+function getConnectorKey(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY") {
+  const env = Deno.env.toObject();
+  const candidates = Object.keys(env)
+    .filter((key) => key === prefix || key.startsWith(`${prefix}_`))
+    .sort((a, b) => {
+      const getOrder = (value: string) => {
+        if (value === prefix) return 0;
+        const match = value.match(/_(\d+)$/);
+        return match ? Number(match[1]) : 0;
+      };
+      return getOrder(b) - getOrder(a);
+    });
+
+  for (const name of candidates) {
+    const value = env[name];
+    if (value) return value;
+  }
+  return null;
+}
+
 function authHeaders(target: "sheets" | "drive") {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   const key =
     target === "drive"
-      ? Deno.env.get("GOOGLE_DRIVE_API_KEY")
-      : Deno.env.get("GOOGLE_SHEETS_API_KEY");
+      ? getConnectorKey("GOOGLE_DRIVE_API_KEY")
+      : getConnectorKey("GOOGLE_SHEETS_API_KEY");
   if (!key) {
     throw new Error(
       target === "drive"
