@@ -1,11 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export type MetricSource = "sheets" | "manual" | "meta";
+export type MetricSource = "sheets" | "manual" | "meta" | "webhook";
 
 export interface MetricSourceConfig {
   source: MetricSource;
-  /** Para sheets: nome da coluna do header. Para meta: nome do campo (ex: link_clicks). */
+  /** Para sheets: nome da coluna do header. Para meta: nome do campo. Para webhook: campo agregado (revenue|sales|avg_ticket). */
   field?: string;
   /** Para manual: valor fixo */
   value?: number;
@@ -107,13 +107,20 @@ export function useUpsertMetricSources() {
 export function resolveMetricValue(
   metricKey: string,
   sources: MetricSourcesMap | undefined,
-  defaults: { sheetsValue?: number; metaTotals?: Record<string, number> },
+  defaults: {
+    sheetsValue?: number;
+    metaTotals?: Record<string, number>;
+    webhookTotals?: Record<string, number>;
+  },
 ): number {
   const cfg = sources?.[metricKey];
   if (!cfg) return defaults.sheetsValue || 0;
   if (cfg.source === "manual") return Number(cfg.value || 0);
   if (cfg.source === "meta" && cfg.field) {
     return Number(defaults.metaTotals?.[cfg.field] || 0);
+  }
+  if (cfg.source === "webhook" && cfg.field) {
+    return Number(defaults.webhookTotals?.[cfg.field] || 0);
   }
   // sheets (default)
   return defaults.sheetsValue || 0;
