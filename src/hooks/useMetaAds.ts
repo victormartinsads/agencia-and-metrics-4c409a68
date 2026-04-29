@@ -4,7 +4,7 @@ import { Campaign, DailyMetric } from "@/data/mockMetaData";
 
 export interface MetaAdsData {
   campaigns: Campaign[];
-  dailyMetrics: DailyMetric[];
+  dailyMetrics: (DailyMetric & { purchases?: number; leads?: number })[];
   overviewMetrics: {
     totalSpend: number;
     totalImpressions: number;
@@ -30,6 +30,7 @@ export interface MetaAdsData {
     contact?: number;
     submit_application?: number;
     view_content?: number;
+    actionBreakdown?: Record<string, number>;
   };
   accountErrors?: { accountId: string; message: string }[];
 }

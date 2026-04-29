@@ -250,7 +250,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         sheetByLabel.set(label, { google: Number((r as any).low_ticket_google || 0) });
       }
       return (metaData!.dailyMetrics || []).map((d) => {
-        const meta = Number(d.conversions || 0);
+        // Use purchases specifically (matches the period total which sums purchase actions).
+        const meta = Number((d as any).purchases ?? d.conversions ?? 0);
         const google = sheetByLabel.get(d.date)?.google || 0;
         return { date: d.date, meta, google, total: meta + google };
       });
