@@ -6,7 +6,7 @@ import { SectionCard } from "./SectionCard";
 import { ProgressMetric } from "./ProgressMetric";
 import { MiniMetric } from "./MiniMetric";
 import { RevenueSalesChart } from "./RevenueSalesChart";
-import { HorizontalFunnel } from "./HorizontalFunnel";
+import { EditableOverviewFunnel } from "./EditableOverviewFunnel";
 import { ProductSalesChart } from "./ProductSalesChart";
 import { LowTicketChart } from "./LowTicketChart";
 import { LeadsChart } from "./LeadsChart";
@@ -405,19 +405,49 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "funil":
         return (
-          <SectionCard key={id} {...cardProps(id)}>
-            <HorizontalFunnel
-              clicks={clicks}
-              pageviews={pageviews}
-              leads={leads}
-              meetings={meetings}
-              sales={sales}
-              prevClicks={metaData?.overviewMetrics?.totalClicks ? Math.round(clicks * 0.85) : 0}
-              prevPageviews={pageviews ? Math.round(pageviews * 0.7) : 0}
-              prevLeads={prev.leads || prev.mql}
-              prevMeetings={prev.smql}
-              prevSales={prev.sales}
-            />
+          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+            {clientId ? (
+              <EditableOverviewFunnel
+                clientId={clientId}
+                metrics={{
+                  current: {
+                    // Meta totals
+                    impressions: metaTotals.impressions,
+                    reach: metaTotals.reach,
+                    clicks: clicks,
+                    landing_page_views: metaTotals.landing_page_views,
+                    messaging_conversations_started: metaTotals.messaging_started,
+                    add_to_cart: metaTotals.add_to_cart,
+                    initiate_checkout: metaTotals.initiate_checkout,
+                    purchases: metaTotals.purchases || sales,
+                    conversions: metaTotals.lead_actions,
+                    // Mapped/resolved
+                    pageviews: pageviews,
+                    leads: leads,
+                    meetings: meetings,
+                    sales: sales,
+                    revenue: curr.revenue,
+                  },
+                  previous: {
+                    impressions: 0,
+                    reach: 0,
+                    clicks: 0,
+                    pageviews: 0,
+                    leads: prev.leads || prev.mql,
+                    meetings: prev.smql,
+                    sales: prev.sales,
+                    revenue: prev.revenue,
+                    purchases: prev.sales,
+                  },
+                }}
+                extraMetricLabels={[
+                  { key: "pageviews", label: "Pageviews (GA4)" },
+                  { key: "meetings", label: "Reuniões" },
+                  { key: "sales", label: "Vendas" },
+                  { key: "revenue", label: "Faturamento" },
+                ]}
+              />
+            ) : null}
           </SectionCard>
         );
 
