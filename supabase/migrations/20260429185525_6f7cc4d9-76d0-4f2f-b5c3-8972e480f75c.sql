@@ -1,0 +1,2 @@
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS lead_action_types text[] NOT NULL DEFAULT ARRAY['lead','onsite_conversion.lead_grouped','onsite_conversion.messaging_conversation_started_7d']::text[];

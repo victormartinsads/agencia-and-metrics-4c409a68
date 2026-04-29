@@ -199,26 +199,38 @@ export default function ClientSheetsConfig() {
 
           {!picked && (
             <>
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  Cole o link da planilha do Google Sheets
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://docs.google.com/spreadsheets/d/…"
+                    value={manualSheetInput}
+                    onChange={(e) => setManualSheetInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleManualSpreadsheet()}
+                  />
+                  <Button type="button" onClick={handleManualSpreadsheet}>Usar link</Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Dica: a planilha precisa estar com acesso "qualquer pessoa com o link pode ver" para o fallback público funcionar.
+                </p>
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar planilha pelo nome…"
+                  placeholder="Ou busque uma planilha da sua conta Google conectada…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
                 />
               </div>
               {browseRes?.error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
-                  <p className="text-xs text-destructive">A listagem automática falhou no conector. Use a URL/ID abaixo para continuar.</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Cole a URL do Google Sheets ou o ID da planilha"
-                      value={manualSheetInput}
-                      onChange={(e) => setManualSheetInput(e.target.value)}
-                    />
-                    <Button type="button" variant="outline" onClick={handleManualSpreadsheet}>Usar</Button>
-                  </div>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-xs text-destructive">
+                    A listagem automática falhou. Cole o link acima para continuar.
+                  </p>
                 </div>
               )}
               <div className="max-h-72 overflow-y-auto space-y-1 border border-border rounded-lg p-2">

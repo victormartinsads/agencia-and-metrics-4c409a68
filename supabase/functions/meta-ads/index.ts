@@ -447,10 +447,41 @@ Deno.serve(async (req) => {
     const avgCPC = Number((activeCampaigns.reduce((s, c) => s + c.cpc, 0) / count).toFixed(2));
     const avgROAS = Number((activeCampaigns.reduce((s, c) => s + c.roas, 0) / count).toFixed(2));
 
+    // Aggregate funnel-level totals (used by metric sources: leads, low ticket, etc.)
+    const totalPurchases = allCampaigns.reduce((s, c) => s + Number(c.purchases || 0), 0);
+    const totalLandingPageViews = allCampaigns.reduce((s, c) => s + Number(c.landingPageViews || 0), 0);
+    const totalAddToCart = allCampaigns.reduce((s, c) => s + Number(c.addToCart || 0), 0);
+    const totalInitiateCheckout = allCampaigns.reduce((s, c) => s + Number(c.initiateCheckout || 0), 0);
+
+    // Total Leads = sum of configured lead action types across all campaigns.
+    // The list is configurable per client (clients.lead_action_types).
+    const leadActionTypes: string[] = (client.lead_action_types && client.lead_action_types.length > 0)
+      ? client.lead_action_types
+      : ["lead", "onsite_conversion.lead_grouped", "onsite_conversion.messaging_conversation_started_7d"];
+
+    let totalLeadActions = 0;
+    for (const result of accountResults) {
+      if (result.status !== "fulfilled") continue;
+      for (const camp of result.value.campaigns) {
+        const insight: MetaInsight | undefined = camp.insights?.data?.[0];
+        for (const t of leadActionTypes) {
+          totalLeadActions += getActionValue(insight?.actions, t);
+        }
+      }
+    }
+
     const result = {
       campaigns: allCampaigns,
       dailyMetrics,
-      overviewMetrics: { totalSpend, totalImpressions, totalClicks, totalConversions, avgCTR, avgCPC, avgROAS, totalReach },
+      overviewMetrics: {
+        totalSpend, totalImpressions, totalClicks, totalConversions,
+        avgCTR, avgCPC, avgROAS, totalReach,
+        totalLeadActions,
+        totalPurchases,
+        totalLandingPageViews,
+        totalAddToCart,
+        totalInitiateCheckout,
+      },
       accountErrors,
     };
 

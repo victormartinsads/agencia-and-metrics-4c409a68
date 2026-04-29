@@ -42,6 +42,11 @@ export const DASHBOARD_FIELDS: { key: string; label: string; required?: boolean;
   { key: "product_code", label: "Código do Produto", type: "text" },
   { key: "qualified_messages", label: "Mensagens Qualificadas", type: "number" },
   { key: "qualified_followers", label: "Seguidores Qualificados", type: "number" },
+  { key: "utm_source", label: "UTM Source", type: "text" },
+  { key: "utm_medium", label: "UTM Medium", type: "text" },
+  { key: "utm_campaign", label: "UTM Campaign", type: "text" },
+  { key: "utm_content", label: "UTM Content", type: "text" },
+  { key: "utm_term", label: "UTM Term", type: "text" },
 ];
 
 export function useDashboardSheet(clientId?: string) {

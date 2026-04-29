@@ -179,6 +179,11 @@ serve(async (req) => {
       product_code: colIndex(mapping.product_code),
       qualified_messages: colIndex(mapping.qualified_messages),
       qualified_followers: colIndex(mapping.qualified_followers),
+      utm_source: colIndex(mapping.utm_source),
+      utm_medium: colIndex(mapping.utm_medium),
+      utm_campaign: colIndex(mapping.utm_campaign),
+      utm_content: colIndex(mapping.utm_content),
+      utm_term: colIndex(mapping.utm_term),
     };
 
     if (idx.date === null) {
@@ -210,7 +215,14 @@ serve(async (req) => {
         product_code: null,
         qualified_messages: 0,
         qualified_followers: 0,
-        raw_row: { rows: 0, product_breakdown: {} as Record<string, number> },
+        raw_row: {
+          rows: 0,
+          product_breakdown: {} as Record<string, number>,
+          utm_breakdown: [] as Array<{
+            source: string; medium: string; campaign: string; content: string; term: string;
+            sales: number; revenue: number;
+          }>,
+        },
         source: "google_sheets",
       };
 
@@ -230,6 +242,25 @@ serve(async (req) => {
       if (productCode) {
         current.raw_row.product_breakdown[productCode] = (current.raw_row.product_breakdown[productCode] || 0)
           + (idx.sales !== null ? parseCount(row[idx.sales], sep) : 1);
+      }
+
+      // UTM aggregation: 1 entry per row, summed later by combination on the client side.
+      const hasAnyUtm = (
+        idx.utm_source !== null || idx.utm_medium !== null ||
+        idx.utm_campaign !== null || idx.utm_content !== null || idx.utm_term !== null
+      );
+      if (hasAnyUtm) {
+        const rowRevenue = idx.revenue !== null ? parseNumber(row[idx.revenue], sep) : 0;
+        const rowSales = idx.sales !== null ? parseCount(row[idx.sales], sep) : 1;
+        current.raw_row.utm_breakdown.push({
+          source: idx.utm_source !== null ? String(row[idx.utm_source] || "").trim() : "",
+          medium: idx.utm_medium !== null ? String(row[idx.utm_medium] || "").trim() : "",
+          campaign: idx.utm_campaign !== null ? String(row[idx.utm_campaign] || "").trim() : "",
+          content: idx.utm_content !== null ? String(row[idx.utm_content] || "").trim() : "",
+          term: idx.utm_term !== null ? String(row[idx.utm_term] || "").trim() : "",
+          sales: rowSales,
+          revenue: rowRevenue,
+        });
       }
       aggregate.set(key, current);
     }
