@@ -22,8 +22,16 @@ function parseCount(raw: unknown, decimalSep: string): number {
   if (raw === null || raw === undefined) return 0;
   const text = String(raw).trim();
   if (!text || text === "-" || text.toLowerCase() === "null") return 0;
+  // Ignore values that look like phone numbers, IDs or other long digit strings.
+  // A real sales/leads count column should never have 8+ consecutive digits.
+  const digitsOnly = text.replace(/\D/g, "");
+  if (digitsOnly.length >= 8) return 0;
   const numeric = parseNumber(text, decimalSep);
-  return numeric > 0 ? Math.round(numeric) : 1;
+  if (!Number.isFinite(numeric) || numeric <= 0) return text ? 1 : 0;
+  // Cap to a safe integer range (Postgres int4 max = 2_147_483_647). Anything
+  // bigger is almost certainly bad data (phone, CPF, order id, etc).
+  if (numeric > 1_000_000) return 0;
+  return Math.round(numeric);
 }
 
 function parseCsv(text: string): string[][] {

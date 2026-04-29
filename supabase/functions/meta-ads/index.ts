@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     const adAccountIds: string[] = client.ad_account_ids;
 
     const allCampaigns: any[] = [];
-    const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+    const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
     const accountErrors: { accountId: string; message: string }[] = [];
     let hitRateLimit = false;
 
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
         }
 
         // Daily insights
-        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
         try {
           await delay(100);
           const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
@@ -242,12 +242,17 @@ Deno.serve(async (req) => {
           if (dailyJson.data) {
             for (const day of dailyJson.data) {
               const date = day.date_start;
-              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchases: 0, leads: 0 };
               dailyData[date].spend += Number(day.spend || 0);
               dailyData[date].impressions += Number(day.impressions || 0);
               dailyData[date].clicks += Number(day.clicks || 0);
-              const conv = getActionValue(day.actions, "purchase");
-              dailyData[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
+              const purchaseVal = getActionValue(day.actions, "purchase")
+                || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
+              const leadVal = getActionValue(day.actions, "lead")
+                || getActionValue(day.actions, "onsite_conversion.lead_grouped");
+              dailyData[date].purchases += purchaseVal;
+              dailyData[date].leads += leadVal;
+              dailyData[date].conversions += purchaseVal || leadVal || getActionValue(day.actions, "link_click");
             }
           }
         } catch (e) {
@@ -313,11 +318,13 @@ Deno.serve(async (req) => {
       }
 
       for (const [date, m] of Object.entries(dailyData)) {
-        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchases: 0, leads: 0 };
         dailySpend[date].spend += m.spend;
         dailySpend[date].impressions += m.impressions;
         dailySpend[date].clicks += m.clicks;
         dailySpend[date].conversions += m.conversions;
+        dailySpend[date].purchases += m.purchases;
+        dailySpend[date].leads += m.leads;
       }
     }
 
@@ -434,6 +441,8 @@ Deno.serve(async (req) => {
         impressions: m.impressions,
         clicks: m.clicks,
         conversions: m.conversions,
+        purchases: m.purchases,
+        leads: m.leads,
       }));
 
     const totalSpend = allCampaigns.reduce((s, c) => s + c.spend, 0);
@@ -466,6 +475,9 @@ Deno.serve(async (req) => {
       "contact",
       "submit_application",
       "view_content",
+      "lead",
+      "onsite_conversion.lead_grouped",
+      "initiate_checkout",
     ];
     const extraTotals: Record<string, number> = {};
     for (const result of accountResults) {
@@ -518,6 +530,10 @@ Deno.serve(async (req) => {
         contact: extraTotals["contact"] || 0,
         submit_application: extraTotals["submit_application"] || 0,
         view_content: extraTotals["view_content"] || 0,
+        // Per-action breakdown — used by the MetricSourceEditor to show
+        // counts next to each lead action checkbox so the user can pick
+        // wisely. Keyed by the raw Meta action_type string.
+        actionBreakdown: extraTotals,
       },
       accountErrors,
     };
