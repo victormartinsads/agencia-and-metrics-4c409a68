@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileSpreadsheet, AlertCircle, Wrench, Sparkles } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, Wrench, Sparkles, Database } from "lucide-react";
 
 import { SectionCard } from "./SectionCard";
 import { ProgressMetric } from "./ProgressMetric";
@@ -14,6 +14,8 @@ import { BestAdsList, AD_METRIC_OPTIONS } from "./BestAdsList";
 import { UtmTrafficTable } from "./UtmTrafficTable";
 import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
+import { MetricSourceEditor } from "./MetricSourceEditor";
+import { Button } from "@/components/ui/button";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
@@ -21,6 +23,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
+import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 
 interface Props {
   clientId?: string;
@@ -72,10 +75,13 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: sheetsConfig } = useDashboardSheet(clientId);
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
+  const { data: metricSources } = useMetricSources(clientId);
 
   const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
   const [editMode, setEditMode] = useState(false);
   const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
+  const [sourceEditorOpen, setSourceEditorOpen] = useState(false);
+  const [focusMetric, setFocusMetric] = useState<string | undefined>(undefined);
 
   const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
 
@@ -91,7 +97,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const sumKey = (rows: typeof inCurr, key: keyof (typeof inCurr)[number]) =>
     rows.reduce((acc, r) => acc + Number((r as any)[key] || 0), 0);
 
-  const curr = {
+  // Totais brutos por fonte
+  const sheetsCurr = {
     revenue: sumKey(inCurr, "revenue"),
     sales: sumKey(inCurr, "sales"),
     mql: sumKey(inCurr, "mql"),
@@ -116,6 +123,31 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     qualified_followers: sumKey(inPrev, "qualified_followers"),
   };
 
+  const metaTotals: Record<string, number> = {
+    spend: metaData?.overviewMetrics?.totalSpend || 0,
+    impressions: metaData?.overviewMetrics?.totalImpressions || 0,
+    clicks: metaData?.overviewMetrics?.totalClicks || 0,
+    leads: (metaData?.overviewMetrics as any)?.totalConversions || 0,
+    purchases: (metaData?.overviewMetrics as any)?.totalPurchases || 0,
+    landing_page_views: (metaData?.overviewMetrics as any)?.totalLandingPageViews || 0,
+  };
+
+  const resolve = (key: string, sheetsValue: number) =>
+    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals });
+
+  // curr aplicando metric sources (sobrescreve quando configurado)
+  const curr = {
+    ...sheetsCurr,
+    revenue: resolve("revenue", sheetsCurr.revenue),
+    investment: resolve("investment", sheetsCurr.investment),
+    leads: resolve("leads", sheetsCurr.leads),
+    sales: resolve("sales", sheetsCurr.sales),
+    mql: resolve("mql", sheetsCurr.mql),
+    smql: resolve("smql", sheetsCurr.smql),
+    low_ticket_meta: resolve("low_ticket_meta", sheetsCurr.low_ticket_meta),
+    low_ticket_google: resolve("low_ticket_google", sheetsCurr.low_ticket_google),
+  };
+
   const totalSpend = curr.investment > 0 ? curr.investment : (metaData?.overviewMetrics?.totalSpend || 0);
   const prevSpend = prev.investment;
 
@@ -130,11 +162,11 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const totalImpressions = metaData?.overviewMetrics?.totalImpressions || 0;
   const cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
 
-  const clicks = totalClicks;
-  const pageviews = ga?.overview?.pageViews || 0;
-  const leads = curr.leads || curr.mql;
-  const meetings = curr.smql;
-  const sales = curr.sales;
+  const clicks = resolve("clicks", totalClicks);
+  const pageviews = resolve("pageviews", ga?.overview?.pageViews || 0);
+  const leads = resolve("leads", curr.leads || curr.mql);
+  const meetings = resolve("meetings", curr.smql);
+  const sales = resolve("sales", curr.sales);
 
   const monthlyRevenueGoal = Number(sheetsConfig?.monthly_revenue_goal || 0);
   const monthlyInvestmentBudget = Number(sheetsConfig?.monthly_investment_budget || 0);
@@ -440,13 +472,25 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
           <h2 className="text-sm font-semibold tracking-tight">Visão Geral</h2>
           <span className="text-[11px] text-muted-foreground">— layout personalizável por cliente</span>
         </div>
-        <LayoutToolbar
-          editMode={editMode}
-          onToggleEdit={() => setEditMode((v) => !v)}
-          onReset={reset}
-          layout={layout}
-          onShowBlock={(id) => toggleVisibility(id)}
-        />
+        <div className="flex items-center gap-2">
+          {clientId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setFocusMetric(undefined); setSourceEditorOpen(true); }}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Database className="h-3.5 w-3.5" /> Fontes de dados
+            </Button>
+          )}
+          <LayoutToolbar
+            editMode={editMode}
+            onToggleEdit={() => setEditMode((v) => !v)}
+            onReset={reset}
+            layout={layout}
+            onShowBlock={(id) => toggleVisibility(id)}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 auto-rows-min">
@@ -460,6 +504,15 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         metricOptions={metricOptionsFor(settingsBlock?.id)}
         onSave={(patch) => settingsBlock && updateBlock(settingsBlock.id, patch)}
       />
+
+      {clientId && (
+        <MetricSourceEditor
+          clientId={clientId}
+          open={sourceEditorOpen}
+          onOpenChange={setSourceEditorOpen}
+          focusMetric={focusMetric}
+        />
+      )}
     </div>
   );
 }

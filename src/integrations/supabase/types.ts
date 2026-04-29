@@ -104,6 +104,7 @@ export type Database = {
           last_sync_rows: number | null
           last_sync_status: string | null
           last_synced_at: string | null
+          metric_sources: Json
           monthly_investment_budget: number | null
           monthly_revenue_goal: number | null
           sheet_name: string
@@ -124,6 +125,7 @@ export type Database = {
           last_sync_rows?: number | null
           last_sync_status?: string | null
           last_synced_at?: string | null
+          metric_sources?: Json
           monthly_investment_budget?: number | null
           monthly_revenue_goal?: number | null
           sheet_name?: string
@@ -144,6 +146,7 @@ export type Database = {
           last_sync_rows?: number | null
           last_sync_status?: string | null
           last_synced_at?: string | null
+          metric_sources?: Json
           monthly_investment_budget?: number | null
           monthly_revenue_goal?: number | null
           sheet_name?: string
