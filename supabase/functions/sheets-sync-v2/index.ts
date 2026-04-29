@@ -1,0 +1,186 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const SHEETS_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
+
+function parseNumber(raw: unknown, decimalSep: string): number {
+  if (raw === null || raw === undefined || raw === "") return 0;
+  let s = String(raw).trim();
+  s = s.replace(/[R$€£\s]/g, "");
+  if (decimalSep === ",") s = s.replace(/\./g, "").replace(",", ".");
+  else s = s.replace(/,/g, "");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseDate(raw: unknown, format: string): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) {
+    const [, a, b, c] = m;
+    const year = c.length === 2 ? `20${c}` : c;
+    if (format.startsWith("MM")) return `${year}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
+    return `${year}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return null;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  try {
+    const { client_id } = await req.json();
+    if (!client_id) throw new Error("client_id required");
+
+    const { data: cfg, error: cfgErr } = await supabase
+      .from("dashboard_sheet_config")
+      .select("*")
+      .eq("client_id", client_id)
+      .maybeSingle();
+    if (cfgErr) throw cfgErr;
+    if (!cfg) throw new Error("Configuração de planilha não encontrada");
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SHEETS_KEY = Deno.env.get("GOOGLE_SHEETS_API_KEY");
+    if (!LOVABLE_API_KEY || !SHEETS_KEY) {
+      throw new Error("Conector Google Sheets não configurado");
+    }
+
+    // Fetch the entire sheet starting from header row.
+    const range = `'${cfg.sheet_name.replace(/'/g, "''")}'!A${cfg.header_row}:ZZ`;
+    const url = `${SHEETS_GATEWAY}/spreadsheets/${cfg.spreadsheet_id}/values/${range}`;
+    const r = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": SHEETS_KEY,
+      },
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(`Sheets API ${r.status}: ${JSON.stringify(data)}`);
+
+    const allRows: string[][] = data.values || [];
+    if (allRows.length === 0) {
+      await supabase.from("dashboard_sheet_config").update({
+        last_synced_at: new Date().toISOString(),
+        last_sync_status: "success",
+        last_sync_error: null,
+        last_sync_rows: 0,
+      }).eq("client_id", client_id);
+      return new Response(JSON.stringify({ synced: 0, message: "Planilha vazia" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const headers = (allRows[0] || []).map((h) => String(h || "").trim());
+    const dataRows = allRows.slice(1);
+
+    const mapping = (cfg.field_mapping || {}) as Record<string, string>;
+
+    // Map each dashboard field key -> column index by header name (case-insensitive).
+    const colIndex = (headerName: string | undefined): number | null => {
+      if (!headerName) return null;
+      const target = headerName.trim().toLowerCase();
+      const idx = headers.findIndex((h) => h.toLowerCase() === target);
+      return idx >= 0 ? idx : null;
+    };
+
+    const idx = {
+      date: colIndex(mapping.date),
+      revenue: colIndex(mapping.revenue),
+      sales: colIndex(mapping.sales),
+      leads: colIndex(mapping.leads),
+      mql: colIndex(mapping.mql),
+      smql: colIndex(mapping.smql),
+      investment: colIndex(mapping.investment),
+      avg_ticket: colIndex(mapping.avg_ticket),
+      ltv: colIndex(mapping.ltv),
+      low_ticket_meta: colIndex(mapping.low_ticket_meta),
+      low_ticket_google: colIndex(mapping.low_ticket_google),
+      product_code: colIndex(mapping.product_code),
+      qualified_messages: colIndex(mapping.qualified_messages),
+      qualified_followers: colIndex(mapping.qualified_followers),
+    };
+
+    if (idx.date === null) {
+      throw new Error("Campo 'Data' não está mapeado. Volte à configuração e selecione qual coluna tem a data.");
+    }
+
+    const sep = cfg.decimal_separator || ",";
+    const fmt = cfg.date_format || "DD/MM/YYYY";
+
+    const records: any[] = [];
+    for (const row of dataRows) {
+      const refDate = parseDate(row[idx.date!], fmt);
+      if (!refDate) continue;
+      records.push({
+        client_id,
+        reference_date: refDate,
+        revenue: idx.revenue !== null ? parseNumber(row[idx.revenue], sep) : 0,
+        sales: idx.sales !== null ? Math.round(parseNumber(row[idx.sales], sep)) : 0,
+        mql: idx.mql !== null ? Math.round(parseNumber(row[idx.mql], sep)) : 0,
+        smql: idx.smql !== null ? Math.round(parseNumber(row[idx.smql], sep)) : 0,
+        leads: idx.leads !== null ? Math.round(parseNumber(row[idx.leads], sep)) : 0,
+        investment: idx.investment !== null ? parseNumber(row[idx.investment], sep) : 0,
+        avg_ticket: idx.avg_ticket !== null ? parseNumber(row[idx.avg_ticket], sep) : 0,
+        ltv: idx.ltv !== null ? parseNumber(row[idx.ltv], sep) : 0,
+        low_ticket_meta: idx.low_ticket_meta !== null ? Math.round(parseNumber(row[idx.low_ticket_meta], sep)) : 0,
+        low_ticket_google: idx.low_ticket_google !== null ? Math.round(parseNumber(row[idx.low_ticket_google], sep)) : 0,
+        product_code: idx.product_code !== null ? String(row[idx.product_code] || "").trim() || null : null,
+        qualified_messages: idx.qualified_messages !== null ? Math.round(parseNumber(row[idx.qualified_messages], sep)) : 0,
+        qualified_followers: idx.qualified_followers !== null ? Math.round(parseNumber(row[idx.qualified_followers], sep)) : 0,
+        raw_row: row,
+        source: "google_sheets",
+      });
+    }
+
+    if (records.length > 0) {
+      // Delete existing rows for this client to avoid duplicates from rows without product_code
+      await supabase.from("weekly_metrics").delete().eq("client_id", client_id).eq("source", "google_sheets");
+      const { error: insErr } = await supabase.from("weekly_metrics").insert(records);
+      if (insErr) throw new Error(`Insert error: ${insErr.message}`);
+    }
+
+    await supabase.from("dashboard_sheet_config").update({
+      last_synced_at: new Date().toISOString(),
+      last_sync_status: "success",
+      last_sync_error: null,
+      last_sync_rows: records.length,
+    }).eq("client_id", client_id);
+
+    return new Response(JSON.stringify({ synced: records.length }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("sheets-sync-v2 error", msg);
+    if (req.method === "POST") {
+      try {
+        const body = await req.clone().json().catch(() => ({}));
+        if (body?.client_id) {
+          await supabase.from("dashboard_sheet_config").update({
+            last_sync_status: "error",
+            last_sync_error: msg,
+          }).eq("client_id", body.client_id);
+        }
+      } catch (_) { /* ignore */ }
+    }
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
