@@ -83,17 +83,32 @@ async function listFiles(query: string | null) {
 async function getMeta(spreadsheetId: string) {
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(sheetId,title,gridProperties)`;
   const sheetsKeys = getConnectorKeys("GOOGLE_SHEETS_API_KEY");
-  if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
-  const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets meta" }]);
-  return {
-    spreadsheet_name: data.properties?.title || "",
-    sheets: (data.sheets || []).map((s: any) => ({
-      name: s.properties?.title,
-      gridId: s.properties?.sheetId,
-      rowCount: s.properties?.gridProperties?.rowCount || 0,
-      columnCount: s.properties?.gridProperties?.columnCount || 0,
-    })),
-  };
+  try {
+    if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
+    const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets meta" }]);
+    return {
+      spreadsheet_name: data.properties?.title || "",
+      sheets: (data.sheets || []).map((s: any) => ({
+        name: s.properties?.title,
+        gridId: s.properties?.sheetId,
+        rowCount: s.properties?.gridProperties?.rowCount || 0,
+        columnCount: s.properties?.gridProperties?.columnCount || 0,
+      })),
+    };
+  } catch (_error) {
+    const publicUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+    const response = await fetch(publicUrl);
+    const html = await response.text();
+    if (!response.ok) {
+      throw new Error(`Sheets meta fallback failed [${response.status}]`);
+    }
+    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i)
+      || html.match(/<title>([^<]+) - Google Sheets<\/title>/i);
+    return {
+      spreadsheet_name: titleMatch?.[1] || "Planilha pública",
+      sheets: [],
+    };
+  }
 }
 
 async function preview(spreadsheetId: string, sheetName: string, headerRow: number) {
@@ -103,12 +118,51 @@ async function preview(spreadsheetId: string, sheetName: string, headerRow: numb
   const range = `'${sheetName.replace(/'/g, "''")}'!A${start}:Z${end}`;
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}/values/${range}`;
   const sheetsKeys = getConnectorKeys("GOOGLE_SHEETS_API_KEY");
-  if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
-  const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets preview" }]);
-  const values: string[][] = data.values || [];
-  const headers = (values[0] || []).map((h) => String(h || "").trim());
-  const rows = values.slice(1);
-  return { headers, rows };
+  try {
+    if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
+    const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets preview" }]);
+    const values: string[][] = data.values || [];
+    const headers = (values[0] || []).map((h) => String(h || "").trim());
+    const rows = values.slice(1);
+    return { headers, rows };
+  } catch (_error) {
+    const publicCsvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const response = await fetch(publicCsvUrl);
+    const csvText = await response.text();
+    if (!response.ok) {
+      throw new Error(`Sheets preview fallback failed [${response.status}]`);
+    }
+
+    const parseCsvLine = (line: string) => {
+      const values: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          values.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      values.push(current);
+      return values;
+    };
+
+    const lines = csvText.split(/\r?\n/).filter((line) => line.length > 0);
+    const sliced = lines.slice(Math.max(0, headerRow - 1), headerRow + 9).map(parseCsvLine);
+    const headers = (sliced[0] || []).map((h) => String(h || "").trim());
+    const rows = sliced.slice(1);
+    return { headers, rows };
+  }
 }
 
 serve(async (req) => {
