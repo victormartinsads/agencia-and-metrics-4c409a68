@@ -21,6 +21,7 @@ export type Database = {
           currency_symbol: string
           ga_property_id: string | null
           id: string
+          lead_action_types: string[]
           meta_access_token: string
           monthly_revenue: number | null
           name: string
@@ -33,6 +34,7 @@ export type Database = {
           currency_symbol?: string
           ga_property_id?: string | null
           id?: string
+          lead_action_types?: string[]
           meta_access_token: string
           monthly_revenue?: number | null
           name: string
@@ -45,6 +47,7 @@ export type Database = {
           currency_symbol?: string
           ga_property_id?: string | null
           id?: string
+          lead_action_types?: string[]
           meta_access_token?: string
           monthly_revenue?: number | null
           name?: string
