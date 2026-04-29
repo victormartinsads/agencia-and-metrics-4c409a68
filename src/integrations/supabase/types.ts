@@ -345,6 +345,100 @@ export type Database = {
           },
         ]
       }
+      sales_events: {
+        Row: {
+          buyer_email: string | null
+          client_id: string
+          created_at: string
+          currency: string
+          gross_amount: number
+          id: string
+          net_amount: number
+          occurred_at: string
+          platform: string
+          product_id: string | null
+          product_name: string | null
+          raw_payload: Json | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          buyer_email?: string | null
+          client_id: string
+          created_at?: string
+          currency?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          occurred_at: string
+          platform: string
+          product_id?: string | null
+          product_name?: string | null
+          raw_payload?: Json | null
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          buyer_email?: string | null
+          client_id?: string
+          created_at?: string
+          currency?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          occurred_at?: string
+          platform?: string
+          product_id?: string | null
+          product_name?: string | null
+          raw_payload?: Json | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_webhook_config: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          product_filters: Json
+          updated_at: string
+          webhook_token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          product_filters?: Json
+          updated_at?: string
+          webhook_token?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          product_filters?: Json
+          updated_at?: string
+          webhook_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_webhook_config_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_insights: {
         Row: {
           client_id: string
