@@ -84,6 +84,15 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
+
+  const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
+  const [editMode, setEditMode] = useState(false);
+  const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
+  const [sourceEditorOpen, setSourceEditorOpen] = useState(false);
+  const [focusMetric, setFocusMetric] = useState<string | undefined>(undefined);
+
+  const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
+
   const salesRange = useMemo(
     () => ({ from: periods.current.start, to: periods.current.end }),
     [periods],
@@ -96,14 +105,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: salesEventsPrev } = useSalesEvents(clientId, salesPrevRange);
   const salesAgg = useMemo(() => aggregateSales(salesEvents), [salesEvents]);
   const salesAggPrev = useMemo(() => aggregateSales(salesEventsPrev), [salesEventsPrev]);
-
-  const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
-  const [editMode, setEditMode] = useState(false);
-  const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
-  const [sourceEditorOpen, setSourceEditorOpen] = useState(false);
-  const [focusMetric, setFocusMetric] = useState<string | undefined>(undefined);
-
-  const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
 
   const inCurr = useMemo(
     () => (weekly || []).filter((m) => inRange(m.reference_date, periods.current.start, periods.current.end)),
