@@ -1,29 +1,45 @@
 import { Campaign } from "@/data/mockMetaData";
 
 /**
- * Mapa unificado de funis. Cada entrada tenta casar o nome da campanha
- * com um regex; se casar, a campanha é agrupada sob aquele rótulo.
+ * Mapa unificado de funis baseado no prefixo F1..F15 no início do nome
+ * da campanha. Aceita variações: F1, [F1], F1_, [F1]_ etc.
  */
-export const FUNNEL_MAP: { regex: RegExp; label: string }[] = [
-  { regex: /CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i, label: "Captação de Seguidores" },
-  { regex: /CORREDOR_?JAPONES|CORREDOR_?JAPONÊS/i, label: "Corredor Japonês" },
-  { regex: /CALL_?MENSAGEM_?IG/i, label: "Call de Vendas | Mensagens" },
-  { regex: /CALL_?PC/i, label: "Call de Vendas | Página de Captura" },
-  { regex: /MINI_?TREINAMENTO_?PC/i, label: "Mini Treinamento | Página de Captura" },
-  { regex: /ISCA_?PC/i, label: "Isca | Página de Captura" },
-  { regex: /SERVICOS_?MENSAGENS_?WPP|SERVIÇOS_?MENSAGENS_?WPP/i, label: "Serviços | Mensagens" },
-  { regex: /MEDIUM_?TICKET_?PV/i, label: "Medium Ticket | Página de Vendas" },
-  { regex: /LOW_?TICKET_?PV/i, label: "Low Ticket | Página de Vendas" },
-  { regex: /FORMS_?NATIVO/i, label: "Formulário Nativo" },
-  { regex: /IMERSÃO_?PAGA|IMERSAO_?PAGA/i, label: "Imersão Paga" },
-  { regex: /WORKSHOP/i, label: "Workshop" },
+export const FUNNEL_DEFINITIONS: { code: string; label: string }[] = [
+  { code: "F1", label: "F1 - Captação de Seguidores" },
+  { code: "F2", label: "F2 - Corredor Japonês" },
+  { code: "F3", label: "F3 - Call de Vendas | Mensagens" },
+  { code: "F4", label: "F4 - Call de Vendas | Página de Captura" },
+  { code: "F5", label: "F5 - Mini Treinamento | Página de Captura" },
+  { code: "F6", label: "F6 - Isca | Página de Captura" },
+  { code: "F7", label: "F7 - Serviços | Mensagens" },
+  { code: "F8", label: "F8 - Medium Ticket | Página de Vendas" },
+  { code: "F9", label: "F9 - Low Ticket | Página de Vendas" },
+  { code: "F10", label: "F10 - Formulário Nativo" },
+  { code: "F11", label: "F11 - Workshop Pago" },
+  { code: "F12", label: "F12 - Workshop Gratuito" },
+  { code: "F13", label: "F13 - Workshop Presencial" },
+  { code: "F14", label: "F14 - Comunidade" },
+  { code: "F15", label: "F15 - Engajamento / Interação" },
 ];
 
+// Backwards-compat alias for any legacy import
+export const FUNNEL_MAP = FUNNEL_DEFINITIONS.map((f) => ({
+  regex: new RegExp(`^\\[?${f.code}\\]?[_\\s\\-]`, "i"),
+  label: f.label,
+}));
+
+/** Extrai o código F1..F15 do início do nome da campanha. */
+export function extractFunnelCode(campaignName: string): string | null {
+  const m = campaignName.match(/^\s*\[?\s*(F\d{1,2})\s*\]?[\s_\-:]/i);
+  if (!m) return null;
+  const code = m[1].toUpperCase();
+  return FUNNEL_DEFINITIONS.find((f) => f.code === code)?.code || null;
+}
+
 export function getFunnelLabelOrNull(campaignName: string): string | null {
-  for (const { regex, label } of FUNNEL_MAP) {
-    if (regex.test(campaignName)) return label;
-  }
-  return null;
+  const code = extractFunnelCode(campaignName);
+  if (!code) return null;
+  return FUNNEL_DEFINITIONS.find((f) => f.code === code)?.label || null;
 }
 
 export interface FunnelGroup {
