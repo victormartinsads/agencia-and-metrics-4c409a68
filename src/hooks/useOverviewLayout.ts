@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type OverviewBlockId =
   | "resultados"
@@ -19,6 +20,11 @@ export interface BlockConfig {
   title?: string;
   /** Optional data source override (sheets | meta | ga | manual). */
   source?: string;
+  /** Grid position: x, y in cols; w, h in cells. (12 cols, ~80px row height) */
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
 }
 
 export interface OverviewLayout {
@@ -26,26 +32,18 @@ export interface OverviewLayout {
   blocks: Record<OverviewBlockId, BlockConfig>;
 }
 
+/** Default 12-col grid: cards arranged side-by-side. h is in row units (80px). */
 const DEFAULT_LAYOUT: OverviewLayout = {
   order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "utm-traffic"],
   blocks: {
-    resultados: { id: "resultados", visible: true, title: "Resultados Gerais" },
-    custos: { id: "custos", visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"] },
-    funil: { id: "funil", visible: true, title: "Funil" },
-    lowticket: { id: "lowticket", visible: true, title: "Vendas LowTicket" },
-    leads: { id: "leads", visible: true, title: "Leads" },
-    mql: { id: "mql", visible: true, title: "MQL & sMQL" },
-    "best-ads": {
-      id: "best-ads",
-      visible: true,
-      title: "Melhores Anúncios",
-      metrics: ["primaryResult", "conversions"],
-    },
-    "utm-traffic": {
-      id: "utm-traffic",
-      visible: true,
-      title: "Fontes de Tráfego (UTMs)",
-    },
+    resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 5 },
+    custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 5 },
+    funil:         { id: "funil",         visible: true, title: "Funil", x: 0, y: 5,  w: 8, h: 6 },
+    lowticket:     { id: "lowticket",     visible: true, title: "Vendas LowTicket", x: 8, y: 5,  w: 4, h: 6 },
+    leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 11, w: 4, h: 4 },
+    mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 11, w: 4, h: 4 },
+    "best-ads":    { id: "best-ads",      visible: true, title: "Melhores Anúncios", metrics: ["primaryResult", "conversions"], x: 8, y: 11, w: 4, h: 4 },
+    "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes de Tráfego (UTMs)", x: 0, y: 15, w: 12, h: 5 },
   },
 };
 
@@ -69,14 +67,36 @@ function mergeWithDefaults(saved: Partial<OverviewLayout> | null): OverviewLayou
 
 export function useOverviewLayout(clientId?: string) {
   const [layout, setLayout] = useState<OverviewLayout>(DEFAULT_LAYOUT);
+  const [loaded, setLoaded] = useState(false);
 
+  // Load from Supabase first; fallback to localStorage; fallback to defaults.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(clientId));
-      setLayout(mergeWithDefaults(raw ? JSON.parse(raw) : null));
-    } catch {
-      setLayout(DEFAULT_LAYOUT);
-    }
+    let alive = true;
+    (async () => {
+      try {
+        if (clientId) {
+          const { data } = await (supabase as any)
+            .from("overview_layouts")
+            .select("layout")
+            .eq("client_id", clientId)
+            .maybeSingle();
+          if (alive && data?.layout) {
+            setLayout(mergeWithDefaults(data.layout));
+            setLoaded(true);
+            return;
+          }
+        }
+        const raw = localStorage.getItem(storageKey(clientId));
+        setLayout(mergeWithDefaults(raw ? JSON.parse(raw) : null));
+      } catch {
+        setLayout(DEFAULT_LAYOUT);
+      } finally {
+        if (alive) setLoaded(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [clientId]);
 
   const persist = useCallback(
@@ -86,6 +106,15 @@ export function useOverviewLayout(clientId?: string) {
         localStorage.setItem(storageKey(clientId), JSON.stringify(next));
       } catch {
         /* ignore quota errors */
+      }
+      if (clientId) {
+        (supabase as any)
+          .from("overview_layouts")
+          .upsert(
+            { client_id: clientId, layout: next, updated_at: new Date().toISOString() },
+            { onConflict: "client_id" },
+          )
+          .then(() => {});
       }
     },
     [clientId],
@@ -128,7 +157,22 @@ export function useOverviewLayout(clientId?: string) {
 
   const reset = useCallback(() => persist(DEFAULT_LAYOUT), [persist]);
 
-  return { layout, moveBlock, toggleVisibility, updateBlock, reset };
+  /** Update grid positions/sizes from react-grid-layout. */
+  const updatePositions = useCallback(
+    (items: { i: string; x: number; y: number; w: number; h: number }[]) => {
+      const blocks = { ...layout.blocks };
+      for (const it of items) {
+        const id = it.i as OverviewBlockId;
+        if (blocks[id]) {
+          blocks[id] = { ...blocks[id], x: it.x, y: it.y, w: it.w, h: it.h };
+        }
+      }
+      persist({ ...layout, blocks });
+    },
+    [layout, persist],
+  );
+
+  return { layout, loaded, moveBlock, toggleVisibility, updateBlock, updatePositions, reset };
 }
 
 export const DEFAULT_OVERVIEW_LAYOUT = DEFAULT_LAYOUT;
