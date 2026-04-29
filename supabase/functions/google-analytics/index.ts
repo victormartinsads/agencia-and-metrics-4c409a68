@@ -225,14 +225,18 @@ Deno.serve(async (req) => {
             { name: "sessionSource" },
             { name: "sessionMedium" },
             { name: "sessionCampaignName" },
+            { name: "sessionManualAdContent" },
+            { name: "sessionManualTerm" },
           ],
           metrics: [
             { name: "sessions" },
             { name: "totalUsers" },
             { name: "engagedSessions" },
+            { name: "conversions" },
+            { name: "totalRevenue" },
           ],
           orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-          limit: 50,
+          limit: 100,
         }),
       }
     );
@@ -274,9 +278,13 @@ Deno.serve(async (req) => {
       source: row.dimensionValues[0].value || "(not set)",
       medium: row.dimensionValues[1].value || "(not set)",
       campaign: row.dimensionValues[2].value || "(not set)",
+      content: row.dimensionValues[3]?.value || "(not set)",
+      term: row.dimensionValues[4]?.value || "(not set)",
       sessions: Number(row.metricValues[0].value || 0),
       users: Number(row.metricValues[1].value || 0),
       engagedSessions: Number(row.metricValues[2].value || 0),
+      conversions: Number(row.metricValues[3]?.value || 0),
+      revenue: Number(row.metricValues[4]?.value || 0),
     }));
 
     return new Response(JSON.stringify({ overview, daily, sources, utms }), {
