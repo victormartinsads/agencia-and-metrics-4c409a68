@@ -19,6 +19,17 @@ export interface MetaAdsData {
     totalLandingPageViews?: number;
     totalAddToCart?: number;
     totalInitiateCheckout?: number;
+    link_clicks?: number;
+    post_engagement?: number;
+    page_engagement?: number;
+    video_view?: number;
+    messaging_started?: number;
+    complete_registration?: number;
+    subscribe?: number;
+    schedule?: number;
+    contact?: number;
+    submit_application?: number;
+    view_content?: number;
   };
   accountErrors?: { accountId: string; message: string }[];
 }

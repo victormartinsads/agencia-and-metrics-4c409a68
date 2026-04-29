@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 export interface SheetUtmRow {
@@ -46,8 +48,17 @@ function aggregate(rows: SheetUtmRow[], by: GroupKey) {
 
 export function SheetUtmTable({ rows, currencySymbol }: Props) {
   const [tab, setTab] = useState<GroupKey>("source");
-  const data = useMemo(() => aggregate(rows, tab), [rows, tab]);
+  const [query, setQuery] = useState("");
+  const aggregated = useMemo(() => aggregate(rows, tab), [rows, tab]);
+  const data = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return aggregated;
+    return aggregated.filter((r) => r.name.toLowerCase().includes(q));
+  }, [aggregated, query]);
   const max = data[0]?.revenue || 0;
+
+  const totalRevenue = aggregated.reduce((a, b) => a + b.revenue, 0);
+  const totalSales = aggregated.reduce((a, b) => a + b.sales, 0);
 
   if (rows.length === 0) {
     return (
@@ -59,26 +70,46 @@ export function SheetUtmTable({ rows, currencySymbol }: Props) {
 
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as GroupKey)}>
-      <TabsList className="bg-muted/40 h-8 mb-3 flex-wrap">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <TabsList className="bg-muted/40 h-8 flex-wrap">
         {(["source", "medium", "campaign", "content", "term", "all"] as GroupKey[]).map((k) => (
           <TabsTrigger key={k} value={k} className="text-xs h-6">
             {TAB_LABEL[k]}
           </TabsTrigger>
         ))}
-      </TabsList>
+        </TabsList>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="h-3 w-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar UTM..."
+              className="h-7 text-xs pl-7 w-44"
+            />
+          </div>
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+            {data.length}/{aggregated.length} • {totalSales} venda(s) • {formatCurrency(totalRevenue, currencySymbol)}
+          </span>
+        </div>
+      </div>
       <TabsContent value={tab} className="mt-0">
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-          {data.slice(0, 25).map((d) => {
+        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+          {data.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground py-6">Nenhum resultado</p>
+          )}
+          {data.map((d) => {
             const pct = max > 0 ? (d.revenue / max) * 100 : 0;
+            const sharePct = totalRevenue > 0 ? (d.revenue / totalRevenue) * 100 : 0;
             return (
-              <div key={d.name} className="space-y-1">
+              <div key={d.name} className="space-y-1 group">
                 <div className="flex items-center justify-between text-xs gap-2">
                   <span className="truncate text-card-foreground font-medium" title={d.name}>
                     {d.name}
                   </span>
-                  <span className="text-muted-foreground font-mono shrink-0">
-                    {formatCurrency(d.revenue, currencySymbol)}{" "}
-                    <span className="opacity-60">· {d.sales} venda(s)</span>
+                  <span className="text-muted-foreground font-mono shrink-0 text-[11px]">
+                    {formatCurrency(d.revenue, currencySymbol)}
+                    <span className="opacity-60"> · {d.sales} venda(s) · {sharePct.toFixed(1)}%</span>
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">

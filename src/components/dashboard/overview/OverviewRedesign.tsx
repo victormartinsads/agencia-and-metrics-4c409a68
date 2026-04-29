@@ -143,6 +143,18 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     initiate_checkout: (metaData?.overviewMetrics as any)?.totalInitiateCheckout || 0,
     add_to_cart: (metaData?.overviewMetrics as any)?.totalAddToCart || 0,
     landing_page_views: (metaData?.overviewMetrics as any)?.totalLandingPageViews || 0,
+    reach: (metaData?.overviewMetrics as any)?.totalReach || 0,
+    link_clicks: (metaData?.overviewMetrics as any)?.link_clicks || 0,
+    post_engagement: (metaData?.overviewMetrics as any)?.post_engagement || 0,
+    page_engagement: (metaData?.overviewMetrics as any)?.page_engagement || 0,
+    video_view: (metaData?.overviewMetrics as any)?.video_view || 0,
+    messaging_started: (metaData?.overviewMetrics as any)?.messaging_started || 0,
+    complete_registration: (metaData?.overviewMetrics as any)?.complete_registration || 0,
+    subscribe: (metaData?.overviewMetrics as any)?.subscribe || 0,
+    schedule: (metaData?.overviewMetrics as any)?.schedule || 0,
+    contact: (metaData?.overviewMetrics as any)?.contact || 0,
+    submit_application: (metaData?.overviewMetrics as any)?.submit_application || 0,
+    view_content: (metaData?.overviewMetrics as any)?.view_content || 0,
   };
 
   const resolve = (key: string, sheetsValue: number) =>
@@ -215,23 +227,43 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       .slice(0, 10);
   }, [inCurr]);
 
-  const lowTicketData = useMemo(
-    () =>
-      [...inCurr]
-        .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
-        .map((r) => ({
-          date: r.reference_date,
-          meta: Number((r as any).low_ticket_meta || 0),
-          google: Number((r as any).low_ticket_google || 0),
-          total: Number((r as any).low_ticket_meta || 0) + Number((r as any).low_ticket_google || 0),
-        })),
-    [inCurr],
-  );
+  // If low_ticket_meta source is Meta, build the daily series from Meta's daily insights
+  // (uses `conversions` which already prefers `purchase` action). Otherwise fall back to sheet data.
+  const lowTicketMetaSource = metricSources?.low_ticket_meta?.source;
+
+  const lowTicketData = useMemo(() => {
+    const sheetSeries = [...inCurr]
+      .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
+      .map((r) => ({
+        date: r.reference_date,
+        meta: Number((r as any).low_ticket_meta || 0),
+        google: Number((r as any).low_ticket_google || 0),
+        total: Number((r as any).low_ticket_meta || 0) + Number((r as any).low_ticket_google || 0),
+      }));
+
+    if (lowTicketMetaSource === "meta" && (metaData?.dailyMetrics?.length || 0) > 0) {
+      // Merge by date label from Meta daily series; google stays from sheets if present
+      const sheetByLabel = new Map<string, { google: number }>();
+      for (const r of inCurr) {
+        const d = new Date(r.reference_date);
+        const label = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        sheetByLabel.set(label, { google: Number((r as any).low_ticket_google || 0) });
+      }
+      return (metaData!.dailyMetrics || []).map((d) => {
+        const meta = Number(d.conversions || 0);
+        const google = sheetByLabel.get(d.date)?.google || 0;
+        return { date: d.date, meta, google, total: meta + google };
+      });
+    }
+    return sheetSeries;
+  }, [inCurr, lowTicketMetaSource, metaData]);
+
   const lowTicketTotals = useMemo(() => {
-    const meta = lowTicketData.reduce((a, b) => a + b.meta, 0);
     const google = lowTicketData.reduce((a, b) => a + b.google, 0);
+    // For "meta" total, prefer the resolved value (curr.low_ticket_meta) so it matches the configured source.
+    const meta = curr.low_ticket_meta || lowTicketData.reduce((a, b) => a + b.meta, 0);
     return { total: meta + google, meta, google };
-  }, [lowTicketData]);
+  }, [lowTicketData, curr.low_ticket_meta]);
   const prevLowTicket = {
     total: prev.low_ticket_meta + prev.low_ticket_google,
     meta: prev.low_ticket_meta,

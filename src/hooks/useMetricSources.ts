@@ -38,6 +38,18 @@ export const META_FIELDS = [
   { key: "initiate_checkout", label: "Iniciou checkout" },
   { key: "add_to_cart", label: "Adicionou ao carrinho" },
   { key: "landing_page_views", label: "Page Views (LP)" },
+  { key: "reach", label: "Alcance (reach)" },
+  { key: "link_clicks", label: "Link Clicks (action)" },
+  { key: "post_engagement", label: "Engajamento de post" },
+  { key: "page_engagement", label: "Engajamento de página" },
+  { key: "video_view", label: "Visualizações de vídeo" },
+  { key: "messaging_started", label: "Conversas iniciadas (msg)" },
+  { key: "complete_registration", label: "Cadastros completos" },
+  { key: "subscribe", label: "Inscrições (subscribe)" },
+  { key: "schedule", label: "Agendamentos" },
+  { key: "contact", label: "Contatos" },
+  { key: "submit_application", label: "Inscrições enviadas" },
+  { key: "view_content", label: "Visualizações de conteúdo" },
 ];
 
 export function useMetricSources(clientId?: string) {

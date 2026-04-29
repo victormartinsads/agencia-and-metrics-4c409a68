@@ -453,6 +453,31 @@ Deno.serve(async (req) => {
     const totalAddToCart = allCampaigns.reduce((s, c) => s + Number(c.addToCart || 0), 0);
     const totalInitiateCheckout = allCampaigns.reduce((s, c) => s + Number(c.initiateCheckout || 0), 0);
 
+    // Generic per-action-type totals (so the UI can let users choose any Meta action as a metric source).
+    const extraActionTypes = [
+      "link_click",
+      "post_engagement",
+      "page_engagement",
+      "video_view",
+      "onsite_conversion.messaging_conversation_started_7d",
+      "complete_registration",
+      "subscribe",
+      "schedule",
+      "contact",
+      "submit_application",
+      "view_content",
+    ];
+    const extraTotals: Record<string, number> = {};
+    for (const result of accountResults) {
+      if (result.status !== "fulfilled") continue;
+      for (const camp of result.value.campaigns) {
+        const insight: MetaInsight | undefined = camp.insights?.data?.[0];
+        for (const t of extraActionTypes) {
+          extraTotals[t] = (extraTotals[t] || 0) + getActionValue(insight?.actions, t);
+        }
+      }
+    }
+
     // Total Leads = sum of configured lead action types across all campaigns.
     // The list is configurable per client (clients.lead_action_types).
     const leadActionTypes: string[] = (client.lead_action_types && client.lead_action_types.length > 0)
@@ -481,6 +506,18 @@ Deno.serve(async (req) => {
         totalLandingPageViews,
         totalAddToCart,
         totalInitiateCheckout,
+        // Generic action totals (keys used by metric sources UI)
+        link_clicks: extraTotals["link_click"] || 0,
+        post_engagement: extraTotals["post_engagement"] || 0,
+        page_engagement: extraTotals["page_engagement"] || 0,
+        video_view: extraTotals["video_view"] || 0,
+        messaging_started: extraTotals["onsite_conversion.messaging_conversation_started_7d"] || 0,
+        complete_registration: extraTotals["complete_registration"] || 0,
+        subscribe: extraTotals["subscribe"] || 0,
+        schedule: extraTotals["schedule"] || 0,
+        contact: extraTotals["contact"] || 0,
+        submit_application: extraTotals["submit_application"] || 0,
+        view_content: extraTotals["view_content"] || 0,
       },
       accountErrors,
     };
