@@ -184,6 +184,14 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const productData = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of inCurr) {
+      const breakdown = (r as any).raw_row?.product_breakdown as Record<string, number> | undefined;
+      if (breakdown && Object.keys(breakdown).length > 0) {
+        for (const [product, amount] of Object.entries(breakdown)) {
+          map.set(product, (map.get(product) || 0) + Number(amount || 0));
+        }
+        continue;
+      }
+
       const code = (r as any).product_code as string | null;
       if (!code) continue;
       map.set(code, (map.get(code) || 0) + Number(r.sales || 0));
