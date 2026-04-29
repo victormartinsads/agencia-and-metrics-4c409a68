@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     const adAccountIds: string[] = client.ad_account_ids;
 
     const allCampaigns: any[] = [];
-    const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+    const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
     const accountErrors: { accountId: string; message: string }[] = [];
     let hitRateLimit = false;
 
