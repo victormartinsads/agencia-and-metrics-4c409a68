@@ -3,10 +3,6 @@ import { motion } from "framer-motion";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { OverviewRedesign } from "@/components/dashboard/overview/OverviewRedesign";
-import { CampaignTable } from "@/components/dashboard/CampaignTable";
-import { CampaignDetail } from "@/components/dashboard/CampaignDetail";
-import { AdSetTable } from "@/components/dashboard/AdSetTable";
-import { CampaignInsights } from "@/components/dashboard/CampaignInsights";
 import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
@@ -15,8 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
-import { ComoEstamosTab } from "@/components/como-estamos/ComoEstamosTab";
-import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +25,6 @@ interface Props {
 }
 
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$" }: Props) {
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
@@ -76,13 +69,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="como-estamos">Como Estamos</TabsTrigger>
             <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
-            <TabsTrigger value="funnel">Funil</TabsTrigger>
-            <TabsTrigger value="campaigns">Campanhas ({campaigns.length})</TabsTrigger>
-            <TabsTrigger value="creatives">Criativos</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="branding">Branding</TabsTrigger>
+            <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>
+            <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>
+            <TabsTrigger value="branding">Distribuição</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -90,16 +80,6 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               clientId={clientId}
               datePreset={datePreset || "last_7d"}
               metaData={metaData}
-              currencySymbol={currencySymbol}
-            />
-          </TabsContent>
-
-          <TabsContent value="como-estamos" className="space-y-6">
-            <ComoEstamosTab
-              clientId={clientId || ""}
-              campaigns={campaigns}
-              dailyMetrics={dailyMetrics}
-              datePreset={datePreset || "last_7d"}
               currencySymbol={currencySymbol}
             />
           </TabsContent>
@@ -121,31 +101,6 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               dailyMetrics={dailyMetrics}
               datePreset={datePreset || "last_7d"}
             />
-          </TabsContent>
-
-          <TabsContent value="campaigns" className="space-y-6">
-            {campaigns.length > 0 ? (
-              <>
-                {!selectedCampaign && (
-                  <>
-                    <CampaignTable campaigns={campaigns} onSelect={setSelectedCampaign} selectedId={selectedCampaign?.id} currencySymbol={currencySymbol} />
-                    <CampaignInsights campaigns={campaigns} currencySymbol={currencySymbol} />
-                  </>
-                )}
-
-                {selectedCampaign && (
-                  <>
-                    <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} currencySymbol={currencySymbol} />
-                    <AdSetTable campaign={selectedCampaign} currencySymbol={currencySymbol} />
-                    <CreativeGrid campaign={selectedCampaign} clientId={clientId} currencySymbol={currencySymbol} />
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-16 text-muted-foreground text-sm">
-                Nenhuma campanha encontrada para este período
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="creatives" className="space-y-6">
@@ -174,10 +129,6 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-6">

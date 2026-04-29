@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, FileSpreadsheet, RefreshCw, CheckCircle2, AlertCircle, Loader2, Search, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, RefreshCw, CheckCircle2, AlertCircle, Loader2, Search, ExternalLink, Trash2, Filter, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
   useSyncDashboardSheet,
   useUpsertDashboardSheet,
   useWeeklyMetrics,
+  RowFilter,
+  RowFilterOperator,
 } from "@/hooks/useDashboardSheet";
 
 function extractSpreadsheetFromInput(value: string) {
@@ -55,6 +57,7 @@ export default function ClientSheetsConfig() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [revGoal, setRevGoal] = useState<number>(0);
   const [invGoal, setInvGoal] = useState<number>(0);
+  const [rowFilters, setRowFilters] = useState<RowFilter[]>([]);
 
   const { data: meta } = useSheetMeta(picked?.id);
   const { data: preview } = useSheetPreview(picked?.id, sheetName, headerRow);
@@ -74,6 +77,7 @@ export default function ClientSheetsConfig() {
       setMapping((config.field_mapping as Record<string, string>) || {});
       setRevGoal(Number(config.monthly_revenue_goal || 0));
       setInvGoal(Number(config.monthly_investment_budget || 0));
+      setRowFilters(Array.isArray((config as any).row_filters) ? (config as any).row_filters : []);
     }
   }, [config?.id]);
 
@@ -128,6 +132,7 @@ export default function ClientSheetsConfig() {
         field_mapping: mapping,
         monthly_revenue_goal: revGoal,
         monthly_investment_budget: invGoal,
+        row_filters: rowFilters,
       } as any);
       toast.success("Configuração salva");
     } catch (e: any) {
@@ -385,6 +390,104 @@ export default function ClientSheetsConfig() {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Step 4 — Row filters */}
+        {picked && headers.length > 0 && (
+          <section className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Filter className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">4. Filtros de linhas (opcional)</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Defina condições para considerar apenas linhas específicas. Ex: <code className="text-primary">status contém "close"</code> só conta linhas onde a venda foi fechada.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setRowFilters([...rowFilters, { column: headers[0] || "", operator: "contains", value: "" }])
+                }
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar filtro
+              </Button>
+            </div>
+
+            {rowFilters.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                Nenhum filtro — todas as linhas da planilha serão importadas.
+              </p>
+            )}
+
+            {rowFilters.map((f, i) => (
+              <div key={i} className="grid grid-cols-[1fr_180px_1fr_auto] gap-2 items-end">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Coluna</Label>
+                  <Select
+                    value={f.column || "__none__"}
+                    onValueChange={(v) =>
+                      setRowFilters(rowFilters.map((x, j) => (j === i ? { ...x, column: v === "__none__" ? "" : v } : x)))
+                    }
+                  >
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {headers.map((h, k) => (h ? <SelectItem key={k} value={h}>{h}</SelectItem> : null))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Operador</Label>
+                  <Select
+                    value={f.operator}
+                    onValueChange={(v) =>
+                      setRowFilters(rowFilters.map((x, j) => (j === i ? { ...x, operator: v as RowFilterOperator } : x)))
+                    }
+                  >
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="contains">contém</SelectItem>
+                      <SelectItem value="not_contains">não contém</SelectItem>
+                      <SelectItem value="equals">igual a</SelectItem>
+                      <SelectItem value="not_equals">diferente de</SelectItem>
+                      <SelectItem value="not_empty">não está vazio</SelectItem>
+                      <SelectItem value="empty">está vazio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Valor</Label>
+                  <Input
+                    placeholder={f.operator === "empty" || f.operator === "not_empty" ? "(não usado)" : "ex: close"}
+                    value={f.value || ""}
+                    disabled={f.operator === "empty" || f.operator === "not_empty"}
+                    onChange={(e) =>
+                      setRowFilters(rowFilters.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))
+                    }
+                    className="h-9"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRowFilters(rowFilters.filter((_, j) => j !== i))}
+                  className="text-destructive h-9 w-9"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            {rowFilters.length > 1 && (
+              <p className="text-[10px] text-muted-foreground">
+                Os filtros são combinados com <strong>E</strong> (todas as condições precisam ser verdadeiras).
+              </p>
+            )}
           </section>
         )}
 

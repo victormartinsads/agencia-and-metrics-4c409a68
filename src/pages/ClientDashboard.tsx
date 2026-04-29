@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  BarChart3, ArrowLeft, Settings, Loader2, Share2, Check, FileSpreadsheet,
+  BarChart3, ArrowLeft, Settings, Loader2, Share2, Check, FileSpreadsheet, RefreshCw,
 } from "lucide-react";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
@@ -26,6 +26,8 @@ export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -42,6 +44,33 @@ export default function ClientDashboard() {
   });
 
   const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset);
+
+  const handleRefreshAll = async () => {
+    if (!clientId) return;
+    setRefreshing(true);
+    try {
+      // Trigger sheet sync (best-effort) and refetch all dashboard queries
+      const tasks: Promise<unknown>[] = [];
+      tasks.push(
+        supabase.functions
+          .invoke("sheets-sync-v2", { body: { client_id: clientId } })
+          .catch(() => null),
+      );
+      tasks.push(
+        supabase.functions
+          .invoke("meta-ads", { body: { clientId, datePreset, forceRefresh: true } })
+          .catch(() => null),
+      );
+      await Promise.all(tasks);
+      // Invalidate all client-scoped caches
+      await queryClient.invalidateQueries();
+      toast.success("Dados atualizados");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/share/${clientId}`;
@@ -93,6 +122,15 @@ export default function ClientDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefreshAll}
+              disabled={refreshing}
+              className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-60"
+              title="Buscar novamente API, webhook e planilhas"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Atualizando..." : "Atualizar"}
+            </button>
             <Select value={datePreset} onValueChange={setDatePreset}>
               <SelectTrigger className="w-[180px] h-9 text-xs">
                 <SelectValue />
