@@ -43,9 +43,13 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   /** Pré-seleciona uma métrica ao abrir (opcional). */
   focusMetric?: string;
+  /** Totais por field do Meta (mesmo objeto usado pelo dashboard). */
+  metaTotals?: Record<string, number>;
+  /** Contagem por action_type bruto (lead, complete_registration, etc). */
+  actionBreakdown?: Record<string, number>;
 }
 
-export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }: Props) {
+export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric, metaTotals, actionBreakdown }: Props) {
   const { toast } = useToast();
   const { data: sources } = useMetricSources(clientId);
   const { data: sheetCfg } = useDashboardSheet(clientId);
@@ -201,10 +205,23 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
                             </SelectTrigger>
                             <SelectContent>
                               {META_FIELDS.map((f) => (
-                                <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                                <SelectItem key={f.key} value={f.key}>
+                                  {f.label}
+                                  {metaTotals && metaTotals[f.key] !== undefined && (
+                                    <span className="ml-2 text-[10px] text-muted-foreground">
+                                      ({Number(metaTotals[f.key] || 0).toLocaleString("pt-BR")})
+                                    </span>
+                                  )}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+
+                          {cfg.field && metaTotals && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Valor atual no período: <strong className="text-foreground">{Number(metaTotals[cfg.field] || 0).toLocaleString("pt-BR")}</strong>
+                            </p>
+                          )}
 
                           {cfg.field === "lead_actions" && (
                             <div className="rounded-md border border-border/60 bg-muted/30 p-2 space-y-1.5">
@@ -214,6 +231,7 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
                               <div className="grid grid-cols-2 gap-1">
                                 {LEAD_ACTION_OPTIONS.map((opt) => {
                                   const checked = leadActions.includes(opt.key);
+                                  const count = actionBreakdown?.[opt.key];
                                   return (
                                     <label
                                       key={opt.key}
@@ -226,13 +244,18 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
                                           else setLeadActions((arr) => arr.filter((k) => k !== opt.key));
                                         }}
                                       />
-                                      <span>{opt.label}</span>
+                                      <span className="flex-1">{opt.label}</span>
+                                      {count !== undefined && (
+                                        <span className={`text-[10px] tabular-nums ${count > 0 ? "text-primary font-semibold" : "text-muted-foreground/60"}`}>
+                                          {Number(count).toLocaleString("pt-BR")}
+                                        </span>
+                                      )}
                                     </label>
                                   );
                                 })}
                               </div>
                               <p className="text-[10px] text-muted-foreground">
-                                Configurado por cliente. Os tipos selecionados são somados como total de Leads do Meta.
+                                Os números mostram quantos eventos cada ação registrou no período. Marque apenas as que fazem sentido como "Lead" para esse cliente.
                               </p>
                             </div>
                           )}

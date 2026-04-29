@@ -587,6 +587,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
           open={sourceEditorOpen}
           onOpenChange={setSourceEditorOpen}
           focusMetric={focusMetric}
+          metaTotals={metaTotals}
+          actionBreakdown={(metaData?.overviewMetrics as any)?.actionBreakdown}
         />
       )}
     </div>
