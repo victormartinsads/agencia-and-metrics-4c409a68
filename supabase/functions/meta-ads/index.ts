@@ -441,6 +441,8 @@ Deno.serve(async (req) => {
         impressions: m.impressions,
         clicks: m.clicks,
         conversions: m.conversions,
+        purchases: m.purchases,
+        leads: m.leads,
       }));
 
     const totalSpend = allCampaigns.reduce((s, c) => s + c.spend, 0);
