@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileSpreadsheet, AlertCircle, Wrench, Sparkles, Database } from "lucide-react";
-import { Responsive, WidthProvider, Layout } from "react-grid-layout";
+// react-grid-layout default export is the basic grid; named exports are inconsistent across builds.
+// Use require-style namespace import to grab Responsive + WidthProvider safely.
+import RGL from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -30,6 +32,8 @@ import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOver
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
 
+const Responsive = (RGL as any).Responsive;
+const WidthProvider = (RGL as any).WidthProvider;
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface Props {
@@ -659,7 +663,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         isDraggable={editMode}
         isResizable={editMode}
         draggableHandle=".grid-drag-handle"
-        onLayoutChange={(curLayout: Layout[]) => {
+        onLayoutChange={(curLayout: any[]) => {
           if (editMode) updatePositions(curLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
         }}
       >
