@@ -230,12 +230,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   // If low_ticket_meta source is Meta, build the daily series from Meta's daily insights
   // (uses `conversions` which already prefers `purchase` action). Otherwise fall back to sheet data.
   const lowTicketMetaSource = metricSources?.low_ticket_meta?.source;
-  const dailyMetaMap = useMemo(() => {
-    const map = new Map<string, number>();
-    // dailyMetrics dates come formatted as "DD/MM"; we can't directly key by ISO,
-    // so we simply merge by index when possible — but for sums we use overviewMetrics totals.
-    return map;
-  }, [metaData]);
 
   const lowTicketData = useMemo(() => {
     const sheetSeries = [...inCurr]
