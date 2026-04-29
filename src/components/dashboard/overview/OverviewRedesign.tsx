@@ -15,13 +15,12 @@ import { UtmTrafficTable } from "./UtmTrafficTable";
 import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 
-import { useWeeklyMetrics, useSheetsConfig } from "@/hooks/useSheetsSync";
+import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
-import { MetricBinding } from "./MetricSourceEditor";
 
 interface Props {
   clientId?: string;
