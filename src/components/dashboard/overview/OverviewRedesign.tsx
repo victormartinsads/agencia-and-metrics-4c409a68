@@ -25,6 +25,7 @@ import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
+import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
 
 interface Props {
   clientId?: string;
@@ -83,6 +84,18 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
+  const salesRange = useMemo(
+    () => ({ from: periods.current.start, to: periods.current.end }),
+    [periods],
+  );
+  const salesPrevRange = useMemo(
+    () => ({ from: periods.previous.start, to: periods.previous.end }),
+    [periods],
+  );
+  const { data: salesEvents } = useSalesEvents(clientId, salesRange);
+  const { data: salesEventsPrev } = useSalesEvents(clientId, salesPrevRange);
+  const salesAgg = useMemo(() => aggregateSales(salesEvents), [salesEvents]);
+  const salesAggPrev = useMemo(() => aggregateSales(salesEventsPrev), [salesEventsPrev]);
 
   const { layout, moveBlock, toggleVisibility, updateBlock, reset } = useOverviewLayout(clientId);
   const [editMode, setEditMode] = useState(false);
@@ -157,8 +170,21 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     view_content: (metaData?.overviewMetrics as any)?.view_content || 0,
   };
 
+  const webhookTotals: Record<string, number> = {
+    revenue: salesAgg.revenue,
+    sales: salesAgg.sales,
+    avg_ticket: salesAgg.avgTicket,
+  };
+  const webhookTotalsPrev: Record<string, number> = {
+    revenue: salesAggPrev.revenue,
+    sales: salesAggPrev.sales,
+    avg_ticket: salesAggPrev.avgTicket,
+  };
+
   const resolve = (key: string, sheetsValue: number) =>
-    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals });
+    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals, webhookTotals });
+  const resolvePrev = (key: string, sheetsValue: number) =>
+    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals, webhookTotals: webhookTotalsPrev });
 
   // curr aplicando metric sources (sobrescreve quando configurado)
   const curr = {
