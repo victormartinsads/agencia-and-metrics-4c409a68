@@ -24,6 +24,22 @@ export interface DashboardSheetConfig {
   last_sync_status: string | null;
   last_sync_error: string | null;
   last_sync_rows: number | null;
+  row_filters?: RowFilter[];
+}
+
+export type RowFilterOperator =
+  | "equals"
+  | "not_equals"
+  | "contains"
+  | "not_contains"
+  | "not_empty"
+  | "empty";
+
+export interface RowFilter {
+  column: string;        // header name in the sheet
+  operator: RowFilterOperator;
+  value?: string;        // empty for not_empty/empty
+  case_sensitive?: boolean;
 }
 
 /** Fields the dashboard knows how to read. Edit here = edit the mapping form. */
