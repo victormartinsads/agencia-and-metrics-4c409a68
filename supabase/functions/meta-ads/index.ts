@@ -475,6 +475,9 @@ Deno.serve(async (req) => {
       "contact",
       "submit_application",
       "view_content",
+      "lead",
+      "onsite_conversion.lead_grouped",
+      "initiate_checkout",
     ];
     const extraTotals: Record<string, number> = {};
     for (const result of accountResults) {
@@ -527,6 +530,10 @@ Deno.serve(async (req) => {
         contact: extraTotals["contact"] || 0,
         submit_application: extraTotals["submit_application"] || 0,
         view_content: extraTotals["view_content"] || 0,
+        // Per-action breakdown — used by the MetricSourceEditor to show
+        // counts next to each lead action checkbox so the user can pick
+        // wisely. Keyed by the raw Meta action_type string.
+        actionBreakdown: extraTotals,
       },
       accountErrors,
     };
