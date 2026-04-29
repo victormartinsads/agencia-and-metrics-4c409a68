@@ -25,6 +25,7 @@ import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
+import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
 
 interface Props {
   clientId?: string;
@@ -92,6 +93,19 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
   const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
 
+  const salesRange = useMemo(
+    () => ({ from: periods.current.start, to: periods.current.end }),
+    [periods],
+  );
+  const salesPrevRange = useMemo(
+    () => ({ from: periods.previous.start, to: periods.previous.end }),
+    [periods],
+  );
+  const { data: salesEvents } = useSalesEvents(clientId, salesRange);
+  const { data: salesEventsPrev } = useSalesEvents(clientId, salesPrevRange);
+  const salesAgg = useMemo(() => aggregateSales(salesEvents), [salesEvents]);
+  const salesAggPrev = useMemo(() => aggregateSales(salesEventsPrev), [salesEventsPrev]);
+
   const inCurr = useMemo(
     () => (weekly || []).filter((m) => inRange(m.reference_date, periods.current.start, periods.current.end)),
     [weekly, periods],
@@ -157,8 +171,21 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     view_content: (metaData?.overviewMetrics as any)?.view_content || 0,
   };
 
+  const webhookTotals: Record<string, number> = {
+    revenue: salesAgg.revenue,
+    sales: salesAgg.sales,
+    avg_ticket: salesAgg.avgTicket,
+  };
+  const webhookTotalsPrev: Record<string, number> = {
+    revenue: salesAggPrev.revenue,
+    sales: salesAggPrev.sales,
+    avg_ticket: salesAggPrev.avgTicket,
+  };
+
   const resolve = (key: string, sheetsValue: number) =>
-    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals });
+    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals, webhookTotals });
+  const resolvePrev = (key: string, sheetsValue: number) =>
+    resolveMetricValue(key, metricSources, { sheetsValue, metaTotals, webhookTotals: webhookTotalsPrev });
 
   // curr aplicando metric sources (sobrescreve quando configurado)
   const curr = {
@@ -172,6 +199,10 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     low_ticket_meta: resolve("low_ticket_meta", sheetsCurr.low_ticket_meta),
     low_ticket_google: resolve("low_ticket_google", sheetsCurr.low_ticket_google),
   };
+
+  // Aplica metric sources também ao período anterior (para comparativos corretos)
+  prev.revenue = resolvePrev("revenue", prev.revenue);
+  prev.sales = resolvePrev("sales", prev.sales);
 
   const totalSpend = curr.investment > 0 ? curr.investment : (metaData?.overviewMetrics?.totalSpend || 0);
   const prevSpend = prev.investment;
