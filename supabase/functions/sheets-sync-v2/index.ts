@@ -193,7 +193,7 @@ serve(async (req) => {
       const refDate = parseDate(row[idx.date!], fmt);
       if (!refDate) continue;
       const productCode = idx.product_code !== null ? String(row[idx.product_code] || "").trim() || null : null;
-      const key = `${refDate}::${productCode || "__none__"}`;
+      const key = refDate;
       const current = aggregate.get(key) || {
         client_id,
         reference_date: refDate,
@@ -207,10 +207,10 @@ serve(async (req) => {
         ltv: 0,
         low_ticket_meta: 0,
         low_ticket_google: 0,
-        product_code: productCode,
+        product_code: null,
         qualified_messages: 0,
         qualified_followers: 0,
-        raw_row: { rows: 0, sample_product: productCode },
+        raw_row: { rows: 0, product_breakdown: {} as Record<string, number> },
         source: "google_sheets",
       };
 
@@ -227,6 +227,10 @@ serve(async (req) => {
       current.qualified_messages += idx.qualified_messages !== null ? parseCount(row[idx.qualified_messages], sep) : 0;
       current.qualified_followers += idx.qualified_followers !== null ? parseCount(row[idx.qualified_followers], sep) : 0;
       current.raw_row.rows += 1;
+      if (productCode) {
+        current.raw_row.product_breakdown[productCode] = (current.raw_row.product_breakdown[productCode] || 0)
+          + (idx.sales !== null ? parseCount(row[idx.sales], sep) : 1);
+      }
       aggregate.set(key, current);
     }
 
