@@ -10,6 +10,7 @@ export interface Client {
   currency_symbol: string;
   created_at: string;
   updated_at: string;
+  lead_action_types?: string[];
 }
 
 export type ClientInsert = {
