@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Send, Loader2, Settings } from "lucide-react";
+import { Sparkles, Send, Loader2, Settings, Tag } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -16,6 +17,25 @@ import {
   useUpsertMetricSources,
 } from "@/hooks/useMetricSources";
 import { useDashboardSheet } from "@/hooks/useDashboardSheet";
+import { useClients, useUpdateClient } from "@/hooks/useClients";
+
+const DEFAULT_LEAD_ACTIONS = [
+  "lead",
+  "onsite_conversion.lead_grouped",
+  "onsite_conversion.messaging_conversation_started_7d",
+];
+
+const LEAD_ACTION_OPTIONS: { key: string; label: string }[] = [
+  { key: "lead", label: "Lead (genérico)" },
+  { key: "onsite_conversion.lead_grouped", label: "Lead Forms (Meta)" },
+  { key: "onsite_conversion.messaging_conversation_started_7d", label: "Conversa por mensagem iniciada" },
+  { key: "complete_registration", label: "Cadastro completo" },
+  { key: "submit_application", label: "Inscrição enviada" },
+  { key: "schedule", label: "Agendamento" },
+  { key: "contact", label: "Contato" },
+  { key: "subscribe", label: "Inscrição" },
+  { key: "initiate_checkout", label: "Iniciou checkout" },
+];
 
 interface Props {
   clientId: string;
@@ -29,9 +49,13 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
   const { toast } = useToast();
   const { data: sources } = useMetricSources(clientId);
   const { data: sheetCfg } = useDashboardSheet(clientId);
+  const { data: clients } = useClients();
+  const updateClient = useUpdateClient();
+  const client = clients?.find((c) => c.id === clientId);
   const upsert = useUpsertMetricSources();
 
   const [draft, setDraft] = useState<MetricSourcesMap>({});
+  const [leadActions, setLeadActions] = useState<string[]>(DEFAULT_LEAD_ACTIONS);
   const [aiMsg, setAiMsg] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiHistory, setAiHistory] = useState<{ role: "user" | "ai"; text: string }[]>([]);
@@ -39,6 +63,14 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
   useEffect(() => {
     if (open) setDraft(sources || {});
   }, [open, sources]);
+
+  useEffect(() => {
+    if (open && client) {
+      setLeadActions(client.lead_action_types && client.lead_action_types.length > 0
+        ? client.lead_action_types
+        : DEFAULT_LEAD_ACTIONS);
+    }
+  }, [open, client?.id]);
 
   const sheetColumns = Object.values(sheetCfg?.field_mapping || {}).filter(Boolean);
 
@@ -49,6 +81,12 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
   const handleSave = async () => {
     try {
       await upsert.mutateAsync({ clientId, sources: draft });
+      // Persist lead action types if it differs from current client value
+      const current = client?.lead_action_types || DEFAULT_LEAD_ACTIONS;
+      const sameSet = current.length === leadActions.length && current.every((c) => leadActions.includes(c));
+      if (!sameSet) {
+        await updateClient.mutateAsync({ id: clientId, lead_action_types: leadActions } as any);
+      }
       toast({ title: "Fontes salvas" });
       onOpenChange(false);
     } catch (e: any) {
@@ -156,16 +194,49 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric }
                       )}
 
                       {cfg.source === "meta" && (
-                        <Select value={cfg.field || ""} onValueChange={(v) => setMetric(m.key, { field: v })}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecione campo do Meta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {META_FIELDS.map((f) => (
-                              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <>
+                          <Select value={cfg.field || ""} onValueChange={(v) => setMetric(m.key, { field: v })}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione campo do Meta" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {META_FIELDS.map((f) => (
+                                <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {cfg.field === "lead_actions" && (
+                            <div className="rounded-md border border-border/60 bg-muted/30 p-2 space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                                <Tag className="h-3 w-3" /> Ações que contam como Lead
+                              </div>
+                              <div className="grid grid-cols-2 gap-1">
+                                {LEAD_ACTION_OPTIONS.map((opt) => {
+                                  const checked = leadActions.includes(opt.key);
+                                  return (
+                                    <label
+                                      key={opt.key}
+                                      className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5"
+                                    >
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(v) => {
+                                          if (v) setLeadActions((arr) => Array.from(new Set([...arr, opt.key])));
+                                          else setLeadActions((arr) => arr.filter((k) => k !== opt.key));
+                                        }}
+                                      />
+                                      <span>{opt.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">
+                                Configurado por cliente. Os tipos selecionados são somados como total de Leads do Meta.
+                              </p>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   );
