@@ -93,6 +93,40 @@ Deno.serve(async (req) => {
     const platform = (parts[idx + 2] || "").toLowerCase();
     const token = url.searchParams.get("token") || req.headers.get("x-webhook-token") || "";
 
+    // ---- Special action: bulk import via CSV (called from app, JWT-authed) ----
+    if (platform === "import") {
+      const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE);
+      const body = await req.json().catch(() => ({}));
+      const events = Array.isArray(body?.events) ? body.events : [];
+      if (events.length === 0) {
+        return new Response(JSON.stringify({ error: "no events" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const rows = events.map((e: any) => ({
+        client_id: clientId,
+        platform: String(e.platform || "csv").toLowerCase(),
+        transaction_id: String(e.transaction_id || crypto.randomUUID()),
+        product_id: e.product_id || null,
+        product_name: e.product_name || null,
+        buyer_email: e.buyer_email || null,
+        status: normalizeStatus(e.status || "approved"),
+        gross_amount: toNumber(e.gross_amount ?? e.amount ?? e.value),
+        net_amount: toNumber(e.net_amount ?? e.gross_amount ?? e.amount ?? e.value),
+        currency: e.currency || "BRL",
+        occurred_at: e.occurred_at ? new Date(e.occurred_at).toISOString() : new Date().toISOString(),
+        raw_payload: e,
+      }));
+      const { error: bulkErr, count } = await supabaseAdmin
+        .from("sales_events")
+        .upsert(rows, { onConflict: "client_id,platform,transaction_id", count: "exact" });
+      if (bulkErr) throw bulkErr;
+      return new Response(JSON.stringify({ ok: true, imported: rows.length, count }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!clientId || !["hotmart", "kiwify", "eduzz"].includes(platform)) {
       return new Response(JSON.stringify({ error: "invalid path" }), {
         status: 400,
