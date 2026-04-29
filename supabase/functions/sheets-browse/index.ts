@@ -7,12 +7,11 @@ const corsHeaders = {
 
 const SHEETS_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
-// Drive endpoints proxied via the google_sheets connector (Sheets OAuth includes drive.readonly).
 const SHEETS_DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/drive/v3";
 
-function getConnectorKey(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY") {
+function getConnectorKeys(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY") {
   const env = Deno.env.toObject();
-  const candidates = Object.keys(env)
+  return Object.keys(env)
     .filter((key) => key === prefix || key.startsWith(`${prefix}_`))
     .sort((a, b) => {
       const getOrder = (value: string) => {
@@ -21,39 +20,45 @@ function getConnectorKey(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY
         return match ? Number(match[1]) : 0;
       };
       return getOrder(b) - getOrder(a);
-    });
-
-  for (const name of candidates) {
-    const value = env[name];
-    if (value) return value;
-  }
-  return null;
+    })
+    .map((name) => env[name])
+    .filter((value): value is string => Boolean(value));
 }
 
-function authHeaders(target: "sheets" | "drive") {
+function getGatewayHeaders(key: string) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-  // Always prefer the Sheets connector key — Drive connector has been flaky and the
-  // Sheets OAuth scope already includes `drive.readonly`, which is enough for listing.
-  const sheetsKey = getConnectorKey("GOOGLE_SHEETS_API_KEY");
-  const driveKey = getConnectorKey("GOOGLE_DRIVE_API_KEY");
-  const key = target === "drive" ? sheetsKey || driveKey : sheetsKey;
-  if (!key) {
-    throw new Error(
-      target === "drive"
-        ? "GOOGLE_DRIVE_API_KEY not configured (Google Drive connector not linked)"
-        : "GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)",
-    );
-  }
   return {
     Authorization: `Bearer ${LOVABLE_API_KEY}`,
     "X-Connection-Api-Key": key,
   };
 }
 
+async function fetchWithCandidateKeys(
+  attempts: { url: string; keys: string[]; label: string }[],
+) {
+  const errors: string[] = [];
+
+  for (const attempt of attempts) {
+    for (const key of attempt.keys) {
+      const r = await fetch(attempt.url, { headers: getGatewayHeaders(key) });
+      const data = await r.json();
+      if (r.ok) return data;
+
+      const message = `${attempt.label} failed [${r.status}]: ${JSON.stringify(data)}`;
+      errors.push(message);
+
+      const isMissingCredential = r.status === 401 && data?.message === "Credential not found";
+      if (!isMissingCredential) {
+        throw new Error(message);
+      }
+    }
+  }
+
+  throw new Error(errors[errors.length - 1] || "Connector request failed");
+}
+
 async function listFiles(query: string | null) {
-  // Use Sheets connector key with Drive gateway: works because the connector OAuth
-  // includes drive.file/drive.readonly scopes.
   const q = [`mimeType = 'application/vnd.google-apps.spreadsheet'`, `trashed = false`];
   if (query) q.push(`name contains '${query.replace(/'/g, "\\'")}'`);
   const params = new URLSearchParams({
@@ -62,20 +67,24 @@ async function listFiles(query: string | null) {
     orderBy: "modifiedTime desc",
     pageSize: "50",
   });
-  // Route through the Sheets connector's gateway path so we use a working credential.
-  const r = await fetch(`${SHEETS_DRIVE_GATEWAY}/files?${params.toString()}`, {
-    headers: authHeaders("drive"),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(`Drive list failed [${r.status}]: ${JSON.stringify(data)}`);
+  const driveKeys = getConnectorKeys("GOOGLE_DRIVE_API_KEY");
+  const sheetsKeys = getConnectorKeys("GOOGLE_SHEETS_API_KEY");
+  if (driveKeys.length === 0 && sheetsKeys.length === 0) {
+    throw new Error("Google Drive / Google Sheets connector not configured");
+  }
+
+  const data = await fetchWithCandidateKeys([
+    { url: `${DRIVE_GATEWAY}/files?${params.toString()}`, keys: driveKeys, label: "Drive list" },
+    { url: `${SHEETS_DRIVE_GATEWAY}/files?${params.toString()}`, keys: sheetsKeys, label: "Drive list" },
+  ]);
   return { files: data.files || [], nextPageToken: data.nextPageToken };
 }
 
 async function getMeta(spreadsheetId: string) {
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(sheetId,title,gridProperties)`;
-  const r = await fetch(url, { headers: authHeaders("sheets") });
-  const data = await r.json();
-  if (!r.ok) throw new Error(`Sheets meta failed [${r.status}]: ${JSON.stringify(data)}`);
+  const sheetsKeys = getConnectorKeys("GOOGLE_SHEETS_API_KEY");
+  if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
+  const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets meta" }]);
   return {
     spreadsheet_name: data.properties?.title || "",
     sheets: (data.sheets || []).map((s: any) => ({
@@ -93,9 +102,9 @@ async function preview(spreadsheetId: string, sheetName: string, headerRow: numb
   const end = headerRow + 10;
   const range = `'${sheetName.replace(/'/g, "''")}'!A${start}:Z${end}`;
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}/values/${range}`;
-  const r = await fetch(url, { headers: authHeaders("sheets") });
-  const data = await r.json();
-  if (!r.ok) throw new Error(`Sheets preview failed [${r.status}]: ${JSON.stringify(data)}`);
+  const sheetsKeys = getConnectorKeys("GOOGLE_SHEETS_API_KEY");
+  if (sheetsKeys.length === 0) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
+  const data = await fetchWithCandidateKeys([{ url, keys: sheetsKeys, label: "Sheets preview" }]);
   const values: string[][] = data.values || [];
   const headers = (values[0] || []).map((h) => String(h || "").trim());
   const rows = values.slice(1);
