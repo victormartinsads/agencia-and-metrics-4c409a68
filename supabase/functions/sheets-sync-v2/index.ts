@@ -188,30 +188,55 @@ serve(async (req) => {
     const sep = cfg.decimal_separator || ",";
     const fmt = cfg.date_format || "DD/MM/YYYY";
 
-    const records: any[] = [];
+    const aggregate = new Map<string, any>();
     for (const row of dataRows) {
       const refDate = parseDate(row[idx.date!], fmt);
       if (!refDate) continue;
-      records.push({
+      const productCode = idx.product_code !== null ? String(row[idx.product_code] || "").trim() || null : null;
+      const key = `${refDate}::${productCode || "__none__"}`;
+      const current = aggregate.get(key) || {
         client_id,
         reference_date: refDate,
-        revenue: idx.revenue !== null ? parseNumber(row[idx.revenue], sep) : 0,
-        sales: idx.sales !== null ? parseCount(row[idx.sales], sep) : 0,
-        mql: idx.mql !== null ? parseCount(row[idx.mql], sep) : 0,
-        smql: idx.smql !== null ? parseCount(row[idx.smql], sep) : 0,
-        leads: idx.leads !== null ? parseCount(row[idx.leads], sep) : 0,
-        investment: idx.investment !== null ? parseNumber(row[idx.investment], sep) : 0,
-        avg_ticket: idx.avg_ticket !== null ? parseNumber(row[idx.avg_ticket], sep) : 0,
-        ltv: idx.ltv !== null ? parseNumber(row[idx.ltv], sep) : 0,
-        low_ticket_meta: idx.low_ticket_meta !== null ? parseCount(row[idx.low_ticket_meta], sep) : 0,
-        low_ticket_google: idx.low_ticket_google !== null ? parseCount(row[idx.low_ticket_google], sep) : 0,
-        product_code: idx.product_code !== null ? String(row[idx.product_code] || "").trim() || null : null,
-        qualified_messages: idx.qualified_messages !== null ? parseCount(row[idx.qualified_messages], sep) : 0,
-        qualified_followers: idx.qualified_followers !== null ? parseCount(row[idx.qualified_followers], sep) : 0,
-        raw_row: row,
+        revenue: 0,
+        sales: 0,
+        mql: 0,
+        smql: 0,
+        leads: 0,
+        investment: 0,
+        avg_ticket: 0,
+        ltv: 0,
+        low_ticket_meta: 0,
+        low_ticket_google: 0,
+        product_code: productCode,
+        qualified_messages: 0,
+        qualified_followers: 0,
+        raw_row: { rows: 0, sample_product: productCode },
         source: "google_sheets",
-      });
+      };
+
+      current.revenue += idx.revenue !== null ? parseNumber(row[idx.revenue], sep) : 0;
+      current.sales += idx.sales !== null ? parseCount(row[idx.sales], sep) : 0;
+      current.mql += idx.mql !== null ? parseCount(row[idx.mql], sep) : 0;
+      current.smql += idx.smql !== null ? parseCount(row[idx.smql], sep) : 0;
+      current.leads += idx.leads !== null ? parseCount(row[idx.leads], sep) : 0;
+      current.investment += idx.investment !== null ? parseNumber(row[idx.investment], sep) : 0;
+      current.avg_ticket += idx.avg_ticket !== null ? parseNumber(row[idx.avg_ticket], sep) : 0;
+      current.ltv += idx.ltv !== null ? parseNumber(row[idx.ltv], sep) : 0;
+      current.low_ticket_meta += idx.low_ticket_meta !== null ? parseCount(row[idx.low_ticket_meta], sep) : 0;
+      current.low_ticket_google += idx.low_ticket_google !== null ? parseCount(row[idx.low_ticket_google], sep) : 0;
+      current.qualified_messages += idx.qualified_messages !== null ? parseCount(row[idx.qualified_messages], sep) : 0;
+      current.qualified_followers += idx.qualified_followers !== null ? parseCount(row[idx.qualified_followers], sep) : 0;
+      current.raw_row.rows += 1;
+      aggregate.set(key, current);
     }
+
+    const records = Array.from(aggregate.values()).map((record) => {
+      if (record.sales > 0) {
+        if (!record.avg_ticket && record.revenue > 0) record.avg_ticket = record.revenue / record.sales;
+        if (!record.ltv && record.revenue > 0) record.ltv = record.revenue / record.sales;
+      }
+      return record;
+    });
 
     if (records.length > 0) {
       // Delete existing rows for this client to avoid duplicates from rows without product_code
