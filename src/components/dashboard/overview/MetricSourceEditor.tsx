@@ -18,6 +18,8 @@ import {
 } from "@/hooks/useMetricSources";
 import { useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useClients, useUpdateClient } from "@/hooks/useClients";
+import { Link } from "react-router-dom";
+import { Webhook } from "lucide-react";
 
 const DEFAULT_LEAD_ACTIONS = [
   "lead",
@@ -167,6 +169,7 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric, 
                             <SelectItem value="sheets">Planilha</SelectItem>
                             <SelectItem value="manual">Manual</SelectItem>
                             <SelectItem value="meta">Meta Ads</SelectItem>
+                            <SelectItem value="webhook">Webhook (Hotmart/Kiwify/Eduzz)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -195,6 +198,27 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric, 
                           onChange={(e) => setMetric(m.key, { value: Number(e.target.value) })}
                           className="h-8 text-xs"
                         />
+                      )}
+
+                      {cfg.source === "webhook" && (
+                        <div className="space-y-2">
+                          <Select value={cfg.field || ""} onValueChange={(v) => setMetric(m.key, { field: v })}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione o agregado de vendas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="revenue">Faturamento (soma)</SelectItem>
+                              <SelectItem value="sales">Vendas (contagem)</SelectItem>
+                              <SelectItem value="avg_ticket">Ticket médio</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Link
+                            to={`/clients/${clientId}/webhooks`}
+                            className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+                          >
+                            <Webhook className="h-3 w-3" /> Configurar URLs e filtros de produtos
+                          </Link>
+                        </div>
                       )}
 
                       {cfg.source === "meta" && (
