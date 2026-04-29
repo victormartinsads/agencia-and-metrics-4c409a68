@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
         }
 
         // Daily insights
-        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number }> = {};
+        const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
         try {
           await delay(100);
           const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
@@ -242,12 +242,17 @@ Deno.serve(async (req) => {
           if (dailyJson.data) {
             for (const day of dailyJson.data) {
               const date = day.date_start;
-              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+              if (!dailyData[date]) dailyData[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchases: 0, leads: 0 };
               dailyData[date].spend += Number(day.spend || 0);
               dailyData[date].impressions += Number(day.impressions || 0);
               dailyData[date].clicks += Number(day.clicks || 0);
-              const conv = getActionValue(day.actions, "purchase");
-              dailyData[date].conversions += conv || getActionValue(day.actions, "lead") || getActionValue(day.actions, "link_click");
+              const purchaseVal = getActionValue(day.actions, "purchase")
+                || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
+              const leadVal = getActionValue(day.actions, "lead")
+                || getActionValue(day.actions, "onsite_conversion.lead_grouped");
+              dailyData[date].purchases += purchaseVal;
+              dailyData[date].leads += leadVal;
+              dailyData[date].conversions += purchaseVal || leadVal || getActionValue(day.actions, "link_click");
             }
           }
         } catch (e) {
@@ -313,11 +318,13 @@ Deno.serve(async (req) => {
       }
 
       for (const [date, m] of Object.entries(dailyData)) {
-        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        if (!dailySpend[date]) dailySpend[date] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchases: 0, leads: 0 };
         dailySpend[date].spend += m.spend;
         dailySpend[date].impressions += m.impressions;
         dailySpend[date].clicks += m.clicks;
         dailySpend[date].conversions += m.conversions;
+        dailySpend[date].purchases += m.purchases;
+        dailySpend[date].leads += m.leads;
       }
     }
 
