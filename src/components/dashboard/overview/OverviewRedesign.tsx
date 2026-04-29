@@ -33,8 +33,14 @@ interface Props {
 }
 
 function inRange(dateStr: string, start: Date, end: Date) {
-  const t = new Date(dateStr).getTime();
-  return t >= start.getTime() && t <= end.getTime();
+  // Compare by YYYY-MM-DD in local time to avoid UTC/timezone shifts
+  // (reference_date is a date-only string from Postgres).
+  const d = String(dateStr).slice(0, 10);
+  const toKey = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const sk = toKey(start);
+  const ek = toKey(end);
+  return d >= sk && d <= ek;
 }
 
 function fmtNum(n: number) {
