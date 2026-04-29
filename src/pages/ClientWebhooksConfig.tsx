@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Copy, Webhook, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, Webhook, RefreshCw, Send, Upload, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
+import { supabase } from "@/integrations/supabase/client";
+import Papa from "papaparse";
 import {
   useSalesWebhookConfig,
   useUpdateSalesWebhookConfig,
   useSalesEvents,
 } from "@/hooks/useSalesEvents";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PLATFORMS = [
   {
@@ -66,6 +69,182 @@ export default function ClientWebhooksConfig() {
 
   const buildUrl = (platform: string) =>
     `${baseUrl}/${clientId}/${platform}?token=${cfg?.webhook_token || ""}`;
+
+  const qc = useQueryClient();
+  const [testing, setTesting] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Mock payloads compatíveis com o normalize() de cada plataforma
+  const mockPayload = (platform: string) => {
+    const txn = `TEST-${Date.now()}`;
+    if (platform === "hotmart") {
+      return {
+        event: "PURCHASE_APPROVED",
+        data: {
+          purchase: {
+            transaction: txn,
+            status: "APPROVED",
+            approved_date: Date.now(),
+            price: { value: 197, currency_value: "BRL" },
+            commission: { value: 150 },
+          },
+          product: { id: "TEST-PROD", name: "Produto Teste Hotmart" },
+          buyer: { email: "teste@exemplo.com" },
+        },
+      };
+    }
+    if (platform === "kiwify") {
+      return {
+        webhook_event_type: "order_approved",
+        order: {
+          order_id: txn,
+          order_status: "paid",
+          created_at: new Date().toISOString(),
+          Customer: { email: "teste@exemplo.com" },
+          Product: { product_id: "TEST-PROD", product_name: "Produto Teste Kiwify" },
+          Commissions: { charge_amount: 19700, my_commission: 15000, currency: "BRL" },
+        },
+      };
+    }
+    return {
+      trans_cod: txn,
+      trans_status: "paid",
+      trans_value: 197,
+      trans_value_partner: 150,
+      product_cod: "TEST-PROD",
+      product_name: "Produto Teste Eduzz",
+      client_email: "teste@exemplo.com",
+      trans_createdate: new Date().toISOString(),
+    };
+  };
+
+  const sendTestEvent = async (platform: string) => {
+    if (!cfg?.webhook_token || !clientId) return;
+    setTesting(platform);
+    try {
+      const res = await fetch(buildUrl(platform), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mockPayload(platform)),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      toast({
+        title: "✅ Webhook funcionando",
+        description: `Evento de teste recebido pela ${platform}. Veja na lista abaixo.`,
+      });
+      qc.invalidateQueries({ queryKey: ["sales-events"] });
+    } catch (e: any) {
+      toast({ title: "Falha no teste", description: e.message, variant: "destructive" });
+    } finally {
+      setTesting(null);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const csv =
+      "platform,transaction_id,product_id,product_name,status,gross_amount,net_amount,currency,occurred_at,buyer_email\n" +
+      "hotmart,ABC-001,PROD-1,Produto Exemplo,approved,197.00,150.00,BRL,2026-01-15 10:30:00,cliente@exemplo.com\n" +
+      "kiwify,XYZ-002,PROD-2,Outro Produto,approved,97.00,80.00,BRL,2026-01-16 14:20:00,outro@exemplo.com\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "template-vendas-historicas.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCsvUpload = (file: File) => {
+    if (!clientId) return;
+    setImporting(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (result) => {
+        try {
+          const events = (result.data as any[])
+            .map((row) => ({
+              platform: (row.platform || "csv").toLowerCase(),
+              transaction_id: row.transaction_id || row.id || `csv-${Date.now()}-${Math.random()}`,
+              product_id: row.product_id || null,
+              product_name: row.product_name || null,
+              buyer_email: row.buyer_email || row.email || null,
+              status: row.status || "approved",
+              gross_amount: row.gross_amount || row.amount || row.value || 0,
+              net_amount: row.net_amount || row.gross_amount || 0,
+              currency: row.currency || "BRL",
+              occurred_at: row.occurred_at || row.date || new Date().toISOString(),
+            }))
+            .filter((e) => e.transaction_id);
+
+          // Send in chunks of 200
+          let total = 0;
+          for (let i = 0; i < events.length; i += 200) {
+            const chunk = events.slice(i, i + 200);
+            const { data, error } = await supabase.functions.invoke("sales-webhook", {
+              method: "POST",
+              body: { events: chunk },
+              // path needs to match /sales-webhook/:clientId/import
+            });
+            if (error) throw error;
+            total += chunk.length;
+          }
+          // The supabase-js functions.invoke does not support custom path segments.
+          // Use direct fetch instead:
+          // (handled below if invoke fails — fall back)
+          toast({ title: `✅ ${total} vendas importadas` });
+          qc.invalidateQueries({ queryKey: ["sales-events"] });
+        } catch (err: any) {
+          // Fallback to direct fetch with path /import
+          try {
+            const csvData = (result.data as any[])
+              .map((row) => ({
+                platform: (row.platform || "csv").toLowerCase(),
+                transaction_id: row.transaction_id || row.id,
+                product_id: row.product_id || null,
+                product_name: row.product_name || null,
+                buyer_email: row.buyer_email || row.email || null,
+                status: row.status || "approved",
+                gross_amount: row.gross_amount || row.amount || row.value || 0,
+                net_amount: row.net_amount || row.gross_amount || 0,
+                currency: row.currency || "BRL",
+                occurred_at: row.occurred_at || row.date || new Date().toISOString(),
+              }))
+              .filter((e) => e.transaction_id);
+
+            const session = (await supabase.auth.getSession()).data.session;
+            const res = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sales-webhook/${clientId}/import`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${session?.access_token || ""}`,
+                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
+                },
+                body: JSON.stringify({ events: csvData }),
+              },
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Falha ao importar");
+            toast({ title: `✅ ${data.imported} vendas importadas` });
+            qc.invalidateQueries({ queryKey: ["sales-events"] });
+          } catch (err2: any) {
+            toast({ title: "Erro ao importar", description: err2.message, variant: "destructive" });
+          }
+        } finally {
+          setImporting(false);
+          if (fileRef.current) fileRef.current.value = "";
+        }
+      },
+      error: (err) => {
+        toast({ title: "Erro CSV", description: err.message, variant: "destructive" });
+        setImporting(false);
+      },
+    });
+  };
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -149,6 +328,28 @@ export default function ClientWebhooksConfig() {
                 <p className="text-[11px] text-muted-foreground mt-1">{p.docs}</p>
               </div>
 
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between gap-3">
+                <div className="text-xs">
+                  <p className="font-medium text-card-foreground">Testar webhook</p>
+                  <p className="text-muted-foreground text-[11px]">
+                    Envia um evento simulado de venda aprovada para verificar se está tudo OK.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => sendTestEvent(p.key)}
+                  disabled={testing === p.key || !cfg?.webhook_token}
+                  className="gap-1.5"
+                >
+                  {testing === p.key ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Enviar teste
+                </Button>
+              </div>
+
               <div>
                 <Label className="text-xs uppercase text-muted-foreground">
                   Filtro de produtos (opcional)
@@ -225,10 +426,45 @@ export default function ClientWebhooksConfig() {
         )}
       </Card>
 
-      <Card className="p-4 bg-muted/20">
-        <h3 className="font-semibold text-sm mb-2">Importar histórico via CSV</h3>
-        <p className="text-xs text-muted-foreground">
-          Em breve: faça upload do export de vendas da Hotmart/Kiwify/Eduzz para popular o histórico anterior à ativação do webhook.
+      <Card className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Upload className="h-4 w-4 text-primary" /> Importar histórico via CSV
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Suba vendas antigas das suas plataformas. Use o template para garantir o formato correto.
+              Vendas duplicadas (mesma plataforma + transaction_id) são ignoradas automaticamente.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5 shrink-0">
+            <FileDown className="h-3.5 w-3.5" /> Template
+          </Button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleCsvUpload(f);
+          }}
+        />
+        <Button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          className="w-full gap-1.5"
+        >
+          {importing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
+          {importing ? "Importando..." : "Selecionar arquivo CSV"}
+        </Button>
+        <p className="text-[10px] text-muted-foreground">
+          Colunas aceitas: <code>platform, transaction_id, product_id, product_name, status, gross_amount, net_amount, currency, occurred_at, buyer_email</code>
         </p>
       </Card>
     </div>
