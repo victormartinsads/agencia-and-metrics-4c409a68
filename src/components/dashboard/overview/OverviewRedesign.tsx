@@ -200,6 +200,10 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     low_ticket_google: resolve("low_ticket_google", sheetsCurr.low_ticket_google),
   };
 
+  // Aplica metric sources também ao período anterior (para comparativos corretos)
+  prev.revenue = resolvePrev("revenue", prev.revenue);
+  prev.sales = resolvePrev("sales", prev.sales);
+
   const totalSpend = curr.investment > 0 ? curr.investment : (metaData?.overviewMetrics?.totalSpend || 0);
   const prevSpend = prev.investment;
 
