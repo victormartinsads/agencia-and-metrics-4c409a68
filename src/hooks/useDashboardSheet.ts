@@ -99,6 +99,7 @@ export function useDeleteDashboardSheet() {
 export interface SheetsBrowseResult {
   files: { id: string; name: string; modifiedTime: string; webViewLink: string }[];
   nextPageToken?: string;
+  error?: string;
 }
 
 export interface SheetMeta {
@@ -119,10 +120,15 @@ export function useBrowseSheets(query?: string) {
       const { data, error } = await supabase.functions.invoke("sheets-browse", {
         body: { action: "list_files", query: query || null },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data as SheetsBrowseResult;
+      if (error) {
+        return { files: [], error: error.message || "Erro ao listar planilhas" } as SheetsBrowseResult;
+      }
+      if (data?.error) {
+        return { files: [], error: data.error } as SheetsBrowseResult;
+      }
+      return { files: data?.files || [], nextPageToken: data?.nextPageToken } as SheetsBrowseResult;
     },
+    retry: false,
   });
 }
 
