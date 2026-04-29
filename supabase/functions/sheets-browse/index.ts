@@ -8,14 +8,23 @@ const corsHeaders = {
 const SHEETS_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 
-function authHeaders() {
+function authHeaders(target: "sheets" | "drive") {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const SHEETS_KEY = Deno.env.get("GOOGLE_SHEETS_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-  if (!SHEETS_KEY) throw new Error("GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)");
+  const key =
+    target === "drive"
+      ? Deno.env.get("GOOGLE_DRIVE_API_KEY")
+      : Deno.env.get("GOOGLE_SHEETS_API_KEY");
+  if (!key) {
+    throw new Error(
+      target === "drive"
+        ? "GOOGLE_DRIVE_API_KEY not configured (Google Drive connector not linked)"
+        : "GOOGLE_SHEETS_API_KEY not configured (Google Sheets connector not linked)",
+    );
+  }
   return {
     Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    "X-Connection-Api-Key": SHEETS_KEY,
+    "X-Connection-Api-Key": key,
   };
 }
 
@@ -31,7 +40,7 @@ async function listFiles(query: string | null) {
     pageSize: "50",
   });
   const r = await fetch(`${DRIVE_GATEWAY}/files?${params.toString()}`, {
-    headers: authHeaders(),
+    headers: authHeaders("drive"),
   });
   const data = await r.json();
   if (!r.ok) throw new Error(`Drive list failed [${r.status}]: ${JSON.stringify(data)}`);
@@ -40,7 +49,7 @@ async function listFiles(query: string | null) {
 
 async function getMeta(spreadsheetId: string) {
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(sheetId,title,gridProperties)`;
-  const r = await fetch(url, { headers: authHeaders() });
+  const r = await fetch(url, { headers: authHeaders("sheets") });
   const data = await r.json();
   if (!r.ok) throw new Error(`Sheets meta failed [${r.status}]: ${JSON.stringify(data)}`);
   return {
@@ -60,7 +69,7 @@ async function preview(spreadsheetId: string, sheetName: string, headerRow: numb
   const end = headerRow + 10;
   const range = `'${sheetName.replace(/'/g, "''")}'!A${start}:Z${end}`;
   const url = `${SHEETS_GATEWAY}/spreadsheets/${spreadsheetId}/values/${range}`;
-  const r = await fetch(url, { headers: authHeaders() });
+  const r = await fetch(url, { headers: authHeaders("sheets") });
   const data = await r.json();
   if (!r.ok) throw new Error(`Sheets preview failed [${r.status}]: ${JSON.stringify(data)}`);
   const values: string[][] = data.values || [];
