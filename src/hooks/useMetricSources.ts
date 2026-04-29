@@ -33,9 +33,11 @@ export const META_FIELDS = [
   { key: "spend", label: "Investimento (spend)" },
   { key: "impressions", label: "Impressões" },
   { key: "clicks", label: "Cliques no link" },
-  { key: "leads", label: "Leads (conversões)" },
-  { key: "purchases", label: "Compras" },
-  { key: "landing_page_views", label: "Page Views" },
+  { key: "lead_actions", label: "Leads (ações configuradas no cliente)" },
+  { key: "purchases", label: "Compras (purchase)" },
+  { key: "initiate_checkout", label: "Iniciou checkout" },
+  { key: "add_to_cart", label: "Adicionou ao carrinho" },
+  { key: "landing_page_views", label: "Page Views (LP)" },
 ];
 
 export function useMetricSources(clientId?: string) {

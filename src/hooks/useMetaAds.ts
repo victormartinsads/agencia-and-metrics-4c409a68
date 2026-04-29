@@ -14,6 +14,11 @@ export interface MetaAdsData {
     avgCPC: number;
     avgROAS: number;
     totalReach: number;
+    totalLeadActions?: number;
+    totalPurchases?: number;
+    totalLandingPageViews?: number;
+    totalAddToCart?: number;
+    totalInitiateCheckout?: number;
   };
   accountErrors?: { accountId: string; message: string }[];
 }

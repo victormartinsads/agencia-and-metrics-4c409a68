@@ -133,8 +133,14 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     spend: metaData?.overviewMetrics?.totalSpend || 0,
     impressions: metaData?.overviewMetrics?.totalImpressions || 0,
     clicks: metaData?.overviewMetrics?.totalClicks || 0,
-    leads: (metaData?.overviewMetrics as any)?.totalConversions || 0,
+    // "lead_actions" sums the action types configured per client (clients.lead_action_types).
+    // Fallback to totalConversions (primary action priority) when not yet present in payload.
+    lead_actions:
+      (metaData?.overviewMetrics as any)?.totalLeadActions ??
+      (metaData?.overviewMetrics as any)?.totalConversions ?? 0,
     purchases: (metaData?.overviewMetrics as any)?.totalPurchases || 0,
+    initiate_checkout: (metaData?.overviewMetrics as any)?.totalInitiateCheckout || 0,
+    add_to_cart: (metaData?.overviewMetrics as any)?.totalAddToCart || 0,
     landing_page_views: (metaData?.overviewMetrics as any)?.totalLandingPageViews || 0,
   };
 
