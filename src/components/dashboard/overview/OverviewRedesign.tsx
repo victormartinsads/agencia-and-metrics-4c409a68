@@ -552,7 +552,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         }
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
-            <UtmTrafficTable utms={ga?.utms || []} />
+            <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />
           </SectionCard>
         );
 
