@@ -160,9 +160,62 @@ serve(async (req) => {
     }
 
     const headers = (allRows[0] || []).map((h) => String(h || "").trim());
-    const dataRows = allRows.slice(1);
+    let dataRows = allRows.slice(1);
 
     const mapping = (cfg.field_mapping || {}) as Record<string, string>;
+
+    // ========== Apply row filters (status="close", etc) ==========
+    const rowFilters = Array.isArray((cfg as any).row_filters) ? (cfg as any).row_filters : [];
+    if (rowFilters.length > 0) {
+      const lowerHeaders = headers.map((h) => h.toLowerCase());
+      const filterCols = rowFilters
+        .map((f: any) => {
+          const col = String(f?.column || "").trim().toLowerCase();
+          if (!col) return null;
+          const idx = lowerHeaders.indexOf(col);
+          if (idx < 0) return null;
+          return {
+            idx,
+            operator: String(f.operator || "equals"),
+            value: String(f.value ?? ""),
+            cs: !!f.case_sensitive,
+          };
+        })
+        .filter(Boolean) as { idx: number; operator: string; value: string; cs: boolean }[];
+
+      if (filterCols.length > 0) {
+        const beforeCount = dataRows.length;
+        dataRows = dataRows.filter((row) => {
+          for (const f of filterCols) {
+            const cellRaw = String(row[f.idx] ?? "");
+            const cell = f.cs ? cellRaw : cellRaw.toLowerCase();
+            const target = f.cs ? f.value : f.value.toLowerCase();
+            switch (f.operator) {
+              case "equals":
+                if (cell.trim() !== target.trim()) return false;
+                break;
+              case "not_equals":
+                if (cell.trim() === target.trim()) return false;
+                break;
+              case "contains":
+                if (!cell.includes(target)) return false;
+                break;
+              case "not_contains":
+                if (cell.includes(target)) return false;
+                break;
+              case "not_empty":
+                if (cell.trim() === "") return false;
+                break;
+              case "empty":
+                if (cell.trim() !== "") return false;
+                break;
+            }
+          }
+          return true;
+        });
+        console.log(`Row filters applied: ${beforeCount} -> ${dataRows.length} rows`);
+      }
+    }
 
     // Map each dashboard field key -> column index by header name (case-insensitive).
     const colIndex = (headerName: string | undefined): number | null => {
