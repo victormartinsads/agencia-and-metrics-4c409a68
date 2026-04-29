@@ -14,178 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      client_sheets_config: {
-        Row: {
-          client_id: string
-          column_avg_ticket: string | null
-          column_date: string | null
-          column_investment: string | null
-          column_leads: string | null
-          column_low_ticket_google: string | null
-          column_low_ticket_meta: string | null
-          column_ltv: string | null
-          column_mql: string | null
-          column_product_code: string | null
-          column_qualified_followers: string | null
-          column_qualified_messages: string | null
-          column_revenue: string | null
-          column_sales: string | null
-          column_smql: string | null
-          created_at: string
-          date_format: string
-          decimal_separator: string
-          header_row: number
-          id: string
-          last_sync_error: string | null
-          last_sync_status: string | null
-          last_synced_at: string | null
-          monthly_investment_budget: number | null
-          monthly_revenue_goal: number | null
-          range_notation: string
-          sheet_name: string
-          spreadsheet_id: string
-          spreadsheet_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          client_id: string
-          column_avg_ticket?: string | null
-          column_date?: string | null
-          column_investment?: string | null
-          column_leads?: string | null
-          column_low_ticket_google?: string | null
-          column_low_ticket_meta?: string | null
-          column_ltv?: string | null
-          column_mql?: string | null
-          column_product_code?: string | null
-          column_qualified_followers?: string | null
-          column_qualified_messages?: string | null
-          column_revenue?: string | null
-          column_sales?: string | null
-          column_smql?: string | null
-          created_at?: string
-          date_format?: string
-          decimal_separator?: string
-          header_row?: number
-          id?: string
-          last_sync_error?: string | null
-          last_sync_status?: string | null
-          last_synced_at?: string | null
-          monthly_investment_budget?: number | null
-          monthly_revenue_goal?: number | null
-          range_notation?: string
-          sheet_name?: string
-          spreadsheet_id: string
-          spreadsheet_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          client_id?: string
-          column_avg_ticket?: string | null
-          column_date?: string | null
-          column_investment?: string | null
-          column_leads?: string | null
-          column_low_ticket_google?: string | null
-          column_low_ticket_meta?: string | null
-          column_ltv?: string | null
-          column_mql?: string | null
-          column_product_code?: string | null
-          column_qualified_followers?: string | null
-          column_qualified_messages?: string | null
-          column_revenue?: string | null
-          column_sales?: string | null
-          column_smql?: string | null
-          created_at?: string
-          date_format?: string
-          decimal_separator?: string
-          header_row?: number
-          id?: string
-          last_sync_error?: string | null
-          last_sync_status?: string | null
-          last_synced_at?: string | null
-          monthly_investment_budget?: number | null
-          monthly_revenue_goal?: number | null
-          range_notation?: string
-          sheet_name?: string
-          spreadsheet_id?: string
-          spreadsheet_url?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_sheets_config_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: true
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_spreadsheets: {
-        Row: {
-          client_id: string
-          created_at: string
-          date_format: string
-          decimal_separator: string
-          header_row: number
-          id: string
-          is_primary: boolean
-          label: string
-          last_sync_error: string | null
-          last_sync_status: string | null
-          last_synced_at: string | null
-          range_notation: string
-          sheet_name: string
-          spreadsheet_id: string
-          spreadsheet_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string
-          date_format?: string
-          decimal_separator?: string
-          header_row?: number
-          id?: string
-          is_primary?: boolean
-          label?: string
-          last_sync_error?: string | null
-          last_sync_status?: string | null
-          last_synced_at?: string | null
-          range_notation?: string
-          sheet_name?: string
-          spreadsheet_id: string
-          spreadsheet_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string
-          date_format?: string
-          decimal_separator?: string
-          header_row?: number
-          id?: string
-          is_primary?: boolean
-          label?: string
-          last_sync_error?: string | null
-          last_sync_status?: string | null
-          last_synced_at?: string | null
-          range_notation?: string
-          sheet_name?: string
-          spreadsheet_id?: string
-          spreadsheet_url?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_spreadsheets_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           ad_account_ids: string[]
@@ -263,46 +91,68 @@ export type Database = {
           },
         ]
       }
-      dashboard_metric_sources: {
+      dashboard_sheet_config: {
         Row: {
           client_id: string
-          column_letter: string | null
           created_at: string
-          field_key: string | null
+          date_format: string
+          decimal_separator: string
+          field_mapping: Json
+          header_row: number
           id: string
-          metric_key: string
-          source: string
+          last_sync_error: string | null
+          last_sync_rows: number | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          monthly_investment_budget: number | null
+          monthly_revenue_goal: number | null
+          sheet_name: string
+          spreadsheet_id: string
+          spreadsheet_name: string | null
+          spreadsheet_url: string | null
           updated_at: string
         }
         Insert: {
           client_id: string
-          column_letter?: string | null
           created_at?: string
-          field_key?: string | null
+          date_format?: string
+          decimal_separator?: string
+          field_mapping?: Json
+          header_row?: number
           id?: string
-          metric_key: string
-          source?: string
+          last_sync_error?: string | null
+          last_sync_rows?: number | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          monthly_investment_budget?: number | null
+          monthly_revenue_goal?: number | null
+          sheet_name?: string
+          spreadsheet_id: string
+          spreadsheet_name?: string | null
+          spreadsheet_url?: string | null
           updated_at?: string
         }
         Update: {
           client_id?: string
-          column_letter?: string | null
           created_at?: string
-          field_key?: string | null
+          date_format?: string
+          decimal_separator?: string
+          field_mapping?: Json
+          header_row?: number
           id?: string
-          metric_key?: string
-          source?: string
+          last_sync_error?: string | null
+          last_sync_rows?: number | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          monthly_investment_budget?: number | null
+          monthly_revenue_goal?: number | null
+          sheet_name?: string
+          spreadsheet_id?: string
+          spreadsheet_name?: string | null
+          spreadsheet_url?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "dashboard_metric_sources_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       diagnostic_metrics_config: {
         Row: {
@@ -489,60 +339,6 @@ export type Database = {
           },
         ]
       }
-      metric_data_sources: {
-        Row: {
-          client_id: string
-          column_letter: string | null
-          created_at: string
-          id: string
-          manual_value: number | null
-          metric_key: string
-          notes: string | null
-          source_type: string
-          spreadsheet_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          client_id: string
-          column_letter?: string | null
-          created_at?: string
-          id?: string
-          manual_value?: number | null
-          metric_key: string
-          notes?: string | null
-          source_type?: string
-          spreadsheet_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          client_id?: string
-          column_letter?: string | null
-          created_at?: string
-          id?: string
-          manual_value?: number | null
-          metric_key?: string
-          notes?: string | null
-          source_type?: string
-          spreadsheet_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "metric_data_sources_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "metric_data_sources_spreadsheet_id_fkey"
-            columns: ["spreadsheet_id"]
-            isOneToOne: false
-            referencedRelation: "client_spreadsheets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       saved_insights: {
         Row: {
           client_id: string
@@ -621,56 +417,7 @@ export type Database = {
           status?: string
           triggered_by?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "sheets_sync_log_spreadsheet_id_fkey"
-            columns: ["spreadsheet_id"]
-            isOneToOne: false
-            referencedRelation: "client_spreadsheets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      spreadsheet_field_mappings: {
-        Row: {
-          client_id: string
-          column_letter: string
-          created_at: string
-          id: string
-          metric_key: string
-          notes: string | null
-          spreadsheet_id: string
-          updated_at: string
-        }
-        Insert: {
-          client_id: string
-          column_letter: string
-          created_at?: string
-          id?: string
-          metric_key: string
-          notes?: string | null
-          spreadsheet_id: string
-          updated_at?: string
-        }
-        Update: {
-          client_id?: string
-          column_letter?: string
-          created_at?: string
-          id?: string
-          metric_key?: string
-          notes?: string | null
-          spreadsheet_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "spreadsheet_field_mappings_spreadsheet_id_fkey"
-            columns: ["spreadsheet_id"]
-            isOneToOne: false
-            referencedRelation: "client_spreadsheets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -747,7 +494,6 @@ export type Database = {
           sales: number | null
           smql: number | null
           source: string
-          spreadsheet_id: string | null
           updated_at: string
         }
         Insert: {
@@ -770,7 +516,6 @@ export type Database = {
           sales?: number | null
           smql?: number | null
           source?: string
-          spreadsheet_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -793,7 +538,6 @@ export type Database = {
           sales?: number | null
           smql?: number | null
           source?: string
-          spreadsheet_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -802,13 +546,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "weekly_metrics_spreadsheet_id_fkey"
-            columns: ["spreadsheet_id"]
-            isOneToOne: false
-            referencedRelation: "client_spreadsheets"
             referencedColumns: ["id"]
           },
         ]
