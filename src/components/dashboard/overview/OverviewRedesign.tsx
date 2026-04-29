@@ -143,6 +143,18 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     initiate_checkout: (metaData?.overviewMetrics as any)?.totalInitiateCheckout || 0,
     add_to_cart: (metaData?.overviewMetrics as any)?.totalAddToCart || 0,
     landing_page_views: (metaData?.overviewMetrics as any)?.totalLandingPageViews || 0,
+    reach: (metaData?.overviewMetrics as any)?.totalReach || 0,
+    link_clicks: (metaData?.overviewMetrics as any)?.link_clicks || 0,
+    post_engagement: (metaData?.overviewMetrics as any)?.post_engagement || 0,
+    page_engagement: (metaData?.overviewMetrics as any)?.page_engagement || 0,
+    video_view: (metaData?.overviewMetrics as any)?.video_view || 0,
+    messaging_started: (metaData?.overviewMetrics as any)?.messaging_started || 0,
+    complete_registration: (metaData?.overviewMetrics as any)?.complete_registration || 0,
+    subscribe: (metaData?.overviewMetrics as any)?.subscribe || 0,
+    schedule: (metaData?.overviewMetrics as any)?.schedule || 0,
+    contact: (metaData?.overviewMetrics as any)?.contact || 0,
+    submit_application: (metaData?.overviewMetrics as any)?.submit_application || 0,
+    view_content: (metaData?.overviewMetrics as any)?.view_content || 0,
   };
 
   const resolve = (key: string, sheetsValue: number) =>
