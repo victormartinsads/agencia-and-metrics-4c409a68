@@ -7,6 +7,8 @@ const corsHeaders = {
 
 const SHEETS_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
+// Drive endpoints proxied via the google_sheets connector (Sheets OAuth includes drive.readonly).
+const SHEETS_DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/drive/v3";
 
 function getConnectorKey(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY") {
   const env = Deno.env.toObject();
@@ -31,10 +33,11 @@ function getConnectorKey(prefix: "GOOGLE_DRIVE_API_KEY" | "GOOGLE_SHEETS_API_KEY
 function authHeaders(target: "sheets" | "drive") {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-  const key =
-    target === "drive"
-      ? getConnectorKey("GOOGLE_DRIVE_API_KEY")
-      : getConnectorKey("GOOGLE_SHEETS_API_KEY");
+  // Always prefer the Sheets connector key — Drive connector has been flaky and the
+  // Sheets OAuth scope already includes `drive.readonly`, which is enough for listing.
+  const sheetsKey = getConnectorKey("GOOGLE_SHEETS_API_KEY");
+  const driveKey = getConnectorKey("GOOGLE_DRIVE_API_KEY");
+  const key = target === "drive" ? sheetsKey || driveKey : sheetsKey;
   if (!key) {
     throw new Error(
       target === "drive"
@@ -59,7 +62,8 @@ async function listFiles(query: string | null) {
     orderBy: "modifiedTime desc",
     pageSize: "50",
   });
-  const r = await fetch(`${DRIVE_GATEWAY}/files?${params.toString()}`, {
+  // Route through the Sheets connector's gateway path so we use a working credential.
+  const r = await fetch(`${SHEETS_DRIVE_GATEWAY}/files?${params.toString()}`, {
     headers: authHeaders("drive"),
   });
   const data = await r.json();
