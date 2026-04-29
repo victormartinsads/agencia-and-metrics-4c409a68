@@ -256,14 +256,22 @@ export default function ClientSheetsConfig() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-[11px]">Aba</Label>
-                <Select value={sheetName} onValueChange={setSheetName}>
-                  <SelectTrigger><SelectValue placeholder="Escolher aba…" /></SelectTrigger>
-                  <SelectContent>
-                    {meta?.sheets.map((s) => (
-                      <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(meta?.sheets?.length || 0) > 0 ? (
+                  <Select value={sheetName} onValueChange={setSheetName}>
+                    <SelectTrigger><SelectValue placeholder="Escolher aba…" /></SelectTrigger>
+                    <SelectContent>
+                      {meta?.sheets.map((s) => (
+                        <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="Digite o nome da aba, ex: BASE"
+                    value={sheetName}
+                    onChange={(e) => setSheetName(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <Label className="text-[11px]">Linha do cabeçalho</Label>
