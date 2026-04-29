@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, FileSpreadsheet, RefreshCw, CheckCircle2, AlertCircle, Loader2, Search, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, RefreshCw, CheckCircle2, AlertCircle, Loader2, Search, ExternalLink, Trash2, Filter, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
   useSyncDashboardSheet,
   useUpsertDashboardSheet,
   useWeeklyMetrics,
+  RowFilter,
+  RowFilterOperator,
 } from "@/hooks/useDashboardSheet";
 
 function extractSpreadsheetFromInput(value: string) {
@@ -55,6 +57,7 @@ export default function ClientSheetsConfig() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [revGoal, setRevGoal] = useState<number>(0);
   const [invGoal, setInvGoal] = useState<number>(0);
+  const [rowFilters, setRowFilters] = useState<RowFilter[]>([]);
 
   const { data: meta } = useSheetMeta(picked?.id);
   const { data: preview } = useSheetPreview(picked?.id, sheetName, headerRow);
@@ -74,6 +77,7 @@ export default function ClientSheetsConfig() {
       setMapping((config.field_mapping as Record<string, string>) || {});
       setRevGoal(Number(config.monthly_revenue_goal || 0));
       setInvGoal(Number(config.monthly_investment_budget || 0));
+      setRowFilters(Array.isArray((config as any).row_filters) ? (config as any).row_filters : []);
     }
   }, [config?.id]);
 
@@ -128,6 +132,7 @@ export default function ClientSheetsConfig() {
         field_mapping: mapping,
         monthly_revenue_goal: revGoal,
         monthly_investment_budget: invGoal,
+        row_filters: rowFilters,
       } as any);
       toast.success("Configuração salva");
     } catch (e: any) {
