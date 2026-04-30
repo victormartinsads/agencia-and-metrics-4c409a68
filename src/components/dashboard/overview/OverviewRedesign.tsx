@@ -581,7 +581,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!hasSheets && (
         <div className="relative overflow-hidden rounded-2xl border border-primary/20 glass-card p-5 flex items-start gap-3">
           <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
@@ -646,6 +646,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       </div>
 
+      {/* A4 landscape container: ratio 1.414 : 1. Cards fill the page densely. */}
+      <div className="mx-auto w-full" style={{ aspectRatio: "1.414 / 1", maxHeight: "calc(100vh - 180px)" }}>
       <ResponsiveGridLayout
         className="layout"
         layouts={{
@@ -657,15 +659,15 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
               y: b.y ?? 0,
               w: b.w ?? 4,
               h: b.h ?? 4,
-              minW: 3,
-              minH: 3,
+              minW: 2,
+              minH: 2,
             };
           }),
         }}
         breakpoints={{ lg: 1100, md: 768, sm: 0 }}
         cols={{ lg: 12, md: 8, sm: 1 }}
-        rowHeight={80}
-        margin={[16, 16]}
+        rowHeight={60}
+        margin={[8, 8]}
         containerPadding={[0, 0]}
         isDraggable={editMode}
         isResizable={editMode}
@@ -685,6 +687,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
           </div>
         ))}
       </ResponsiveGridLayout>
+      </div>
 
       <BlockSettingsDialog
         open={!!settingsBlock}
