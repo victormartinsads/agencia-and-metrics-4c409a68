@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useClientUserAccess } from "@/hooks/useClientUserAccess";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMyClientOrg } from "@/hooks/useClientCrm";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -13,8 +14,9 @@ export default function Portal() {
   const { signOut } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { data: clientId, isLoading } = useClientUserAccess();
+  const { data: org, isLoading: orgLoading } = useMyClientOrg(clientId);
 
-  if (roleLoading || isLoading) {
+  if (roleLoading || isLoading || orgLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -39,5 +41,7 @@ export default function Portal() {
     );
   }
 
+  // Se cliente tem CRM novo ativo, manda pra lá. Caso contrário, mantém o CRM antigo.
+  if (org?.id) return <Navigate to={`/crm-app?org=${org.id}`} replace />;
   return <Navigate to="/crm" replace />;
 }
