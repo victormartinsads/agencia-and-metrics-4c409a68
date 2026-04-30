@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,14 @@ import {
 } from "@/hooks/useMembers";
 import { toast } from "sonner";
 import { Trash2, UserPlus, Mail } from "lucide-react";
+import {
+  useClientUsers,
+  useCreateClientUser,
+  useSetClientUserPassword,
+  useSetClientUserEmail,
+  useSetClientUserClient,
+  useRemoveClientUser,
+} from "@/hooks/useClientUsers";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -74,6 +82,9 @@ export default function SettingsPage() {
             <TabsTrigger value="members" className="gap-1.5">
               <Users className="h-3.5 w-3.5" /> Membros
             </TabsTrigger>
+            <TabsTrigger value="client-access" className="gap-1.5">
+              <KanbanSquare className="h-3.5 w-3.5" /> Acessos de Clientes
+            </TabsTrigger>
             <TabsTrigger value="permissions" className="gap-1.5">
               <Shield className="h-3.5 w-3.5" /> Permissões
             </TabsTrigger>
@@ -89,6 +100,10 @@ export default function SettingsPage() {
 
           <TabsContent value="members">
             <MembersSection />
+          </TabsContent>
+
+          <TabsContent value="client-access">
+            <ClientAccessSection />
           </TabsContent>
 
           <TabsContent value="permissions">
