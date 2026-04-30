@@ -30,15 +30,31 @@ export const FUNNEL_MAP = FUNNEL_DEFINITIONS.map((f) => ({
 
 /** Extrai o código F1..F15 do início do nome da campanha. */
 export function extractFunnelCode(campaignName: string): string | null {
+  if (!campaignName) return null;
+
+  // Normaliza: remove acentos, colchetes, parênteses extras no início
   const head = campaignName
     .trim()
-    .replace(/^[^A-Za-z0-9\[]+/, "")
-    .slice(0, 24);
+    .replace(/^[^A-Za-z0-9\[\(]+/, "")
+    .slice(0, 40);
 
-  const m = head.match(/(?:^|[\s\[{(|\-_/|])\s*(F\d{1,2})\s*\]?(?!\d)/i);
-  if (!m) return null;
-  const code = m[1].toUpperCase();
-  return FUNNEL_DEFINITIONS.find((f) => f.code === code)?.code || null;
+  // Aceita: F1, [F1], (F1), F01, FUNIL 1, FUNIL01, f1, f-1, f.1
+  // Separadores aceitos depois do código: espaço, _, -, ., :, |, /, ], ), fim de string
+  const patterns = [
+    /^\[?\(?\s*F\s*[-._]?\s*(\d{1,2})\s*\]?\)?(?:[\s_\-.:|/\]\)]|$)/i,
+    /^\[?\(?\s*FUNIL\s*[-._]?\s*(\d{1,2})\s*\]?\)?(?:[\s_\-.:|/\]\)]|$)/i,
+  ];
+
+  for (const re of patterns) {
+    const m = head.match(re);
+    if (m) {
+      const num = parseInt(m[1], 10);
+      if (Number.isFinite(num) && num >= 1 && num <= 15) {
+        return `F${num}`;
+      }
+    }
+  }
+  return null;
 }
 
 export function getFunnelLabelOrNull(campaignName: string): string | null {
