@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.crm-webhook]
 verify_jwt = false
+
+[functions.crm-app-webhook-leads]
+verify_jwt = false
+
+[functions.crm-app-dispatch-events]
+verify_jwt = false
