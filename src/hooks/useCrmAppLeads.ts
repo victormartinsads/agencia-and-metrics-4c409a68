@@ -1,13 +1,42 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leadsService, webhookService, Lead, LeadStatus } from "@/lib/crm-app";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useLeadsForOrg(orgId?: string) {
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ["crm-app-leads", orgId],
     enabled: !!orgId,
     queryFn: () => leadsService.getAll(orgId!),
     refetchInterval: 30000,
   });
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    const channel = supabase
+      .channel(`crm-app-leads:${orgId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "leads",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["crm-app-leads", orgId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orgId, qc]);
+
+  return query;
 }
 
 export function useUpdateLeadStatus(orgId?: string) {
