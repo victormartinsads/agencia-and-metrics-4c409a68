@@ -178,13 +178,6 @@ const Index = () => {
                             </div>
                           </Card>
                         </Link>
-                        <Link
-                          to={`/crm/${c.id}`}
-                          className="absolute bottom-3 right-3 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
-                          title="Abrir CRM deste cliente"
-                        >
-                          <KanbanSquare className="h-3 w-3" /> CRM
-                        </Link>
                         </div>
                       </motion.div>
                     );
