@@ -56,6 +56,21 @@ function storageKey(clientId?: string) {
 
 function mergeWithDefaults(saved: Partial<OverviewLayout> | null): OverviewLayout {
   if (!saved) return DEFAULT_LAYOUT;
+  // Auto-migration: if the saved layout uses the old loose grid (any block with h >= 5
+  // or total span > 14 rows), discard it and apply the new dense A4 default.
+  // Users can still reorganize freely afterwards.
+  const blocksIn = saved.blocks || {};
+  let maxBottom = 0;
+  let hasTallBlock = false;
+  for (const k of Object.keys(blocksIn)) {
+    const b = (blocksIn as any)[k];
+    if (!b) continue;
+    if ((b.h ?? 0) >= 5) hasTallBlock = true;
+    maxBottom = Math.max(maxBottom, (b.y ?? 0) + (b.h ?? 0));
+  }
+  if (hasTallBlock || maxBottom > 14) {
+    return DEFAULT_LAYOUT;
+  }
   const blocks = { ...DEFAULT_LAYOUT.blocks } as OverviewLayout["blocks"];
   for (const key of Object.keys(blocks) as OverviewBlockId[]) {
     blocks[key] = { ...blocks[key], ...(saved.blocks?.[key] || {}) };
