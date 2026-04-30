@@ -83,16 +83,28 @@ export function FunnelAnalysisTab({
     const map = new Map<string, Campaign[]>();
     for (const c of campaigns) {
       const code = extractFunnelCode(c.name);
-      if (!code) continue;
+      if (!code && c.spend <= 0) continue;
+      const fallbackCode = code || `CAMP-${c.id}`;
       const arr = map.get(code) || [];
       arr.push(c);
-      map.set(code, arr);
+      map.set(fallbackCode, arr);
     }
-    return FUNNEL_DEFINITIONS.filter((d) => map.has(d.code)).map((d) => ({
+    const orderedFunnels = FUNNEL_DEFINITIONS.filter((d) => map.has(d.code)).map((d) => ({
       code: d.code,
       label: d.label,
       campaigns: map.get(d.code) || [],
     }));
+
+    const fallbackFunnels = Array.from(map.entries())
+      .filter(([key]) => !FUNNEL_DEFINITIONS.some((d) => d.code === key))
+      .map(([key, items]) => ({
+        code: key,
+        label: items[0]?.name || key,
+        campaigns: items,
+      }))
+      .sort((a, b) => b.campaigns.reduce((sum, c) => sum + c.spend, 0) - a.campaigns.reduce((sum, c) => sum + c.spend, 0));
+
+    return [...orderedFunnels, ...fallbackFunnels];
   }, [campaigns]);
 
   const filtered = funnelGroups.filter(
@@ -227,10 +239,10 @@ export function FunnelAnalysisTab({
       {filtered.length === 0 ? (
         <Card className="p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            Nenhuma campanha com prefixo F1–F15 encontrada para esse período.
+            Nenhuma campanha com gasto encontrada para esse período.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            Renomeie suas campanhas no padrão <code>[F1]_NOME_CAMPANHA</code> para que apareçam aqui.
+            Campanhas fora do padrão <code>[F1]_NOME_CAMPANHA</code> agora aparecem como cards avulsos, mas padronizar os nomes melhora o agrupamento.
           </p>
         </Card>
       ) : (
