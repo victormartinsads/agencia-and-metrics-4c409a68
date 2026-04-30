@@ -30,20 +30,20 @@ export function SectionCard({
   return (
     <div
       className={cn(
-        "relative rounded-2xl glass-card glass-card-hover overflow-hidden",
+        "relative rounded-xl glass-card glass-card-hover overflow-hidden h-full flex flex-col",
         editMode && "ring-edit",
-        compact ? "p-4" : "p-5",
+        compact ? "p-2.5" : "p-3",
         className,
       )}
     >
       {/* decorative top neon line */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       {(title || editMode) && (
-        <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center justify-between gap-2 mb-2">
           {title ? (
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-primary neon-glow" />
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {title}
               </h3>
             </div>
@@ -76,7 +76,7 @@ export function SectionCard({
           )}
         </div>
       )}
-      {children}
+      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
     </div>
   );
 }
