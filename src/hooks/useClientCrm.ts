@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +7,8 @@ const sb = supabase as any;
 
 /** Mapa client_id -> organization (CRM ativo) */
 export function useClientOrgs() {
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ["client-orgs"],
     queryFn: async () => {
       const { data, error } = await sb
@@ -19,6 +21,25 @@ export function useClientOrgs() {
       return map;
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("client-orgs-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "organizations" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["client-orgs"] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+  return query;
 }
 
 export function useEnableClientCrm() {
