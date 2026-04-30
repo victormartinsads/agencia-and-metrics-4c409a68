@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_assignments: {
+        Row: {
+          assigned_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          is_favorite: boolean
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           ad_account_ids: string[]
@@ -464,6 +491,33 @@ export type Database = {
           created_at?: string
           id?: string
           layout?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      overview_templates: {
+        Row: {
+          block_overrides: Json
+          client_id: string
+          created_at: string
+          id: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          block_overrides?: Json
+          client_id: string
+          created_at?: string
+          id?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Update: {
+          block_overrides?: Json
+          client_id?: string
+          created_at?: string
+          id?: string
+          template_key?: string
           updated_at?: string
         }
         Relationships: []
