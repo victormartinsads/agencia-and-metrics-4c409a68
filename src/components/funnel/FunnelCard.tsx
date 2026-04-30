@@ -125,16 +125,6 @@ export function FunnelCard({
 
   const cleanLabel = funnelLabel.replace(/^F\d+\s*[\-—]\s*/, "");
 
-  const health = (() => {
-    if (totals.purchaseValue > 0) {
-      if (totals.roas >= 2) return { label: "Saudável", tone: "bg-emerald-500/15 text-emerald-400" };
-      if (totals.roas >= 1) return { label: "Atenção", tone: "bg-yellow-500/15 text-yellow-400" };
-      return { label: "Crítico", tone: "bg-red-500/15 text-red-400" };
-    }
-    if (totals.conversions > 0) return { label: "Captando", tone: "bg-blue-500/15 text-blue-400" };
-    return { label: "Sem dados", tone: "bg-muted text-muted-foreground" };
-  })();
-
   // Group metrics by category for the picker
   const groupedMetrics = useMemo(() => {
     const groups: Record<string, typeof ALL_FUNNEL_METRICS> = {};
@@ -170,9 +160,6 @@ export function FunnelCard({
               >
                 {funnelCode}
               </Badge>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${health.tone}`}>
-                {health.label}
-              </span>
             </div>
             <h3 className="text-sm font-bold leading-tight truncate" title={cleanLabel}>
               {cleanLabel}
