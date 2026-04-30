@@ -291,13 +291,6 @@ export function FunnelChatWidget({
                       </div>
                     </div>
                   ))}
-                  {loading && (
-                    <div className="flex justify-start">
-                      <div className="bg-muted rounded-2xl px-3 py-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </ScrollArea>
@@ -311,7 +304,7 @@ export function FunnelChatWidget({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      if (input.trim() && !loading) send(input.trim());
+                      if (input.trim()) send(input.trim());
                     }
                   }}
                   rows={1}
@@ -320,7 +313,7 @@ export function FunnelChatWidget({
                 <Button
                   size="icon"
                   onClick={() => input.trim() && send(input.trim())}
-                  disabled={loading || !input.trim()}
+                  disabled={!input.trim()}
                   className="h-10 w-10 shrink-0"
                 >
                   <Send className="h-4 w-4" />
