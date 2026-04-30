@@ -709,6 +709,124 @@ export type Database = {
           },
         ]
       }
+      invites: {
+        Row: {
+          accepted: boolean
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          organization_id: string | null
+        }
+        Insert: {
+          accepted?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          fclid: string | null
+          id: string
+          instagram: string | null
+          lead_score: number
+          message: string | null
+          name: string | null
+          notes: string | null
+          organization_id: string | null
+          phone: string | null
+          product: string | null
+          raw_data: Json | null
+          source: string | null
+          status: string
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_term: string | null
+          value: number | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          fclid?: string | null
+          id?: string
+          instagram?: string | null
+          lead_score?: number
+          message?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          product?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_term?: string | null
+          value?: number | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          fclid?: string | null
+          id?: string
+          instagram?: string | null
+          lead_score?: number
+          message?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          product?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_term?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_ads_cache: {
         Row: {
           client_id: string
@@ -740,6 +858,167 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      outbound_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          lead_id: string | null
+          organization_id: string | null
+          payload: Json | null
+          response_body: string | null
+          status_code: number | null
+          success: boolean
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          lead_id?: string | null
+          organization_id?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          status_code?: number | null
+          success?: boolean
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          lead_id?: string | null
+          organization_id?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          status_code?: number | null
+          success?: boolean
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_events_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbound_webhooks: {
+        Row: {
+          active: boolean
+          created_at: string
+          events: string[]
+          id: string
+          name: string
+          organization_id: string | null
+          secret: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          name?: string
+          organization_id?: string | null
+          secret?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          name?: string
+          organization_id?: string | null
+          secret?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -792,6 +1071,30 @@ export type Database = {
           id?: string
           template_key?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -987,6 +1290,41 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_tokens: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          organization_id: string | null
+          token: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string | null
+          token?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weekly_diagnostics: {
         Row: {
           client_id: string
@@ -1145,6 +1483,14 @@ export type Database = {
     Functions: {
       crm_ensure_defaults: { Args: { _client_id: string }; Returns: undefined }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
+      has_org_role_in: {
+        Args: {
+          _org_id: string
+          _role: Database["public"]["Enums"]["org_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1152,9 +1498,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_member_of_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "editor" | "client"
+      org_role: "owner" | "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1283,6 +1634,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "client"],
+      org_role: ["owner", "admin", "member"],
     },
   },
 } as const
