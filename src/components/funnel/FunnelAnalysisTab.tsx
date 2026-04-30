@@ -1,14 +1,24 @@
 import { useMemo, useState } from "react";
 import { Campaign, DailyMetric } from "@/data/mockMetaData";
-import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { extractFunnelCode, FUNNEL_DEFINITIONS } from "@/lib/funnelGrouping";
 import { FunnelCard } from "@/components/funnel/FunnelCard";
 import { FunnelChatWidget } from "@/components/funnel/FunnelChatWidget";
-import { FunnelMetricsCards } from "@/components/funnel/FunnelMetricsCards";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Layers, TrendingUp, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, Layers, Settings2 } from "lucide-react";
+import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
+import { ALL_FUNNEL_METRICS } from "@/hooks/useFunnelCardConfig";
+import { useFunnelCardConfig, useSaveFunnelCardConfig } from "@/hooks/useFunnelCardConfig";
 
 interface Props {
   clientId: string;
@@ -27,7 +37,47 @@ export function FunnelAnalysisTab({
   currencySymbol = "R$",
 }: Props) {
   const [search, setSearch] = useState("");
-  const analysis = useFunnelAnalysis(campaigns);
+  const [openConsolidatedSettings, setOpenConsolidatedSettings] = useState(false);
+
+  // Consolidated metrics (all campaigns)
+  const consolidatedTotals = useMemo(
+    () => aggregateCampaignMetrics(campaigns),
+    [campaigns],
+  );
+
+  // Reuse the funnel_card_config table with a sentinel funnel_code to persist
+  // which consolidated metrics are visible (per client).
+  const CONSOLIDATED_KEY = "__CONSOLIDATED__";
+  const { data: configMap } = useFunnelCardConfig(clientId);
+  const saveCfg = useSaveFunnelCardConfig();
+  const consolidatedSelected =
+    configMap?.[CONSOLIDATED_KEY] ||
+    ["spend", "purchaseValue", "roas", "conversions", "cpa", "ctr", "impressions", "cpm"];
+  const [draftConsolidated, setDraftConsolidated] = useState<string[]>(consolidatedSelected);
+  useMemo(
+    () => setDraftConsolidated(consolidatedSelected),
+    [consolidatedSelected.join(",")],
+  );
+
+  const groupedMetrics = useMemo(() => {
+    const groups: Record<string, typeof ALL_FUNNEL_METRICS> = {};
+    for (const m of ALL_FUNNEL_METRICS) {
+      const g = m.group || "outros";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(m);
+    }
+    return groups;
+  }, []);
+  const groupLabels: Record<string, string> = {
+    performance: "Performance",
+    alcance: "Alcance",
+    trafego: "Tráfego",
+    engajamento: "Engajamento",
+    video: "Vídeo",
+    leads: "Leads / Conversões",
+    vendas: "Vendas",
+    custos: "Custos",
+  };
 
   const funnelGroups = useMemo(() => {
     const map = new Map<string, Campaign[]>();
@@ -52,47 +102,107 @@ export function FunnelAnalysisTab({
       g.label.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const totalRevenue = analysis.totalPurchaseValue;
-  const totalSpend = analysis.totalSpend;
-
   return (
     <div className="space-y-5 relative">
-      {/* Header summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Card className="p-3 bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
+      {/* Consolidated header — editable */}
+      <Card className="p-4 bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />
-            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Funis ativos</p>
+            <div>
+              <h3 className="text-sm font-bold">Métricas consolidadas da conta</h3>
+              <p className="text-[10px] text-muted-foreground">
+                {funnelGroups.length} funis • {campaigns.length} campanhas
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold mt-1">{funnelGroups.length}</p>
-          <p className="text-[10px] text-muted-foreground">{campaigns.length} campanhas no total</p>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Investido</p>
-          </div>
-          <p className="text-2xl font-bold mt-1 tabular-nums">{formatCurrency(totalSpend, currencySymbol)}</p>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Receita</p>
-          </div>
-          <p className="text-2xl font-bold mt-1 tabular-nums text-primary">
-            {formatCurrency(totalRevenue, currencySymbol)}
-          </p>
-        </Card>
-        <Card className="p-3 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/30">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-            <p className="text-[10px] uppercase text-muted-foreground tracking-wider">ROAS Geral</p>
-          </div>
-          <p className="text-2xl font-bold mt-1 tabular-nums text-emerald-400">
-            {analysis.metrics.roas.toFixed(2)}x
-          </p>
-        </Card>
-      </div>
+          <Dialog open={openConsolidatedSettings} onOpenChange={setOpenConsolidatedSettings}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 gap-1.5">
+                <Settings2 className="h-3.5 w-3.5" /> Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Métricas consolidadas</DialogTitle>
+              </DialogHeader>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Escolha quais métricas exibir no topo da Análise de Funis.
+              </p>
+              <ScrollArea className="max-h-[60vh] pr-3">
+                <div className="space-y-3">
+                  {Object.entries(groupedMetrics).map(([group, items]) => (
+                    <div key={group}>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                        {groupLabels[group] || group}
+                      </p>
+                      <div className="space-y-0.5">
+                        {items.map((m) => {
+                          const checked = draftConsolidated.includes(m.key);
+                          return (
+                            <label
+                              key={m.key}
+                              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(v) => {
+                                  setDraftConsolidated((prev) =>
+                                    v ? [...prev, m.key] : prev.filter((k) => k !== m.key),
+                                  );
+                                }}
+                              />
+                              <span className="flex-1">{m.label}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {m.key}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setOpenConsolidatedSettings(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    await saveCfg.mutateAsync({
+                      clientId,
+                      funnelCode: CONSOLIDATED_KEY,
+                      metrics: draftConsolidated,
+                    });
+                    setOpenConsolidatedSettings(false);
+                  }}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+          {consolidatedSelected.map((key) => {
+            const meta = ALL_FUNNEL_METRICS.find((m) => m.key === key);
+            if (!meta) return null;
+            const value = (consolidatedTotals as any)[key] ?? 0;
+            return (
+              <div key={key} className="rounded-lg bg-muted/30 border border-border/40 p-2.5">
+                <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+                  {meta.label}
+                </p>
+                <p className="text-base font-bold tabular-nums truncate mt-0.5">
+                  {formatMetricValue(key, value, currencySymbol)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Search */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -138,16 +248,6 @@ export function FunnelAnalysisTab({
           ))}
         </div>
       )}
-
-      {/* Aggregate metrics for context */}
-      <Card className="p-4">
-        <h3 className="text-sm font-bold mb-3">Métricas consolidadas da conta</h3>
-        <FunnelMetricsCards
-          metrics={analysis.metrics}
-          totalSpend={analysis.totalSpend}
-          totalPurchaseValue={analysis.totalPurchaseValue}
-        />
-      </Card>
 
       {/* Floating AI chat */}
       <FunnelChatWidget
