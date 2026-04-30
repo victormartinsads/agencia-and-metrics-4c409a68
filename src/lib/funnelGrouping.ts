@@ -30,7 +30,12 @@ export const FUNNEL_MAP = FUNNEL_DEFINITIONS.map((f) => ({
 
 /** Extrai o código F1..F15 do início do nome da campanha. */
 export function extractFunnelCode(campaignName: string): string | null {
-  const m = campaignName.match(/^\s*\[?\s*(F\d{1,2})\s*\]?[\s_\-:]/i);
+  const head = campaignName
+    .trim()
+    .replace(/^[^A-Za-z0-9\[]+/, "")
+    .slice(0, 24);
+
+  const m = head.match(/(?:^|[\s\[{(|\-_/|])\s*(F\d{1,2})\s*\]?(?!\d)/i);
   if (!m) return null;
   const code = m[1].toUpperCase();
   return FUNNEL_DEFINITIONS.find((f) => f.code === code)?.code || null;
