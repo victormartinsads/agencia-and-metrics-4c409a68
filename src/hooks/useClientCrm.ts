@@ -84,3 +84,27 @@ export function useMyClientOrg(clientId?: string | null) {
     },
   });
 }
+
+/** Dada uma org, devolve o client vinculado (id, name, slug) — para montar URLs públicas */
+export function useOrgClient(orgId?: string | null) {
+  return useQuery({
+    queryKey: ["org-client", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data: org, error } = await sb
+        .from("organizations")
+        .select("id, client_id")
+        .eq("id", orgId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!org?.client_id) return null;
+      const { data: client, error: cErr } = await sb
+        .from("clients")
+        .select("id, name, slug")
+        .eq("id", org.client_id)
+        .maybeSingle();
+      if (cErr) throw cErr;
+      return client as { id: string; name: string; slug: string } | null;
+    },
+  });
+}
