@@ -196,6 +196,36 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_card_config: {
+        Row: {
+          client_id: string
+          created_at: string
+          display_order: number
+          funnel_code: string
+          id: string
+          metrics: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          display_order?: number
+          funnel_code: string
+          id?: string
+          metrics?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          display_order?: number
+          funnel_code?: string
+          id?: string
+          metrics?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_configs: {
         Row: {
           client_id: string
@@ -225,6 +255,39 @@ export type Database = {
           id?: string
           notes?: string | null
           stages?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      funnel_dated_notes: {
+        Row: {
+          author: string | null
+          client_id: string
+          content: string
+          created_at: string
+          funnel_code: string
+          id: string
+          note_date: string
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          client_id: string
+          content?: string
+          created_at?: string
+          funnel_code: string
+          id?: string
+          note_date?: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          client_id?: string
+          content?: string
+          created_at?: string
+          funnel_code?: string
+          id?: string
+          note_date?: string
           updated_at?: string
         }
         Relationships: []
