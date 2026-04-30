@@ -32,18 +32,21 @@ export interface OverviewLayout {
   blocks: Record<OverviewBlockId, BlockConfig>;
 }
 
-/** Default 12-col grid: cards arranged side-by-side. h is in row units (80px). */
+/**
+ * Default 12-col grid optimized to fit on a single A4 landscape sheet.
+ * Total height target: ~10 rows × 56px ≈ 560px (fits ~720px usable A4 area).
+ */
 const DEFAULT_LAYOUT: OverviewLayout = {
   order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "utm-traffic"],
   blocks: {
-    resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 5 },
-    custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 5 },
-    funil:         { id: "funil",         visible: true, title: "Funil", x: 0, y: 5,  w: 8, h: 6 },
-    lowticket:     { id: "lowticket",     visible: true, title: "Vendas LowTicket", x: 8, y: 5,  w: 4, h: 6 },
-    leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 11, w: 4, h: 4 },
-    mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 11, w: 4, h: 4 },
-    "best-ads":    { id: "best-ads",      visible: true, title: "Melhores Anúncios", metrics: ["primaryResult", "conversions"], x: 8, y: 11, w: 4, h: 4 },
-    "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes de Tráfego (UTMs)", x: 0, y: 15, w: 12, h: 5 },
+    resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 4 },
+    custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 4 },
+    funil:         { id: "funil",         visible: true, title: "Funil", x: 0, y: 4,  w: 5, h: 4 },
+    lowticket:     { id: "lowticket",     visible: true, title: "Low Ticket", x: 5, y: 4,  w: 4, h: 4 },
+    "best-ads":    { id: "best-ads",      visible: true, title: "Melhores Anúncios", metrics: ["primaryResult", "conversions"], x: 9, y: 4, w: 3, h: 4 },
+    leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 8,  w: 4, h: 3 },
+    mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 8, w: 4, h: 3 },
+    "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes (UTMs)", x: 8, y: 8, w: 4, h: 3 },
   },
 };
 
