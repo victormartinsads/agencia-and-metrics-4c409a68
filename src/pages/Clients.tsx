@@ -6,15 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign, KanbanSquare, Power, PowerOff, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 
 export default function ClientsPage() {
   const { data: clients, isLoading } = useClients();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const { data: clientOrgs } = useClientOrgs();
+  const enableCrm = useEnableClientCrm();
+  const disableCrm = useDisableClientCrm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -96,6 +100,32 @@ export default function ClientsPage() {
     } catch {
       toast.error("Erro ao excluir");
     }
+  };
+
+  const toggleCrm = async (c: Client) => {
+    const existing = clientOrgs?.[c.id];
+    if (existing) {
+      if (!confirm(`Desativar CRM de ${c.name.toUpperCase()}? Todos os leads e configurações serão apagados.`)) return;
+      try {
+        await disableCrm.mutateAsync({ orgId: existing.id });
+        toast.success("CRM desativado");
+      } catch (e: any) {
+        toast.error(e.message || "Erro ao desativar");
+      }
+    } else {
+      try {
+        await enableCrm.mutateAsync({ clientId: c.id, clientName: c.name, clientSlug: c.slug });
+        toast.success("CRM ativado!");
+      } catch (e: any) {
+        toast.error(e.message || "Erro ao ativar");
+      }
+    }
+  };
+
+  const copyPortalLink = (path: string) => {
+    const url = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado!");
   };
 
   return (
@@ -245,8 +275,8 @@ export default function ClientsPage() {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <Card className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1 flex-1 min-w-0">
                       <Link
                         to={`/dashboard/${c.id}`}
                         className="text-base font-semibold text-card-foreground hover:text-primary transition-colors"
@@ -263,9 +293,27 @@ export default function ClientsPage() {
                             {aid}
                           </Badge>
                         ))}
+                        {clientOrgs?.[c.id] && (
+                          <Badge className="text-xs bg-primary/15 text-primary border-primary/30">
+                            <KanbanSquare className="h-3 w-3 mr-1" /> CRM ativo
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
+                      <Button
+                        variant={clientOrgs?.[c.id] ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => toggleCrm(c)}
+                        disabled={enableCrm.isPending || disableCrm.isPending}
+                        className="gap-1.5"
+                      >
+                        {clientOrgs?.[c.id] ? (
+                          <><PowerOff className="h-3.5 w-3.5" /> Desativar CRM</>
+                        ) : (
+                          <><Power className="h-3.5 w-3.5" /> Ativar CRM</>
+                        )}
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => startEdit(c)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -274,12 +322,47 @@ export default function ClientsPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {clientOrgs?.[c.id] && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-2">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
+                        Links para o cliente
+                      </p>
+                      <div className="grid sm:grid-cols-3 gap-2">
+                        <LinkRow label="CRM (com login)" path={`/portal`} onCopy={copyPortalLink} />
+                        <LinkRow label="Dashboard (público)" path={`/share/${c.id}`} onCopy={copyPortalLink} />
+                        <LinkRow label="Pódio (público)" path={`/podio/${c.slug}`} onCopy={copyPortalLink} />
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <Link to={`/crm-app?org=${clientOrgs[c.id].id}`}>
+                          <Button size="sm" variant="secondary" className="gap-1.5">
+                            <KanbanSquare className="h-3.5 w-3.5" /> Abrir CRM
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               </motion.div>
             ))}
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function LinkRow({ label, path, onCopy }: { label: string; path: string; onCopy: (p: string) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-muted/40 rounded-md px-2 py-1.5 text-xs">
+      <span className="text-muted-foreground shrink-0">{label}:</span>
+      <code className="flex-1 truncate font-mono text-[10px]">{path}</code>
+      <button onClick={() => onCopy(path)} className="p-1 hover:bg-accent rounded" title="Copiar">
+        <Copy className="h-3 w-3" />
+      </button>
+      <a href={path} target="_blank" rel="noopener" className="p-1 hover:bg-accent rounded" title="Abrir">
+        <ExternalLink className="h-3 w-3" />
+      </a>
     </div>
   );
 }

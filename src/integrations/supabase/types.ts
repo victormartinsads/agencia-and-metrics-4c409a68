@@ -896,6 +896,7 @@ export type Database = {
       }
       organizations: {
         Row: {
+          client_id: string | null
           created_at: string
           id: string
           name: string
@@ -903,6 +904,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           id?: string
           name: string
@@ -910,6 +912,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -1482,6 +1485,7 @@ export type Database = {
     }
     Functions: {
       crm_ensure_defaults: { Args: { _client_id: string }; Returns: undefined }
+      get_org_id_for_client: { Args: { _client_id: string }; Returns: string }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       has_org_role_in: {
         Args: {

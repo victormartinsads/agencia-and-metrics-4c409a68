@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, KanbanSquare, List as ListIcon, Plus, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,7 +14,16 @@ import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
 import { Lead } from "@/lib/crm-app";
 
 export default function CrmAppPage() {
-  const [orgId, setOrgId] = useState<string | null>(() => localStorage.getItem("crm-app:orgId"));
+  const [searchParams] = useSearchParams();
+  const queryOrg = searchParams.get("org");
+  const [orgId, setOrgId] = useState<string | null>(() => queryOrg || localStorage.getItem("crm-app:orgId"));
+  useEffect(() => {
+    if (queryOrg && queryOrg !== orgId) {
+      setOrgId(queryOrg);
+      localStorage.setItem("crm-app:orgId", queryOrg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryOrg]);
   const { data: leads = [], isLoading } = useLeadsForOrg(orgId || undefined);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
