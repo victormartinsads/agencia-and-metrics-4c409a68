@@ -151,6 +151,7 @@ export function useComoEstamos(campaigns: Campaign[], previousCampaigns?: Campai
     // Ad sets
     const adSetMap = new Map<string, AdSetPerformance>();
     for (const c of classified) {
+      const funnelLabel = getFunnelLabelOrNull(c.name) || c.name;
       for (const cr of c.creatives) {
         const name = cr.adsetName || cr.name;
         const existing = adSetMap.get(name);
@@ -162,7 +163,7 @@ export function useComoEstamos(campaigns: Campaign[], previousCampaigns?: Campai
         } else {
           adSetMap.set(name, {
             name,
-            campaignName: c.name,
+            campaignName: funnelLabel,
             spend: cr.spend,
             impressions: cr.impressions,
             clicks: cr.clicks,
