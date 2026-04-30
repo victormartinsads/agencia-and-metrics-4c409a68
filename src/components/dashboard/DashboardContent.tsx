@@ -97,6 +97,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           <TabsContent value="funnel" className="space-y-6">
             <FunnelAnalysisTab
               clientId={clientId || ""}
+              clientName={clientInfo?.name}
               campaigns={campaigns}
               dailyMetrics={dailyMetrics}
               datePreset={datePreset || "last_7d"}
