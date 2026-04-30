@@ -85,7 +85,7 @@ export function FunnelAnalysisTab({
       const code = extractFunnelCode(c.name);
       if (!code && c.spend <= 0) continue;
       const fallbackCode = code || `CAMP-${c.id}`;
-      const arr = map.get(code) || [];
+      const arr = map.get(fallbackCode) || [];
       arr.push(c);
       map.set(fallbackCode, arr);
     }
