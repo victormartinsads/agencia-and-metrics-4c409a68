@@ -105,9 +105,69 @@ export function useFunnelAnalysis(campaigns: Campaign[], overrides?: Record<stri
     };
 
     // Rankings
-    const withRoas = active.filter((c) => c.roas > 0).sort((a, b) => b.roas - a.roas);
-    const withCpa = active.filter((c) => c.costPerConversion > 0).sort((a, b) => a.costPerConversion - b.costPerConversion);
-    const withCtr = active.filter((c) => c.ctr > 0).sort((a, b) => b.ctr - a.ctr);
+    // Agrupa campanhas por código de funil (F1..F15). Campanhas fora do padrão
+    // ficam isoladas usando o próprio nome.
+    const groupMap = new Map<string, Campaign[]>();
+    for (const c of active) {
+      const code = extractFunnelCode(c.name);
+      const key = code ? `__F__${code}` : `__C__${c.id}`;
+      const arr = groupMap.get(key) || [];
+      arr.push(c);
+      groupMap.set(key, arr);
+    }
+
+    const aggregated: Campaign[] = Array.from(groupMap.entries()).map(([key, arr]) => {
+      const isFunnel = key.startsWith("__F__");
+      const code = isFunnel ? key.replace("__F__", "") : null;
+      const def = code ? FUNNEL_DEFINITIONS.find((d) => d.code === code) : null;
+      const name = def ? def.label : arr[0].name;
+
+      const sum = (k: keyof Campaign) =>
+        arr.reduce((s, c) => s + (Number((c as any)[k]) || 0), 0);
+
+      const spend = sum("spend");
+      const impressions = sum("impressions");
+      const clicks = sum("clicks");
+      const conversions = sum("conversions");
+      const reach = sum("reach");
+      const purchases = sum("purchases" as any);
+      const purchaseValue = sum("purchaseValue" as any);
+
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+      const cpc = clicks > 0 ? spend / clicks : 0;
+      const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+      const costPerConversion = conversions > 0 ? spend / conversions : 0;
+      const roas = spend > 0 ? purchaseValue / spend : 0;
+      const frequency = reach > 0 ? impressions / reach : 0;
+
+      return {
+        id: key,
+        name,
+        status: "active",
+        objective: arr[0].objective,
+        spend,
+        impressions,
+        clicks,
+        ctr: Number(ctr.toFixed(2)),
+        cpc: Number(cpc.toFixed(2)),
+        cpm: Number(cpm.toFixed(2)),
+        conversions,
+        costPerConversion: Number(costPerConversion.toFixed(2)),
+        roas: Number(roas.toFixed(2)),
+        reach,
+        frequency: Number(frequency.toFixed(2)),
+        creatives: arr.flatMap((c) => c.creatives || []),
+        landingPageViews: sum("landingPageViews" as any),
+        addToCart: sum("addToCart" as any),
+        initiateCheckout: sum("initiateCheckout" as any),
+        purchases,
+        purchaseValue,
+      } as Campaign;
+    });
+
+    const withRoas = aggregated.filter((c) => c.roas > 0).sort((a, b) => b.roas - a.roas);
+    const withCpa = aggregated.filter((c) => c.costPerConversion > 0).sort((a, b) => a.costPerConversion - b.costPerConversion);
+    const withCtr = aggregated.filter((c) => c.ctr > 0).sort((a, b) => b.ctr - a.ctr);
 
     const topRoas = withRoas.slice(0, 3);
     const topCpa = withCpa.slice(0, 3);
