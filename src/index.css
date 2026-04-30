@@ -162,6 +162,16 @@ All colors MUST be HSL.
       0 0 0 1px hsl(var(--primary) / 0.55),
       0 0 32px -10px hsl(var(--primary) / 0.5);
   }
+  /* CRM-App utilities */
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
 }
 
 /* react-grid-layout overrides — match design system */
