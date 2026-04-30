@@ -4,7 +4,7 @@ import { useClients } from "@/hooks/useClients";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search } from "lucide-react";
+import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -139,6 +139,7 @@ const Index = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.04 }}
                       >
+                        <div className="relative">
                         <Link to={`/dashboard/${c.id}`}>
                           <Card className="p-5 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative">
                             <button
@@ -172,6 +173,14 @@ const Index = () => {
                             </div>
                           </Card>
                         </Link>
+                        <Link
+                          to={`/crm/${c.id}`}
+                          className="absolute bottom-3 right-3 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
+                          title="Abrir CRM deste cliente"
+                        >
+                          <KanbanSquare className="h-3 w-3" /> CRM
+                        </Link>
+                        </div>
                       </motion.div>
                     );
                   })}
