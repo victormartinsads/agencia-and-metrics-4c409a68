@@ -14,6 +14,9 @@ import {
   LineChart as LineChartIcon,
   Trophy,
   ImageIcon,
+  Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -24,12 +27,28 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ALL_FUNNEL_METRICS,
   defaultMetricsFor,
   useFunnelCardConfig,
   useSaveFunnelCardConfig,
 } from "@/hooks/useFunnelCardConfig";
+import {
+  useFunnelManualMetrics,
+  useSaveManualMetric,
+  useDeleteManualMetric,
+  formatManualMetric,
+  type ManualMetric,
+  type ManualMetricFormat,
+} from "@/hooks/useFunnelManualMetrics";
 import { FunnelNotesPanel } from "./FunnelNotesPanel";
 import { FunnelDetailDialog } from "./FunnelDetailDialog";
 import { FunnelComparisonDialog } from "./FunnelComparisonDialog";
