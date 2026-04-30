@@ -39,14 +39,14 @@ export interface OverviewLayout {
 const DEFAULT_LAYOUT: OverviewLayout = {
   order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "utm-traffic"],
   blocks: {
-    resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 4 },
-    custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 4 },
-    funil:         { id: "funil",         visible: true, title: "Funil", x: 0, y: 4,  w: 5, h: 4 },
-    lowticket:     { id: "lowticket",     visible: true, title: "Low Ticket", x: 5, y: 4,  w: 4, h: 4 },
-    "best-ads":    { id: "best-ads",      visible: true, title: "Melhores Anúncios", metrics: ["primaryResult", "conversions"], x: 9, y: 4, w: 3, h: 4 },
-    leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 8,  w: 4, h: 3 },
-    mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 8, w: 4, h: 3 },
-    "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes (UTMs)", x: 8, y: 8, w: 4, h: 3 },
+    resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 6 },
+    custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 6 },
+    funil:         { id: "funil",         visible: true, title: "Funil", x: 0, y: 6,  w: 5, h: 6 },
+    lowticket:     { id: "lowticket",     visible: true, title: "Low Ticket", x: 5, y: 6,  w: 4, h: 6 },
+    "best-ads":    { id: "best-ads",      visible: true, title: "Melhores Anúncios", metrics: ["primaryResult", "conversions"], x: 9, y: 6, w: 3, h: 6 },
+    leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 12, w: 4, h: 5 },
+    mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 12, w: 4, h: 5 },
+    "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes (UTMs)", x: 8, y: 12, w: 4, h: 5 },
   },
 };
 
@@ -59,16 +59,16 @@ function mergeWithDefaults(saved: Partial<OverviewLayout> | null): OverviewLayou
   // Auto-migration: if the saved layout uses the old loose grid (any block with h >= 5
   // or total span > 14 rows), discard it and apply the new dense A4 default.
   // Users can still reorganize freely afterwards.
+  // Migration v2: anything where the tallest block is < 6 rows is the previous
+  // dense A4 layout where content was being clipped. Reset it to the new defaults.
   const blocksIn = saved.blocks || {};
-  let maxBottom = 0;
-  let hasTallBlock = false;
+  let maxH = 0;
   for (const k of Object.keys(blocksIn)) {
     const b = (blocksIn as any)[k];
     if (!b) continue;
-    if ((b.h ?? 0) >= 5) hasTallBlock = true;
-    maxBottom = Math.max(maxBottom, (b.y ?? 0) + (b.h ?? 0));
+    maxH = Math.max(maxH, b.h ?? 0);
   }
-  if (hasTallBlock || maxBottom > 14) {
+  if (maxH < 6) {
     return DEFAULT_LAYOUT;
   }
   const blocks = { ...DEFAULT_LAYOUT.blocks } as OverviewLayout["blocks"];
