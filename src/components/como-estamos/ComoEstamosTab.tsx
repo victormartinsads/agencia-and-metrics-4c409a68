@@ -70,7 +70,8 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
     if (podiumCampaignId === "all") return analysis;
     const camp = campaigns.find(c => c.id === podiumCampaignId);
     if (!camp) return analysis;
-    const creatives = camp.creatives.map(cr => ({ ...cr, campaignName: camp.name }));
+    const funnelLabel = getFunnelLabelOrNull(camp.name) || camp.name;
+    const creatives = camp.creatives.map(cr => ({ ...cr, campaignName: funnelLabel }));
     return {
       ...analysis,
       topCreativesByCPA: [...creatives].filter(c => c.conversions > 0).sort((a, b) => (a.spend / a.conversions) - (b.spend / b.conversions)).slice(0, 3),
