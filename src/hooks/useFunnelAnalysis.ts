@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Campaign } from "@/data/mockMetaData";
+import { extractFunnelCode, FUNNEL_DEFINITIONS } from "@/lib/funnelGrouping";
 
 export type FunnelStage = "topo" | "meio" | "fundo";
 
