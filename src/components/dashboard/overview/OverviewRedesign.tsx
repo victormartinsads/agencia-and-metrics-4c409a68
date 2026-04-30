@@ -646,8 +646,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       </div>
 
-      {/* A4 landscape container: ratio 1.414 : 1. Cards fill the page densely. */}
-      <div className="mx-auto w-full" style={{ aspectRatio: "1.414 / 1", maxHeight: "calc(100vh - 180px)" }}>
+      {/* Container fluido: cards crescem o suficiente para mostrar todo o conteúdo, alinhados na grid. */}
+      <div className="mx-auto w-full">
       <ResponsiveGridLayout
         className="layout"
         layouts={{
@@ -666,8 +666,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         }}
         breakpoints={{ lg: 1100, md: 768, sm: 0 }}
         cols={{ lg: 12, md: 8, sm: 1 }}
-        rowHeight={60}
-        margin={[8, 8]}
+        rowHeight={56}
+        margin={[10, 10]}
         containerPadding={[0, 0]}
         isDraggable={editMode}
         isResizable={editMode}
