@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Campaign, DailyMetric } from "@/data/mockMetaData";
-import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { extractFunnelCode, FUNNEL_DEFINITIONS } from "@/lib/funnelGrouping";
 import { FunnelCard } from "@/components/funnel/FunnelCard";
 import { FunnelChatWidget } from "@/components/funnel/FunnelChatWidget";
@@ -39,7 +38,6 @@ export function FunnelAnalysisTab({
 }: Props) {
   const [search, setSearch] = useState("");
   const [openConsolidatedSettings, setOpenConsolidatedSettings] = useState(false);
-  const analysis = useFunnelAnalysis(campaigns);
 
   // Consolidated metrics (all campaigns)
   const consolidatedTotals = useMemo(
