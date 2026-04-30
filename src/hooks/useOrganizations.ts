@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +22,8 @@ const sb = supabase as any;
 
 export function useMyOrganizations() {
   const { user } = useAuth();
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ["my-orgs", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -36,6 +38,39 @@ export function useMyOrganizations() {
       })) as (Organization & { role: OrgMember["role"] })[];
     },
   });
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`my-orgs-sync:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "organization_members",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["my-orgs", user.id] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "organizations" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["my-orgs", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc, user?.id]);
+
+  return query;
 }
 
 export function useCreateOrganization() {
