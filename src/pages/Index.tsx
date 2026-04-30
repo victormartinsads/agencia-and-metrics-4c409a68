@@ -59,6 +59,11 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/crm-app">
+              <Button variant="outline" size="sm">
+                <KanbanSquare className="h-4 w-4 mr-1" /> CRM
+              </Button>
+            </Link>
             {role?.isAdmin && (
               <Link to="/settings">
                 <Button variant="outline" size="sm">
