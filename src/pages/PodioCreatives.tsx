@@ -10,6 +10,7 @@ import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 
 const DATE_PRESETS = [
   { value: "today", label: "Hoje" },
@@ -157,21 +158,31 @@ export default function PodioCreatives() {
         )}
 
         {(() => {
-          const captacao = campaignsWithCreatives.filter(c => isCaptacaoSeguidores(c.name));
-          const others = campaignsWithCreatives.filter(c => !isCaptacaoSeguidores(c.name));
+          const groups = groupCampaignsByFunnel(campaignsWithCreatives);
           return (
             <>
-              {captacao.length > 0 && (
-                <AggregatedCreativeGrid
-                  campaigns={captacao}
-                  funnelLabel="Captação de Seguidores"
-                  clientId={client.id}
-                  currencySymbol={client.currency_symbol || "R$"}
-                />
-              )}
-              {others.map((campaign) => (
-                <CreativeGrid key={campaign.id} campaign={campaign} clientId={client.id} currencySymbol={client.currency_symbol || "R$"} />
-              ))}
+              {groups.map((g) => {
+                if (g.isFunnel) {
+                  return (
+                    <AggregatedCreativeGrid
+                      key={g.key}
+                      campaigns={g.campaigns}
+                      funnelLabel={g.key}
+                      clientId={client.id}
+                      currencySymbol={client.currency_symbol || "R$"}
+                    />
+                  );
+                }
+                const campaign = g.campaigns[0];
+                return (
+                  <CreativeGrid
+                    key={campaign.id}
+                    campaign={campaign}
+                    clientId={client.id}
+                    currencySymbol={client.currency_symbol || "R$"}
+                  />
+                );
+              })}
             </>
           );
         })()}
