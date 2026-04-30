@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Campaign, Creative } from "@/data/mockMetaData";
 import { classifyFunnel, FunnelStage } from "@/hooks/useFunnelAnalysis";
+import { getFunnelLabelOrNull } from "@/lib/funnelGrouping";
 
 export type CampaignClassification = "escalar" | "manter" | "revisar" | "pausar";
 
