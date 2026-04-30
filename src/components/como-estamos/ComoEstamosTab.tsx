@@ -14,6 +14,7 @@ import { WeeklyNotesPanel } from "./WeeklyNotesPanel";
 import { ComoEstamosAIReport } from "./ComoEstamosAIReport";
 import { EditableFunnel } from "./EditableFunnel";
 import { RevenueRoasCard } from "./RevenueRoasCard";
+import { getFunnelLabelOrNull } from "@/lib/funnelGrouping";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
