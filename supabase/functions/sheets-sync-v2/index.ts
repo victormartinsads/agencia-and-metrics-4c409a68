@@ -107,7 +107,16 @@ serve(async (req) => {
       .eq("client_id", client_id)
       .maybeSingle();
     if (cfgErr) throw cfgErr;
-    if (!cfg) throw new Error("Configuração de planilha não encontrada");
+    if (!cfg || !cfg.spreadsheet_id || !cfg.sheet_name) {
+      return new Response(JSON.stringify({
+        synced: 0,
+        skipped: true,
+        reason: "missing_config",
+        message: "Nenhuma planilha configurada para este cliente",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SHEETS_KEY = Deno.env.get("GOOGLE_SHEETS_API_KEY");
