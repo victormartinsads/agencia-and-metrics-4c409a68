@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,14 @@ import {
 } from "@/hooks/useMembers";
 import { toast } from "sonner";
 import { Trash2, UserPlus, Mail } from "lucide-react";
+import {
+  useClientUsers,
+  useCreateClientUser,
+  useSetClientUserPassword,
+  useSetClientUserEmail,
+  useSetClientUserClient,
+  useRemoveClientUser,
+} from "@/hooks/useClientUsers";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -74,6 +82,9 @@ export default function SettingsPage() {
             <TabsTrigger value="members" className="gap-1.5">
               <Users className="h-3.5 w-3.5" /> Membros
             </TabsTrigger>
+            <TabsTrigger value="client-access" className="gap-1.5">
+              <KanbanSquare className="h-3.5 w-3.5" /> Acessos de Clientes
+            </TabsTrigger>
             <TabsTrigger value="permissions" className="gap-1.5">
               <Shield className="h-3.5 w-3.5" /> Permissões
             </TabsTrigger>
@@ -89,6 +100,10 @@ export default function SettingsPage() {
 
           <TabsContent value="members">
             <MembersSection />
+          </TabsContent>
+
+          <TabsContent value="client-access">
+            <ClientAccessSection />
           </TabsContent>
 
           <TabsContent value="permissions">
@@ -434,5 +449,140 @@ function PermissionsSection() {
         </p>
       </div>
     </Card>
+  );
+}
+
+function ClientAccessSection() {
+  const { data: clients } = useClients();
+  const { data: items, isLoading } = useClientUsers();
+  const create = useCreateClientUser();
+  const setPwd = useSetClientUserPassword();
+  const setEmail = useSetClientUserEmail();
+  const setClient = useSetClientUserClient();
+  const remove = useRemoveClientUser();
+  const [email, setEmailInput] = useState("");
+  const [password, setPassword] = useState("");
+  const [clientId, setClientId] = useState("");
+
+  const handleCreate = async () => {
+    if (!email || !password || !clientId) {
+      toast.error("Preencha email, senha e cliente");
+      return;
+    }
+    try {
+      await create.mutateAsync({ email, password, client_id: clientId });
+      toast.success("Acesso criado");
+      setEmailInput("");
+      setPassword("");
+      setClientId("");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao criar");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">Criar acesso de cliente</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            O cliente entra com email/senha e vê apenas o CRM e o dashboard dele (modo somente leitura).
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_1fr_auto] gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmailInput(e.target.value)} placeholder="cliente@empresa.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Senha (mín. 8)</Label>
+            <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="senha inicial" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cliente</Label>
+            <Select value={clientId} onValueChange={setClientId}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {(clients || []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name.toUpperCase()}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button onClick={handleCreate} disabled={create.isPending} className="gap-1.5">
+              {create.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+              Criar
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <h2 className="text-base font-semibold">Acessos ativos ({items?.length || 0})</h2>
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        ) : !items?.length ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">Nenhum acesso de cliente criado.</p>
+        ) : (
+          <div className="space-y-2">
+            {items.map((it) => (
+              <div key={it.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 p-3 rounded-lg border border-border bg-background/50">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{it.email}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {it.last_sign_in_at ? `Último acesso: ${new Date(it.last_sign_in_at).toLocaleDateString("pt-BR")}` : "Nunca acessou"}
+                  </p>
+                </div>
+                <Select value={it.client_id} onValueChange={(v) => setClient.mutate({ user_id: it.user_id, client_id: v }, {
+                  onSuccess: () => toast.success("Cliente atualizado"),
+                  onError: (e: any) => toast.error(e.message),
+                })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(clients || []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name.toUpperCase()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Trocar senha"
+                    onClick={() => {
+                      const p = prompt(`Nova senha para ${it.email} (mín. 8):`);
+                      if (p && p.length >= 8) setPwd.mutate({ user_id: it.user_id, password: p }, {
+                        onSuccess: () => toast.success("Senha atualizada"),
+                        onError: (e: any) => toast.error(e.message),
+                      });
+                    }}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Trocar email"
+                    onClick={() => {
+                      const e2 = prompt(`Novo email para ${it.email}:`, it.email);
+                      if (e2) setEmail.mutate({ user_id: it.user_id, email: e2 }, {
+                        onSuccess: () => toast.success("Email atualizado"),
+                        onError: (er: any) => toast.error(er.message),
+                      });
+                    }}>
+                    <MailIcon className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Remover acesso"
+                    onClick={() => {
+                      if (confirm(`Remover acesso de ${it.email}? Esta ação apaga o usuário.`)) {
+                        remove.mutate(it.user_id, {
+                          onSuccess: () => toast.success("Removido"),
+                          onError: (e: any) => toast.error(e.message),
+                        });
+                      }
+                    }}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

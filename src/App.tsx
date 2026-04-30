@@ -18,6 +18,9 @@ import GoogleCallback from "./pages/GoogleCallback.tsx";
 import Login from "./pages/Login.tsx";
 import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import CRMPage from "./pages/CRM.tsx";
+import Portal from "./pages/Portal.tsx";
+import ClientPortalRouter from "./components/ClientPortalRouter.tsx";
 
 const queryClient = new QueryClient();
 
@@ -37,12 +40,16 @@ const App = () => (
             <Route path="/como-estamos/:slug" element={<ComoEstamosPublic />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
             {/* Protected routes */}
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Index /></ClientPortalRouter></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId/sheets" element={<ProtectedRoute><ClientSheetsConfig /></ProtectedRoute>} />
             <Route path="/clients/:clientId/webhooks" element={<ProtectedRoute><ClientWebhooksConfig /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+            <Route path="/portal/dashboard" element={<ProtectedRoute><ClientPortalDashboardRedirect /></ProtectedRoute>} />
+            <Route path="/crm" element={<ProtectedRoute><CRMPage /></ProtectedRoute>} />
+            <Route path="/crm/:clientId" element={<ProtectedRoute><CRMPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
@@ -52,3 +59,12 @@ const App = () => (
 );
 
 export default App;
+
+import { Navigate } from "react-router-dom";
+import { useClientUserAccess } from "@/hooks/useClientUserAccess";
+function ClientPortalDashboardRedirect() {
+  const { data: clientId, isLoading } = useClientUserAccess();
+  if (isLoading) return null;
+  if (!clientId) return <Navigate to="/portal" replace />;
+  return <Navigate to={`/share/${clientId}`} replace />;
+}
