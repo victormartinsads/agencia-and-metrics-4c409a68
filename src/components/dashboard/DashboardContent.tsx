@@ -58,6 +58,24 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
         </motion.div>
       )}
 
+      {!metaLoading && metaData?.accountErrors && metaData.accountErrors.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-2"
+        >
+          <p className="text-sm font-semibold text-yellow-400">⚠️ Dados parciais em algumas contas</p>
+          {metaData.accountErrors.map((e, i) => (
+            <p key={i} className="text-xs text-yellow-200/80">
+              <strong>{e.accountId}:</strong> {e.message}
+            </p>
+          ))}
+          <p className="text-[10px] text-muted-foreground pt-1">
+            Quando uma conta falha, o dashboard continua carregando o restante. Isso pode fazer alguns funis, criativos e totais parecerem incompletos.
+          </p>
+        </motion.div>
+      )}
+
       {metaLoading && (
         <div className="flex items-center justify-center py-16 gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
