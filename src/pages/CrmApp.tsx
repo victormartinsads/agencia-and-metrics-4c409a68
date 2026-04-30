@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, KanbanSquare, List as ListIcon, Plus, Webhook } from "lucide-react";
+import { ArrowLeft, BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,9 @@ import { LeadsList } from "@/components/crm-app/LeadsList";
 import { LeadDetail } from "@/components/crm-app/LeadDetail";
 import { AddLeadDialog } from "@/components/crm-app/AddLeadDialog";
 import { WebhookPanel } from "@/components/crm-app/WebhookPanel";
+import { CrmDashboard } from "@/components/crm-app/CrmDashboard";
 import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
+import { useOrgClient } from "@/hooks/useClientCrm";
 import { Lead } from "@/lib/crm-app";
 
 export default function CrmAppPage() {
@@ -25,6 +27,7 @@ export default function CrmAppPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryOrg]);
   const { data: leads = [], isLoading } = useLeadsForOrg(orgId || undefined);
+  const { data: orgClient } = useOrgClient(orgId);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
@@ -58,19 +61,31 @@ export default function CrmAppPage() {
             <p className="text-sm text-muted-foreground">Use o botão "Nova" no topo para começar.</p>
           </Card>
         ) : (
-          <Tabs defaultValue="board">
-            <TabsList>
+          <Tabs defaultValue="dashboard">
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="dashboard" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Dashboard</TabsTrigger>
               <TabsTrigger value="board" className="gap-1.5"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
               <TabsTrigger value="list" className="gap-1.5"><ListIcon className="h-3.5 w-3.5" /> Lista</TabsTrigger>
+              <TabsTrigger value="overview" className="gap-1.5" disabled={!orgClient}><BarChart3 className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
+              <TabsTrigger value="podium" className="gap-1.5" disabled={!orgClient}><Trophy className="h-3.5 w-3.5" /> Pódio</TabsTrigger>
               <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
             </TabsList>
 
+            <TabsContent value="dashboard" className="mt-4">
+              {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : <CrmDashboard leads={leads} />}
+            </TabsContent>
             <TabsContent value="board" className="mt-4">
               {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> :
                 <KanbanBoard leads={leads} orgId={orgId} onCardClick={(l) => { setSelected(l); setOpenDetail(true); }} />}
             </TabsContent>
             <TabsContent value="list" className="mt-4">
               <LeadsList leads={leads} onClick={(l) => { setSelected(l); setOpenDetail(true); }} />
+            </TabsContent>
+            <TabsContent value="overview" className="mt-4">
+              {orgClient ? <EmbedFrame title="Visão Geral" url={`/share/${orgClient.id}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
+            </TabsContent>
+            <TabsContent value="podium" className="mt-4">
+              {orgClient ? <EmbedFrame title="Pódio de Criativos" url={`/podio/${orgClient.slug}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
             </TabsContent>
             <TabsContent value="webhooks" className="mt-4 max-w-2xl">
               <WebhookPanel orgId={orgId} />
@@ -83,4 +98,22 @@ export default function CrmAppPage() {
       {orgId && <AddLeadDialog orgId={orgId} open={openAdd} onClose={() => setOpenAdd(false)} />}
     </div>
   );
+}
+
+function EmbedFrame({ title, url }: { title: string; url: string }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <a href={url} target="_blank" rel="noreferrer">
+          <Button size="sm" variant="outline" className="gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> Abrir em nova aba</Button>
+        </a>
+      </div>
+      <iframe src={url} title={title} className="w-full" style={{ height: "calc(100vh - 280px)", minHeight: 600, border: 0 }} />
+    </Card>
+  );
+}
+
+function EmptyEmbed({ label }: { label: string }) {
+  return <Card className="p-8 text-center text-sm text-muted-foreground">{label}</Card>;
 }
