@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { FunnelMetricsCards } from "./FunnelMetricsCards";
-import { FunnelVisualization } from "./FunnelVisualization";
 import { FunnelPodium } from "./FunnelPodium";
 import { FunnelRecommendations } from "./FunnelRecommendations";
 import { EditableOverviewFunnel } from "@/components/dashboard/overview/EditableOverviewFunnel";
@@ -85,12 +84,9 @@ export function FunnelDetailView({ clientId, funnelCode, funnelLabel, campaigns,
         totalPurchaseValue={analysis.totalPurchaseValue}
       />
 
-      {/* Funil visual padrão (impressões → compras) */}
-      <FunnelVisualization steps={analysis.funnelSteps} />
-
-      {/* Funil EDITÁVEL específico para este funil (cliente pode customizar etapas) */}
-      <Card className="p-4">
-        <h4 className="text-sm font-semibold mb-3">Funil customizado deste {funnelCode}</h4>
+      {/* Funil EDITÁVEL específico para este funil (único funil exibido) */}
+      <Card className="p-5">
+        <h4 className="text-sm font-semibold mb-4">Funil de {funnelCode}</h4>
         <EditableOverviewFunnel
           clientId={clientId}
           campaignId={funnelCode}

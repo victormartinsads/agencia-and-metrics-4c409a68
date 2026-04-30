@@ -165,67 +165,80 @@ function FunnelShape({
   steps: { name: string; value: number; prev: number }[];
   maxValue: number;
 }) {
-  // Real funnel shape: each segment narrower than the previous (trapezoid stack)
-  const minWidthPct = 22;
+  // Stacked trapezoid funnel: each segment is a centered trapezoid that is
+  // narrower than the one above. Uses shades of the primary (green) color.
   const stepCount = steps.length;
+  const topWidth = 100; // % of container
+  const bottomWidth = 38; // % of container at the last step
+  const rowHeight = 56; // px
+
+  // Width at the TOP edge of step i (interpolated linearly between topWidth and bottomWidth)
+  const widthAt = (i: number) => {
+    if (stepCount <= 1) return topWidth;
+    return topWidth - (i / stepCount) * (topWidth - bottomWidth);
+  };
 
   return (
-    <div className="flex flex-col items-center gap-1.5 max-w-2xl mx-auto">
-      {steps.map((s, i) => {
-        // Width based on rank position so it always looks like a funnel
-        const rankWidth = 100 - (i / Math.max(1, stepCount - 1)) * (100 - minWidthPct);
-        // Also factor real value so big drops look bigger (50% from rank, 50% from data)
-        const dataWidth = Math.max(minWidthPct, (s.value / maxValue) * 100);
-        const widthPct = Math.max(minWidthPct, (rankWidth + dataWidth) / 2);
+    <div className="w-full max-w-xl mx-auto">
+      <div className="flex flex-col items-center gap-1">
+        {steps.map((s, i) => {
+          const wTop = widthAt(i);
+          const wBottom = widthAt(i + 1);
+          // Horizontal inset (each side) needed to morph a full-width box into the trapezoid
+          const insetTop = (100 - wTop) / 2;
+          const insetBottom = (100 - wBottom) / 2;
 
-        const prevValue = i > 0 ? steps[i - 1].value : 0;
-        const conversion = prevValue > 0 ? (s.value / prevValue) * 100 : null;
-        const delta = pct(s.value, s.prev);
+          const prevValue = i > 0 ? steps[i - 1].value : 0;
+          const conversion = prevValue > 0 ? (s.value / prevValue) * 100 : null;
+          const delta = pct(s.value, s.prev);
 
-        return (
-          <div key={i} className="w-full flex flex-col items-center">
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: `${widthPct}%`, opacity: 1 }}
-              transition={{ duration: 0.5, delay: i * 0.07 }}
-              className="relative h-14 flex items-center justify-between px-5 text-primary-foreground"
-              style={{
-                clipPath:
-                  i === 0
-                    ? "polygon(0 0, 100% 0, 95% 100%, 5% 100%)"
-                    : i === stepCount - 1
-                    ? "polygon(5% 0, 95% 0, 80% 100%, 20% 100%)"
-                    : "polygon(3% 0, 97% 0, 92% 100%, 8% 100%)",
-                background:
-                  "linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.85) 50%, hsl(var(--primary)/0.55) 100%)",
-              }}
-            >
-              <span className="text-[11px] font-bold uppercase tracking-wider drop-shadow-sm">
-                {s.name}
-              </span>
-              <span className="text-base font-extrabold tabular-nums drop-shadow-sm">
-                {fmt(s.value)}
-              </span>
-            </motion.div>
-            <div className="flex items-center gap-3 mt-0.5 text-[10px]">
-              {conversion != null && i > 0 && (
-                <span className="text-muted-foreground font-medium">
-                  ↓ {conversion.toFixed(1)}%
-                </span>
-              )}
-              {delta != null && (
-                <span
-                  className={
-                    delta >= 0 ? "text-primary font-semibold" : "text-destructive font-semibold"
-                  }
-                >
-                  {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}%
-                </span>
+          // Shade goes from solid primary at the top to lighter at the bottom
+          const shade = 1 - (i / Math.max(1, stepCount - 1)) * 0.55;
+
+          return (
+            <div key={i} className="w-full flex flex-col items-center">
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.07 }}
+                className="relative w-full flex items-center justify-center text-primary-foreground"
+                style={{
+                  height: `${rowHeight}px`,
+                  clipPath: `polygon(${insetTop}% 0, ${100 - insetTop}% 0, ${100 - insetBottom}% 100%, ${insetBottom}% 100%)`,
+                  background: `hsl(var(--primary) / ${shade.toFixed(2)})`,
+                }}
+              >
+                <div className="flex items-center gap-3 px-4">
+                  <span className="text-xs font-semibold tracking-wide">
+                    {s.name}
+                  </span>
+                  <span className="text-sm font-extrabold tabular-nums opacity-95">
+                    {fmt(s.value)}
+                  </span>
+                </div>
+              </motion.div>
+              {(conversion != null || delta != null) && i > 0 && (
+                <div className="flex items-center gap-3 py-0.5 text-[10px]">
+                  {conversion != null && (
+                    <span className="text-muted-foreground font-medium">
+                      ↓ {conversion.toFixed(1)}%
+                    </span>
+                  )}
+                  {delta != null && (
+                    <span
+                      className={
+                        delta >= 0 ? "text-primary font-semibold" : "text-destructive font-semibold"
+                      }
+                    >
+                      {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
