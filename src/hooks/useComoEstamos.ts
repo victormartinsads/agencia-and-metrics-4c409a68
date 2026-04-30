@@ -204,8 +204,9 @@ export function useComoEstamos(campaigns: Campaign[], previousCampaigns?: Campai
     // Creative podium
     const allCreatives: (Creative & { campaignName: string })[] = [];
     for (const c of classified) {
+      const funnelLabel = getFunnelLabelOrNull(c.name) || c.name;
       for (const cr of c.creatives) {
-        allCreatives.push({ ...cr, campaignName: c.name });
+        allCreatives.push({ ...cr, campaignName: funnelLabel });
       }
     }
     const topCreativesByCPA = [...allCreatives].filter(c => c.conversions > 0).sort((a, b) => (a.spend / a.conversions) - (b.spend / b.conversions)).slice(0, 3);
