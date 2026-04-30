@@ -99,9 +99,20 @@ export function FunnelCard({
   const [openDetail, setOpenDetail] = useState(false);
   const [openComparison, setOpenComparison] = useState(false);
   const [showCreatives, setShowCreatives] = useState(true);
+  const [openManual, setOpenManual] = useState(false);
+  const [manualDraft, setManualDraft] = useState<{
+    id?: string;
+    metric_label: string;
+    metric_value: number;
+    metric_format: ManualMetricFormat;
+  }>({ metric_label: "", metric_value: 0, metric_format: "number" });
 
   const { data: configMap } = useFunnelCardConfig(clientId);
   const saveCfg = useSaveFunnelCardConfig();
+  const { data: manualMap } = useFunnelManualMetrics(clientId);
+  const saveManual = useSaveManualMetric();
+  const deleteManual = useDeleteManualMetric();
+  const manualMetrics: ManualMetric[] = manualMap?.[funnelCode] || [];
 
   const totals = useMemo(() => aggregateCampaignMetrics(campaigns), [campaigns]);
   const analysis = useFunnelAnalysis(campaigns);
@@ -287,12 +298,143 @@ export function FunnelCard({
               </div>
             );
           })}
-          {selected.length === 0 && (
+          {manualMetrics.map((m) => (
+            <div
+              key={m.id}
+              className="group relative rounded-lg bg-primary/5 border border-primary/30 p-2"
+            >
+              <p className="text-[9px] uppercase tracking-wide text-primary/80 truncate flex items-center gap-1">
+                <span className="h-1 w-1 rounded-full bg-primary" /> {m.metric_label}
+              </p>
+              <p className="text-sm font-bold tabular-nums truncate">
+                {formatManualMetric(Number(m.metric_value), m.metric_format, currencySymbol)}
+              </p>
+              <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                <button
+                  className="p-0.5 rounded hover:bg-muted/60"
+                  title="Editar"
+                  onClick={() => {
+                    setManualDraft({
+                      id: m.id,
+                      metric_label: m.metric_label,
+                      metric_value: Number(m.metric_value),
+                      metric_format: m.metric_format,
+                    });
+                    setOpenManual(true);
+                  }}
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  className="p-0.5 rounded hover:bg-destructive/20 text-destructive"
+                  title="Excluir"
+                  onClick={() => deleteManual.mutate({ id: m.id, clientId })}
+                >
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+          {selected.length === 0 && manualMetrics.length === 0 && (
             <p className="col-span-2 text-xs text-muted-foreground italic text-center py-3">
               Nenhuma métrica selecionada — clique no ⚙️ para escolher.
             </p>
           )}
         </div>
+
+        {/* Add manual metric button */}
+        <Dialog open={openManual} onOpenChange={(v) => {
+          setOpenManual(v);
+          if (!v) setManualDraft({ metric_label: "", metric_value: 0, metric_format: "number" });
+        }}>
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-1.5 h-7 text-[11px] gap-1 text-muted-foreground hover:text-primary border border-dashed border-border/50 hover:border-primary/40"
+              onClick={() => setManualDraft({ metric_label: "", metric_value: 0, metric_format: "number" })}
+            >
+              <Plus className="h-3 w-3" /> Adicionar métrica manual
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>
+                {manualDraft.id ? "Editar" : "Nova"} métrica manual — {funnelCode}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium mb-1 block">Nome</label>
+                <Input
+                  placeholder="Ex: Vendas reais, Meta, Leads offline"
+                  value={manualDraft.metric_label}
+                  maxLength={60}
+                  onChange={(e) =>
+                    setManualDraft({ ...manualDraft, metric_label: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Valor</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualDraft.metric_value}
+                    onChange={(e) =>
+                      setManualDraft({
+                        ...manualDraft,
+                        metric_value: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Formato</label>
+                  <Select
+                    value={manualDraft.metric_format}
+                    onValueChange={(v) =>
+                      setManualDraft({ ...manualDraft, metric_format: v as ManualMetricFormat })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="number">Número</SelectItem>
+                      <SelectItem value="currency">Moeda</SelectItem>
+                      <SelectItem value="percent">Percentual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setOpenManual(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!manualDraft.metric_label.trim()}
+                  onClick={async () => {
+                    await saveManual.mutateAsync({
+                      id: manualDraft.id,
+                      client_id: clientId,
+                      funnel_code: funnelCode,
+                      metric_label: manualDraft.metric_label.trim(),
+                      metric_value: manualDraft.metric_value,
+                      metric_format: manualDraft.metric_format,
+                      display_order: manualMetrics.length,
+                    });
+                    setOpenManual(false);
+                  }}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Top creatives */}
         {top3.length > 0 && (
