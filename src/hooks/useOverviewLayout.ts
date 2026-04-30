@@ -157,6 +157,9 @@ export function useOverviewLayout(clientId?: string) {
 
   const reset = useCallback(() => persist(DEFAULT_LAYOUT), [persist]);
 
+  /** Replace the layout entirely (used by template picker). */
+  const replaceLayout = useCallback((next: OverviewLayout) => persist(next), [persist]);
+
   /** Update grid positions/sizes from react-grid-layout. */
   const updatePositions = useCallback(
     (items: { i: string; x: number; y: number; w: number; h: number }[]) => {
@@ -172,7 +175,7 @@ export function useOverviewLayout(clientId?: string) {
     [layout, persist],
   );
 
-  return { layout, loaded, moveBlock, toggleVisibility, updateBlock, updatePositions, reset };
+  return { layout, loaded, moveBlock, toggleVisibility, updateBlock, updatePositions, reset, replaceLayout };
 }
 
 export const DEFAULT_OVERVIEW_LAYOUT = DEFAULT_LAYOUT;

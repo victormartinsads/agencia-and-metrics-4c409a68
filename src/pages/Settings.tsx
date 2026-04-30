@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2 } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,9 @@ export default function SettingsPage() {
             <TabsTrigger value="google" className="gap-1.5">
               <Globe className="h-3.5 w-3.5" /> Google Analytics
             </TabsTrigger>
+            <TabsTrigger value="sheets" className="gap-1.5">
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
+            </TabsTrigger>
             <TabsTrigger value="members" className="gap-1.5">
               <Users className="h-3.5 w-3.5" /> Membros
             </TabsTrigger>
@@ -80,6 +83,10 @@ export default function SettingsPage() {
             <GoogleAnalyticsSection />
           </TabsContent>
 
+          <TabsContent value="sheets">
+            <SheetsSection />
+          </TabsContent>
+
           <TabsContent value="members">
             <MembersSection />
           </TabsContent>
@@ -90,6 +97,56 @@ export default function SettingsPage() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+function SheetsSection() {
+  const { data: clients, isLoading } = useClients();
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  return (
+    <Card className="p-6 space-y-5">
+      <div>
+        <h2 className="text-base font-semibold text-card-foreground">
+          Configuração de Planilhas por Cliente
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Selecione um cliente para mapear colunas, filtros e fontes de dados das planilhas.
+        </p>
+      </div>
+
+      <div className="space-y-2 max-w-md">
+        <Label>Cliente</Label>
+        <Select value={selectedClientId} onValueChange={setSelectedClientId} disabled={isLoading}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um cliente..." />
+          </SelectTrigger>
+          <SelectContent>
+            {(clients || []).map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name.toUpperCase()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedClientId && (
+        <div className="border-t border-border pt-5">
+          <Link
+            to={`/dashboard/${selectedClientId}/sheets`}
+            className="inline-flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Abrir configuração de planilhas
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+          <p className="text-xs text-muted-foreground mt-3">
+            Você será redirecionado para a tela de mapeamento de colunas, sincronização e webhooks deste cliente.
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }
 
