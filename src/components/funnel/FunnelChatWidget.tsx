@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, X, Send, Loader2 } from "lucide-react";
+import { Sparkles, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Campaign } from "@/data/mockMetaData";
 import { extractFunnelCode, FUNNEL_DEFINITIONS } from "@/lib/funnelGrouping";
