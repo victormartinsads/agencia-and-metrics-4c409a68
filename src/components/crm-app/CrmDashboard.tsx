@@ -82,7 +82,7 @@ export function CrmDashboard({ leads }: Props) {
   const topSources = useMemo(() => {
     const src = new Map<string, number>();
     leads.forEach((l) => {
-      const key = l.utm_source || l.source || "direto";
+      const key = l.source || "direto";
       src.set(key, (src.get(key) || 0) + 1);
     });
     return Array.from(src.entries())
