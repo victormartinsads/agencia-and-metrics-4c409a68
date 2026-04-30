@@ -1,14 +1,30 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Campaign } from "@/data/mockMetaData";
+import { Campaign, Creative } from "@/data/mockMetaData";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Settings2, NotebookPen, ChevronRight, TrendingUp } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Sparkles,
+  Settings2,
+  NotebookPen,
+  ChevronRight,
+  TrendingUp,
+  LineChart as LineChartIcon,
+  Trophy,
+  ImageIcon,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ALL_FUNNEL_METRICS,
   defaultMetricsFor,
@@ -17,6 +33,8 @@ import {
 } from "@/hooks/useFunnelCardConfig";
 import { FunnelNotesPanel } from "./FunnelNotesPanel";
 import { FunnelDetailDialog } from "./FunnelDetailDialog";
+import { FunnelComparisonDialog } from "./FunnelComparisonDialog";
+import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { formatCurrency } from "@/lib/format";
 
 interface Props {
@@ -28,47 +46,26 @@ interface Props {
   datePreset: string;
 }
 
-function aggregate(campaigns: Campaign[]) {
-  const num = (k: keyof Campaign) =>
-    campaigns.reduce((s, c) => s + Number((c as any)[k] || 0), 0);
-  const spend = num("spend");
-  const impressions = num("impressions");
-  const clicks = num("clicks");
-  const conversions = num("conversions");
-  const purchases = num("purchases" as any);
-  const purchaseValue = num("purchaseValue" as any);
-  const reach = num("reach");
-
-  return {
-    spend,
-    impressions,
-    reach,
-    frequency: reach > 0 ? impressions / reach : 0,
-    clicks,
-    ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
-    cpc: clicks > 0 ? spend / clicks : 0,
-    cpm: impressions > 0 ? (spend / impressions) * 1000 : 0,
-    landingPageViews: num("landingPageViews" as any),
-    addToCart: num("addToCart" as any),
-    initiateCheckout: num("initiateCheckout" as any),
-    messages: 0,
-    conversions,
-    purchases,
-    purchaseValue,
-    roas: spend > 0 ? purchaseValue / spend : 0,
-    cpa: purchases > 0 ? spend / purchases : conversions > 0 ? spend / conversions : 0,
-    cpl: conversions > 0 ? spend / conversions : 0,
-  };
+interface CreativeRow extends Creative {
+  campaignName: string;
 }
 
-function formatMetric(key: string, value: number, currency: string) {
-  if (["spend", "purchaseValue", "cpc", "cpm", "cpa", "cpl"].includes(key)) {
-    return formatCurrency(value, currency);
+function topCreatives(campaigns: Campaign[], limit = 3): CreativeRow[] {
+  const all: CreativeRow[] = [];
+  for (const c of campaigns) {
+    for (const cr of c.creatives || []) {
+      all.push({ ...cr, campaignName: c.name });
+    }
   }
-  if (["ctr"].includes(key)) return `${value.toFixed(2)}%`;
-  if (["roas"].includes(key)) return `${value.toFixed(2)}x`;
-  if (["frequency"].includes(key)) return value.toFixed(2);
-  return Math.round(value).toLocaleString("pt-BR");
+  // Rank by primaryResult or conversions volume; tiebreak by ROAS desc
+  return all
+    .sort((a, b) => {
+      const ra = (a.primaryResult ?? a.conversions) || 0;
+      const rb = (b.primaryResult ?? b.conversions) || 0;
+      if (rb !== ra) return rb - ra;
+      return (b.roas || 0) - (a.roas || 0);
+    })
+    .slice(0, limit);
 }
 
 export function FunnelCard({
@@ -82,23 +79,23 @@ export function FunnelCard({
   const [openSettings, setOpenSettings] = useState(false);
   const [openNotes, setOpenNotes] = useState(false);
   const [openDetail, setOpenDetail] = useState(false);
+  const [openComparison, setOpenComparison] = useState(false);
+  const [showCreatives, setShowCreatives] = useState(true);
 
   const { data: configMap } = useFunnelCardConfig(clientId);
   const saveCfg = useSaveFunnelCardConfig();
 
-  const totals = useMemo(() => aggregate(campaigns), [campaigns]);
+  const totals = useMemo(() => aggregateCampaignMetrics(campaigns), [campaigns]);
   const analysis = useFunnelAnalysis(campaigns);
+  const top3 = useMemo(() => topCreatives(campaigns, 3), [campaigns]);
 
   const selected = configMap?.[funnelCode] || defaultMetricsFor(funnelCode);
 
   const [draft, setDraft] = useState<string[]>(selected);
-  // Sync draft when selected changes
   useMemo(() => setDraft(selected), [selected.join(",")]);
 
-  // Cleaner label without the leading "F1 - " noise
   const cleanLabel = funnelLabel.replace(/^F\d+\s*[\-—]\s*/, "");
 
-  // Health indicator: ROAS-based if revenue > 0, else CPA delta vs spend
   const health = (() => {
     if (totals.purchaseValue > 0) {
       if (totals.roas >= 2) return { label: "Saudável", tone: "bg-emerald-500/15 text-emerald-400" };
@@ -109,6 +106,28 @@ export function FunnelCard({
     return { label: "Sem dados", tone: "bg-muted text-muted-foreground" };
   })();
 
+  // Group metrics by category for the picker
+  const groupedMetrics = useMemo(() => {
+    const groups: Record<string, typeof ALL_FUNNEL_METRICS> = {};
+    for (const m of ALL_FUNNEL_METRICS) {
+      const g = m.group || "outros";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(m);
+    }
+    return groups;
+  }, []);
+
+  const groupLabels: Record<string, string> = {
+    performance: "Performance",
+    alcance: "Alcance",
+    trafego: "Tráfego",
+    engajamento: "Engajamento",
+    video: "Vídeo",
+    leads: "Leads / Conversões",
+    vendas: "Vendas",
+    custos: "Custos",
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="relative overflow-hidden p-4 bg-gradient-to-br from-card to-card/60 border-border/60 hover:border-primary/40 transition-all">
@@ -116,7 +135,10 @@ export function FunnelCard({
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 h-4 border-primary/40 text-primary">
+              <Badge
+                variant="outline"
+                className="font-mono text-[10px] px-1.5 py-0 h-4 border-primary/40 text-primary"
+              >
                 {funnelCode}
               </Badge>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${health.tone}`}>
@@ -132,58 +154,82 @@ export function FunnelCard({
           </div>
 
           <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Comparar períodos"
+              onClick={() => setOpenComparison(true)}
+            >
+              <LineChartIcon className="h-3.5 w-3.5" />
+            </Button>
+
             <Dialog open={openSettings} onOpenChange={setOpenSettings}>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar métricas">
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-xl">
                 <DialogHeader>
                   <DialogTitle>Métricas do {funnelCode}</DialogTitle>
                 </DialogHeader>
                 <p className="text-xs text-muted-foreground -mt-2">
-                  Escolha quais informações deseja exibir neste card.
+                  Catálogo completo da Meta — escolha as métricas que fazem sentido para esse funil.
                 </p>
-                <ScrollArea className="max-h-80 pr-3">
-                  <div className="space-y-1.5">
-                    {ALL_FUNNEL_METRICS.map((m) => {
-                      const checked = draft.includes(m.key);
-                      return (
-                        <label
-                          key={m.key}
-                          className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(v) => {
-                              setDraft((prev) =>
-                                v ? [...prev, m.key] : prev.filter((k) => k !== m.key),
-                              );
-                            }}
-                          />
-                          <span className="flex-1">{m.label}</span>
-                          {m.group && (
-                            <span className="text-[10px] text-muted-foreground capitalize">{m.group}</span>
-                          )}
-                        </label>
-                      );
-                    })}
+                <ScrollArea className="max-h-[60vh] pr-3">
+                  <div className="space-y-3">
+                    {Object.entries(groupedMetrics).map(([group, items]) => (
+                      <div key={group}>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                          {groupLabels[group] || group}
+                        </p>
+                        <div className="space-y-0.5">
+                          {items.map((m) => {
+                            const checked = draft.includes(m.key);
+                            return (
+                              <label
+                                key={m.key}
+                                className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    setDraft((prev) =>
+                                      v ? [...prev, m.key] : prev.filter((k) => k !== m.key),
+                                    );
+                                  }}
+                                />
+                                <span className="flex-1">{m.label}</span>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  {m.key}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </ScrollArea>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => setOpenSettings(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      await saveCfg.mutateAsync({ clientId, funnelCode, metrics: draft });
-                      setOpenSettings(false);
-                    }}
-                  >
-                    Salvar
-                  </Button>
+                <div className="flex justify-between gap-2 pt-2">
+                  <p className="text-[11px] text-muted-foreground self-center">
+                    {draft.length} selecionada{draft.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setOpenSettings(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        await saveCfg.mutateAsync({ clientId, funnelCode, metrics: draft });
+                        setOpenSettings(false);
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -196,7 +242,9 @@ export function FunnelCard({
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Notas — {funnelCode} {cleanLabel}</DialogTitle>
+                  <DialogTitle>
+                    Notas — {funnelCode} {cleanLabel}
+                  </DialogTitle>
                 </DialogHeader>
                 <FunnelNotesPanel clientId={clientId} funnelCode={funnelCode} />
               </DialogContent>
@@ -211,15 +259,12 @@ export function FunnelCard({
             if (!meta) return null;
             const value = (totals as any)[key] ?? 0;
             return (
-              <div
-                key={key}
-                className="rounded-lg bg-muted/30 border border-border/40 p-2"
-              >
+              <div key={key} className="rounded-lg bg-muted/30 border border-border/40 p-2">
                 <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
                   {meta.label}
                 </p>
                 <p className="text-sm font-bold tabular-nums truncate">
-                  {formatMetric(key, value, currencySymbol)}
+                  {formatMetricValue(key, value, currencySymbol)}
                 </p>
               </div>
             );
@@ -230,6 +275,66 @@ export function FunnelCard({
             </p>
           )}
         </div>
+
+        {/* Top creatives */}
+        {top3.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/40">
+            <button
+              onClick={() => setShowCreatives((v) => !v)}
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground w-full mb-2"
+            >
+              <Trophy className="h-3 w-3 text-yellow-400" />
+              Top criativos
+              <ChevronRight
+                className={`h-3 w-3 ml-auto transition-transform ${showCreatives ? "rotate-90" : ""}`}
+              />
+            </button>
+            {showCreatives && (
+              <div className="space-y-1.5">
+                {top3.map((cr, idx) => (
+                  <div
+                    key={cr.id}
+                    className="flex items-center gap-2 p-1.5 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
+                  >
+                    <span className="text-[10px] font-bold w-4 text-center text-yellow-400">
+                      {idx + 1}
+                    </span>
+                    {cr.thumbnail ? (
+                      <img
+                        src={cr.thumbnail}
+                        alt=""
+                        className="h-9 w-9 rounded object-cover ring-1 ring-border/60"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-9 w-9 rounded bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium truncate" title={cr.name}>
+                        {cr.name}
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums">
+                        <span>
+                          {(cr.primaryResult ?? cr.conversions ?? 0).toLocaleString("pt-BR")} result.
+                        </span>
+                        <span>•</span>
+                        <span>{formatCurrency(cr.spend, currencySymbol)}</span>
+                        {cr.roas > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-primary">{cr.roas.toFixed(1)}x</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2">
@@ -255,7 +360,7 @@ export function FunnelCard({
           </Button>
         </div>
 
-        {/* Detail dialog (full funnel view) */}
+        {/* Detail dialog */}
         <FunnelDetailDialog
           open={openDetail}
           onClose={() => setOpenDetail(false)}
@@ -263,6 +368,17 @@ export function FunnelCard({
           funnelCode={funnelCode}
           funnelLabel={funnelLabel}
           campaigns={campaigns}
+          currencySymbol={currencySymbol}
+        />
+
+        {/* Comparison dialog */}
+        <FunnelComparisonDialog
+          open={openComparison}
+          onClose={() => setOpenComparison(false)}
+          funnelCode={funnelCode}
+          funnelLabel={cleanLabel}
+          campaigns={campaigns}
+          selectedMetrics={selected}
           currencySymbol={currencySymbol}
         />
       </Card>
