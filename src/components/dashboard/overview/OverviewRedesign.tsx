@@ -20,6 +20,7 @@ import { SheetUtmTable, SheetUtmRow } from "./SheetUtmTable";
 import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 import { MetricSourceEditor } from "./MetricSourceEditor";
+import { TemplatePicker } from "./TemplatePicker";
 import { Button } from "@/components/ui/button";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
@@ -30,6 +31,7 @@ import { formatCurrency } from "@/lib/format";
 import { useOverviewLayout, OverviewBlockId, BlockConfig } from "@/hooks/useOverviewLayout";
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
+import { useOverviewTemplate, applyTemplateToLayout, TemplateKey } from "@/hooks/useOverviewTemplate";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -91,7 +93,8 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
 
-  const { layout, moveBlock, toggleVisibility, updateBlock, updatePositions, reset } = useOverviewLayout(clientId);
+  const { layout, moveBlock, toggleVisibility, updateBlock, updatePositions, reset, replaceLayout } = useOverviewLayout(clientId);
+  const { templateKey, setTemplateKey } = useOverviewTemplate(clientId);
   const [editMode, setEditMode] = useState(false);
   const [settingsBlock, setSettingsBlock] = useState<BlockConfig | null>(null);
   const [sourceEditorOpen, setSourceEditorOpen] = useState(false);
@@ -616,6 +619,13 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
           <span className="text-[11px] text-muted-foreground">— layout personalizável por cliente</span>
         </div>
         <div className="flex items-center gap-2">
+          <TemplatePicker
+            value={templateKey}
+            onChange={(k: TemplateKey) => {
+              setTemplateKey(k);
+              if (k !== "custom") replaceLayout(applyTemplateToLayout(layout, k));
+            }}
+          />
           {clientId && (
             <Button
               variant="outline"
