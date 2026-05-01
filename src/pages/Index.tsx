@@ -4,7 +4,7 @@ import { useClients } from "@/hooks/useClients";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare } from "lucide-react";
+import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,18 @@ const Index = () => {
       toast.success(isFav ? "Removido dos meus clientes" : "Adicionado aos meus clientes");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao atualizar");
+    }
+  };
+
+  const handleCopyPublicLink = async (e: React.MouseEvent, clientId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/share/${clientId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link público copiado!", { description: url });
+    } catch {
+      toast.error("Não foi possível copiar o link");
     }
   };
 
@@ -176,6 +188,15 @@ const Index = () => {
                                 <Badge variant="outline" className="text-[10px]">+{c.ad_account_ids.length - 3}</Badge>
                               )}
                             </div>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyPublicLink(e, c.id)}
+                              className="mt-3 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 rounded-md py-1.5 transition-colors"
+                              title="Copiar link de visualização aberta para o cliente"
+                            >
+                              <Link2 className="h-3 w-3" />
+                              Copiar link público do cliente
+                            </button>
                           </Card>
                         </Link>
                         </div>
