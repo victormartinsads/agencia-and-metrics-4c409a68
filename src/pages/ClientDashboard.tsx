@@ -73,7 +73,7 @@ export default function ClientDashboard() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/share/${clientId}`;
+    const shareUrl = `${window.location.origin}/share/${client?.slug || clientId}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
