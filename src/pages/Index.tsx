@@ -45,10 +45,10 @@ const Index = () => {
     }
   };
 
-  const handleCopyPublicLink = async (e: React.MouseEvent, clientId: string) => {
+  const handleCopyPublicLink = async (e: React.MouseEvent, slugOrId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}/share/${clientId}`;
+    const url = `${window.location.origin}/share/${slugOrId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link público copiado!", { description: url });
@@ -190,7 +190,7 @@ const Index = () => {
                             </div>
                             <button
                               type="button"
-                              onClick={(e) => handleCopyPublicLink(e, c.id)}
+                              onClick={(e) => handleCopyPublicLink(e, c.slug || c.id)}
                               className="mt-3 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 rounded-md py-1.5 transition-colors"
                               title="Copiar link de visualização aberta para o cliente"
                             >
