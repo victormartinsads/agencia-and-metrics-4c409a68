@@ -21,23 +21,24 @@ const DATE_PRESETS = [
 ];
 
 export default function SharedDashboard() {
-  const { clientId } = useParams<{ clientId: string }>();
+  const { clientId: param } = useParams<{ clientId: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
 
   const { data: client, isLoading: clientLoading } = useQuery({
-    queryKey: ["client", clientId],
+    queryKey: ["client-public", param],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name, currency_symbol")
-        .eq("id", clientId!)
-        .single();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param || "");
+      const q = supabase.from("clients").select("id, name, currency_symbol, slug");
+      const { data, error } = isUuid
+        ? await q.eq("id", param!).single()
+        : await q.eq("slug", param!).single();
       if (error) throw error;
-      return data as Pick<Client, "id" | "name" | "currency_symbol">;
+      return data as Pick<Client, "id" | "name" | "currency_symbol" | "slug">;
     },
-    enabled: !!clientId,
+    enabled: !!param,
   });
 
+  const clientId = client?.id;
   const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset);
 
   if (clientLoading) {
