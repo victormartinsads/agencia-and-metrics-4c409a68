@@ -9,6 +9,7 @@ import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
 import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaAdsData } from "@/hooks/useMetaAds";
+import { friendlyError } from "@/lib/friendlyError";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
@@ -53,7 +54,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           <div>
             <p className="text-sm font-medium text-destructive">Erro ao carregar dados</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {metaError.message || "Verifique o token de acesso e os IDs das contas de anúncio."}
+              {friendlyError(metaError, "Verifique o token de acesso e os IDs das contas de anúncio.")}
             </p>
           </div>
         </motion.div>
@@ -68,7 +69,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           <p className="text-sm font-semibold text-yellow-400">⚠️ Dados parciais em algumas contas</p>
           {metaData.accountErrors.map((e, i) => (
             <p key={i} className="text-xs text-yellow-200/80">
-              <strong>{e.accountId}:</strong> {e.message}
+              <strong>{e.accountId}:</strong> {friendlyError(e.message, e.message)}
             </p>
           ))}
           <p className="text-[10px] text-muted-foreground pt-1">
