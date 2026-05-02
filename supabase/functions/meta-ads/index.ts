@@ -179,6 +179,15 @@ Deno.serve(async (req) => {
 
     const preset = datePreset || "last_7d";
 
+    // Build Meta API date param: supports presets ("last_7d") and custom ranges ("custom:YYYY-MM-DD:YYYY-MM-DD").
+    const customMatch = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(preset);
+    const dateParamQS = customMatch
+      ? `time_range=${encodeURIComponent(JSON.stringify({ since: customMatch[1], until: customMatch[2] }))}`
+      : `date_preset=${preset}`;
+    const insightsModifier = customMatch
+      ? `time_range({since:'${customMatch[1]}',until:'${customMatch[2]}'})`
+      : `date_preset(${preset})`;
+
     // 1. Check cache first (skip if forceRefresh)
     const cached = await getCachedData(supabase, clientId, preset);
     if (!forceRefresh && cached && new Date(cached.expires_at) > new Date()) {
