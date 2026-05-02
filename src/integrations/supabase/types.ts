@@ -1231,6 +1231,45 @@ export type Database = {
           },
         ]
       }
+      saved_diagnostics: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          date_preset: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          snapshot: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          date_preset: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          snapshot?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          date_preset?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          snapshot?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_insights: {
         Row: {
           client_id: string

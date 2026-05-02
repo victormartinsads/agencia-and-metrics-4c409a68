@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { FunnelGroup } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
-import { Layers, Target } from "lucide-react";
+import { Layers, Target, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { MetricsCustomizer } from "./MetricsCustomizer";
 import {
   AVAILABLE_METRICS,
@@ -71,6 +72,7 @@ function aggregateAdsets(campaigns: Campaign[]) {
 export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
   const totals = useMemo(() => aggregate(group.campaigns), [group.campaigns]);
   const adsets = useMemo(() => aggregateAdsets(group.campaigns), [group.campaigns]);
+  const [showAdsets, setShowAdsets] = useState(true);
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
@@ -201,10 +203,18 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
       {/* Conjuntos (adsets) consolidados */}
       {adsets.length > 0 && (
         <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground">
-            Conjuntos de anúncios ({adsets.length})
+          <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground flex items-center justify-between">
+            <span>Conjuntos de anúncios ({adsets.length})</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[11px] gap-1"
+              onClick={() => setShowAdsets(s => !s)}
+            >
+              {showAdsets ? <><EyeOff className="h-3 w-3" /> Ocultar</> : <><Eye className="h-3 w-3" /> Exibir</>}
+            </Button>
           </div>
-          <div className="overflow-x-auto max-h-72">
+          {showAdsets && <div className="overflow-x-auto max-h-72">
             <table className="w-full text-xs">
               <thead className="bg-muted/20 text-muted-foreground sticky top-0">
                 <tr>
@@ -229,7 +239,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
         </div>
       )}
 
