@@ -60,18 +60,18 @@ export default function SharedDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-6 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
               <BarChart3 className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground uppercase">{client.name}</h1>
-              <p className="text-xs text-muted-foreground">Dashboard de Performance • Meta Ads</p>
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg font-bold text-foreground uppercase truncate">{client.name}</h1>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">Dashboard de Performance • Meta Ads</p>
             </div>
           </div>
           <Select value={datePreset} onValueChange={setDatePreset}>
-            <SelectTrigger className="w-[180px] h-9 text-xs">
+            <SelectTrigger className="w-[140px] md:w-[180px] h-9 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -83,7 +83,7 @@ export default function SharedDashboard() {
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-6 py-6">
+      <main className="max-w-[1400px] mx-auto px-3 md:px-6 py-4 md:py-6">
         <DashboardContent
           clientId={clientId}
           datePreset={datePreset}
