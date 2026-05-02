@@ -10,6 +10,7 @@ import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { friendlyError } from "@/lib/friendlyError";
 
 const DATE_PRESETS = [
   { value: "today", label: "Hoje" },
@@ -51,7 +52,7 @@ export default function SharedCreatives() {
       await refreshMetaAds(clientId, datePreset);
       toast.success("Dados atualizados!");
     } catch (e: any) {
-      toast.error("Erro ao atualizar", { description: e.message });
+      toast.error("Erro ao atualizar", { description: friendlyError(e) });
     } finally {
       setRefreshing(false);
     }
@@ -128,7 +129,7 @@ export default function SharedCreatives() {
             animate={{ opacity: 1 }}
             className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center"
           >
-            <p className="text-sm text-destructive">Erro ao carregar dados dos criativos</p>
+            <p className="text-sm text-destructive">{friendlyError(metaError, "Erro ao carregar dados dos criativos")}</p>
           </motion.div>
         )}
 
@@ -141,7 +142,7 @@ export default function SharedCreatives() {
             <p className="text-sm font-semibold text-yellow-400">⚠️ Problemas de acesso à Meta Ads</p>
             {metaData.accountErrors.map((e, i) => (
               <p key={i} className="text-xs text-yellow-200/80">
-                <strong>{e.accountId}:</strong> {e.message}
+                <strong>{e.accountId}:</strong> {friendlyError(e.message, e.message)}
               </p>
             ))}
             <p className="text-[10px] text-muted-foreground pt-1">
