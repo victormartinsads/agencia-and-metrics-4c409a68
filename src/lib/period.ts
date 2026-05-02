@@ -95,3 +95,30 @@ export function pctDelta(current: number, previous: number): number | null {
   if (!previous) return current > 0 ? 100 : null;
   return ((current - previous) / previous) * 100;
 }
+
+const PRESET_LABELS: Record<string, string> = {
+  today: "Hoje",
+  yesterday: "Ontem",
+  last_3d: "Últimos 3 dias",
+  last_7d: "Últimos 7 dias",
+  last_14d: "Últimos 14 dias",
+  last_30d: "Últimos 30 dias",
+  this_month: "Mês atual",
+  last_month: "Mês passado",
+};
+
+/**
+ * Rótulo amigável para um preset (inclui ranges customizados "custom:YYYY-MM-DD:YYYY-MM-DD").
+ */
+export function presetLabel(preset: string): string {
+  if (PRESET_LABELS[preset]) return PRESET_LABELS[preset];
+  const m = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(preset);
+  if (m) {
+    const fmt = (s: string) => {
+      const [y, mo, d] = s.split("-");
+      return `${d}/${mo}/${y.slice(2)}`;
+    };
+    return `${fmt(m[1])} – ${fmt(m[2])}`;
+  }
+  return preset;
+}

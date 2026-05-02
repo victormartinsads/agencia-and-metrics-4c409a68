@@ -14,7 +14,7 @@ import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshMetaAds } from "@/hooks/useMetaAds";
-import { getPeriodPair } from "@/lib/period";
+import { getPeriodPair, presetLabel } from "@/lib/period";
 
 function formatPeriodRange(preset: string): string {
   const { current } = getPeriodPair(preset);
@@ -30,13 +30,9 @@ interface Props {
   currencySymbol?: string;
 }
 
-const DATE_LABEL: Record<string, string> = {
-  last_7d: "Últimos 7 dias",
-  last_14d: "Últimos 14 dias",
-  last_30d: "Últimos 30 dias",
-  this_month: "Mês atual",
-  last_month: "Mês passado",
-};
+const DATE_LABEL = new Proxy({} as Record<string, string>, {
+  get: (_t, key: string) => presetLabel(key),
+});
 
 export function DiagnosticoSemanal({
   clientId,
