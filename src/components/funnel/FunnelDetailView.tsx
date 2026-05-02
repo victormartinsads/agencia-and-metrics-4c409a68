@@ -19,6 +19,29 @@ interface Props {
 export function FunnelDetailView({ clientId, funnelCode, funnelLabel, campaigns, currencySymbol }: Props) {
   const analysis = useFunnelAnalysis(campaigns);
 
+  // Métricas relevantes para a exibição de criativos por tipo de funil.
+  // Limitamos a 3 para manter o card limpo na visão do cliente.
+  const adMetricsByFunnel = useMemo(() => {
+    const code = (funnelCode || "").toUpperCase();
+    // Vendas / ROAS
+    if (["F8", "F9", "F11"].includes(code)) {
+      return ["primaryResult", "clicks", "ctr", "roas"];
+    }
+    // Captação de lead / inscrições
+    if (["F4", "F5", "F6", "F10", "F12", "F13"].includes(code)) {
+      return ["primaryResult", "clicks", "ctr"];
+    }
+    // Mensagens / Call de vendas
+    if (["F2", "F3", "F7"].includes(code)) {
+      return ["primaryResult", "clicks", "ctr"];
+    }
+    // Topo: engajamento / seguidores / interação
+    if (["F1", "F14", "F15"].includes(code)) {
+      return ["primaryResult", "clicks", "ctr"];
+    }
+    return ["primaryResult", "clicks", "ctr", "conversions"];
+  }, [funnelCode]);
+
   // Aggregate Meta totals from these campaigns to feed EditableOverviewFunnel
   const metaTotals = useMemo(() => {
     const sum = (k: keyof Campaign) =>
@@ -112,7 +135,12 @@ export function FunnelDetailView({ clientId, funnelCode, funnelLabel, campaigns,
       {/* Melhores anúncios deste funil */}
       <Card className="p-4">
         <h4 className="text-sm font-semibold mb-3">Melhores Anúncios do {funnelCode}</h4>
-        <BestAdsList campaigns={campaigns} limit={5} currencySymbol={currencySymbol} />
+        <BestAdsList
+          campaigns={campaigns}
+          limit={5}
+          metrics={adMetricsByFunnel}
+          currencySymbol={currencySymbol}
+        />
       </Card>
 
       <FunnelRecommendations recommendations={analysis.recommendations} />

@@ -14,7 +14,7 @@ import { formatCurrency } from "@/lib/format";
 
 export const AD_METRIC_OPTIONS: { key: string; label: string; format?: "currency" | "number" | "percent" }[] = [
   { key: "primaryResult", label: "Resultado", format: "number" },
-  { key: "conversions", label: "Vendas", format: "number" },
+  { key: "conversions", label: "Conversões", format: "number" },
   { key: "spend", label: "Investimento", format: "currency" },
   { key: "impressions", label: "Impressões", format: "number" },
   { key: "clicks", label: "Cliques", format: "number" },
