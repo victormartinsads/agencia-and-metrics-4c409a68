@@ -179,6 +179,15 @@ Deno.serve(async (req) => {
 
     const preset = datePreset || "last_7d";
 
+    // Build Meta API date param: supports presets ("last_7d") and custom ranges ("custom:YYYY-MM-DD:YYYY-MM-DD").
+    const customMatch = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(preset);
+    const dateParamQS = customMatch
+      ? `time_range=${encodeURIComponent(JSON.stringify({ since: customMatch[1], until: customMatch[2] }))}`
+      : `date_preset=${preset}`;
+    const insightsModifier = customMatch
+      ? `time_range({since:'${customMatch[1]}',until:'${customMatch[2]}'})`
+      : `date_preset(${preset})`;
+
     // 1. Check cache first (skip if forceRefresh)
     const cached = await getCachedData(supabase, clientId, preset);
     if (!forceRefresh && cached && new Date(cached.expires_at) > new Date()) {
@@ -218,7 +227,7 @@ Deno.serve(async (req) => {
         const campaigns: any[] = [];
         let accountError: string | null = null;
 
-        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.date_preset(${preset}){spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.${insightsModifier}{spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
 
         try {
           const fetched = await fetchMeta<any>(campaignsUrl);
@@ -236,7 +245,7 @@ Deno.serve(async (req) => {
         const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
         try {
           await delay(100);
-          const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&date_preset=${preset}&time_increment=1&access_token=${token}&limit=90`;
+          const dailyUrl = `${GRAPH_API}/${actId}/insights?fields=spend,impressions,clicks,actions&${dateParamQS}&time_increment=1&access_token=${token}&limit=500`;
           const dailyRes = await fetch(dailyUrl);
           const dailyJson = await dailyRes.json();
           if (dailyJson.data) {
@@ -345,7 +354,7 @@ Deno.serve(async (req) => {
     for (const camp of campaignsWithSpend) {
       await delay(150);
       const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
-      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset_name,adset{name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.date_preset(${preset}){spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
+      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,adset_name,adset{name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.${insightsModifier}{spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
 
       let ads: any[] = [];
       try {

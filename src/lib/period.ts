@@ -36,6 +36,11 @@ export function getPeriodPair(preset: string): PeriodPair {
   let start: Date;
   let end: Date;
 
+  const customMatch = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(preset);
+  if (customMatch) {
+    start = startOfDay(new Date(customMatch[1] + "T00:00:00"));
+    end = endOfDay(new Date(customMatch[2] + "T00:00:00"));
+  } else {
   switch (preset) {
     case "today":
       start = today;
@@ -73,6 +78,7 @@ export function getPeriodPair(preset: string): PeriodPair {
     default:
       start = addDays(today, -6);
       end = endOfDay(today);
+  }
   }
 
   const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);

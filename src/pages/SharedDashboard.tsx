@@ -7,18 +7,7 @@ import { BarChart3, Loader2 } from "lucide-react";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const DATE_PRESETS = [
-  { value: "today", label: "Hoje" },
-  { value: "yesterday", label: "Ontem" },
-  { value: "last_3d", label: "Últimos 3 dias" },
-  { value: "last_7d", label: "Últimos 7 dias" },
-  { value: "last_14d", label: "Últimos 14 dias" },
-  { value: "last_30d", label: "Últimos 30 dias" },
-  { value: "this_month", label: "Este mês" },
-  { value: "last_month", label: "Mês passado" },
-];
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 export default function SharedDashboard() {
   const { clientId: param } = useParams<{ clientId: string }>();
@@ -70,16 +59,7 @@ export default function SharedDashboard() {
               <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">Dashboard de Performance • Meta Ads</p>
             </div>
           </div>
-          <Select value={datePreset} onValueChange={setDatePreset}>
-            <SelectTrigger className="w-[140px] md:w-[180px] h-9 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_PRESETS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DateRangePicker value={datePreset} onChange={setDatePreset} />
         </div>
       </header>
 

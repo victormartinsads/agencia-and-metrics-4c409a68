@@ -8,19 +8,8 @@ import {
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { toast } from "sonner";
-
-const DATE_PRESETS = [
-  { value: "today", label: "Hoje" },
-  { value: "yesterday", label: "Ontem" },
-  { value: "last_3d", label: "Últimos 3 dias" },
-  { value: "last_7d", label: "Últimos 7 dias" },
-  { value: "last_14d", label: "Últimos 14 dias" },
-  { value: "last_30d", label: "Últimos 30 dias" },
-  { value: "this_month", label: "Este mês" },
-  { value: "last_month", label: "Mês passado" },
-];
 
 export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -131,16 +120,7 @@ export default function ClientDashboard() {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "Atualizando..." : "Atualizar"}
             </button>
-            <Select value={datePreset} onValueChange={setDatePreset}>
-              <SelectTrigger className="w-[140px] md:w-[180px] h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_PRESETS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DateRangePicker value={datePreset} onChange={setDatePreset} />
             <button
               onClick={handleShare}
               className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
