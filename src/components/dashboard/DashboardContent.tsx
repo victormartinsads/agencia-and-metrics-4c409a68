@@ -89,7 +89,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            {!hideDiagnostico && <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>}
+            {!hideDiagnostico && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
             <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>
             <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>
             <TabsTrigger value="branding">Distribuição</TabsTrigger>
