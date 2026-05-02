@@ -60,39 +60,39 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="max-w-[1100px] mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1100px] mx-auto px-3 md:px-6 py-4 md:py-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
               <BarChart3 className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Meta Ads Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Acompanhe seus clientes ou explore todos da agência</p>
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Meta Ads Dashboard</h1>
+              <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Acompanhe seus clientes ou explore todos da agência</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link to="/crm-app">
               <Button variant="outline" size="sm">
-                <KanbanSquare className="h-4 w-4 mr-1" /> CRM
+                <KanbanSquare className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">CRM</span>
               </Button>
             </Link>
             {role?.isAdmin && (
               <Link to="/settings">
                 <Button variant="outline" size="sm">
-                  <Shield className="h-4 w-4 mr-1" /> Configurações
+                  <Shield className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Configurações</span>
                 </Button>
               </Link>
             )}
             <Link to="/clients">
               <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-1" /> Gerenciar Clientes
+                <Settings className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Gerenciar Clientes</span>
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-[1100px] mx-auto px-6 py-8 space-y-5">
+      <main className="max-w-[1100px] mx-auto px-3 md:px-6 py-6 md:py-8 space-y-5">
         {isLoading ? (
           <p className="text-muted-foreground text-center py-16">Carregando...</p>
         ) : !clients?.length ? (
