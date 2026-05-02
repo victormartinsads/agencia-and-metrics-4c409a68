@@ -10,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Save, Loader2, Presentation, ClipboardList, ArrowRight, RefreshCw, Archive } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { getPeriodPair, presetLabel } from "@/lib/period";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
