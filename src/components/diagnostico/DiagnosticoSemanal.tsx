@@ -8,13 +8,19 @@ import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Save, Loader2, Presentation, FileDown, ClipboardList, ArrowRight, Link2, RefreshCw, ExternalLink } from "lucide-react";
+import { Sparkles, Save, Loader2, Presentation, ClipboardList, ArrowRight, RefreshCw, Archive } from "lucide-react";
 import { toast } from "sonner";
-import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { getPeriodPair, presetLabel } from "@/lib/period";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { useSaveDiagnostic } from "@/hooks/useSavedDiagnostics";
+import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
 
 function formatPeriodRange(preset: string): string {
   const { current } = getPeriodPair(preset);
@@ -41,42 +47,6 @@ export function DiagnosticoSemanal({
   datePreset,
   currencySymbol = "R$",
 }: Props) {
-  // Slug do cliente para gerar o link público
-  const { data: clientSlug } = useQuery({
-    queryKey: ["client-slug", clientId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("slug")
-        .eq("id", clientId)
-        .maybeSingle();
-      return data?.slug || null;
-    },
-    enabled: !!clientId,
-  });
-
-  const publicUrl = clientSlug
-    ? `${window.location.origin}/como-estamos/${clientSlug}?p=${datePreset}`
-    : null;
-
-  const handleCopyPublicLink = async () => {
-    if (!publicUrl) {
-      toast.error("Este cliente ainda não tem slug configurado.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      toast.success("Link público copiado!", { description: publicUrl });
-    } catch {
-      toast.error("Não consegui copiar. Link: " + publicUrl);
-    }
-  };
-
-  const handleOpenPublic = () => {
-    if (!publicUrl) return;
-    window.open(publicUrl, "_blank", "noopener");
-  };
-
   // Refresh forçado dos dados Meta (bypass cache)
   const refreshMeta = useRefreshMetaAds();
   const [refreshing, setRefreshing] = useState(false);
@@ -109,8 +79,41 @@ export function DiagnosticoSemanal({
     useWeeklyDiagnostic(clientId, datePreset);
 
   const [presenting, setPresenting] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+
+  // Salvar snapshot
+  const saveDiag = useSaveDiagnostic();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const defaultTitle = `${clientName} — ${periodRange}`;
+  const [saveTitle, setSaveTitle] = useState(defaultTitle);
+  useEffect(() => { setSaveTitle(`${clientName} — ${periodRange}`); }, [clientName, periodRange]);
+
+  const handleSaveSnapshot = async () => {
+    if (!saveTitle.trim()) { toast.error("Dê um título ao diagnóstico"); return; }
+    const { current } = getPeriodPair(datePreset);
+    try {
+      await saveDiag.mutateAsync({
+        client_id: clientId,
+        title: saveTitle.trim(),
+        date_preset: datePreset,
+        period_start: current.start.toISOString().slice(0, 10),
+        period_end: current.end.toISOString().slice(0, 10),
+        snapshot: {
+          campaigns: activeCampaigns,
+          blocks,
+          whatWeDid,
+          nextActions,
+          periodRange,
+          clientName,
+          currencySymbol,
+        },
+      });
+      toast.success("Diagnóstico salvo!");
+      setSaveOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    }
+  };
 
   // Resumo enviado pra IA
   const summaryForAI = useMemo(() => {
@@ -192,18 +195,6 @@ export function DiagnosticoSemanal({
     generateWithAI(summaryForAI);
   };
 
-  const handleExportPDF = async () => {
-    if (!docRef.current) return;
-    setExporting(true);
-    try {
-      await exportDiagnosticoPDF(docRef.current, `diagnostico-${clientName}-${datePreset}.pdf`);
-    } catch (e) {
-      toast.error("Erro ao exportar PDF");
-    } finally {
-      setExporting(false);
-    }
-  };
-
   // ESC fecha apresentação
   useEffect(() => {
     if (!presenting) return;
@@ -212,21 +203,29 @@ export function DiagnosticoSemanal({
     return () => window.removeEventListener("keydown", onKey);
   }, [presenting]);
 
-  if (activeCampaigns.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
-        Nenhuma campanha com gasto nos {DATE_LABEL[datePreset] || datePreset}.
-      </div>
-    );
-  }
-
   return (
     <>
+      <Tabs defaultValue="atual" className="space-y-4">
+        <TabsList className="bg-card border border-border">
+          <TabsTrigger value="atual">Como estamos agora</TabsTrigger>
+          <TabsTrigger value="salvos" className="gap-1"><Archive className="h-3.5 w-3.5" /> Diagnósticos salvos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="salvos">
+          <SavedDiagnosticsList clientId={clientId} clientName={clientName} currencySymbol={currencySymbol} />
+        </TabsContent>
+
+        <TabsContent value="atual" className="space-y-6">
+          {activeCampaigns.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
+              Nenhuma campanha com gasto nos {DATE_LABEL[datePreset] || datePreset}.
+            </div>
+          ) : (<>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 sticky top-0 z-20">
         <div>
           <h2 className="text-lg font-bold text-card-foreground">
-            📊 Diagnóstico — {periodRange}
+            📊 Como Estamos — {periodRange}
           </h2>
           <p className="text-xs text-muted-foreground">
             {clientName} • {DATE_LABEL[datePreset] || datePreset} • {groups.length} funil(s)/campanha(s) ativos
@@ -245,15 +244,8 @@ export function DiagnosticoSemanal({
           <Button onClick={() => setPresenting(true)} variant="outline" size="sm" className="gap-2">
             <Presentation className="h-4 w-4" /> Apresentar
           </Button>
-          <Button onClick={handleOpenPublic} variant="outline" size="sm" className="gap-2" disabled={!publicUrl}>
-            <ExternalLink className="h-4 w-4" /> Abrir link público
-          </Button>
-          <Button onClick={handleCopyPublicLink} variant="outline" size="sm" className="gap-2" disabled={!publicUrl}>
-            <Link2 className="h-4 w-4" /> Copiar link
-          </Button>
-          <Button onClick={handleExportPDF} disabled={exporting} variant="outline" size="sm" className="gap-2">
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-            {exporting ? "Exportando..." : "Exportar PDF"}
+          <Button onClick={() => setSaveOpen(true)} size="sm" className="gap-2" variant="default">
+            <Save className="h-4 w-4" /> Salvar diagnóstico
           </Button>
         </div>
       </div>
@@ -262,7 +254,7 @@ export function DiagnosticoSemanal({
       <div ref={docRef} className="space-y-6 mt-6 bg-background p-2">
         {/* Capa */}
         <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-background p-8">
-          <p className="text-xs uppercase tracking-widest text-primary font-semibold">Diagnóstico — {periodRange}</p>
+          <p className="text-xs uppercase tracking-widest text-primary font-semibold">Como Estamos — {periodRange}</p>
           <h1 className="text-3xl md:text-4xl font-bold text-card-foreground mt-2">{clientName}</h1>
           <p className="text-sm text-muted-foreground mt-2">
             {DATE_LABEL[datePreset] || datePreset} • {periodRange}
@@ -358,6 +350,9 @@ export function DiagnosticoSemanal({
           </div>
         </section>
       </div>
+          </>)}
+        </TabsContent>
+      </Tabs>
 
       {presenting && (
         <DiagnosticoPresentMode
@@ -374,6 +369,28 @@ export function DiagnosticoSemanal({
           clientId={clientId}
         />
       )}
+
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvar este diagnóstico</DialogTitle>
+            <DialogDescription>
+              Cria uma versão arquivada do diagnóstico atual ({periodRange}). Você pode revisitá-lo depois na aba "Diagnósticos salvos".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-card-foreground">Título</label>
+            <Input value={saveTitle} onChange={e => setSaveTitle(e.target.value)} placeholder="Ex: Semana 01–07/05" />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveSnapshot} disabled={saveDiag.isPending} className="gap-2">
+              {saveDiag.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
