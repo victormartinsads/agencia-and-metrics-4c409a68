@@ -41,7 +41,7 @@ export default function Portal() {
     );
   }
 
-  // Se cliente tem CRM novo ativo, manda pra lá. Caso contrário, mantém o CRM antigo.
+  // Se cliente tem CRM ativo, manda pra lá. Caso contrário, manda para o dashboard público.
   if (org?.id) return <Navigate to={`/crm-app?org=${org.id}`} replace />;
-  return <Navigate to="/crm" replace />;
+  return <Navigate to={`/share/${clientId}`} replace />;
 }

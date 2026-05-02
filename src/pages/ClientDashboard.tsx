@@ -106,22 +106,22 @@ export default function ClientDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-6 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Link to="/" className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors">
               <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
             </Link>
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
               <BarChart3 className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground uppercase">{client.name}</h1>
-              <p className="text-xs text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg font-bold text-foreground uppercase truncate">{client.name}</h1>
+              <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">
                 {client.ad_account_ids.length} conta(s) de anúncio • Dashboard Meta Ads
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleRefreshAll}
               disabled={refreshing}
@@ -132,7 +132,7 @@ export default function ClientDashboard() {
               {refreshing ? "Atualizando..." : "Atualizar"}
             </button>
             <Select value={datePreset} onValueChange={setDatePreset}>
-              <SelectTrigger className="w-[180px] h-9 text-xs">
+              <SelectTrigger className="w-[140px] md:w-[180px] h-9 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -152,13 +152,13 @@ export default function ClientDashboard() {
               to="/clients"
               className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1"
             >
-              <Settings className="h-3.5 w-3.5" /> Configurações
+              <Settings className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Configurações</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-6 py-6">
+      <main className="max-w-[1400px] mx-auto px-3 md:px-6 py-4 md:py-6">
         <DashboardContent
           clientId={clientId}
           datePreset={datePreset}

@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, Cell, PieChart, Pie,
@@ -64,8 +65,8 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
     try {
       const result = await connectGoogle.mutateAsync({ clientId, redirectUri });
       window.location.href = result.authUrl;
-    } catch {
-      toast.error("Erro ao iniciar conexão com Google");
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao iniciar conexão com Google"));
     }
   };
 
@@ -74,8 +75,8 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
     try {
       await disconnectGoogle.mutateAsync(clientId);
       toast.success("Google Analytics desconectado");
-    } catch {
-      toast.error("Erro ao desconectar");
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao desconectar"));
     }
   };
 
@@ -90,8 +91,8 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
       toast.success("Propriedade GA4 vinculada!");
       setSelectingProperty(false);
       qc.invalidateQueries({ queryKey: ["google-analytics", clientId] });
-    } catch {
-      toast.error("Erro ao vincular propriedade");
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao vincular propriedade"));
     }
   };
 
@@ -245,7 +246,9 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
   if (gaError || !gaData?.overview) {
     return (
       <div className="text-center py-16 space-y-3">
-        <p className="text-muted-foreground text-sm">Erro ao carregar dados do Analytics</p>
+        <p className="text-muted-foreground text-sm">
+          {friendlyError(gaError, "Erro ao carregar dados do Analytics")}
+        </p>
         <Button variant="ghost" size="sm" onClick={handleDisconnect} className="gap-1 text-destructive">
           <Unlink className="h-3.5 w-3.5" /> Desconectar e reconectar
         </Button>
