@@ -22,9 +22,10 @@ interface Props {
   metaLoading: boolean;
   metaError: Error | null;
   currencySymbol?: string;
+  hideDiagnostico?: boolean;
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$" }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false }: Props) {
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
@@ -87,7 +88,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
+            {!hideDiagnostico && <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>}
             <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>
             <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>
             <TabsTrigger value="branding">Distribuição</TabsTrigger>
@@ -102,7 +103,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             />
           </TabsContent>
 
-          <TabsContent value="diagnostico" className="space-y-6">
+          {!hideDiagnostico && <TabsContent value="diagnostico" className="space-y-6">
             <DiagnosticoSemanal
               clientId={clientId || ""}
               clientName={clientInfo?.name}
@@ -110,7 +111,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               datePreset={datePreset || "last_7d"}
               currencySymbol={currencySymbol}
             />
-          </TabsContent>
+          </TabsContent>}
 
           <TabsContent value="funnel" className="space-y-6">
             <FunnelAnalysisTab

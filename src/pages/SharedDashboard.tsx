@@ -91,6 +91,7 @@ export default function SharedDashboard() {
           metaLoading={metaLoading}
           metaError={metaError as Error | null}
           currencySymbol={client.currency_symbol || "R$"}
+          hideDiagnostico
         />
       </main>
 
