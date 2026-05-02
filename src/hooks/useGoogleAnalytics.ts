@@ -84,10 +84,16 @@ export function useGoogleAnalytics(clientId?: string, dateRange?: string, enable
         last_month: { startDate: "60daysAgo", endDate: "30daysAgo" },
       };
 
+      // Custom range: "custom:YYYY-MM-DD:YYYY-MM-DD" → GA aceita ISO direto
+      const customMatch = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(dateRange || "");
+      const resolvedRange = customMatch
+        ? { startDate: customMatch[1], endDate: customMatch[2] }
+        : (dateMap[dateRange || "last_7d"] || dateMap.last_7d);
+
       const { data, error } = await supabase.functions.invoke("google-analytics", {
         body: {
           clientId,
-          dateRange: dateMap[dateRange || "last_7d"] || dateMap.last_7d,
+          dateRange: resolvedRange,
         },
       });
       if (error) throw error;
