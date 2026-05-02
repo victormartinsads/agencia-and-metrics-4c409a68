@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check } from "lucide-react";
@@ -53,7 +54,7 @@ export function DiagnosticoBloco({ title, emoji, accentClass, value, onChange, p
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none text-card-foreground
                         prose-p:my-2 prose-ul:my-2 prose-li:my-1 prose-strong:text-card-foreground">
-          <ReactMarkdown>{value}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkBreaks]}>{value}</ReactMarkdown>
         </div>
       )}
     </div>
