@@ -19,7 +19,6 @@ export const AD_METRIC_OPTIONS: { key: string; label: string; format?: "currency
   { key: "impressions", label: "Impressões", format: "number" },
   { key: "clicks", label: "Cliques", format: "number" },
   { key: "ctr", label: "CTR", format: "percent" },
-  { key: "roas", label: "ROAS", format: "number" },
 ];
 
 interface CreativeRow extends Creative {
