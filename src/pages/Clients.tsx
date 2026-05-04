@@ -245,6 +245,20 @@ export default function ClientsPage() {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Hash className="h-3.5 w-3.5" /> Google Ads Customer ID (opcional)
+                  </Label>
+                  <Input
+                    placeholder="123-456-7890"
+                    value={form.google_ads_customer_id || ""}
+                    onChange={(e) => setForm({ ...form, google_ads_customer_id: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    ID da conta do Google Ads (com ou sem traços). Necessário para puxar campanhas do Google Ads quando a integração for ativada.
+                  </p>
+                </div>
+
                 <div className="flex gap-2 pt-2">
                   <Button onClick={handleSubmit} disabled={createClient.isPending || updateClient.isPending}>
                     <Save className="h-4 w-4 mr-1" />
