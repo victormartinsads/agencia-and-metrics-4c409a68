@@ -1,10 +1,10 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { messages, context } = await req.json();
+    const { messages, context, model } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -29,7 +29,7 @@ ${context ? JSON.stringify(context, null, 2) : "Sem dados carregados ainda."}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: model || "google/gemini-2.5-pro",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         stream: true,
       }),
