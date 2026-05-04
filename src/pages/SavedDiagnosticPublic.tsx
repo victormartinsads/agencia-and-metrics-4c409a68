@@ -1,25 +1,31 @@
 import { useParams } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Presentation } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
+import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPresentMode";
 
-export default function SavedDiagnosticPublic() {
+export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["public-saved-diagnostic", id],
+    queryKey: ["public-saved-diagnostic", savedItem?.id || id],
     queryFn: async () => {
-      const { data: diag, error } = await supabase
-        .from("saved_diagnostics" as any)
-        .select("*")
-        .eq("id", id!)
-        .maybeSingle();
-      if (error) throw error;
-      if (!diag) return null;
-      const d: any = diag;
+      let d: any = savedItem;
+      if (!d) {
+        const { data: diag, error } = await supabase
+          .from("saved_diagnostics" as any)
+          .select("*")
+          .eq("id", id!)
+          .maybeSingle();
+        if (error) throw error;
+        if (!diag) return null;
+        d = diag;
+      }
       const { data: client } = await supabase
         .from("clients")
         .select("name, currency_symbol")
@@ -27,7 +33,7 @@ export default function SavedDiagnosticPublic() {
         .maybeSingle();
       return { diag: d, client };
     },
-    enabled: !!id,
+    enabled: !!(savedItem || id),
   });
 
   if (isLoading) {
@@ -56,12 +62,18 @@ export default function SavedDiagnosticPublic() {
   const whatWeDid = snap.whatWeDid || "";
   const nextActions = snap.nextActions || "";
   const periodRange = snap.periodRange || item.date_preset;
+  const [presenting, setPresenting] = useState(false);
 
   const fmtMoney = (v: number) =>
     `${currencySymbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="sticky top-0 z-30 flex items-center justify-end px-6 py-3 border-b border-border bg-card/80 backdrop-blur">
+        <Button size="sm" variant="default" className="gap-2" onClick={() => setPresenting(true)}>
+          <Presentation className="h-4 w-4" /> Apresentar
+        </Button>
+      </div>
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-background p-8">
           <p className="text-xs uppercase tracking-widest text-primary font-semibold">Como Estamos — {periodRange}</p>
@@ -123,6 +135,19 @@ export default function SavedDiagnosticPublic() {
           </div>
         </section>
       </div>
+      {presenting && (
+        <DiagnosticoPresentMode
+          clientName={clientName}
+          datePreset={periodRange}
+          periodRange={periodRange}
+          groups={groups}
+          blocks={blocks}
+          whatWeDid={whatWeDid}
+          nextActions={nextActions}
+          currencySymbol={currencySymbol}
+          onClose={() => setPresenting(false)}
+        />
+      )}
     </div>
   );
 }

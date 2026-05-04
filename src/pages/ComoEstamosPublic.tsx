@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPresentMode";
+import SavedDiagnosticPublic from "./SavedDiagnosticPublic";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
 import { getPeriodPair } from "@/lib/period";
@@ -29,6 +30,38 @@ function formatPeriodRange(preset: string): string {
 }
 
 export default function ComoEstamosPublic() {
+  const { slug } = useParams<{ slug: string }>();
+
+  // 1) Tenta resolver como "diagnóstico salvo" pelo slug
+  const { data: saved, isLoading: savedLoading } = useQuery({
+    queryKey: ["public-saved-diagnostic-by-slug", slug],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("saved_diagnostics" as any)
+        .select("*")
+        .eq("slug", slug!)
+        .maybeSingle();
+      return data as any;
+    },
+    enabled: !!slug,
+  });
+
+  if (savedLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (saved) {
+    return <SavedDiagnosticPublic savedItem={saved} />;
+  }
+
+  return <LiveClientView />;
+}
+
+function LiveClientView() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPreset = searchParams.get("p") || "last_7d";
@@ -159,3 +192,5 @@ export default function ComoEstamosPublic() {
     </div>
   );
 }
+
+
