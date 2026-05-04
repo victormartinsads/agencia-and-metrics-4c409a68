@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedDiagnostics, useDeleteSavedDiagnostic, SavedDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
@@ -64,6 +64,18 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
                   <Eye className="h-4 w-4" /> Visualizar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    const url = `${window.location.origin}/diagnostico/${item.id}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("Link público copiado!");
+                  }}
+                >
+                  <Link2 className="h-4 w-4" /> Copiar link
                 </Button>
                 <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
                   <Trash2 className="h-4 w-4" />
