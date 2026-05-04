@@ -27,10 +27,11 @@ export default function ClientsPage() {
     meta_access_token: "",
     ad_account_ids: [""],
     currency_symbol: "R$",
+    google_ads_customer_id: "",
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$" });
+    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$", google_ads_customer_id: "" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -41,6 +42,7 @@ export default function ClientsPage() {
       meta_access_token: c.meta_access_token,
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
       currency_symbol: c.currency_symbol || "R$",
+      google_ads_customer_id: (c as any).google_ads_customer_id || "",
     });
     setEditingId(c.id);
     setShowForm(true);
