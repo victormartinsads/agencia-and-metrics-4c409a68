@@ -135,6 +135,19 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           </div>
         </section>
       </div>
+      {presenting && (
+        <DiagnosticoPresentMode
+          clientName={clientName}
+          datePreset={periodRange}
+          periodRange={periodRange}
+          groups={groups}
+          blocks={blocks}
+          whatWeDid={whatWeDid}
+          nextActions={nextActions}
+          currencySymbol={currencySymbol}
+          onClose={() => setPresenting(false)}
+        />
+      )}
     </div>
   );
 }
