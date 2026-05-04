@@ -11,6 +11,7 @@ export interface SavedDiagnostic {
   snapshot: any;
   created_at: string;
   updated_at: string;
+  slug?: string | null;
 }
 
 export function useSavedDiagnostics(clientId: string) {
@@ -40,9 +41,31 @@ export function useSaveDiagnostic() {
       period_end?: string | null;
       snapshot: any;
     }) => {
+      // Build base slug from client name + period (DD-MM-YYYY)
+      const { data: client } = await supabase
+        .from("clients").select("name").eq("id", input.client_id).maybeSingle();
+      const slugify = (s: string) =>
+        s.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 60);
+      const dateForSlug = input.period_end || input.period_start || new Date().toISOString().slice(0, 10);
+      const [y, m, d] = dateForSlug.split("-");
+      const dateStr = d && m && y ? `${d}-${m}-${y}` : dateForSlug;
+      const base = slugify(`${client?.name || "cliente"}-${dateStr}`);
+      let slug = base;
+      // Ensure uniqueness with up to 5 attempts
+      for (let i = 0; i < 5; i++) {
+        const { data: existing } = await supabase
+          .from("saved_diagnostics" as any)
+          .select("id").eq("slug", slug).maybeSingle();
+        if (!existing) break;
+        slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+      }
       const { data, error } = await supabase
         .from("saved_diagnostics" as any)
-        .insert(input)
+        .insert({ ...input, slug })
         .select()
         .single();
       if (error) throw error;
