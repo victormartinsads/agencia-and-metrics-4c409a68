@@ -191,3 +191,36 @@ function LiveClientView() {
     </div>
   );
 }
+
+function SavedDiagnosticView({ item }: { item: any }) {
+  const snap = item.snapshot || {};
+  const campaigns = snap.campaigns || [];
+  const groups = groupCampaignsByFunnel(campaigns);
+  const blocks: DiagnosticBlocks = snap.blocks || {
+    positives: "", negatives: "", manager_actions: "", client_requests: "",
+  };
+  const periodRange = snap.periodRange || item.date_preset;
+
+  const { data: client } = useQuery({
+    queryKey: ["saved-diag-client", item.client_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients").select("name, currency_symbol").eq("id", item.client_id).maybeSingle();
+      return data;
+    },
+  });
+
+  return (
+    <DiagnosticoPresentMode
+      clientName={(client?.name || "Cliente").toUpperCase()}
+      datePreset={periodRange}
+      periodRange={periodRange}
+      groups={groups}
+      blocks={blocks}
+      whatWeDid={snap.whatWeDid || ""}
+      nextActions={snap.nextActions || ""}
+      currencySymbol={client?.currency_symbol || "R$"}
+      publicMode
+    />
+  );
+}
