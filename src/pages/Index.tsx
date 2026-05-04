@@ -4,7 +4,7 @@ import { useClients } from "@/hooks/useClients";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare, Link2 } from "lucide-react";
+import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare, Link2, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,13 @@ const Index = () => {
                 <KanbanSquare className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">CRM</span>
               </Button>
             </Link>
+            {role?.isAdmin && (
+              <Link to="/gestor">
+                <Button size="sm" className="gap-1">
+                  <Brain className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Visão do Gestor</span>
+                </Button>
+              </Link>
+            )}
             {role?.isAdmin && (
               <Link to="/settings">
                 <Button variant="outline" size="sm">
