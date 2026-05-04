@@ -11,6 +11,7 @@ import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPres
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
+  const [presenting, setPresenting] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["public-saved-diagnostic", savedItem?.id || id],
@@ -62,7 +63,6 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
   const whatWeDid = snap.whatWeDid || "";
   const nextActions = snap.nextActions || "";
   const periodRange = snap.periodRange || item.date_preset;
-  const [presenting, setPresenting] = useState(false);
 
   const fmtMoney = (v: number) =>
     `${currencySymbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
