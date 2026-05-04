@@ -82,6 +82,7 @@ export type Database = {
           created_at: string
           currency_symbol: string
           ga_property_id: string | null
+          google_ads_customer_id: string | null
           id: string
           lead_action_types: string[]
           meta_access_token: string
@@ -95,6 +96,7 @@ export type Database = {
           created_at?: string
           currency_symbol?: string
           ga_property_id?: string | null
+          google_ads_customer_id?: string | null
           id?: string
           lead_action_types?: string[]
           meta_access_token: string
@@ -108,6 +110,7 @@ export type Database = {
           created_at?: string
           currency_symbol?: string
           ga_property_id?: string | null
+          google_ads_customer_id?: string | null
           id?: string
           lead_action_types?: string[]
           meta_access_token?: string
