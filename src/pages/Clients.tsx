@@ -27,10 +27,11 @@ export default function ClientsPage() {
     meta_access_token: "",
     ad_account_ids: [""],
     currency_symbol: "R$",
+    google_ads_customer_id: "",
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$" });
+    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$", google_ads_customer_id: "" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -41,6 +42,7 @@ export default function ClientsPage() {
       meta_access_token: c.meta_access_token,
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
       currency_symbol: c.currency_symbol || "R$",
+      google_ads_customer_id: (c as any).google_ads_customer_id || "",
     });
     setEditingId(c.id);
     setShowForm(true);
@@ -240,6 +242,20 @@ export default function ClientsPage() {
                   </select>
                   <p className="text-xs text-muted-foreground">
                     Símbolo exibido nos valores monetários do dashboard
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Hash className="h-3.5 w-3.5" /> Google Ads Customer ID (opcional)
+                  </Label>
+                  <Input
+                    placeholder="123-456-7890"
+                    value={form.google_ads_customer_id || ""}
+                    onChange={(e) => setForm({ ...form, google_ads_customer_id: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    ID da conta do Google Ads (com ou sem traços). Necessário para puxar campanhas do Google Ads quando a integração for ativada.
                   </p>
                 </div>
 

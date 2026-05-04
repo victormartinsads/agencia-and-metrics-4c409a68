@@ -18,6 +18,7 @@ export type ClientInsert = {
   meta_access_token: string;
   ad_account_ids: string[];
   currency_symbol?: string;
+  google_ads_customer_id?: string;
 };
 
 function generateSlug(name: string): string {
