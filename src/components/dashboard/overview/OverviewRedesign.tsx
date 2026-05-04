@@ -357,7 +357,7 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "resultados":
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <ProgressMetric
                 label="Investimento Total"
                 value={fmtNum(totalSpend)}
@@ -376,15 +376,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
                 goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
                 tone="primary"
               />
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">ROAS</p>
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-card border border-border text-2xl font-bold">
-                  {roas.toFixed(1)}
-                </div>
-                {prevRoas > 0 && (
-                  <p className="text-[10px] text-muted-foreground">vs {prevRoas.toFixed(1)} anterior</p>
-                )}
-              </div>
             </div>
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </SectionCard>
