@@ -1243,6 +1243,7 @@ export type Database = {
           id: string
           period_end: string | null
           period_start: string | null
+          slug: string | null
           snapshot: Json
           title: string
           updated_at: string
@@ -1255,6 +1256,7 @@ export type Database = {
           id?: string
           period_end?: string | null
           period_start?: string | null
+          slug?: string | null
           snapshot?: Json
           title: string
           updated_at?: string
@@ -1267,6 +1269,7 @@ export type Database = {
           id?: string
           period_end?: string | null
           period_start?: string | null
+          slug?: string | null
           snapshot?: Json
           title?: string
           updated_at?: string
