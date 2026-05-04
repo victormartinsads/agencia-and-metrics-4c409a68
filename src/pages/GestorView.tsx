@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity, AlertTriangle, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 
@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { MetricsColumnPicker, ALL_METRIC_COLUMNS, formatMetricValue } from "@/components/gestor/MetricsColumnPicker";
+import { CampaignDrillDown } from "@/components/gestor/CampaignDrillDown";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -26,6 +28,13 @@ const periods = [
   { value: "last_30d", label: "Últimos 30 dias" },
 ];
 
+const DEFAULT_COLUMNS = ["status", "spend", "ctr", "costPerConversion", "conversions", "frequency"];
+const AI_MODELS = [
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (preciso)" },
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (rápido)" },
+  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (preview)" },
+];
+
 export default function GestorView() {
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { data: clients } = useClients();
@@ -35,6 +44,9 @@ export default function GestorView() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
+  const [drill, setDrill] = useState<{ id: string; name: string } | null>(null);
+  const [aiModel, setAiModel] = useState(AI_MODELS[0].value);
 
   if (roleLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!role?.isAdmin) return <Navigate to="/" replace />;
@@ -42,6 +54,8 @@ export default function GestorView() {
   const currentClient = clients?.find((c) => c.id === clientId);
   const overview = meta?.overviewMetrics;
   const campaigns = meta?.campaigns || [];
+  const currencySymbol = currentClient?.currency_symbol || "R$";
+  const sortedCampaigns = useMemo(() => [...campaigns].sort((a, b) => b.spend - a.spend).slice(0, 30), [campaigns]);
 
   const insights = useMemo(() => {
     if (!campaigns.length) return null;
@@ -111,7 +125,7 @@ export default function GestorView() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMsgs, context: buildContext() }),
+        body: JSON.stringify({ messages: newMsgs, context: buildContext(), model: aiModel }),
       });
 
       if (resp.status === 429) { toast.error("Muitas requisições. Aguarde."); setSending(false); return; }
@@ -194,6 +208,12 @@ export default function GestorView() {
                 {periods.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={aiModel} onValueChange={setAiModel}>
+              <SelectTrigger className="w-[200px] h-9 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {AI_MODELS.map((m) => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </header>
@@ -216,8 +236,8 @@ export default function GestorView() {
           {clientId && !isLoading && overview && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <KpiTile label="Gasto" value={`${currentClient?.currency_symbol || "R$"} ${overview.totalSpend.toFixed(2)}`} />
-                <KpiTile label="ROAS" value={overview.avgROAS.toFixed(2) + "x"} accent={overview.avgROAS >= 2 ? "good" : overview.avgROAS < 1 ? "bad" : "warn"} />
+                <KpiTile label="Gasto" value={`${currencySymbol} ${overview.totalSpend.toFixed(2)}`} />
+                <KpiTile label="Cliques" value={overview.totalClicks.toLocaleString("pt-BR")} />
                 <KpiTile label="CTR" value={overview.avgCTR.toFixed(2) + "%"} accent={overview.avgCTR >= 1.5 ? "good" : overview.avgCTR < 1 ? "bad" : "warn"} />
                 <KpiTile label="Conversões" value={overview.totalConversions.toString()} />
               </div>
@@ -257,30 +277,49 @@ export default function GestorView() {
               )}
 
               <Card className="p-5">
-                <h2 className="text-sm font-semibold mb-3">Campanhas (top 20 por gasto)</h2>
+                <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                  <div>
+                    <h2 className="text-sm font-semibold">Campanhas (top 30 por gasto)</h2>
+                    <p className="text-[11px] text-muted-foreground">Clique em uma linha para ver AdSets, Ads e funil interno.</p>
+                  </div>
+                  <MetricsColumnPicker selected={columns} onChange={setColumns} />
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
                       <tr className="border-b border-border">
                         <th className="text-left py-2 font-medium">Campanha</th>
-                        <th className="text-right py-2 font-medium">Status</th>
-                        <th className="text-right py-2 font-medium">Gasto</th>
-                        <th className="text-right py-2 font-medium">CTR</th>
-                        <th className="text-right py-2 font-medium">CPA</th>
-                        <th className="text-right py-2 font-medium">ROAS</th>
-                        <th className="text-right py-2 font-medium">Freq</th>
+                        {columns.map((k) => {
+                          const col = ALL_METRIC_COLUMNS.find((c) => c.key === k);
+                          return <th key={k} className="text-right py-2 font-medium whitespace-nowrap">{col?.label || k}</th>;
+                        })}
+                        <th className="text-right py-2 w-8"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[...campaigns].sort((a, b) => b.spend - a.spend).slice(0, 20).map((c) => (
-                        <tr key={c.id} className="border-b border-border/50 hover:bg-accent/30">
+                      {sortedCampaigns.map((c) => (
+                        <tr
+                          key={c.id}
+                          className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                          onClick={() => setDrill({ id: c.id, name: c.name })}
+                        >
                           <td className="py-2 pr-2 truncate max-w-[280px]" title={c.name}>{c.name}</td>
-                          <td className="text-right py-2"><Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[9px]">{c.status}</Badge></td>
-                          <td className="text-right py-2 tabular-nums">{c.spend.toFixed(0)}</td>
-                          <td className="text-right py-2 tabular-nums">{c.ctr.toFixed(2)}%</td>
-                          <td className="text-right py-2 tabular-nums">{c.costPerConversion ? c.costPerConversion.toFixed(2) : "—"}</td>
-                          <td className={`text-right py-2 tabular-nums ${c.roas >= 2 ? "text-primary" : c.roas > 0 && c.roas < 1 ? "text-red-400" : ""}`}>{c.roas ? c.roas.toFixed(2) + "x" : "—"}</td>
-                          <td className={`text-right py-2 tabular-nums ${c.frequency > 3 ? "text-yellow-400" : ""}`}>{c.frequency.toFixed(2)}</td>
+                          {columns.map((k) => {
+                            const col = ALL_METRIC_COLUMNS.find((x) => x.key === k);
+                            const raw = (c as any)[k];
+                            if (k === "status") {
+                              return <td key={k} className="text-right py-2"><Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[9px]">{c.status}</Badge></td>;
+                            }
+                            const warn =
+                              (k === "frequency" && Number(raw) > 3) ||
+                              (k === "ctr" && Number(raw) < 1 && c.spend > 50);
+                            return (
+                              <td key={k} className={`text-right py-2 tabular-nums whitespace-nowrap ${warn ? "text-yellow-400" : ""}`}>
+                                {formatMetricValue(raw, col?.format, currencySymbol)}
+                              </td>
+                            );
+                          })}
+                          <td className="text-right py-2"><ChevronRight className="h-3.5 w-3.5 text-muted-foreground inline" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -366,6 +405,18 @@ export default function GestorView() {
           </Card>
         </aside>
       </main>
+
+      {drill && clientId && (
+        <CampaignDrillDown
+          open={!!drill}
+          onOpenChange={(v) => { if (!v) setDrill(null); }}
+          clientId={clientId}
+          campaignId={drill.id}
+          campaignName={drill.name}
+          datePreset={period}
+          currencySymbol={currencySymbol}
+        />
+      )}
     </div>
   );
 }
