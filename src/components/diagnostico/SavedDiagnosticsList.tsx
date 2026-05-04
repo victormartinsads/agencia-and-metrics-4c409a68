@@ -70,7 +70,8 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                   variant="outline"
                   className="gap-2"
                   onClick={() => {
-                    const url = `${window.location.origin}/diagnostico/${item.id}`;
+                    const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
+                    const url = `${window.location.origin}${path}`;
                     navigator.clipboard.writeText(url);
                     toast.success("Link público copiado!");
                   }}
