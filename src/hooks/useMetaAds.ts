@@ -14,6 +14,11 @@ export interface MetaAdsData {
     avgCPC: number;
     avgROAS: number;
     totalReach: number;
+    totalLinkClicks?: number;
+    totalOutboundClicks?: number;
+    totalUniqueClicks?: number;
+    avgCTRAll?: number;
+    avgCPCAll?: number;
     totalLeadActions?: number;
     totalPurchases?: number;
     totalLandingPageViews?: number;
