@@ -61,6 +61,9 @@ export interface FunnelTotals {
   // leads
   conversions: number;
   leadActions: number;
+  leads: number;
+  cpLead: number;
+  cpFollow: number;
   completeRegistration: number;
   subscribe: number;
   schedule: number;
