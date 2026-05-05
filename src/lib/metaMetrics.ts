@@ -116,12 +116,26 @@ export function aggregateCampaignMetrics(
   const purchases = sum("purchases");
   const purchaseValue = sum("purchaseValue") || sum("purchase_value") || sum("revenue");
   const conversions = sum("conversions");
-  const leadActions = sum("lead_actions") || sum("leadActions") || sum("lead");
-  // Configurable "leads" for the funnel — default to common Meta lead events
+  // Default lead catalogue — used when the user hasn't picked a mapping yet.
+  // Mirrors the daily lead aggregation in the meta-ads edge function so the
+  // numbers match what the Meta gerenciador shows as "Leads".
+  const DEFAULT_LEAD_TYPES = [
+    "lead",
+    "offsite_conversion.fb_pixel_lead",
+    "onsite_conversion.lead_grouped",
+    "leadgen.other",
+    "leadgen_grouped",
+    "onsite_conversion.messaging_conversation_started_7d",
+  ];
+  const leadActions =
+    sum("lead_actions") ||
+    sum("leadActions") ||
+    sumActions(DEFAULT_LEAD_TYPES);
+  // Configurable "leads" for the funnel — default to broad catalogue
   const leadActionTypesUsed =
     options?.leadActionTypes && options.leadActionTypes.length > 0
       ? options.leadActionTypes
-      : ["lead", "onsite_conversion.lead_grouped"];
+      : DEFAULT_LEAD_TYPES;
   const leads = sumActions(leadActionTypesUsed);
   const followsCount = sum("follow") || sum("follows") || sumActions(["onsite_conversion.follow"]);
   const addToCart = sum("addToCart") || sum("add_to_cart");
