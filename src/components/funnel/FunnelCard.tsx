@@ -60,8 +60,18 @@ import {
   useSaveFunnelLeadMapping,
   LEAD_ACTION_CATALOG,
 } from "@/hooks/useFunnelLeadMapping";
+import {
+  useFunnelFollowMapping,
+  useSaveFunnelFollowMapping,
+  FOLLOW_ACTION_CATALOG,
+} from "@/hooks/useFunnelFollowMapping";
+import {
+  useFunnelMetricOverrides,
+  useSaveFunnelMetricOverride,
+  useDeleteFunnelMetricOverride,
+} from "@/hooks/useFunnelMetricOverrides";
 import { useMetaCustomConversions } from "@/hooks/useMetaCustomConversions";
-import { Tag } from "lucide-react";
+import { Tag, UserPlus, RotateCcw } from "lucide-react";
 
 interface Props {
   clientId: string;
@@ -109,6 +119,12 @@ export function FunnelCard({
   const [showCreatives, setShowCreatives] = useState(true);
   const [openManual, setOpenManual] = useState(false);
   const [openLeadMap, setOpenLeadMap] = useState(false);
+  const [openFollowMap, setOpenFollowMap] = useState(false);
+  const [editingMetric, setEditingMetric] = useState<{
+    key: string;
+    label: string;
+    value: string;
+  } | null>(null);
   const [manualDraft, setManualDraft] = useState<{
     id?: string;
     metric_label: string;
@@ -121,8 +137,14 @@ export function FunnelCard({
   const { data: globalMap } = useFunnelTemplateGlobal();
   const { data: leadMap } = useFunnelLeadMapping(clientId);
   const saveLeadMap = useSaveFunnelLeadMapping();
+  const { data: followMap } = useFunnelFollowMapping(clientId);
+  const saveFollowMap = useSaveFunnelFollowMapping();
+  const { data: overridesMap } = useFunnelMetricOverrides(clientId);
+  const saveOverride = useSaveFunnelMetricOverride();
+  const deleteOverride = useDeleteFunnelMetricOverride();
+  const overrides = overridesMap?.[funnelCode] || {};
   const { data: customConversions } = useMetaCustomConversions(
-    openLeadMap ? clientId : undefined,
+    openLeadMap || openFollowMap ? clientId : undefined,
   );
   const { data: manualMap } = useFunnelManualMetrics(clientId);
   const saveManual = useSaveManualMetric();
@@ -130,9 +152,10 @@ export function FunnelCard({
   const manualMetrics: ManualMetric[] = manualMap?.[funnelCode] || [];
 
   const leadActionTypes = leadMap?.[funnelCode] || [];
+  const followActionTypes = followMap?.[funnelCode] || [];
   const totals = useMemo(
-    () => aggregateCampaignMetrics(campaigns, { leadActionTypes }),
-    [campaigns, leadActionTypes.join(",")],
+    () => aggregateCampaignMetrics(campaigns, { leadActionTypes, followActionTypes }),
+    [campaigns, leadActionTypes.join(","), followActionTypes.join(",")],
   );
   const analysis = useFunnelAnalysis(campaigns);
   const top3 = useMemo(() => topCreatives(campaigns, 3), [campaigns]);
@@ -145,6 +168,8 @@ export function FunnelCard({
 
   const [draftLeadTypes, setDraftLeadTypes] = useState<string[]>(leadActionTypes);
   useMemo(() => setDraftLeadTypes(leadActionTypes), [leadActionTypes.join(",")]);
+  const [draftFollowTypes, setDraftFollowTypes] = useState<string[]>(followActionTypes);
+  useMemo(() => setDraftFollowTypes(followActionTypes), [followActionTypes.join(",")]);
 
   const [draft, setDraft] = useState<string[]>(selected);
   useMemo(() => setDraft(selected), [selected.join(",")]);
