@@ -70,7 +70,10 @@ export const ALL_FUNNEL_METRICS: FunnelCardMetric[] = [
 
   // Leads / conversões
   { key: "conversions", label: "Conversões/Leads", group: "leads" },
-  { key: "leadActions", label: "Leads (ação Meta)", group: "leads" },
+  { key: "leadActions", label: "Leads (ação Meta crua)", group: "leads" },
+  { key: "leads", label: "Leads (mapeamento configurado)", group: "leads" },
+  { key: "cpLead", label: "Custo por Lead (mapeado)", group: "custos" },
+  { key: "cpFollow", label: "Custo por seguidor", group: "custos" },
   { key: "completeRegistration", label: "Cadastros", group: "leads" },
   { key: "subscribe", label: "Inscrições", group: "leads" },
   { key: "schedule", label: "Agendamentos", group: "leads" },
