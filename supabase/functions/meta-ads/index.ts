@@ -290,8 +290,10 @@ Deno.serve(async (req) => {
               dailyData[date].clicks += Number(day.clicks || 0);
               const purchaseVal = getActionValue(day.actions, "purchase")
                 || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
-              const leadVal = getActionValue(day.actions, "lead")
-                || getActionValue(day.actions, "onsite_conversion.lead_grouped");
+              // Daily leads use the client's configured lead action types
+              const dailyLeadTypes = ["lead","offsite_conversion.fb_pixel_lead","onsite_conversion.lead_grouped","leadgen.other","leadgen_grouped","onsite_conversion.messaging_conversation_started_7d"];
+              let leadVal = 0;
+              for (const t of dailyLeadTypes) leadVal += getActionValue(day.actions, t);
               dailyData[date].purchases += purchaseVal;
               dailyData[date].leads += leadVal;
               dailyData[date].conversions += purchaseVal || leadVal || getActionValue(day.actions, "link_click");
@@ -521,10 +523,16 @@ Deno.serve(async (req) => {
     const totalClicks = allCampaigns.reduce((s, c) => s + c.clicks, 0);
     const totalConversions = allCampaigns.reduce((s, c) => s + c.conversions, 0);
     const totalReach = allCampaigns.reduce((s, c) => s + c.reach, 0);
+    const totalLinkClicks = allCampaigns.reduce((s, c) => s + Number(c.linkClicks || 0), 0);
+    const totalOutboundClicks = allCampaigns.reduce((s, c) => s + Number(c.outboundClicks || 0), 0);
+    const totalUniqueClicks = allCampaigns.reduce((s, c) => s + Number(c.uniqueClicks || 0), 0);
     const activeCampaigns = allCampaigns.filter((c) => c.spend > 0);
     const count = activeCampaigns.length || 1;
-    const avgCTR = Number((activeCampaigns.reduce((s, c) => s + c.ctr, 0) / count).toFixed(2));
-    const avgCPC = Number((activeCampaigns.reduce((s, c) => s + c.cpc, 0) / count).toFixed(2));
+    // Default CTR/CPC = link-based (per user preference). True weighted averages.
+    const avgCTR = totalImpressions > 0 ? Number(((totalLinkClicks / totalImpressions) * 100).toFixed(2)) : 0;
+    const avgCPC = totalLinkClicks > 0 ? Number((totalSpend / totalLinkClicks).toFixed(2)) : 0;
+    const avgCTRAll = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0;
+    const avgCPCAll = totalClicks > 0 ? Number((totalSpend / totalClicks).toFixed(2)) : 0;
     const avgROAS = Number((activeCampaigns.reduce((s, c) => s + c.roas, 0) / count).toFixed(2));
 
     // Aggregate funnel-level totals (used by metric sources: leads, low ticket, etc.)
@@ -584,6 +592,11 @@ Deno.serve(async (req) => {
       overviewMetrics: {
         totalSpend, totalImpressions, totalClicks, totalConversions,
         avgCTR, avgCPC, avgROAS, totalReach,
+        totalLinkClicks,
+        totalOutboundClicks,
+        totalUniqueClicks,
+        avgCTRAll,
+        avgCPCAll,
         totalLeadActions,
         totalPurchases,
         totalLandingPageViews,
