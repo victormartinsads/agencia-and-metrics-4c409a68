@@ -812,6 +812,62 @@ export function FunnelCard({
 
         {/* Detail dialog */}
         <FunnelDetailDialog
+
+        {/* Edit metric override dialog */}
+        <Dialog open={!!editingMetric} onOpenChange={(v) => !v && setEditingMetric(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-sm">
+                Editar valor — {editingMetric?.label}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-[11px] text-muted-foreground">
+                Sobrescreve o valor calculado automaticamente. Útil para métricas como
+                Seguidores ou Custo por seguidor que precisam ser ajustadas manualmente.
+              </p>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Valor</label>
+                <Input
+                  type="number"
+                  step="any"
+                  autoFocus
+                  value={editingMetric?.value ?? ""}
+                  onChange={(e) =>
+                    setEditingMetric((prev) =>
+                      prev ? { ...prev, value: e.target.value } : prev,
+                    )
+                  }
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingMetric(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (!editingMetric) return;
+                    const num = parseFloat(editingMetric.value);
+                    if (isNaN(num)) return;
+                    await saveOverride.mutateAsync({
+                      clientId,
+                      funnelCode,
+                      metricKey: editingMetric.key,
+                      metricValue: num,
+                    });
+                    setEditingMetric(null);
+                  }}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Detail dialog */}
+        <FunnelDetailDialog
           open={openDetail}
           onClose={() => setOpenDetail(false)}
           clientId={clientId}
