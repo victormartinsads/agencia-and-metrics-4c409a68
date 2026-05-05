@@ -9,19 +9,29 @@ const KEY = "funnel-lead-mapping";
  * what counts as a lead for that funnel.
  */
 export const LEAD_ACTION_CATALOG: { key: string; label: string }[] = [
-  { key: "lead", label: "Lead (padrão pixel)" },
-  { key: "onsite_conversion.lead_grouped", label: "Lead agrupado (Meta)" },
-  { key: "onsite_conversion.messaging_conversation_started_7d", label: "Conversa iniciada (7d)" },
-  { key: "complete_registration", label: "Cadastro completo" },
-  { key: "submit_application", label: "Aplicação enviada" },
+  // Leads diretos
+  { key: "lead", label: "Lead (Pixel padrão)" },
+  { key: "offsite_conversion.fb_pixel_lead", label: "Lead — Pixel offsite (CAPI)" },
+  { key: "onsite_conversion.lead_grouped", label: "Lead — formulário instantâneo (agrupado)" },
+  { key: "leadgen.other", label: "Lead Ads — formulário Meta" },
+  { key: "leadgen_grouped", label: "Lead Ads — agrupado" },
+  // Mensageria (WhatsApp / Messenger / IG Direct)
+  { key: "onsite_conversion.messaging_conversation_started_7d", label: "Conversa iniciada — 7d" },
+  { key: "onsite_conversion.messaging_first_reply", label: "1ª resposta de mensagem" },
+  { key: "onsite_conversion.total_messaging_connection", label: "Conexão por mensagem (total)" },
+  // Cadastros / inscrições
+  { key: "complete_registration", label: "Cadastro completo (Pixel)" },
+  { key: "offsite_conversion.fb_pixel_complete_registration", label: "Cadastro — Pixel offsite" },
   { key: "subscribe", label: "Inscrição" },
+  { key: "offsite_conversion.fb_pixel_subscribe", label: "Inscrição — Pixel offsite" },
+  // Outros eventos comuns
+  { key: "submit_application", label: "Aplicação enviada" },
   { key: "schedule", label: "Agendamento" },
   { key: "contact", label: "Contato" },
   { key: "view_content", label: "Visualização de conteúdo" },
-  { key: "landing_page_view", label: "Visualização da página" },
+  { key: "offsite_conversion.fb_pixel_view_content", label: "ViewContent — Pixel offsite" },
+  { key: "landing_page_view", label: "Visualização da página de destino (LPV)" },
   { key: "link_click", label: "Clique no link" },
-  { key: "offsite_conversion.fb_pixel_lead", label: "Lead (Pixel offsite)" },
-  { key: "offsite_conversion.fb_pixel_complete_registration", label: "Cadastro (Pixel offsite)" },
 ];
 
 export function useFunnelLeadMapping(clientId?: string) {

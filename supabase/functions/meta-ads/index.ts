@@ -44,6 +44,24 @@ interface MetaInsight {
   reach?: string;
   frequency?: string;
   cost_per_action_type?: { action_type: string; value: string }[];
+  inline_link_clicks?: string;
+  inline_link_click_ctr?: string;
+  cost_per_inline_link_click?: string;
+  unique_clicks?: string;
+  unique_ctr?: string;
+  unique_actions?: { action_type: string; value: string }[];
+  cost_per_unique_action_type?: { action_type: string; value: string }[];
+  outbound_clicks?: { action_type: string; value: string }[];
+  outbound_clicks_ctr?: { action_type: string; value: string }[];
+  cost_per_outbound_click?: { action_type: string; value: string }[];
+  video_play_actions?: { action_type: string; value: string }[];
+  video_thruplay_watched_actions?: { action_type: string; value: string }[];
+  video_p25_watched_actions?: { action_type: string; value: string }[];
+  video_p50_watched_actions?: { action_type: string; value: string }[];
+  video_p75_watched_actions?: { action_type: string; value: string }[];
+  video_p95_watched_actions?: { action_type: string; value: string }[];
+  video_p100_watched_actions?: { action_type: string; value: string }[];
+  video_avg_time_watched_actions?: { action_type: string; value: string }[];
 }
 
 function getActionValue(
@@ -227,7 +245,22 @@ Deno.serve(async (req) => {
         const campaigns: any[] = [];
         let accountError: string | null = null;
 
-        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.${insightsModifier}{spend,impressions,clicks,ctr,cpc,cpm,actions,action_values,reach,frequency,cost_per_action_type}&access_token=${token}&limit=100`;
+        const insightFields = [
+          "spend","impressions","clicks","ctr","cpc","cpm",
+          "actions","action_values","reach","frequency","cost_per_action_type",
+          // Link-specific (the correct "Cliques no link" / "CTR link" / "CPC link")
+          "inline_link_clicks","inline_link_click_ctr","cost_per_inline_link_click",
+          // Unique
+          "unique_clicks","unique_ctr","unique_actions","cost_per_unique_action_type",
+          // Outbound
+          "outbound_clicks","outbound_clicks_ctr","cost_per_outbound_click",
+          // Video
+          "video_play_actions","video_thruplay_watched_actions",
+          "video_p25_watched_actions","video_p50_watched_actions",
+          "video_p75_watched_actions","video_p95_watched_actions",
+          "video_p100_watched_actions","video_avg_time_watched_actions",
+        ].join(",");
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.${insightsModifier}{${insightFields}}&access_token=${token}&limit=100`;
 
         try {
           const fetched = await fetchMeta<any>(campaignsUrl);
@@ -323,6 +356,22 @@ Deno.serve(async (req) => {
           initiateCheckout,
           purchases,
           purchaseValue,
+          // Link-specific (correct values from Meta)
+          linkClicks: Number(insight?.inline_link_clicks || 0),
+          linkCtr: Number(Number(insight?.inline_link_click_ctr || 0).toFixed(2)),
+          cpcLink: Number(Number(insight?.cost_per_inline_link_click || 0).toFixed(2)),
+          uniqueClicks: Number(insight?.unique_clicks || 0),
+          uniqueCtr: Number(Number(insight?.unique_ctr || 0).toFixed(2)),
+          outboundClicks: Number(insight?.outbound_clicks?.[0]?.value || 0),
+          // Video metrics (extract from action arrays)
+          videoPlays: Number(insight?.video_play_actions?.[0]?.value || 0),
+          thruplays: Number(insight?.video_thruplay_watched_actions?.[0]?.value || 0),
+          videoP25: Number(insight?.video_p25_watched_actions?.[0]?.value || 0),
+          videoP50: Number(insight?.video_p50_watched_actions?.[0]?.value || 0),
+          videoP75: Number(insight?.video_p75_watched_actions?.[0]?.value || 0),
+          videoP95: Number(insight?.video_p95_watched_actions?.[0]?.value || 0),
+          videoP100: Number(insight?.video_p100_watched_actions?.[0]?.value || 0),
+          avgVideoTime: Number(insight?.video_avg_time_watched_actions?.[0]?.value || 0),
           // Raw Meta breakdowns (used by UI to read any metric / event)
           actionBreakdown: Object.fromEntries(
             (insight?.actions || []).map((a: any) => [a.action_type, Number(a.value || 0)])
@@ -332,6 +381,9 @@ Deno.serve(async (req) => {
           ),
           actionValues: Object.fromEntries(
             (insight?.action_values || []).map((a: any) => [a.action_type, Number(a.value || 0)])
+          ),
+          uniqueActionBreakdown: Object.fromEntries(
+            (insight?.unique_actions || []).map((a: any) => [a.action_type, Number(a.value || 0)])
           ),
         });
       }
