@@ -429,6 +429,113 @@ export function FunnelCard({
                 </div>
               </DialogContent>
             </Dialog>
+
+            <Dialog open={openFollowMap} onOpenChange={setOpenFollowMap}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Mapear evento de Seguidor">
+                  <UserPlus className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Mapear "Seguidor" — {funnelCode}</DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Escolha quais eventos da Meta contam como "Seguidor" neste funil.
+                  As métricas <b>Seguidores</b> e <b>Custo por seguidor</b> usarão a soma desses eventos.
+                </p>
+                <ScrollArea className="max-h-[55vh] pr-3">
+                  <div className="space-y-1">
+                    {(() => {
+                      const seen = new Set<string>();
+                      const items: { key: string; label: string; group: string }[] = [];
+                      for (const opt of FOLLOW_ACTION_CATALOG) {
+                        items.push({ ...opt, group: "Catálogo" });
+                        seen.add(opt.key);
+                      }
+                      for (const cc of customConversions || []) {
+                        const key = `offsite_conversion.custom.${cc.id}`;
+                        if (seen.has(key)) continue;
+                        items.push({
+                          key,
+                          label: `★ ${cc.name}${cc.custom_event_type ? ` (${cc.custom_event_type})` : ""}`,
+                          group: "Eventos personalizados (nomeados)",
+                        });
+                        seen.add(key);
+                      }
+                      const allKeys = new Set<string>();
+                      for (const c of campaigns) {
+                        const ab = (c as any).actionBreakdown || {};
+                        for (const k of Object.keys(ab)) allKeys.add(k);
+                      }
+                      for (const k of Array.from(allKeys).sort()) {
+                        if (seen.has(k)) continue;
+                        items.push({ key: k, label: k, group: "Outros (detectados)" });
+                        seen.add(k);
+                      }
+                      const groups: Record<string, typeof items> = {};
+                      for (const it of items) {
+                        (groups[it.group] = groups[it.group] || []).push(it);
+                      }
+                      return Object.entries(groups).map(([gname, arr]) => (
+                        <div key={gname} className="mb-2">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 mt-2 mb-1">
+                            {gname}
+                          </p>
+                          {arr.map((opt) => {
+                            const checked = draftFollowTypes.includes(opt.key);
+                            const count = campaigns.reduce(
+                              (s, c) => s + Number(((c as any).actionBreakdown || {})[opt.key] || 0),
+                              0,
+                            );
+                            return (
+                              <label
+                                key={opt.key}
+                                className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) =>
+                                    setDraftFollowTypes((prev) =>
+                                      v ? [...prev, opt.key] : prev.filter((k) => k !== opt.key),
+                                    )
+                                  }
+                                />
+                                <span className="flex-1">{opt.label}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums">
+                                  {count.toLocaleString("pt-BR")}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono opacity-60">
+                                  {opt.key}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </ScrollArea>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setOpenFollowMap(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await saveFollowMap.mutateAsync({
+                        clientId,
+                        funnelCode,
+                        actionTypes: draftFollowTypes,
+                      });
+                      setOpenFollowMap(false);
+                    }}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
