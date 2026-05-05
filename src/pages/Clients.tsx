@@ -356,6 +356,7 @@ export default function ClientsPage() {
                           </Button>
                         </Link>
                       </div>
+                      <VisibleTabsEditor clientId={c.id} />
                     </div>
                   )}
                 </Card>
