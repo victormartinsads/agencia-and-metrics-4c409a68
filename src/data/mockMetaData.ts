@@ -23,6 +23,10 @@ export interface Campaign {
   initiateCheckout?: number;
   purchases?: number;
   purchaseValue?: number;
+  // Raw Meta breakdowns
+  actionBreakdown?: Record<string, number>;
+  costPerAction?: Record<string, number>;
+  actionValues?: Record<string, number>;
 }
 
 export interface Creative {
