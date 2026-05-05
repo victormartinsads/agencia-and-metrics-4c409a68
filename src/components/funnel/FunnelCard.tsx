@@ -60,6 +60,7 @@ import {
   useSaveFunnelLeadMapping,
   LEAD_ACTION_CATALOG,
 } from "@/hooks/useFunnelLeadMapping";
+import { useMetaCustomConversions } from "@/hooks/useMetaCustomConversions";
 import { Tag } from "lucide-react";
 
 interface Props {
@@ -120,6 +121,9 @@ export function FunnelCard({
   const { data: globalMap } = useFunnelTemplateGlobal();
   const { data: leadMap } = useFunnelLeadMapping(clientId);
   const saveLeadMap = useSaveFunnelLeadMapping();
+  const { data: customConversions } = useMetaCustomConversions(
+    openLeadMap ? clientId : undefined,
+  );
   const { data: manualMap } = useFunnelManualMetrics(clientId);
   const saveManual = useSaveManualMetric();
   const deleteManual = useDeleteManualMetric();
@@ -305,7 +309,47 @@ export function FunnelCard({
                 </p>
                 <ScrollArea className="max-h-[55vh] pr-3">
                   <div className="space-y-1">
-                    {LEAD_ACTION_CATALOG.map((opt) => {
+                    {(() => {
+                      // Build full list: catalog + all action_types seen in campaigns + named Custom Conversions
+                      const seen = new Set<string>();
+                      const items: { key: string; label: string; group: string }[] = [];
+                      for (const opt of LEAD_ACTION_CATALOG) {
+                        items.push({ ...opt, group: "Catálogo" });
+                        seen.add(opt.key);
+                      }
+                      // Named Custom Conversions (action_type = offsite_conversion.custom.<id>)
+                      for (const cc of customConversions || []) {
+                        const key = `offsite_conversion.custom.${cc.id}`;
+                        if (seen.has(key)) continue;
+                        items.push({
+                          key,
+                          label: `★ ${cc.name}${cc.custom_event_type ? ` (${cc.custom_event_type})` : ""}`,
+                          group: "Eventos personalizados (nomeados)",
+                        });
+                        seen.add(key);
+                      }
+                      // Any remaining action_types found in campaigns
+                      const allKeys = new Set<string>();
+                      for (const c of campaigns) {
+                        const ab = (c as any).actionBreakdown || {};
+                        for (const k of Object.keys(ab)) allKeys.add(k);
+                      }
+                      for (const k of Array.from(allKeys).sort()) {
+                        if (seen.has(k)) continue;
+                        items.push({ key: k, label: k, group: "Outros (detectados)" });
+                        seen.add(k);
+                      }
+                      // Group render
+                      const groups: Record<string, typeof items> = {};
+                      for (const it of items) {
+                        (groups[it.group] = groups[it.group] || []).push(it);
+                      }
+                      return Object.entries(groups).map(([gname, arr]) => (
+                        <div key={gname} className="mb-2">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 mt-2 mb-1">
+                            {gname}
+                          </p>
+                          {arr.map((opt) => {
                       const checked = draftLeadTypes.includes(opt.key);
                       // Show count from current campaigns to help picking right
                       const count = campaigns.reduce(
@@ -334,7 +378,10 @@ export function FunnelCard({
                           </span>
                         </label>
                       );
-                    })}
+                          })}
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </ScrollArea>
                 <div className="flex justify-end gap-2 pt-2">
