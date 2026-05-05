@@ -810,9 +810,6 @@ export function FunnelCard({
           </Button>
         </div>
 
-        {/* Detail dialog */}
-        <FunnelDetailDialog
-
         {/* Edit metric override dialog */}
         <Dialog open={!!editingMetric} onOpenChange={(v) => !v && setEditingMetric(null)}>
           <DialogContent className="max-w-sm">
