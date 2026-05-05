@@ -544,15 +544,47 @@ export function FunnelCard({
           {selected.map((key) => {
             const meta = ALL_FUNNEL_METRICS.find((m) => m.key === key);
             if (!meta) return null;
-            const value = (totals as any)[key] ?? 0;
+            const rawValue = (totals as any)[key] ?? 0;
+            const hasOverride = overrides[key] !== undefined;
+            const value = hasOverride ? overrides[key] : rawValue;
             return (
-              <div key={key} className="rounded-lg bg-muted/30 border border-border/40 p-2">
-                <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+              <div
+                key={key}
+                className={`group relative rounded-lg border p-2 ${
+                  hasOverride
+                    ? "bg-amber-500/5 border-amber-500/30"
+                    : "bg-muted/30 border-border/40"
+                }`}
+              >
+                <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate flex items-center gap-1">
+                  {hasOverride && <span className="h-1 w-1 rounded-full bg-amber-500" />}
                   {meta.label}
                 </p>
                 <p className="text-sm font-bold tabular-nums truncate">
                   {formatMetricValue(key, value, currencySymbol)}
                 </p>
+                <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                  <button
+                    className="p-0.5 rounded hover:bg-muted/60"
+                    title="Editar valor manualmente"
+                    onClick={() =>
+                      setEditingMetric({ key, label: meta.label, value: String(value) })
+                    }
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                  </button>
+                  {hasOverride && (
+                    <button
+                      className="p-0.5 rounded hover:bg-destructive/20 text-destructive"
+                      title="Voltar ao valor automático"
+                      onClick={() =>
+                        deleteOverride.mutate({ clientId, funnelCode, metricKey: key })
+                      }
+                    >
+                      <RotateCcw className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
