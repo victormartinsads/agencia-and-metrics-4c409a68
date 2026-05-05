@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign,
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
+import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
 
 export default function ClientsPage() {
   const { data: clients, isLoading } = useClients();
@@ -356,6 +357,7 @@ export default function ClientsPage() {
                           </Button>
                         </Link>
                       </div>
+                      <VisibleTabsEditor clientId={c.id} />
                     </div>
                   )}
                 </Card>

@@ -17,12 +17,12 @@ export default function SharedDashboard() {
     queryKey: ["client-public", param],
     queryFn: async () => {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param || "");
-      const q = supabase.from("clients").select("id, name, currency_symbol, slug");
+      const q = supabase.from("clients").select("id, name, currency_symbol, slug, visible_tabs");
       const { data, error } = isUuid
         ? await q.eq("id", param!).single()
         : await q.eq("slug", param!).single();
       if (error) throw error;
-      return data as Pick<Client, "id" | "name" | "currency_symbol" | "slug">;
+      return data as Pick<Client, "id" | "name" | "currency_symbol" | "slug"> & { visible_tabs?: string[] };
     },
     enabled: !!param,
   });
@@ -72,6 +72,7 @@ export default function SharedDashboard() {
           metaError={metaError as Error | null}
           currencySymbol={client.currency_symbol || "R$"}
           hideDiagnostico
+          visibleTabs={(client as any).visible_tabs || ["overview","funnel","spreadsheet","creatives","branding"]}
         />
       </main>
 

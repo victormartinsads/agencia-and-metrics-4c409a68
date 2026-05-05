@@ -12,6 +12,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { friendlyError } from "@/lib/friendlyError";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
+import { MetricsSpreadsheet } from "@/components/funnel/MetricsSpreadsheet";
 import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,9 +25,11 @@ interface Props {
   metaError: Error | null;
   currencySymbol?: string;
   hideDiagnostico?: boolean;
+  visibleTabs?: string[];
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs }: Props) {
+  const showTab = (k: string) => !visibleTabs || visibleTabs.includes(k);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
@@ -88,23 +91,24 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
       {!metaLoading && !metaError && overview && (
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border flex-wrap h-auto">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            {!hideDiagnostico && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
-            <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>
-            <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>
-            <TabsTrigger value="branding">Distribuição</TabsTrigger>
+            {showTab("overview") && <TabsTrigger value="overview">Visão Geral</TabsTrigger>}
+            {!hideDiagnostico && showTab("diagnostico") && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
+            {showTab("funnel") && <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>}
+            {showTab("spreadsheet") && <TabsTrigger value="spreadsheet">Planilha de Métricas</TabsTrigger>}
+            {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
+            {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          {showTab("overview") && <TabsContent value="overview" className="space-y-6">
             <OverviewRedesign
               clientId={clientId}
               datePreset={datePreset || "last_7d"}
               metaData={metaData}
               currencySymbol={currencySymbol}
             />
-          </TabsContent>
+          </TabsContent>}
 
-          {!hideDiagnostico && <TabsContent value="diagnostico" className="space-y-6">
+          {!hideDiagnostico && showTab("diagnostico") && <TabsContent value="diagnostico" className="space-y-6">
             <DiagnosticoSemanal
               clientId={clientId || ""}
               clientName={clientInfo?.name}
@@ -114,7 +118,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             />
           </TabsContent>}
 
-          <TabsContent value="funnel" className="space-y-6">
+          {showTab("funnel") && <TabsContent value="funnel" className="space-y-6">
             <FunnelAnalysisTab
               clientId={clientId || ""}
               clientName={clientInfo?.name}
@@ -123,9 +127,17 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               datePreset={datePreset || "last_7d"}
               currencySymbol={currencySymbol}
             />
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="creatives" className="space-y-6">
+          {showTab("spreadsheet") && <TabsContent value="spreadsheet" className="space-y-6">
+            <MetricsSpreadsheet
+              clientId={clientId || ""}
+              campaigns={campaigns}
+              currencySymbol={currencySymbol}
+            />
+          </TabsContent>}
+
+          {showTab("creatives") && <TabsContent value="creatives" className="space-y-6">
             {(() => {
               const eligible = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0);
               const captacao = eligible.filter(c => isCaptacaoSeguidores(c.name));
@@ -151,11 +163,11 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="branding" className="space-y-6">
+          {showTab("branding") && <TabsContent value="branding" className="space-y-6">
             <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} currencySymbol={currencySymbol} />
-          </TabsContent>
+          </TabsContent>}
         </Tabs>
       )}
 

@@ -61,6 +61,9 @@ export interface FunnelTotals {
   // leads
   conversions: number;
   leadActions: number;
+  leads: number;
+  cpLead: number;
+  cpFollow: number;
   completeRegistration: number;
   subscribe: number;
   schedule: number;
@@ -89,8 +92,18 @@ export interface FunnelTotals {
   cpMessage: number;
 }
 
-export function aggregateCampaignMetrics(campaigns: Campaign[]): FunnelTotals {
+export function aggregateCampaignMetrics(
+  campaigns: Campaign[],
+  options?: { leadActionTypes?: string[] },
+): FunnelTotals {
   const sum = (key: string) => campaigns.reduce((s, c) => s + read(c, key), 0);
+  const sumActions = (types: string[]) =>
+    campaigns.reduce((s, c) => {
+      const ab = (c as any).actionBreakdown || {};
+      let acc = 0;
+      for (const t of types) acc += Number(ab[t] || 0);
+      return s + acc;
+    }, 0);
 
   const spend = sum("spend");
   const impressions = sum("impressions");
@@ -104,6 +117,13 @@ export function aggregateCampaignMetrics(campaigns: Campaign[]): FunnelTotals {
   const purchaseValue = sum("purchaseValue") || sum("purchase_value") || sum("revenue");
   const conversions = sum("conversions");
   const leadActions = sum("lead_actions") || sum("leadActions") || sum("lead");
+  // Configurable "leads" for the funnel — default to common Meta lead events
+  const leadActionTypesUsed =
+    options?.leadActionTypes && options.leadActionTypes.length > 0
+      ? options.leadActionTypes
+      : ["lead", "onsite_conversion.lead_grouped"];
+  const leads = sumActions(leadActionTypesUsed);
+  const followsCount = sum("follow") || sum("follows") || sumActions(["onsite_conversion.follow"]);
   const addToCart = sum("addToCart") || sum("add_to_cart");
   const initiateCheckout = sum("initiateCheckout") || sum("initiate_checkout");
   const addPaymentInfo = sum("add_payment_info") || sum("addPaymentInfo");
@@ -163,6 +183,9 @@ export function aggregateCampaignMetrics(campaigns: Campaign[]): FunnelTotals {
 
     conversions,
     leadActions,
+    leads,
+    cpLead: leads > 0 ? spend / leads : 0,
+    cpFollow: followsCount > 0 ? spend / followsCount : 0,
     completeRegistration: sum("complete_registration") || sum("completeRegistration"),
     subscribe: sum("subscribe"),
     schedule: sum("schedule"),

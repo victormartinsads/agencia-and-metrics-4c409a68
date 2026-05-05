@@ -90,6 +90,7 @@ export type Database = {
           name: string
           slug: string
           updated_at: string
+          visible_tabs: Json
         }
         Insert: {
           ad_account_ids?: string[]
@@ -104,6 +105,7 @@ export type Database = {
           name: string
           slug: string
           updated_at?: string
+          visible_tabs?: Json
         }
         Update: {
           ad_account_ids?: string[]
@@ -118,6 +120,7 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string
+          visible_tabs?: Json
         }
         Relationships: []
       }
@@ -529,6 +532,27 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_card_template_global: {
+        Row: {
+          funnel_code: string
+          id: string
+          metrics: Json
+          updated_at: string
+        }
+        Insert: {
+          funnel_code: string
+          id?: string
+          metrics?: Json
+          updated_at?: string
+        }
+        Update: {
+          funnel_code?: string
+          id?: string
+          metrics?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_configs: {
         Row: {
           client_id: string
@@ -591,6 +615,30 @@ export type Database = {
           funnel_code?: string
           id?: string
           note_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      funnel_lead_mapping: {
+        Row: {
+          action_types: Json
+          client_id: string
+          funnel_code: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          action_types?: Json
+          client_id: string
+          funnel_code: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          action_types?: Json
+          client_id?: string
+          funnel_code?: string
+          id?: string
           updated_at?: string
         }
         Relationships: []

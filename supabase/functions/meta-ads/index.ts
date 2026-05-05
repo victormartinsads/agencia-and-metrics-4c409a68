@@ -323,6 +323,16 @@ Deno.serve(async (req) => {
           initiateCheckout,
           purchases,
           purchaseValue,
+          // Raw Meta breakdowns (used by UI to read any metric / event)
+          actionBreakdown: Object.fromEntries(
+            (insight?.actions || []).map((a: any) => [a.action_type, Number(a.value || 0)])
+          ),
+          costPerAction: Object.fromEntries(
+            (insight?.cost_per_action_type || []).map((a: any) => [a.action_type, Number(a.value || 0)])
+          ),
+          actionValues: Object.fromEntries(
+            (insight?.action_values || []).map((a: any) => [a.action_type, Number(a.value || 0)])
+          ),
         });
       }
 
