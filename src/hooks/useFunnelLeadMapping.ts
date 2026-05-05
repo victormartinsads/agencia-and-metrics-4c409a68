@@ -15,6 +15,10 @@ export const LEAD_ACTION_CATALOG: { key: string; label: string }[] = [
   { key: "onsite_conversion.lead_grouped", label: "Lead — formulário instantâneo (agrupado)" },
   { key: "leadgen.other", label: "Lead Ads — formulário Meta" },
   { key: "leadgen_grouped", label: "Lead Ads — agrupado" },
+  // Site
+  { key: "onsite_web_lead", label: "Lead — site (onsite web)" },
+  { key: "offsite_lead_add_20_s_calls", label: "Lead — qualificado (20s+)" },
+  { key: "offsite_conversion.fb_pixel_custom", label: "Eventos personalizados — Pixel (todos agregados)" },
   // Mensageria (WhatsApp / Messenger / IG Direct)
   { key: "onsite_conversion.messaging_conversation_started_7d", label: "Conversa iniciada — 7d" },
   { key: "onsite_conversion.messaging_first_reply", label: "1ª resposta de mensagem" },
