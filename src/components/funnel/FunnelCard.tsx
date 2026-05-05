@@ -60,8 +60,18 @@ import {
   useSaveFunnelLeadMapping,
   LEAD_ACTION_CATALOG,
 } from "@/hooks/useFunnelLeadMapping";
+import {
+  useFunnelFollowMapping,
+  useSaveFunnelFollowMapping,
+  FOLLOW_ACTION_CATALOG,
+} from "@/hooks/useFunnelFollowMapping";
+import {
+  useFunnelMetricOverrides,
+  useSaveFunnelMetricOverride,
+  useDeleteFunnelMetricOverride,
+} from "@/hooks/useFunnelMetricOverrides";
 import { useMetaCustomConversions } from "@/hooks/useMetaCustomConversions";
-import { Tag } from "lucide-react";
+import { Tag, UserPlus, RotateCcw } from "lucide-react";
 
 interface Props {
   clientId: string;
@@ -109,6 +119,12 @@ export function FunnelCard({
   const [showCreatives, setShowCreatives] = useState(true);
   const [openManual, setOpenManual] = useState(false);
   const [openLeadMap, setOpenLeadMap] = useState(false);
+  const [openFollowMap, setOpenFollowMap] = useState(false);
+  const [editingMetric, setEditingMetric] = useState<{
+    key: string;
+    label: string;
+    value: string;
+  } | null>(null);
   const [manualDraft, setManualDraft] = useState<{
     id?: string;
     metric_label: string;
@@ -121,8 +137,14 @@ export function FunnelCard({
   const { data: globalMap } = useFunnelTemplateGlobal();
   const { data: leadMap } = useFunnelLeadMapping(clientId);
   const saveLeadMap = useSaveFunnelLeadMapping();
+  const { data: followMap } = useFunnelFollowMapping(clientId);
+  const saveFollowMap = useSaveFunnelFollowMapping();
+  const { data: overridesMap } = useFunnelMetricOverrides(clientId);
+  const saveOverride = useSaveFunnelMetricOverride();
+  const deleteOverride = useDeleteFunnelMetricOverride();
+  const overrides = overridesMap?.[funnelCode] || {};
   const { data: customConversions } = useMetaCustomConversions(
-    openLeadMap ? clientId : undefined,
+    openLeadMap || openFollowMap ? clientId : undefined,
   );
   const { data: manualMap } = useFunnelManualMetrics(clientId);
   const saveManual = useSaveManualMetric();
@@ -130,9 +152,10 @@ export function FunnelCard({
   const manualMetrics: ManualMetric[] = manualMap?.[funnelCode] || [];
 
   const leadActionTypes = leadMap?.[funnelCode] || [];
+  const followActionTypes = followMap?.[funnelCode] || [];
   const totals = useMemo(
-    () => aggregateCampaignMetrics(campaigns, { leadActionTypes }),
-    [campaigns, leadActionTypes.join(",")],
+    () => aggregateCampaignMetrics(campaigns, { leadActionTypes, followActionTypes }),
+    [campaigns, leadActionTypes.join(","), followActionTypes.join(",")],
   );
   const analysis = useFunnelAnalysis(campaigns);
   const top3 = useMemo(() => topCreatives(campaigns, 3), [campaigns]);
@@ -145,6 +168,8 @@ export function FunnelCard({
 
   const [draftLeadTypes, setDraftLeadTypes] = useState<string[]>(leadActionTypes);
   useMemo(() => setDraftLeadTypes(leadActionTypes), [leadActionTypes.join(",")]);
+  const [draftFollowTypes, setDraftFollowTypes] = useState<string[]>(followActionTypes);
+  useMemo(() => setDraftFollowTypes(followActionTypes), [followActionTypes.join(",")]);
 
   const [draft, setDraft] = useState<string[]>(selected);
   useMemo(() => setDraft(selected), [selected.join(",")]);
@@ -404,6 +429,113 @@ export function FunnelCard({
                 </div>
               </DialogContent>
             </Dialog>
+
+            <Dialog open={openFollowMap} onOpenChange={setOpenFollowMap}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Mapear evento de Seguidor">
+                  <UserPlus className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Mapear "Seguidor" — {funnelCode}</DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Escolha quais eventos da Meta contam como "Seguidor" neste funil.
+                  As métricas <b>Seguidores</b> e <b>Custo por seguidor</b> usarão a soma desses eventos.
+                </p>
+                <ScrollArea className="max-h-[55vh] pr-3">
+                  <div className="space-y-1">
+                    {(() => {
+                      const seen = new Set<string>();
+                      const items: { key: string; label: string; group: string }[] = [];
+                      for (const opt of FOLLOW_ACTION_CATALOG) {
+                        items.push({ ...opt, group: "Catálogo" });
+                        seen.add(opt.key);
+                      }
+                      for (const cc of customConversions || []) {
+                        const key = `offsite_conversion.custom.${cc.id}`;
+                        if (seen.has(key)) continue;
+                        items.push({
+                          key,
+                          label: `★ ${cc.name}${cc.custom_event_type ? ` (${cc.custom_event_type})` : ""}`,
+                          group: "Eventos personalizados (nomeados)",
+                        });
+                        seen.add(key);
+                      }
+                      const allKeys = new Set<string>();
+                      for (const c of campaigns) {
+                        const ab = (c as any).actionBreakdown || {};
+                        for (const k of Object.keys(ab)) allKeys.add(k);
+                      }
+                      for (const k of Array.from(allKeys).sort()) {
+                        if (seen.has(k)) continue;
+                        items.push({ key: k, label: k, group: "Outros (detectados)" });
+                        seen.add(k);
+                      }
+                      const groups: Record<string, typeof items> = {};
+                      for (const it of items) {
+                        (groups[it.group] = groups[it.group] || []).push(it);
+                      }
+                      return Object.entries(groups).map(([gname, arr]) => (
+                        <div key={gname} className="mb-2">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 mt-2 mb-1">
+                            {gname}
+                          </p>
+                          {arr.map((opt) => {
+                            const checked = draftFollowTypes.includes(opt.key);
+                            const count = campaigns.reduce(
+                              (s, c) => s + Number(((c as any).actionBreakdown || {})[opt.key] || 0),
+                              0,
+                            );
+                            return (
+                              <label
+                                key={opt.key}
+                                className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) =>
+                                    setDraftFollowTypes((prev) =>
+                                      v ? [...prev, opt.key] : prev.filter((k) => k !== opt.key),
+                                    )
+                                  }
+                                />
+                                <span className="flex-1">{opt.label}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums">
+                                  {count.toLocaleString("pt-BR")}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono opacity-60">
+                                  {opt.key}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </ScrollArea>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setOpenFollowMap(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await saveFollowMap.mutateAsync({
+                        clientId,
+                        funnelCode,
+                        actionTypes: draftFollowTypes,
+                      });
+                      setOpenFollowMap(false);
+                    }}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -412,15 +544,47 @@ export function FunnelCard({
           {selected.map((key) => {
             const meta = ALL_FUNNEL_METRICS.find((m) => m.key === key);
             if (!meta) return null;
-            const value = (totals as any)[key] ?? 0;
+            const rawValue = (totals as any)[key] ?? 0;
+            const hasOverride = overrides[key] !== undefined;
+            const value = hasOverride ? overrides[key] : rawValue;
             return (
-              <div key={key} className="rounded-lg bg-muted/30 border border-border/40 p-2">
-                <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+              <div
+                key={key}
+                className={`group relative rounded-lg border p-2 ${
+                  hasOverride
+                    ? "bg-amber-500/5 border-amber-500/30"
+                    : "bg-muted/30 border-border/40"
+                }`}
+              >
+                <p className="text-[9px] uppercase tracking-wide text-muted-foreground truncate flex items-center gap-1">
+                  {hasOverride && <span className="h-1 w-1 rounded-full bg-amber-500" />}
                   {meta.label}
                 </p>
                 <p className="text-sm font-bold tabular-nums truncate">
                   {formatMetricValue(key, value, currencySymbol)}
                 </p>
+                <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                  <button
+                    className="p-0.5 rounded hover:bg-muted/60"
+                    title="Editar valor manualmente"
+                    onClick={() =>
+                      setEditingMetric({ key, label: meta.label, value: String(value) })
+                    }
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                  </button>
+                  {hasOverride && (
+                    <button
+                      className="p-0.5 rounded hover:bg-destructive/20 text-destructive"
+                      title="Voltar ao valor automático"
+                      onClick={() =>
+                        deleteOverride.mutate({ clientId, funnelCode, metricKey: key })
+                      }
+                    >
+                      <RotateCcw className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -645,6 +809,59 @@ export function FunnelCard({
             <ChevronRight className="h-3 w-3" />
           </Button>
         </div>
+
+        {/* Edit metric override dialog */}
+        <Dialog open={!!editingMetric} onOpenChange={(v) => !v && setEditingMetric(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-sm">
+                Editar valor — {editingMetric?.label}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-[11px] text-muted-foreground">
+                Sobrescreve o valor calculado automaticamente. Útil para métricas como
+                Seguidores ou Custo por seguidor que precisam ser ajustadas manualmente.
+              </p>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Valor</label>
+                <Input
+                  type="number"
+                  step="any"
+                  autoFocus
+                  value={editingMetric?.value ?? ""}
+                  onChange={(e) =>
+                    setEditingMetric((prev) =>
+                      prev ? { ...prev, value: e.target.value } : prev,
+                    )
+                  }
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingMetric(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (!editingMetric) return;
+                    const num = parseFloat(editingMetric.value);
+                    if (isNaN(num)) return;
+                    await saveOverride.mutateAsync({
+                      clientId,
+                      funnelCode,
+                      metricKey: editingMetric.key,
+                      metricValue: num,
+                    });
+                    setEditingMetric(null);
+                  }}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Detail dialog */}
         <FunnelDetailDialog

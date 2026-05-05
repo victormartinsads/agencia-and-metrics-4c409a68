@@ -619,6 +619,30 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_follow_mapping: {
+        Row: {
+          action_types: Json
+          client_id: string
+          funnel_code: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          action_types?: Json
+          client_id: string
+          funnel_code: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          action_types?: Json
+          client_id?: string
+          funnel_code?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_lead_mapping: {
         Row: {
           action_types: Json
@@ -674,6 +698,33 @@ export type Database = {
           id?: string
           metric_format?: string
           metric_label?: string
+          metric_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      funnel_metric_overrides: {
+        Row: {
+          client_id: string
+          funnel_code: string
+          id: string
+          metric_key: string
+          metric_value: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          funnel_code: string
+          id?: string
+          metric_key: string
+          metric_value?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          funnel_code?: string
+          id?: string
+          metric_key?: string
           metric_value?: number
           updated_at?: string
         }

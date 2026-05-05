@@ -94,7 +94,7 @@ export interface FunnelTotals {
 
 export function aggregateCampaignMetrics(
   campaigns: Campaign[],
-  options?: { leadActionTypes?: string[] },
+  options?: { leadActionTypes?: string[]; followActionTypes?: string[] },
 ): FunnelTotals {
   const sum = (key: string) => campaigns.reduce((s, c) => s + read(c, key), 0);
   const sumActions = (types: string[]) =>
@@ -137,7 +137,15 @@ export function aggregateCampaignMetrics(
       ? options.leadActionTypes
       : DEFAULT_LEAD_TYPES;
   const leads = sumActions(leadActionTypesUsed);
-  const followsCount = sum("follow") || sum("follows") || sumActions(["onsite_conversion.follow"]);
+  const DEFAULT_FOLLOW_TYPES = ["follow", "onsite_conversion.follow"];
+  const followActionTypesUsed =
+    options?.followActionTypes && options.followActionTypes.length > 0
+      ? options.followActionTypes
+      : DEFAULT_FOLLOW_TYPES;
+  const followsCount =
+    sumActions(followActionTypesUsed) ||
+    sum("follow") ||
+    sum("follows");
   const addToCart = sum("addToCart") || sum("add_to_cart");
   const initiateCheckout = sum("initiateCheckout") || sum("initiate_checkout");
   const addPaymentInfo = sum("add_payment_info") || sum("addPaymentInfo");
