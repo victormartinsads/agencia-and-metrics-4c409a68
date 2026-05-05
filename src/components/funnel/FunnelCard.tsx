@@ -54,6 +54,13 @@ import { FunnelDetailDialog } from "./FunnelDetailDialog";
 import { FunnelComparisonDialog } from "./FunnelComparisonDialog";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { formatCurrency } from "@/lib/format";
+import { useFunnelTemplateGlobal } from "@/hooks/useFunnelTemplateGlobal";
+import {
+  useFunnelLeadMapping,
+  useSaveFunnelLeadMapping,
+  LEAD_ACTION_CATALOG,
+} from "@/hooks/useFunnelLeadMapping";
+import { Tag } from "lucide-react";
 
 interface Props {
   clientId: string;
@@ -100,6 +107,7 @@ export function FunnelCard({
   const [openComparison, setOpenComparison] = useState(false);
   const [showCreatives, setShowCreatives] = useState(true);
   const [openManual, setOpenManual] = useState(false);
+  const [openLeadMap, setOpenLeadMap] = useState(false);
   const [manualDraft, setManualDraft] = useState<{
     id?: string;
     metric_label: string;
@@ -109,16 +117,30 @@ export function FunnelCard({
 
   const { data: configMap } = useFunnelCardConfig(clientId);
   const saveCfg = useSaveFunnelCardConfig();
+  const { data: globalMap } = useFunnelTemplateGlobal();
+  const { data: leadMap } = useFunnelLeadMapping(clientId);
+  const saveLeadMap = useSaveFunnelLeadMapping();
   const { data: manualMap } = useFunnelManualMetrics(clientId);
   const saveManual = useSaveManualMetric();
   const deleteManual = useDeleteManualMetric();
   const manualMetrics: ManualMetric[] = manualMap?.[funnelCode] || [];
 
-  const totals = useMemo(() => aggregateCampaignMetrics(campaigns), [campaigns]);
+  const leadActionTypes = leadMap?.[funnelCode] || [];
+  const totals = useMemo(
+    () => aggregateCampaignMetrics(campaigns, { leadActionTypes }),
+    [campaigns, leadActionTypes.join(",")],
+  );
   const analysis = useFunnelAnalysis(campaigns);
   const top3 = useMemo(() => topCreatives(campaigns, 3), [campaigns]);
 
-  const selected = configMap?.[funnelCode] || defaultMetricsFor(funnelCode);
+  // Priority: client override > global template > hardcoded default
+  const selected =
+    configMap?.[funnelCode] ||
+    globalMap?.[funnelCode] ||
+    defaultMetricsFor(funnelCode);
+
+  const [draftLeadTypes, setDraftLeadTypes] = useState<string[]>(leadActionTypes);
+  useMemo(() => setDraftLeadTypes(leadActionTypes), [leadActionTypes.join(",")]);
 
   const [draft, setDraft] = useState<string[]>(selected);
   useMemo(() => setDraft(selected), [selected.join(",")]);
@@ -263,6 +285,76 @@ export function FunnelCard({
                   </DialogTitle>
                 </DialogHeader>
                 <FunnelNotesPanel clientId={clientId} funnelCode={funnelCode} />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={openLeadMap} onOpenChange={setOpenLeadMap}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Mapear evento de Lead">
+                  <Tag className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Mapear "Lead" — {funnelCode}</DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Escolha quais eventos da Meta contam como "Lead" neste funil.
+                  A métrica <b>Leads (mapeamento configurado)</b> e o <b>Custo por Lead</b>
+                  passam a usar a soma desses eventos.
+                </p>
+                <ScrollArea className="max-h-[55vh] pr-3">
+                  <div className="space-y-1">
+                    {LEAD_ACTION_CATALOG.map((opt) => {
+                      const checked = draftLeadTypes.includes(opt.key);
+                      // Show count from current campaigns to help picking right
+                      const count = campaigns.reduce(
+                        (s, c) => s + Number((c.actionBreakdown || {})[opt.key] || 0),
+                        0,
+                      );
+                      return (
+                        <label
+                          key={opt.key}
+                          className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-sm"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) =>
+                              setDraftLeadTypes((prev) =>
+                                v ? [...prev, opt.key] : prev.filter((k) => k !== opt.key),
+                              )
+                            }
+                          />
+                          <span className="flex-1">{opt.label}</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {count.toLocaleString("pt-BR")}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono opacity-60">
+                            {opt.key}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setOpenLeadMap(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await saveLeadMap.mutateAsync({
+                        clientId,
+                        funnelCode,
+                        actionTypes: draftLeadTypes,
+                      });
+                      setOpenLeadMap(false);
+                    }}
+                  >
+                    Salvar
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
