@@ -94,7 +94,7 @@ export interface FunnelTotals {
 
 export function aggregateCampaignMetrics(
   campaigns: Campaign[],
-  options?: { leadActionTypes?: string[] },
+  options?: { leadActionTypes?: string[]; followActionTypes?: string[] },
 ): FunnelTotals {
   const sum = (key: string) => campaigns.reduce((s, c) => s + read(c, key), 0);
   const sumActions = (types: string[]) =>
