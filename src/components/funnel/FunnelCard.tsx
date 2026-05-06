@@ -567,7 +567,7 @@ export function FunnelCard({
                 <p className="text-sm font-bold tabular-nums truncate">
                   {formatMetricValue(key, value, currencySymbol)}
                 </p>
-                <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                {!readOnly && (<div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
                   <button
                     className="p-0.5 rounded hover:bg-muted/60"
                     title="Editar valor manualmente"
@@ -588,7 +588,7 @@ export function FunnelCard({
                       <RotateCcw className="h-2.5 w-2.5" />
                     </button>
                   )}
-                </div>
+                </div>)}
               </div>
             );
           })}
@@ -603,7 +603,7 @@ export function FunnelCard({
               <p className="text-sm font-bold tabular-nums truncate">
                 {formatManualMetric(Number(m.metric_value), m.metric_format, currencySymbol)}
               </p>
-              <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+              {!readOnly && (<div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
                 <button
                   className="p-0.5 rounded hover:bg-muted/60"
                   title="Editar"
@@ -626,7 +626,7 @@ export function FunnelCard({
                 >
                   <Trash2 className="h-2.5 w-2.5" />
                 </button>
-              </div>
+              </div>)}
             </div>
           ))}
           {selected.length === 0 && manualMetrics.length === 0 && (
@@ -637,7 +637,7 @@ export function FunnelCard({
         </div>
 
         {/* Add manual metric button */}
-        <Dialog open={openManual} onOpenChange={(v) => {
+        {!readOnly && (<Dialog open={openManual} onOpenChange={(v) => {
           setOpenManual(v);
           if (!v) setManualDraft({ metric_label: "", metric_value: 0, metric_format: "number" });
         }}>
@@ -728,7 +728,7 @@ export function FunnelCard({
               </div>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>)}
 
         {/* Top creatives */}
         {top3.length > 0 && (
