@@ -80,6 +80,7 @@ interface Props {
   campaigns: Campaign[];
   currencySymbol: string;
   datePreset: string;
+  readOnly?: boolean;
 }
 
 interface CreativeRow extends Creative {
@@ -111,6 +112,7 @@ export function FunnelCard({
   campaigns,
   currencySymbol,
   datePreset,
+  readOnly = false,
 }: Props) {
   const [openSettings, setOpenSettings] = useState(false);
   const [openNotes, setOpenNotes] = useState(false);
