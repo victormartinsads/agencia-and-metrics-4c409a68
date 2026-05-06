@@ -15,6 +15,7 @@ import SharedCreatives from "./pages/SharedCreatives.tsx";
 import PodioCreatives from "./pages/PodioCreatives.tsx";
 import ComoEstamosPublic from "./pages/ComoEstamosPublic.tsx";
 import SavedDiagnosticPublic from "./pages/SavedDiagnosticPublic.tsx";
+import ClientView from "./pages/ClientView.tsx";
 import GoogleCallback from "./pages/GoogleCallback.tsx";
 import Login from "./pages/Login.tsx";
 import Settings from "./pages/Settings.tsx";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/podio/:slug" element={<PodioCreatives />} />
             <Route path="/como-estamos/:slug" element={<ComoEstamosPublic />} />
             <Route path="/diagnostico/:id" element={<SavedDiagnosticPublic />} />
+            <Route path="/visao-cliente/:slug" element={<ClientView />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Index /></ClientPortalRouter></ProtectedRoute>} />

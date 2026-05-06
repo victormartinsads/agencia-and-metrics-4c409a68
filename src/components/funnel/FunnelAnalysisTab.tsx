@@ -27,6 +27,7 @@ interface Props {
   dailyMetrics: DailyMetric[];
   datePreset: string;
   currencySymbol?: string;
+  readOnly?: boolean;
 }
 
 export function FunnelAnalysisTab({
@@ -35,6 +36,7 @@ export function FunnelAnalysisTab({
   campaigns,
   datePreset,
   currencySymbol = "R$",
+  readOnly = false,
 }: Props) {
   const [search, setSearch] = useState("");
   const [openConsolidatedSettings, setOpenConsolidatedSettings] = useState(false);
@@ -128,7 +130,7 @@ export function FunnelAnalysisTab({
               </p>
             </div>
           </div>
-          <Dialog open={openConsolidatedSettings} onOpenChange={setOpenConsolidatedSettings}>
+          {!readOnly && (<Dialog open={openConsolidatedSettings} onOpenChange={setOpenConsolidatedSettings}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 gap-1.5">
                 <Settings2 className="h-3.5 w-3.5" /> Editar
@@ -195,7 +197,7 @@ export function FunnelAnalysisTab({
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+          </Dialog>)}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           {consolidatedSelected.map((key) => {
@@ -256,19 +258,20 @@ export function FunnelAnalysisTab({
               campaigns={g.campaigns}
               currencySymbol={currencySymbol}
               datePreset={datePreset}
+              readOnly={readOnly}
             />
           ))}
         </div>
       )}
 
       {/* Floating AI chat */}
-      <FunnelChatWidget
+      {!readOnly && (<FunnelChatWidget
         clientId={clientId}
         clientName={clientName}
         campaigns={campaigns}
         datePreset={datePreset}
         currencySymbol={currencySymbol}
-      />
+      />)}
     </div>
   );
 }
