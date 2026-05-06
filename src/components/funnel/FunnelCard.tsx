@@ -223,6 +223,7 @@ export function FunnelCard({
           </div>
 
           <div className="flex items-center gap-0.5">
+            {!readOnly && (<>
             <Button
               variant="ghost"
               size="icon"
@@ -538,6 +539,7 @@ export function FunnelCard({
                 </div>
               </DialogContent>
             </Dialog>
+            </>)}
           </div>
         </div>
 
