@@ -43,9 +43,10 @@ interface Props {
   campaign: Campaign;
   clientId?: string;
   currencySymbol?: string;
+  readOnly?: boolean;
 }
 
-export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Props) {
+export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
 
@@ -133,7 +134,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$" }: Prop
                   i === 0 ? "border-primary/40 shadow-md" : "border-border hover:shadow-md"
                 }`}
               >
-                {clientId && (
+                {clientId && !readOnly && (
                   <button
                     onClick={() => setEditingCreative(cr.id)}
                     className="absolute top-2 right-10 z-10 bg-card/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
