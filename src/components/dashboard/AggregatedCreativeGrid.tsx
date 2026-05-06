@@ -17,6 +17,7 @@ interface Props {
   funnelLabel: string;
   clientId?: string;
   currencySymbol?: string;
+  readOnly?: boolean;
 }
 
 /**
@@ -24,7 +25,7 @@ interface Props {
  * (ex: 4 campanhas de Captação de Seguidores -> 1 pódio com top 3 dentre todos os criativos).
  * Mesma lógica de ranking em cascata do CreativeGrid (resultado -> CPA -> impressões -> cliques).
  */
-export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$" }: Props) {
+export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
 
@@ -120,7 +121,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                   i === 0 ? "border-primary/40 shadow-md" : "border-border hover:shadow-md"
                 }`}
               >
-                {clientId && (
+                {clientId && !readOnly && (
                   <button
                     onClick={() => setEditingCreative(cr.id)}
                     className="absolute top-2 right-10 z-10 bg-card/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
