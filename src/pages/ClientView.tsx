@@ -98,7 +98,7 @@ export default function ClientView() {
           <Tabs defaultValue="funnel" className="space-y-6">
             <TabsList className="bg-card border border-border">
               <TabsTrigger value="funnel"><BarChart3 className="h-3.5 w-3.5 mr-1.5" />Análise de Funis</TabsTrigger>
-              <TabsTrigger value="diagnostics"><FileText className="h-3.5 w-3.5 mr-1.5" />Diagnósticos</TabsTrigger>
+              <TabsTrigger value="diagnostics"><FileText className="h-3.5 w-3.5 mr-1.5" />Como estamos</TabsTrigger>
               <TabsTrigger value="creatives"><Trophy className="h-3.5 w-3.5 mr-1.5" />Pódio de Criativos</TabsTrigger>
             </TabsList>
 
@@ -117,7 +117,7 @@ export default function ClientView() {
             <TabsContent value="diagnostics" className="space-y-3">
               {(!diagnostics || diagnostics.length === 0) ? (
                 <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
-                  Nenhum diagnóstico salvo disponível.
+                  Nenhum relatório "Como estamos" disponível.
                 </div>
               ) : diagnostics.map((d) => {
                 const created = new Date(d.created_at).toLocaleDateString("pt-BR", {
