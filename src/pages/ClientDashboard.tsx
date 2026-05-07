@@ -3,13 +3,15 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  BarChart3, ArrowLeft, Settings, Loader2, Share2, Check, RefreshCw,
+  ArrowLeft, Settings, Loader2, Share2, Check, RefreshCw,
 } from "lucide-react";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { toast } from "sonner";
+import AppShell from "@/components/layout/AppShell";
+import { Button } from "@/components/ui/button";
 
 export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -92,62 +94,64 @@ export default function ClientDashboard() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1400px] mx-auto px-3 md:px-6 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link to="/" className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors">
-              <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
-            </Link>
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base md:text-lg font-bold text-foreground uppercase truncate">{client.name}</h1>
-              <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">
-                {client.ad_account_ids.length} conta(s) de anúncio • Dashboard Meta Ads
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleRefreshAll}
-              disabled={refreshing}
-              className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-60"
-              title="Buscar novamente API, webhook e planilhas"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Atualizando..." : "Atualizar"}
-            </button>
-            <DateRangePicker value={datePreset} onChange={setDatePreset} />
-            <button
-              onClick={handleShare}
-              className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-              {copied ? "Copiado!" : "Compartilhar"}
-            </button>
-            <Link
-              to="/clients"
-              className="text-xs bg-secondary text-secondary-foreground px-3 py-1.5 rounded-lg font-medium hover:bg-accent transition-colors flex items-center gap-1"
-            >
-              <Settings className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Configurações</span>
-            </Link>
-          </div>
+  const header = (
+    <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <Link
+          to="/"
+          className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors shrink-0"
+        >
+          <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
+        </Link>
+        <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+          <span className="text-xs font-bold text-primary">
+            {client.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+          </span>
         </div>
-      </header>
-
-      <main className="max-w-[1400px] mx-auto px-3 md:px-6 py-4 md:py-6">
-        <DashboardContent
-          clientId={clientId}
-          datePreset={datePreset}
-          metaData={metaData}
-          metaLoading={metaLoading}
-          metaError={metaError as Error | null}
-          currencySymbol={client.currency_symbol || "R$"}
-        />
-      </main>
+        <div className="min-w-0">
+          <h1 className="text-lg md:text-xl font-bold text-foreground uppercase truncate">{client.name}</h1>
+          <p className="text-[11px] md:text-xs text-muted-foreground">
+            {client.ad_account_ids.length} conta(s) de anúncio • Dashboard Meta Ads
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefreshAll}
+          disabled={refreshing}
+          className="gap-1.5"
+          title="Buscar novamente API, webhook e planilhas"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Atualizando..." : "Atualizar"}
+        </Button>
+        <DateRangePicker value={datePreset} onChange={setDatePreset} />
+        <Button onClick={handleShare} size="sm" className="gap-1.5">
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+          {copied ? "Copiado!" : "Compartilhar"}
+        </Button>
+        <Link to="/clients">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Configurações</span>
+          </Button>
+        </Link>
+      </div>
     </div>
+  );
+
+  return (
+    <AppShell currentPage="dashboard" header={header}>
+      <DashboardContent
+        clientId={clientId}
+        datePreset={datePreset}
+        metaData={metaData}
+        metaLoading={metaLoading}
+        metaError={metaError as Error | null}
+        currencySymbol={client.currency_symbol || "R$"}
+      />
+    </AppShell>
   );
 }

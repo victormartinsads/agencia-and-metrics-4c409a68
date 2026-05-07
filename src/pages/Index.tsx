@@ -1,20 +1,19 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useClients } from "@/hooks/useClients";
-import { useUserRole } from "@/hooks/useUserRole";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, Settings, ArrowRight, Shield, Star, Search, KanbanSquare, Link2, Brain } from "lucide-react";
+import { Plus, Users, ArrowRight, Star, Search, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import AppShell from "@/components/layout/AppShell";
 
 const Index = () => {
   const { data: clients, isLoading } = useClients();
-  const { data: role } = useUserRole();
   const { data: assignments } = useMyAssignments();
   const toggle = useToggleAssignment();
   const [tab, setTab] = useState<"mine" | "all">("mine");
@@ -57,49 +56,25 @@ const Index = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-[1100px] mx-auto px-3 md:px-6 py-4 md:py-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Meta Ads Dashboard</h1>
-              <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Acompanhe seus clientes ou explore todos da agência</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link to="/crm-app">
-              <Button variant="outline" size="sm">
-                <KanbanSquare className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">CRM</span>
-              </Button>
-            </Link>
-            {role?.isAdmin && (
-              <Link to="/gestor">
-                <Button size="sm" className="gap-1">
-                  <Brain className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Visão do Gestor</span>
-                </Button>
-              </Link>
-            )}
-            {role?.isAdmin && (
-              <Link to="/settings">
-                <Button variant="outline" size="sm">
-                  <Shield className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Configurações</span>
-                </Button>
-              </Link>
-            )}
-            <Link to="/clients">
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Gerenciar Clientes</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+  const header = (
+    <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Gerencie e acompanhe todos os seus clientes
+        </p>
+      </div>
+      <Link to="/clients">
+        <Button size="sm" className="gap-2">
+          <Plus className="h-4 w-4" /> Novo Cliente
+        </Button>
+      </Link>
+    </div>
+  );
 
-      <main className="max-w-[1100px] mx-auto px-3 md:px-6 py-6 md:py-8 space-y-5">
+  return (
+    <AppShell currentPage="dashboard" header={header}>
+      <div className="space-y-6">
         {isLoading ? (
           <p className="text-muted-foreground text-center py-16">Carregando...</p>
         ) : !clients?.length ? (
@@ -114,7 +89,7 @@ const Index = () => {
             </Link>
           </div>
         ) : (
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "mine" | "all")} className="space-y-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "mine" | "all")} className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <TabsList className="bg-card border border-border">
                 <TabsTrigger value="mine" className="gap-1.5">
@@ -153,7 +128,7 @@ const Index = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {filteredClients.map((c, i) => {
                     const isFav = favoriteIds.has(c.id);
                     return (
@@ -165,7 +140,7 @@ const Index = () => {
                       >
                         <div className="relative">
                         <Link to={`/dashboard/${c.id}`}>
-                          <Card className="p-5 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative">
+                          <Card className="p-5 hover:shadow-elevated hover:border-primary/40 transition-all cursor-pointer group relative bg-card">
                             <button
                               type="button"
                               onClick={(e) => handleToggleFav(e, c.id)}
@@ -178,13 +153,23 @@ const Index = () => {
                                 }`}
                               />
                             </button>
-                            <div className="flex items-start justify-between mb-3 pr-8">
-                              <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                                <BarChart3 className="h-5 w-5 text-accent-foreground" />
+                            <div className="flex items-start justify-between mb-4 pr-8">
+                              <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                <span className="text-xs font-bold text-primary">
+                                  {c.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .substring(0, 2)
+                                    .toUpperCase()}
+                                </span>
                               </div>
                               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
-                            <h3 className="font-semibold text-card-foreground mb-1 uppercase">{c.name}</h3>
+                            <h3 className="font-semibold text-card-foreground mb-1 uppercase truncate">{c.name}</h3>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              {c.ad_account_ids.length} conta{c.ad_account_ids.length !== 1 ? "s" : ""} de anúncio
+                            </p>
                             <div className="flex flex-wrap gap-1.5">
                               {c.ad_account_ids.slice(0, 3).map((aid) => (
                                 <Badge key={aid} variant="secondary" className="text-[10px] font-mono">
@@ -198,7 +183,7 @@ const Index = () => {
                             <button
                               type="button"
                               onClick={(e) => handleCopyPublicLink(e, c.slug || c.id)}
-                              className="mt-3 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 rounded-md py-1.5 transition-colors"
+                              className="mt-4 w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary border border-border hover:border-primary/40 rounded-md py-2 transition-colors"
                               title="Copiar link de visualização aberta para o cliente"
                             >
                               <Link2 className="h-3 w-3" />
@@ -225,8 +210,8 @@ const Index = () => {
             </TabsContent>
           </Tabs>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 };
 
