@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import { CrmDashboard } from "@/components/crm-app/CrmDashboard";
 import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
 import { useOrgClient } from "@/hooks/useClientCrm";
 import { Lead } from "@/lib/crm-app";
+import AppShell from "@/components/layout/AppShell";
 
 export default function CrmAppPage() {
   const [searchParams] = useSearchParams();
@@ -34,27 +35,24 @@ export default function CrmAppPage() {
 
   const handleOrgChange = (id: string) => { setOrgId(id); localStorage.setItem("crm-app:orgId", id); };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center gap-3">
-          <Link to="/" className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <KanbanSquare className="h-5 w-5 text-primary" /> CRM
-            </h1>
-            <p className="text-xs text-muted-foreground">{leads.length} leads</p>
-          </div>
-          <OrgSwitcher value={orgId} onChange={handleOrgChange} />
-          <Button size="sm" className="gap-1.5" onClick={() => setOpenAdd(true)} disabled={!orgId}>
-            <Plus className="h-3.5 w-3.5" /> Novo lead
-          </Button>
-        </div>
-      </header>
+  const header = (
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3 flex-wrap">
+      <div className="flex-1 min-w-0">
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <KanbanSquare className="h-5 w-5 text-primary" /> CRM
+        </h1>
+        <p className="text-xs text-muted-foreground">{leads.length} leads</p>
+      </div>
+      <OrgSwitcher value={orgId} onChange={handleOrgChange} />
+      <Button size="sm" className="gap-1.5" onClick={() => setOpenAdd(true)} disabled={!orgId}>
+        <Plus className="h-3.5 w-3.5" /> Novo lead
+      </Button>
+    </div>
+  );
 
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
+  return (
+    <AppShell currentPage="crm" header={header} noContainer>
+      <main className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">
         {!orgId ? (
           <Card className="p-8 text-center">
             <h2 className="text-lg font-semibold mb-2">Crie sua primeira organização</h2>
@@ -96,7 +94,7 @@ export default function CrmAppPage() {
 
       <LeadDetail lead={selected} orgId={orgId || ""} open={openDetail} onClose={() => setOpenDetail(false)} />
       {orgId && <AddLeadDialog orgId={orgId} open={openAdd} onClose={() => setOpenAdd(false)} />}
-    </div>
+    </AppShell>
   );
 }
 
