@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity, AlertTriangle, ChevronRight } from "lucide-react";
+import { Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity, AlertTriangle, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 
@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { MetricsColumnPicker, ALL_METRIC_COLUMNS, formatMetricValue } from "@/components/gestor/MetricsColumnPicker";
 import { CampaignDrillDown } from "@/components/gestor/CampaignDrillDown";
+import AppShell from "@/components/layout/AppShell";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -177,48 +178,45 @@ export default function GestorView() {
     "Como está a saúde do funil? O que otimizar em topo, meio e fundo?",
   ];
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-[1400px] mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Link to="/"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button></Link>
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-                <Brain className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-foreground">Visão do Gestor</h1>
-                <p className="text-[11px] text-muted-foreground">Painel estratégico + IA de tráfego pago</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger className="w-[240px] h-9"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
-              <SelectContent>
-                {clients?.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="uppercase">{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {periods.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={aiModel} onValueChange={setAiModel}>
-              <SelectTrigger className="w-[200px] h-9 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {AI_MODELS.map((m) => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+  const header = (
+    <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2">
+        <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <Brain className="h-4 w-4 text-primary" />
         </div>
-      </header>
+        <div>
+          <h1 className="text-lg font-bold text-foreground">Visão do Gestor</h1>
+          <p className="text-[11px] text-muted-foreground">Painel estratégico + IA de tráfego pago</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={clientId} onValueChange={setClientId}>
+          <SelectTrigger className="w-[240px] h-9"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+          <SelectContent>
+            {clients?.map((c) => (
+              <SelectItem key={c.id} value={c.id} className="uppercase">{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {periods.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={aiModel} onValueChange={setAiModel}>
+          <SelectTrigger className="w-[200px] h-9 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {AI_MODELS.map((m) => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 
-      <main className="max-w-[1400px] mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-6">
+  return (
+    <AppShell currentPage="manager" header={header} noContainer>
+      <main className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-6">
         <section className="space-y-5 min-w-0">
           {!clientId && (
             <Card className="p-12 text-center text-muted-foreground text-sm">
@@ -417,7 +415,7 @@ export default function GestorView() {
           currencySymbol={currencySymbol}
         />
       )}
-    </div>
+    </AppShell>
   );
 }
 
