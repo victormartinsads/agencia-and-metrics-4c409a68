@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useClients } from "@/hooks/useClients";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, Users, ArrowRight, Star, Search, Link2, Copy } from "lucide-react";
+import { Plus, Users, ArrowRight, Star, Search, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
