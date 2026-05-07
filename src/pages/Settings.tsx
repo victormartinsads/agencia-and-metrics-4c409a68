@@ -1,6 +1,6 @@
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon } from "lucide-react";
+import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
   useSetClientUserClient,
   useRemoveClientUser,
 } from "@/hooks/useClientUsers";
+import AppShell from "@/components/layout/AppShell";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -49,28 +50,20 @@ export default function SettingsPage() {
     return <Navigate to="/" replace />;
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1100px] mx-auto px-6 py-4 flex items-center gap-3">
-          <Link
-            to="/"
-            className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" /> Configurações Gerais
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Painel exclusivo para administradores
-            </p>
-          </div>
-        </div>
-      </header>
+  const header = (
+    <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-4">
+      <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+        <SettingsIcon className="h-5 w-5 text-primary" /> Configurações Gerais
+      </h1>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        Painel exclusivo para administradores
+      </p>
+    </div>
+  );
 
-      <main className="max-w-[1100px] mx-auto px-6 py-6">
+  return (
+    <AppShell currentPage="settings" header={header} noContainer>
+      <main className="max-w-[1100px] mx-auto px-4 md:px-6 py-6">
         <Tabs defaultValue="google" className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="google" className="gap-1.5">
@@ -111,7 +104,7 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
+    </AppShell>
   );
 }
 
