@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, ArrowLeft, DollarSign, KanbanSquare, Power, PowerOff, Copy, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, Users, Key, Hash, DollarSign, KanbanSquare, Power, PowerOff, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
+import AppShell from "@/components/layout/AppShell";
 
 export default function ClientsPage() {
   const { data: clients, isLoading } = useClients();
@@ -131,30 +132,25 @@ export default function ClientsPage() {
     toast.success("Link copiado!");
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-[1000px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors">
-              <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Users className="h-5 w-5" /> Gerenciar Clientes
-              </h1>
-              <p className="text-xs text-muted-foreground">Configure tokens e contas de anúncio da Meta</p>
-            </div>
-          </div>
-          {!showForm && (
-            <Button onClick={() => { resetForm(); setShowForm(true); }} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Novo Cliente
-            </Button>
-          )}
-        </div>
-      </header>
+  const header = (
+    <div className="max-w-[1000px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between gap-3">
+      <div>
+        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" /> Gerenciar Clientes
+        </h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Configure tokens e contas de anúncio da Meta</p>
+      </div>
+      {!showForm && (
+        <Button onClick={() => { resetForm(); setShowForm(true); }} size="sm">
+          <Plus className="h-4 w-4 mr-1" /> Novo Cliente
+        </Button>
+      )}
+    </div>
+  );
 
-      <main className="max-w-[1000px] mx-auto px-6 py-6 space-y-6">
+  return (
+    <AppShell currentPage="manage" header={header} noContainer>
+      <main className="max-w-[1000px] mx-auto px-4 md:px-6 py-6 space-y-6">
         {/* Form */}
         <AnimatePresence>
           {showForm && (
@@ -366,7 +362,7 @@ export default function ClientsPage() {
           </div>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }
 
