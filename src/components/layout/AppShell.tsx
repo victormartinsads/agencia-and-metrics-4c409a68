@@ -10,8 +10,22 @@ import {
   KanbanSquare,
   Brain,
   Shield,
+  KeyRound,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { cn } from "@/lib/utils";
@@ -42,6 +56,32 @@ export default function AppShell({
   const { signOut } = useAuth();
   const { data: role } = useUserRole();
   const location = useLocation();
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [savingPwd, setSavingPwd] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPwd.length < 6) {
+      toast.error("Senha deve ter ao menos 6 caracteres");
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      toast.error("As senhas não conferem");
+      return;
+    }
+    setSavingPwd(true);
+    const { error } = await supabase.auth.updateUser({ password: newPwd });
+    setSavingPwd(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Senha alterada com sucesso");
+    setNewPwd("");
+    setConfirmPwd("");
+    setPwdOpen(false);
+  };
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3, href: "/" },
@@ -143,6 +183,19 @@ export default function AppShell({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setPwdOpen(true)}
+            className={cn(
+              "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground mb-1",
+              open ? "justify-start" : "justify-center px-0",
+            )}
+            title="Alterar senha"
+          >
+            <KeyRound className="h-4 w-4" />
+            {open && <span className="ml-2 text-sm">Alterar senha</span>}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => signOut()}
             className={cn(
               "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
@@ -170,6 +223,48 @@ export default function AppShell({
           )}
         </div>
       </main>
+
+      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Alterar minha senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha de acesso. Mínimo 6 caracteres.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pwd">Nova senha</Label>
+              <Input
+                id="new-pwd"
+                type="password"
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-pwd">Confirmar nova senha</Label>
+              <Input
+                id="confirm-pwd"
+                type="password"
+                value={confirmPwd}
+                onChange={(e) => setConfirmPwd(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPwdOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleChangePassword} disabled={savingPwd}>
+              {savingPwd && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

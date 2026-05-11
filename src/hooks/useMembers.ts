@@ -68,3 +68,16 @@ export function useRemoveMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["members"] }),
   });
 }
+
+export function useSetMemberPassword() {
+  return useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "set_password", userId, password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+  });
+}
