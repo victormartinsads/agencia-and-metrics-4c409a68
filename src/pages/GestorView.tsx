@@ -17,6 +17,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { MetricsColumnPicker, ALL_METRIC_COLUMNS, formatMetricValue } from "@/components/gestor/MetricsColumnPicker";
 import { CampaignDrillDown } from "@/components/gestor/CampaignDrillDown";
+import { AlertsPanel } from "@/components/gestor/AlertsPanel";
+import { SuggestionsList } from "@/components/gestor/SuggestionsList";
+import { CampaignDraftDialog } from "@/components/gestor/CampaignDraftDialog";
 import AppShell from "@/components/layout/AppShell";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -233,6 +236,14 @@ export default function GestorView() {
 
           {clientId && !isLoading && overview && (
             <>
+              <AlertsPanel clientId={clientId} campaigns={campaigns} currencySymbol={currencySymbol} />
+
+              <div className="flex justify-end">
+                <CampaignDraftDialog clientId={clientId} adAccountIds={currentClient?.ad_account_ids || []} />
+              </div>
+
+              <SuggestionsList clientId={clientId} period={period} />
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <KpiTile label="Gasto" value={`${currencySymbol} ${overview.totalSpend.toFixed(2)}`} />
                 <KpiTile label="Cliques" value={overview.totalClicks.toLocaleString("pt-BR")} />
