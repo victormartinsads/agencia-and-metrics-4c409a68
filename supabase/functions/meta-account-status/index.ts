@@ -1,0 +1,125 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+// Mapeia o código numérico de account_status da Meta para uma string amigável
+const STATUS_MAP: Record<number, string> = {
+  1: "ACTIVE",
+  2: "DISABLED",
+  3: "UNSETTLED",
+  7: "PENDING_RISK_REVIEW",
+  8: "PENDING_SETTLEMENT",
+  9: "IN_GRACE_PERIOD",
+  100: "PENDING_CLOSURE",
+  101: "CLOSED",
+  201: "ANY_ACTIVE",
+  202: "ANY_CLOSED",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const { clientId } = await req.json();
+    if (!clientId) {
+      return new Response(JSON.stringify({ error: "clientId required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: client } = await supabase
+      .from("clients")
+      .select("meta_access_token, ad_account_ids, currency_symbol, target_cpa_lead, target_cpa_purchase, cpa_alert_multiplier, budget_alert_threshold_pct")
+      .eq("id", clientId)
+      .single();
+
+    if (!client?.meta_access_token) {
+      return new Response(JSON.stringify({ error: "Token Meta não configurado" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = client.meta_access_token;
+    const accountIds: string[] = (client.ad_account_ids || []).filter(Boolean);
+    if (accountIds.length === 0) {
+      return new Response(JSON.stringify({ accounts: [], budgetAlerts: [], thresholds: client }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 1. Status de cada conta
+    const accounts = await Promise.all(accountIds.map(async (id) => {
+      const acctId = id.startsWith("act_") ? id : `act_${id}`;
+      try {
+        const r = await fetch(`${GRAPH}/${acctId}?fields=name,account_status,disable_reason,balance,amount_spent,spend_cap,currency,timezone_name&access_token=${token}`);
+        const j = await r.json();
+        if (j.error) {
+          return { id: acctId, error: j.error.message, status: "ERROR", statusCode: 0 };
+        }
+        return {
+          id: acctId,
+          name: j.name || acctId,
+          statusCode: j.account_status,
+          status: STATUS_MAP[j.account_status] || `UNKNOWN(${j.account_status})`,
+          disableReason: j.disable_reason,
+          balance: Number(j.balance || 0) / 100,
+          amountSpent: Number(j.amount_spent || 0) / 100,
+          spendCap: j.spend_cap ? Number(j.spend_cap) / 100 : null,
+          currency: j.currency,
+        };
+      } catch (e) {
+        return { id: acctId, error: String(e), status: "ERROR", statusCode: 0 };
+      }
+    }));
+
+    // 2. Orçamento das campanhas ativas + gasto do dia (today)
+    const budgetAlerts: any[] = [];
+    for (const acct of accounts) {
+      if (acct.statusCode !== 1) continue;
+      try {
+        const campRes = await fetch(`${GRAPH}/${acct.id}/campaigns?fields=name,status,daily_budget,lifetime_budget,insights.date_preset(today){spend}&effective_status=["ACTIVE"]&limit=50&access_token=${token}`);
+        const campJ = await campRes.json();
+        if (campJ.error || !Array.isArray(campJ.data)) continue;
+        for (const c of campJ.data) {
+          const dailyBudget = c.daily_budget ? Number(c.daily_budget) / 100 : 0;
+          const todaySpend = Number(c.insights?.data?.[0]?.spend || 0);
+          if (dailyBudget > 0 && todaySpend > 0) {
+            const pct = (todaySpend / dailyBudget) * 100;
+            const threshold = Number(client.budget_alert_threshold_pct || 90);
+            if (pct >= threshold) {
+              budgetAlerts.push({
+                accountId: acct.id,
+                accountName: acct.name,
+                campaignId: c.id,
+                campaignName: c.name,
+                dailyBudget,
+                todaySpend,
+                pct: Math.round(pct),
+              });
+            }
+          }
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    return new Response(JSON.stringify({
+      accounts,
+      budgetAlerts,
+      thresholds: {
+        target_cpa_lead: Number(client.target_cpa_lead || 0),
+        target_cpa_purchase: Number(client.target_cpa_purchase || 0),
+        cpa_alert_multiplier: Number(client.cpa_alert_multiplier || 1.5),
+        budget_alert_threshold_pct: Number(client.budget_alert_threshold_pct || 90),
+      },
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("meta-account-status error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "unknown" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
