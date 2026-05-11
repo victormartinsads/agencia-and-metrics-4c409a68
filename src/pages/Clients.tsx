@@ -30,10 +30,18 @@ export default function ClientsPage() {
     ad_account_ids: [""],
     currency_symbol: "R$",
     google_ads_customer_id: "",
+    target_cpa_lead: 0,
+    target_cpa_purchase: 0,
+    cpa_alert_multiplier: 1.5,
+    budget_alert_threshold_pct: 90,
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$", google_ads_customer_id: "" });
+    setForm({
+      name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$",
+      google_ads_customer_id: "", target_cpa_lead: 0, target_cpa_purchase: 0,
+      cpa_alert_multiplier: 1.5, budget_alert_threshold_pct: 90,
+    });
     setEditingId(null);
     setShowForm(false);
   };
@@ -45,6 +53,10 @@ export default function ClientsPage() {
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
       currency_symbol: c.currency_symbol || "R$",
       google_ads_customer_id: (c as any).google_ads_customer_id || "",
+      target_cpa_lead: c.target_cpa_lead ?? 0,
+      target_cpa_purchase: c.target_cpa_purchase ?? 0,
+      cpa_alert_multiplier: c.cpa_alert_multiplier ?? 1.5,
+      budget_alert_threshold_pct: c.budget_alert_threshold_pct ?? 90,
     });
     setEditingId(c.id);
     setShowForm(true);
@@ -254,6 +266,37 @@ export default function ClientsPage() {
                   <p className="text-xs text-muted-foreground">
                     ID da conta do Google Ads (com ou sem traços). Necessário para puxar campanhas do Google Ads quando a integração for ativada.
                   </p>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t border-border">
+                  <Label className="text-sm font-semibold">Limites de alertas (Visão do Gestor)</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">CPA alvo — Lead ({form.currency_symbol})</Label>
+                      <Input type="number" step="0.01" min="0"
+                        value={form.target_cpa_lead ?? 0}
+                        onChange={(e) => setForm({ ...form, target_cpa_lead: Number(e.target.value) })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">CPA alvo — Compra ({form.currency_symbol})</Label>
+                      <Input type="number" step="0.01" min="0"
+                        value={form.target_cpa_purchase ?? 0}
+                        onChange={(e) => setForm({ ...form, target_cpa_purchase: Number(e.target.value) })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Multiplicador de alerta de CPA</Label>
+                      <Input type="number" step="0.1" min="1"
+                        value={form.cpa_alert_multiplier ?? 1.5}
+                        onChange={(e) => setForm({ ...form, cpa_alert_multiplier: Number(e.target.value) })} />
+                      <p className="text-[10px] text-muted-foreground">Alerta dispara quando CPA &gt; alvo × multiplicador</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Alerta de orçamento (% do diário)</Label>
+                      <Input type="number" step="1" min="50" max="100"
+                        value={form.budget_alert_threshold_pct ?? 90}
+                        onChange={(e) => setForm({ ...form, budget_alert_threshold_pct: Number(e.target.value) })} />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-2">
