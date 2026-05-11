@@ -9,6 +9,7 @@ import {
   AVAILABLE_METRICS,
   formatCustomValue,
   useDiagnosticMetricsConfig,
+  MetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
 
 interface Props {
@@ -27,6 +28,8 @@ interface Props {
   datePresetKey?: string;
   /** Se true, esconde o botão "Sair" (uso em página pública compartilhada). */
   publicMode?: boolean;
+  /** Override de configuração de métricas por groupKey (usado em snapshots salvos). */
+  groupConfigs?: Record<string, MetricsConfig>;
 }
 
 type Slide =
@@ -45,7 +48,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode,
+  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -145,6 +148,7 @@ export function DiagnosticoPresentMode({
                 currencySymbol={currencySymbol}
                 clientId={clientId}
                 datePreset={datePresetKey || datePreset}
+                overrideConfig={groupConfigs?.[slide.group.key]}
               />
             )}
 
@@ -184,11 +188,13 @@ function GroupSlide({
   currencySymbol,
   clientId,
   datePreset,
+  overrideConfig,
 }: {
   group: FunnelGroup;
   currencySymbol: string;
   clientId?: string;
   datePreset: string;
+  overrideConfig?: MetricsConfig;
 }) {
   const totals = group.campaigns.reduce(
     (acc, c) => {
@@ -210,7 +216,8 @@ function GroupSlide({
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
-  const { config } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
+  const { config: liveConfig } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
+  const config = overrideConfig || liveConfig;
 
   const renderMetricValue = (key: string): string => {
     switch (key) {
