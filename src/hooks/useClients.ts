@@ -11,6 +11,10 @@ export interface Client {
   created_at: string;
   updated_at: string;
   lead_action_types?: string[];
+  target_cpa_lead?: number;
+  target_cpa_purchase?: number;
+  cpa_alert_multiplier?: number;
+  budget_alert_threshold_pct?: number;
 }
 
 export type ClientInsert = {
@@ -19,6 +23,10 @@ export type ClientInsert = {
   ad_account_ids: string[];
   currency_symbol?: string;
   google_ads_customer_id?: string;
+  target_cpa_lead?: number;
+  target_cpa_purchase?: number;
+  cpa_alert_multiplier?: number;
+  budget_alert_threshold_pct?: number;
 };
 
 function generateSlug(name: string): string {
