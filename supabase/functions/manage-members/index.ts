@@ -128,6 +128,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "set_password") {
+      const userId = String(body.userId || "");
+      const password = String(body.password || "");
+      if (!userId || !password || password.length < 6) {
+        return new Response(JSON.stringify({ error: "userId e senha (mín. 6 chars) obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error: updErr } = await admin.auth.admin.updateUserById(userId, { password });
+      if (updErr) {
+        return new Response(JSON.stringify({ error: updErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "remove") {
       const userId = String(body.userId || "");
       if (!userId) {
