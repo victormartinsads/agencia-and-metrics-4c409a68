@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation, Link2 } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedDiagnostics, useDeleteSavedDiagnostic, SavedDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
@@ -9,6 +9,7 @@ import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { toast } from "sonner";
 import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
+import { SendDiagnosticWhatsAppDialog } from "./SendDiagnosticWhatsAppDialog";
 
 interface Props {
   clientId: string;
@@ -20,6 +21,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
   const { data: list, isLoading } = useSavedDiagnostics(clientId);
   const del = useDeleteSavedDiagnostic();
   const [viewing, setViewing] = useState<SavedDiagnostic | null>(null);
+  const [sharing, setSharing] = useState<SavedDiagnostic | null>(null);
 
   if (isLoading) {
     return (
@@ -79,6 +81,13 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                 >
                   <Link2 className="h-4 w-4" /> Copiar link
                 </Button>
+                <Button
+                  size="sm"
+                  className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
+                  onClick={() => setSharing(item)}
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </Button>
                 <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -94,6 +103,15 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           clientName={clientName}
           currencySymbol={currencySymbol}
           onClose={() => setViewing(null)}
+        />
+      )}
+
+      {sharing && (
+        <SendDiagnosticWhatsAppDialog
+          open={!!sharing}
+          onOpenChange={(v) => !v && setSharing(null)}
+          diagnosticUrl={`${window.location.origin}${sharing.slug ? `/como-estamos/${sharing.slug}` : `/diagnostico/${sharing.id}`}`}
+          diagnosticTitle={sharing.title}
         />
       )}
     </>
