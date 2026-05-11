@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.103.0/cors";
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
 const CACHE_TTL_MINUTES = 120; // 2 hour cache
