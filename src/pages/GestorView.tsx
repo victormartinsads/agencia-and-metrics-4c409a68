@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity,
-  AlertTriangle, ChevronRight, Zap, Layers, Image as ImageIcon, MessageSquare,
+  AlertTriangle, ChevronRight, Zap, Layers, Image as ImageIcon, MessageSquare, ArrowLeft,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -53,7 +53,10 @@ const TABS: { key: TabKey; label: string; icon: any }[] = [
 export default function GestorView() {
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { data: clients } = useClients();
-  const [clientId, setClientId] = useState<string | undefined>();
+  const { clientId: urlClientId } = useParams<{ clientId: string }>();
+  const [clientIdState, setClientIdState] = useState<string | undefined>(urlClientId);
+  const clientId = urlClientId || clientIdState;
+  const setClientId = setClientIdState;
   const [period, setPeriod] = useState("last_7d");
   const { data: meta, isLoading } = useMetaAds(clientId, period);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -197,6 +200,9 @@ export default function GestorView() {
   const header = (
     <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3">
+        <Button asChild variant="ghost" size="icon" className="h-9 w-9" title="Voltar à visão geral">
+          <Link to="/gestor"><ArrowLeft className="h-4 w-4" /></Link>
+        </Button>
         <div className="h-10 w-10 rounded-xl bg-[image:var(--gradient-hero)] flex items-center justify-center shadow-[var(--shadow-elevated)]">
           <Brain className="h-5 w-5 text-primary-foreground" />
         </div>
@@ -208,7 +214,7 @@ export default function GestorView() {
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Select value={clientId} onValueChange={setClientId}>
+        <Select value={clientId} onValueChange={(v) => { setClientId(v); window.history.pushState({}, "", `/gestor/${v}`); }}>
           <SelectTrigger className="w-[220px] h-9"><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
           <SelectContent>
             {clients?.map((c) => (
