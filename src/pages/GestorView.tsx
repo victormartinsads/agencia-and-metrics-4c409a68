@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Brain, Loader2, Send, Sparkles, TrendingUp, TrendingDown, Activity,
-  AlertTriangle, ChevronRight, Zap, Layers, Image as ImageIcon, X, MessageSquare,
+  AlertTriangle, ChevronRight, Zap, Layers, Image as ImageIcon, MessageSquare,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
