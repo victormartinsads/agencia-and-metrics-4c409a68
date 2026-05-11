@@ -30,10 +30,18 @@ export default function ClientsPage() {
     ad_account_ids: [""],
     currency_symbol: "R$",
     google_ads_customer_id: "",
+    target_cpa_lead: 0,
+    target_cpa_purchase: 0,
+    cpa_alert_multiplier: 1.5,
+    budget_alert_threshold_pct: 90,
   });
 
   const resetForm = () => {
-    setForm({ name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$", google_ads_customer_id: "" });
+    setForm({
+      name: "", meta_access_token: "", ad_account_ids: [""], currency_symbol: "R$",
+      google_ads_customer_id: "", target_cpa_lead: 0, target_cpa_purchase: 0,
+      cpa_alert_multiplier: 1.5, budget_alert_threshold_pct: 90,
+    });
     setEditingId(null);
     setShowForm(false);
   };
@@ -45,6 +53,10 @@ export default function ClientsPage() {
       ad_account_ids: c.ad_account_ids.length > 0 ? c.ad_account_ids : [""],
       currency_symbol: c.currency_symbol || "R$",
       google_ads_customer_id: (c as any).google_ads_customer_id || "",
+      target_cpa_lead: c.target_cpa_lead ?? 0,
+      target_cpa_purchase: c.target_cpa_purchase ?? 0,
+      cpa_alert_multiplier: c.cpa_alert_multiplier ?? 1.5,
+      budget_alert_threshold_pct: c.budget_alert_threshold_pct ?? 90,
     });
     setEditingId(c.id);
     setShowForm(true);
