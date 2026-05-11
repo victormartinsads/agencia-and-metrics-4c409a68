@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_drafts: {
+        Row: {
+          ad_account_id: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          meta_campaign_id: string | null
+          prompt: string
+          publish_error: string | null
+          status: string
+          structure: Json
+          updated_at: string
+        }
+        Insert: {
+          ad_account_id: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_campaign_id?: string | null
+          prompt: string
+          publish_error?: string | null
+          status?: string
+          structure?: Json
+          updated_at?: string
+        }
+        Update: {
+          ad_account_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_campaign_id?: string | null
+          prompt?: string
+          publish_error?: string | null
+          status?: string
+          structure?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_assignments: {
         Row: {
           assigned_by: string | null
@@ -79,6 +121,8 @@ export type Database = {
       clients: {
         Row: {
           ad_account_ids: string[]
+          budget_alert_threshold_pct: number | null
+          cpa_alert_multiplier: number | null
           created_at: string
           currency_symbol: string
           ga_property_id: string | null
@@ -89,11 +133,15 @@ export type Database = {
           monthly_revenue: number | null
           name: string
           slug: string
+          target_cpa_lead: number | null
+          target_cpa_purchase: number | null
           updated_at: string
           visible_tabs: Json
         }
         Insert: {
           ad_account_ids?: string[]
+          budget_alert_threshold_pct?: number | null
+          cpa_alert_multiplier?: number | null
           created_at?: string
           currency_symbol?: string
           ga_property_id?: string | null
@@ -104,11 +152,15 @@ export type Database = {
           monthly_revenue?: number | null
           name: string
           slug: string
+          target_cpa_lead?: number | null
+          target_cpa_purchase?: number | null
           updated_at?: string
           visible_tabs?: Json
         }
         Update: {
           ad_account_ids?: string[]
+          budget_alert_threshold_pct?: number | null
+          cpa_alert_multiplier?: number | null
           created_at?: string
           currency_symbol?: string
           ga_property_id?: string | null
@@ -119,6 +171,8 @@ export type Database = {
           monthly_revenue?: number | null
           name?: string
           slug?: string
+          target_cpa_lead?: number | null
+          target_cpa_purchase?: number | null
           updated_at?: string
           visible_tabs?: Json
         }
@@ -999,6 +1053,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      optimization_suggestions: {
+        Row: {
+          action: string
+          applied_at: string | null
+          approved_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          level: string
+          metadata: Json | null
+          object_id: string
+          object_name: string | null
+          reason: string | null
+          severity: string
+          status: string
+          suggested_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          applied_at?: string | null
+          approved_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          level: string
+          metadata?: Json | null
+          object_id: string
+          object_name?: string | null
+          reason?: string | null
+          severity?: string
+          status?: string
+          suggested_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          applied_at?: string | null
+          approved_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          level?: string
+          metadata?: Json | null
+          object_id?: string
+          object_name?: string | null
+          reason?: string | null
+          severity?: string
+          status?: string
+          suggested_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       organization_members: {
         Row: {
