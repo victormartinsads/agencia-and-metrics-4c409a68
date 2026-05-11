@@ -128,17 +128,11 @@ export function DiagnosticoPresentMode({
             {slide.kind === "notes" && (
               <div className="space-y-8">
                 <h2 className="text-4xl font-bold text-card-foreground">📝 Anotações da semana</h2>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 max-w-3xl">
                   <div className="rounded-2xl border border-border bg-card p-6">
                     <h3 className="text-lg font-semibold text-primary">O que fizemos</h3>
                     <pre className="mt-3 whitespace-pre-wrap text-base text-card-foreground font-sans leading-relaxed">
                       {whatWeDid || "(sem anotações)"}
-                    </pre>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold text-primary">Próximas ações</h3>
-                    <pre className="mt-3 whitespace-pre-wrap text-base text-card-foreground font-sans leading-relaxed">
-                      {nextActions || "(sem anotações)"}
                     </pre>
                   </div>
                 </div>
