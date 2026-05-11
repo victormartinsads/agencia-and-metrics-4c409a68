@@ -20,6 +20,7 @@ import GoogleCallback from "./pages/GoogleCallback.tsx";
 import Login from "./pages/Login.tsx";
 import Settings from "./pages/Settings.tsx";
 import GestorView from "./pages/GestorView.tsx";
+import GestorOverview from "./pages/GestorOverview.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CrmAppPage from "./pages/CrmApp.tsx";
 import Portal from "./pages/Portal.tsx";
@@ -51,7 +52,8 @@ const App = () => (
             <Route path="/dashboard/:clientId/sheets" element={<ProtectedRoute><ClientSheetsConfig /></ProtectedRoute>} />
             <Route path="/clients/:clientId/webhooks" element={<ProtectedRoute><ClientWebhooksConfig /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/gestor" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
+            <Route path="/gestor" element={<ProtectedRoute><GestorOverview /></ProtectedRoute>} />
+            <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
             <Route path="/portal/dashboard" element={<ProtectedRoute><ClientPortalDashboardRedirect /></ProtectedRoute>} />
             <Route path="/crm-app" element={<ProtectedRoute><CrmAppPage /></ProtectedRoute>} />

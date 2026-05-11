@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pause, Play, DollarSign, AlertCircle, TrendingDown } from "lucide-react";
+import { Loader2, Pause, Play, DollarSign, AlertCircle, TrendingDown, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { ObjectEditDrawer } from "./ObjectEditDrawer";
 
 interface Props {
   open: boolean;
@@ -30,6 +31,7 @@ function getAction(actions: any[] | undefined, type: string) {
 
 export function CampaignDrillDown({ open, onOpenChange, clientId, campaignId, campaignName, datePreset, currencySymbol = "R$" }: Props) {
   const qc = useQueryClient();
+  const [editing, setEditing] = useState<{ level: "campaign" | "adset" | "ad"; obj: any } | null>(null);
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["meta-ads-detail", clientId, campaignId, datePreset],
     queryFn: async () => {
@@ -114,6 +116,10 @@ export function CampaignDrillDown({ open, onOpenChange, clientId, campaignId, ca
                   onSave={(v) => doAction("campaign", campaignId, "set_daily_budget", v)}
                   currencySymbol={currencySymbol}
                 />
+                <Button size="sm" variant="outline" className="h-7 text-xs"
+                  onClick={() => setEditing({ level: "campaign", obj: { id: campaignId, ...camp } })}>
+                  <Pencil className="h-3 w-3 mr-1" /> Editar tudo
+                </Button>
               </>
             )}
           </DialogTitle>
@@ -214,6 +220,10 @@ export function CampaignDrillDown({ open, onOpenChange, clientId, campaignId, ca
                               onSave={(v) => doAction("adset", a.id, "set_daily_budget", v)}
                               currencySymbol={currencySymbol}
                             />
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Editar tudo"
+                              onClick={() => setEditing({ level: "adset", obj: a })}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -251,15 +261,21 @@ export function CampaignDrillDown({ open, onOpenChange, clientId, campaignId, ca
                         <td className="text-right py-2 tabular-nums">{fmtMoney(ins.cpc, currencySymbol)}</td>
                         <td className="text-right py-2 tabular-nums">{fmtNum(purchase)}</td>
                         <td className="text-right py-2">
-                          {ad.status === "ACTIVE" ? (
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => doAction("ad", ad.id, "pause")} title="Pausar">
-                              <Pause className="h-3 w-3" />
+                          <div className="flex justify-end gap-1">
+                            {ad.status === "ACTIVE" ? (
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => doAction("ad", ad.id, "pause")} title="Pausar">
+                                <Pause className="h-3 w-3" />
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => doAction("ad", ad.id, "activate")} title="Ativar">
+                                <Play className="h-3 w-3" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Editar tudo"
+                              onClick={() => setEditing({ level: "ad", obj: ad })}>
+                              <Pencil className="h-3 w-3" />
                             </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => doAction("ad", ad.id, "activate")} title="Ativar">
-                              <Play className="h-3 w-3" />
-                            </Button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -278,6 +294,14 @@ export function CampaignDrillDown({ open, onOpenChange, clientId, campaignId, ca
           </Tabs>
         )}
       </DialogContent>
+      <ObjectEditDrawer
+        open={!!editing}
+        onOpenChange={(v) => { if (!v) setEditing(null); }}
+        level={editing?.level || "adset"}
+        clientId={clientId}
+        object={editing?.obj || null}
+        onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["meta-ads", clientId] }); }}
+      />
     </Dialog>
   );
 }
