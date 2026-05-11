@@ -22,6 +22,7 @@ import {
   useInviteMember,
   useSetMemberRole,
   useRemoveMember,
+  useSetMemberPassword,
 } from "@/hooks/useMembers";
 import { toast } from "sonner";
 import { Trash2, UserPlus, Mail } from "lucide-react";
@@ -208,8 +209,11 @@ function MembersSection() {
   const invite = useInviteMember();
   const setRole = useSetMemberRole();
   const remove = useRemoveMember();
+  const setPassword = useSetMemberPassword();
   const [email, setEmail] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "editor">("editor");
+  const [pwdEditId, setPwdEditId] = useState<string | null>(null);
+  const [pwdValue, setPwdValue] = useState("");
 
   const handleInvite = async () => {
     if (!email.trim()) {
@@ -241,6 +245,21 @@ function MembersSection() {
       toast.success("Membro removido");
     } catch (e: any) {
       toast.error(e.message || "Erro ao remover");
+    }
+  };
+
+  const handleSavePassword = async (userId: string) => {
+    if (pwdValue.length < 6) {
+      toast.error("Senha deve ter ao menos 6 caracteres");
+      return;
+    }
+    try {
+      await setPassword.mutateAsync({ userId, password: pwdValue });
+      toast.success("Senha atualizada");
+      setPwdEditId(null);
+      setPwdValue("");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao atualizar senha");
     }
   };
 
@@ -370,6 +389,50 @@ function MembersSection() {
                         <SelectItem value="admin">Administrador</SelectItem>
                       </SelectContent>
                     </Select>
+                    {pwdEditId === m.id ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="text"
+                          autoFocus
+                          placeholder="Nova senha"
+                          value={pwdValue}
+                          onChange={(e) => setPwdValue(e.target.value)}
+                          className="h-8 w-32 text-xs"
+                        />
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => handleSavePassword(m.id)}
+                          disabled={setPassword.isPending}
+                        >
+                          Salvar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setPwdEditId(null);
+                            setPwdValue("");
+                          }}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setPwdEditId(m.id);
+                          setPwdValue("");
+                        }}
+                        className="h-8 w-8"
+                        title="Alterar senha"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
