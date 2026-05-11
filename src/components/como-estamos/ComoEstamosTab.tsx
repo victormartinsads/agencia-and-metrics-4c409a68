@@ -14,7 +14,6 @@ import { WeeklyNotesPanel } from "./WeeklyNotesPanel";
 import { ComoEstamosAIReport } from "./ComoEstamosAIReport";
 import { EditableFunnel } from "./EditableFunnel";
 import { RevenueRoasCard } from "./RevenueRoasCard";
-import { SendWhatsAppDialog } from "./SendWhatsAppDialog";
 import { getFunnelLabelOrNull } from "@/lib/funnelGrouping";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -47,7 +46,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
   const { data: clientData } = useQuery({
     queryKey: ["client-revenue", clientId],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("monthly_revenue, name, slug").eq("id", clientId).single();
+      const { data } = await supabase.from("clients").select("monthly_revenue").eq("id", clientId).single();
       return data;
     },
     enabled: !!clientId,
@@ -116,15 +115,6 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
             <Switch checked={showAIRecommendations} onCheckedChange={setShowAIRecommendations} id="ai-toggle" />
             <Label htmlFor="ai-toggle" className="text-xs cursor-pointer">IA</Label>
           </div>
-
-          {clientData?.slug && (
-            <div className="ml-auto">
-              <SendWhatsAppDialog
-                clientName={clientData.name || ""}
-                clientSlug={clientData.slug}
-              />
-            </div>
-          )}
         </div>
       </div>
 
