@@ -9,6 +9,7 @@ import {
   AVAILABLE_METRICS,
   formatCustomValue,
   useDiagnosticMetricsConfig,
+  MetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
 
 interface Props {
@@ -27,6 +28,8 @@ interface Props {
   datePresetKey?: string;
   /** Se true, esconde o botão "Sair" (uso em página pública compartilhada). */
   publicMode?: boolean;
+  /** Override de configuração de métricas por groupKey (usado em snapshots salvos). */
+  groupConfigs?: Record<string, MetricsConfig>;
 }
 
 type Slide =
@@ -45,7 +48,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode,
+  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
@@ -128,17 +131,11 @@ export function DiagnosticoPresentMode({
             {slide.kind === "notes" && (
               <div className="space-y-8">
                 <h2 className="text-4xl font-bold text-card-foreground">📝 Anotações da semana</h2>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 max-w-3xl">
                   <div className="rounded-2xl border border-border bg-card p-6">
                     <h3 className="text-lg font-semibold text-primary">O que fizemos</h3>
                     <pre className="mt-3 whitespace-pre-wrap text-base text-card-foreground font-sans leading-relaxed">
                       {whatWeDid || "(sem anotações)"}
-                    </pre>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold text-primary">Próximas ações</h3>
-                    <pre className="mt-3 whitespace-pre-wrap text-base text-card-foreground font-sans leading-relaxed">
-                      {nextActions || "(sem anotações)"}
                     </pre>
                   </div>
                 </div>
@@ -151,6 +148,7 @@ export function DiagnosticoPresentMode({
                 currencySymbol={currencySymbol}
                 clientId={clientId}
                 datePreset={datePresetKey || datePreset}
+                overrideConfig={groupConfigs?.[slide.group.key]}
               />
             )}
 
@@ -190,11 +188,13 @@ function GroupSlide({
   currencySymbol,
   clientId,
   datePreset,
+  overrideConfig,
 }: {
   group: FunnelGroup;
   currencySymbol: string;
   clientId?: string;
   datePreset: string;
+  overrideConfig?: MetricsConfig;
 }) {
   const totals = group.campaigns.reduce(
     (acc, c) => {
@@ -216,7 +216,8 @@ function GroupSlide({
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
-  const { config } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
+  const { config: liveConfig } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
+  const config = overrideConfig || liveConfig;
 
   const renderMetricValue = (key: string): string => {
     switch (key) {

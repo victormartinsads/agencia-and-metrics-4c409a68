@@ -44,7 +44,7 @@ export function DiagnosticoBloco({ title, emoji, accentClass, value, onChange, p
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="min-h-[180px] resize-y text-sm leading-relaxed"
+          className="min-h-[220px] resize-y text-sm leading-loose [&]:leading-loose"
           autoFocus
         />
       ) : isEmpty ? (
@@ -53,7 +53,7 @@ export function DiagnosticoBloco({ title, emoji, accentClass, value, onChange, p
         </p>
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none text-card-foreground
-                        prose-p:my-2 prose-ul:my-2 prose-li:my-1 prose-strong:text-card-foreground">
+                        prose-p:my-3 prose-ul:my-3 prose-li:my-2 prose-strong:text-card-foreground leading-relaxed">
           <ReactMarkdown remarkPlugins={[remarkBreaks]}>{value}</ReactMarkdown>
         </div>
       )}

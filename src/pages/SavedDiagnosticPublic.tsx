@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPresentMode";
+import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
@@ -61,8 +62,8 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
   const groups = groupCampaignsByFunnel(campaigns);
   const blocks = snap.blocks || { positives: "", negatives: "", manager_actions: "", client_requests: "" };
   const whatWeDid = snap.whatWeDid || "";
-  const nextActions = snap.nextActions || "";
   const periodRange = snap.periodRange || item.date_preset;
+  const metricsConfig: Record<string, MetricsConfig> = snap.metricsConfig || {};
 
   const fmtMoney = (v: number) =>
     `${currencySymbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -81,18 +82,12 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           <p className="text-sm text-muted-foreground mt-2">{item.title}</p>
         </section>
 
-        {(whatWeDid || nextActions) && (
+        {whatWeDid && (
           <section className="rounded-2xl border border-border bg-card p-6 space-y-4">
             <h3 className="text-lg font-bold text-card-foreground">📝 Anotações do gestor</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm font-semibold text-primary mb-2">O que fizemos</div>
-                <pre className="whitespace-pre-wrap text-sm text-card-foreground font-sans leading-relaxed">{whatWeDid || "—"}</pre>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-primary mb-2">Próximas ações</div>
-                <pre className="whitespace-pre-wrap text-sm text-card-foreground font-sans leading-relaxed">{nextActions || "—"}</pre>
-              </div>
+            <div>
+              <div className="text-sm font-semibold text-primary mb-2">O que fizemos</div>
+              <pre className="whitespace-pre-wrap text-sm text-card-foreground font-sans leading-relaxed">{whatWeDid}</pre>
             </div>
           </section>
         )}
@@ -104,21 +99,55 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
               const totals = g.campaigns.reduce((acc: any, c: any) => {
                 acc.spend += c.spend; acc.impressions += c.impressions;
                 acc.clicks += c.clicks; acc.conversions += c.conversions;
+                acc.reach += c.reach || 0;
+                acc.purchaseValue += c.purchaseValue || 0;
                 return acc;
-              }, { spend: 0, impressions: 0, clicks: 0, conversions: 0 });
+              }, { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchaseValue: 0 });
               const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
               const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
+              const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
+              const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0;
+              const roas = totals.spend > 0 && totals.purchaseValue > 0 ? totals.purchaseValue / totals.spend : 0;
+              const resultLabel = g.campaigns.find((c: any) => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
+              const cfg = metricsConfig[g.key];
+              const renderVal = (key: string): string => {
+                switch (key) {
+                  case "spend": return fmtMoney(totals.spend);
+                  case "conversions": return totals.conversions.toLocaleString("pt-BR");
+                  case "cpa": return cpa > 0 ? fmtMoney(cpa) : "—";
+                  case "ctr": return `${ctr.toFixed(2)}%`;
+                  case "cpc": return cpc > 0 ? fmtMoney(cpc) : "—";
+                  case "cpm": return fmtMoney(cpm);
+                  case "reach": return totals.reach.toLocaleString("pt-BR");
+                  case "impressions": return totals.impressions.toLocaleString("pt-BR");
+                  case "clicks": return totals.clicks.toLocaleString("pt-BR");
+                  case "roas": return roas > 0 ? `${roas.toFixed(2)}x` : "—";
+                  default: return "—";
+                }
+              };
+              const labelOf = (key: string) => key === "conversions" ? resultLabel : (AVAILABLE_METRICS.find(m => m.key === key)?.label || key);
               return (
                 <div key={g.key} className="rounded-xl border border-border bg-card p-5">
                   <h4 className="text-base font-bold text-card-foreground">
                     {g.isFunnel ? `Funil: ${g.key}` : g.key}
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                    <Mini label="Investimento" value={fmtMoney(totals.spend)} />
-                    <Mini label="Resultados" value={totals.conversions.toLocaleString("pt-BR")} />
-                    <Mini label="CPA" value={cpa > 0 ? fmtMoney(cpa) : "—"} />
-                    <Mini label="CTR" value={`${ctr.toFixed(2)}%`} />
-                  </div>
+                  {cfg ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
+                      {cfg.visible_metrics.map(k => (
+                        <Mini key={k} label={labelOf(k)} value={renderVal(k)} />
+                      ))}
+                      {cfg.custom_metrics.map(m => (
+                        <Mini key={m.id} label={`✦ ${m.label}`} value={formatCustomValue(m, currencySymbol)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                      <Mini label="Investimento" value={fmtMoney(totals.spend)} />
+                      <Mini label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} />
+                      <Mini label="CPA" value={cpa > 0 ? fmtMoney(cpa) : "—"} />
+                      <Mini label="CTR" value={`${ctr.toFixed(2)}%`} />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -143,9 +172,11 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           groups={groups}
           blocks={blocks}
           whatWeDid={whatWeDid}
-          nextActions={nextActions}
+          nextActions=""
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
+          groupConfigs={metricsConfig}
+          publicMode
         />
       )}
     </div>
