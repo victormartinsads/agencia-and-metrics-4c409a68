@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { useSaveDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
+import { supabase } from "@/integrations/supabase/client";
+import type { MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 
 function formatPeriodRange(preset: string): string {
   const { current } = getPeriodPair(preset);
@@ -90,6 +92,20 @@ export function DiagnosticoSemanal({
     if (!saveTitle.trim()) { toast.error("Dê um título ao diagnóstico"); return; }
     const { current } = getPeriodPair(datePreset);
     try {
+      // Captura a config de métricas (visíveis + manuais) por funil/campanha
+      // para que o diagnóstico salvo exiba exatamente o que o gestor editou.
+      const { data: cfgRows } = await supabase
+        .from("diagnostic_metrics_config")
+        .select("group_key, visible_metrics, custom_metrics")
+        .eq("client_id", clientId)
+        .eq("date_preset", datePreset);
+      const metricsConfig: Record<string, MetricsConfig> = {};
+      for (const row of (cfgRows || []) as any[]) {
+        metricsConfig[row.group_key] = {
+          visible_metrics: Array.isArray(row.visible_metrics) ? row.visible_metrics : [],
+          custom_metrics: Array.isArray(row.custom_metrics) ? row.custom_metrics : [],
+        };
+      }
       await saveDiag.mutateAsync({
         client_id: clientId,
         title: saveTitle.trim(),
@@ -104,6 +120,7 @@ export function DiagnosticoSemanal({
           periodRange,
           clientName,
           currencySymbol,
+          metricsConfig,
         },
       });
       toast.success("Diagnóstico salvo!");
