@@ -6,7 +6,6 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
-// Mapeia o código numérico de account_status da Meta para uma string amigável
 const STATUS_MAP: Record<number, string> = {
   1: "ACTIVE",
   2: "DISABLED",
@@ -19,6 +18,38 @@ const STATUS_MAP: Record<number, string> = {
   201: "ANY_ACTIVE",
   202: "ANY_CLOSED",
 };
+
+const DISABLE_REASON_MAP: Record<number, string> = {
+  0: "Nenhum",
+  1: "Violação de política de anúncios",
+  2: "Revisão de IP em andamento",
+  3: "Problema de pagamento (cartão recusado / saldo pendente)",
+  4: "Conta encerrada",
+  5: "Encerramento AFC",
+  6: "Reavaliação de integridade",
+  7: "Encerrada permanentemente",
+  8: "Conta revendedor inativa",
+  9: "Conta inativa",
+  10: "BM não utilizado",
+  11: "Verificação de negócio pendente",
+  16: "Verificação solicitada",
+  20: "Saldo excedido (massive balance)",
+};
+
+function getHealthMessage(statusCode: number, disableReason?: number) {
+  if (statusCode === 1) return { level: "ok" as const, message: "Conta ativa" };
+  if (disableReason && DISABLE_REASON_MAP[disableReason]) {
+    return { level: "critical" as const, message: DISABLE_REASON_MAP[disableReason] };
+  }
+  if (statusCode === 2) return { level: "critical" as const, message: "Conta desabilitada" };
+  if (statusCode === 3) return { level: "critical" as const, message: "Conta com saldo pendente (UNSETTLED)" };
+  if (statusCode === 7) return { level: "warning" as const, message: "Revisão de risco pendente" };
+  if (statusCode === 8) return { level: "warning" as const, message: "Acordo de pagamento pendente" };
+  if (statusCode === 9) return { level: "warning" as const, message: "Período de carência" };
+  if (statusCode === 100) return { level: "critical" as const, message: "Fechamento da conta pendente" };
+  if (statusCode === 101) return { level: "critical" as const, message: "Conta fechada" };
+  return { level: "warning" as const, message: `Status desconhecido (${statusCode})` };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -59,21 +90,36 @@ Deno.serve(async (req) => {
         const r = await fetch(`${GRAPH}/${acctId}?fields=name,account_status,disable_reason,balance,amount_spent,spend_cap,currency,timezone_name&access_token=${token}`);
         const j = await r.json();
         if (j.error) {
-          return { id: acctId, error: j.error.message, status: "ERROR", statusCode: 0 };
+          return {
+            id: acctId,
+            error: j.error.message,
+            status: "ERROR",
+            statusCode: 0,
+            health: { level: "critical" as const, message: `Erro ao consultar conta: ${j.error.message}` },
+          };
         }
+        const health = getHealthMessage(j.account_status, j.disable_reason);
         return {
           id: acctId,
           name: j.name || acctId,
           statusCode: j.account_status,
           status: STATUS_MAP[j.account_status] || `UNKNOWN(${j.account_status})`,
           disableReason: j.disable_reason,
+          disableReasonLabel: DISABLE_REASON_MAP[j.disable_reason] || null,
           balance: Number(j.balance || 0) / 100,
           amountSpent: Number(j.amount_spent || 0) / 100,
           spendCap: j.spend_cap ? Number(j.spend_cap) / 100 : null,
           currency: j.currency,
+          health,
         };
       } catch (e) {
-        return { id: acctId, error: String(e), status: "ERROR", statusCode: 0 };
+        return {
+          id: acctId,
+          error: String(e),
+          status: "ERROR",
+          statusCode: 0,
+          health: { level: "critical" as const, message: `Erro na consulta: ${String(e)}` },
+        };
       }
     }));
 

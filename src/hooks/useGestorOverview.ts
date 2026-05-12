@@ -36,13 +36,36 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
 
     const alerts: ClientOverview["alerts"] = [];
 
-    // Account / BM issues
-    const badAccounts = (s.accounts || []).filter((a: any) => a.statusCode !== 1 || a.error);
-    badAccounts.forEach((a: any) => {
-      alerts.push({
-        severity: "high",
-        message: `Conta ${a.name || a.id} ${a.error ? "com erro" : `pausada (${a.status})`}`,
-      });
+    // Account health issues (prioridade alta)
+    const accounts: any[] = s.accounts || [];
+    accounts.forEach((a: any) => {
+      if (a.health?.level === "ok") return;
+      if (a.error) {
+        alerts.push({
+          severity: "high",
+          message: `${a.name || a.id}: ${a.health?.message || a.error}`,
+        });
+      } else if (a.health?.level === "critical") {
+        alerts.push({
+          severity: "high",
+          message: `${a.name || a.id}: ${a.health.message}`,
+        });
+      } else if (a.health?.level === "warning") {
+        alerts.push({
+          severity: "medium",
+          message: `${a.name || a.id}: ${a.health.message}`,
+        });
+      }
+    });
+
+    // Se todas as contas estiverem saudáveis mas houver saldo negativo
+    accounts.forEach((a: any) => {
+      if (a.health?.level === "ok" && a.balance < 0) {
+        alerts.push({
+          severity: "medium",
+          message: `${a.name || a.id}: Saldo negativo ${a.currency} ${a.balance.toFixed(2)}`,
+        });
+      }
     });
 
     // Budget
@@ -79,7 +102,7 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
       avgCTR: ov.avgCTR || 0,
       avgROAS: ov.avgROAS || 0,
       alerts,
-      accountIssues: badAccounts.length,
+      accountIssues: accounts.filter((a: any) => a.health?.level !== "ok").length,
       budgetAlertsCount: budgetAlerts.length,
       highCpaCount: highCpa.length,
     };
