@@ -64,14 +64,30 @@ export function ClientOverviewCard({
 
           {data.alerts.length > 0 ? (
             <div className="space-y-1.5 border-t border-border/50 pt-2">
-              {data.alerts.slice(0, 3).map((a, i) => (
-                <div key={i} className="flex items-start gap-1.5 text-[10.5px]">
-                  <AlertTriangle className={`h-3 w-3 mt-0.5 shrink-0 ${a.severity === "high" ? "text-red-400" : "text-yellow-400"}`} />
-                  <span className="text-muted-foreground line-clamp-1">{a.message}</span>
-                </div>
-              ))}
-              {data.alerts.length > 3 && (
-                <p className="text-[10px] text-muted-foreground/70">+ {data.alerts.length - 3} alertas</p>
+              {data.alerts.slice(0, 4).map((a, i) => {
+                const isAccountAlert = a.message.includes(":") && (
+                  a.message.toLowerCase().includes("conta") ||
+                  a.message.toLowerCase().includes("pagamento") ||
+                  a.message.toLowerCase().includes("fechada") ||
+                  a.message.toLowerCase().includes("desabilitada") ||
+                  a.message.toLowerCase().includes("encerrada") ||
+                  a.message.toLowerCase().includes("saldo")
+                );
+                const Icon = isAccountAlert ? AlertOctagon : AlertTriangle;
+                const iconColor = a.severity === "high"
+                  ? (isAccountAlert ? "text-red-400" : "text-red-400")
+                  : "text-yellow-400";
+                return (
+                  <div key={i} className="flex items-start gap-1.5 text-[10.5px]">
+                    <Icon className={`h-3 w-3 mt-0.5 shrink-0 ${iconColor}`} />
+                    <span className={`line-clamp-1 ${isAccountAlert ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                      {a.message}
+                    </span>
+                  </div>
+                );
+              })}
+              {data.alerts.length > 4 && (
+                <p className="text-[10px] text-muted-foreground/70">+ {data.alerts.length - 4} alertas</p>
               )}
             </div>
           ) : (
