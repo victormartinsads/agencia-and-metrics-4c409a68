@@ -90,21 +90,36 @@ Deno.serve(async (req) => {
         const r = await fetch(`${GRAPH}/${acctId}?fields=name,account_status,disable_reason,balance,amount_spent,spend_cap,currency,timezone_name&access_token=${token}`);
         const j = await r.json();
         if (j.error) {
-          return { id: acctId, error: j.error.message, status: "ERROR", statusCode: 0 };
+          return {
+            id: acctId,
+            error: j.error.message,
+            status: "ERROR",
+            statusCode: 0,
+            health: { level: "critical" as const, message: `Erro ao consultar conta: ${j.error.message}` },
+          };
         }
+        const health = getHealthMessage(j.account_status, j.disable_reason);
         return {
           id: acctId,
           name: j.name || acctId,
           statusCode: j.account_status,
           status: STATUS_MAP[j.account_status] || `UNKNOWN(${j.account_status})`,
           disableReason: j.disable_reason,
+          disableReasonLabel: DISABLE_REASON_MAP[j.disable_reason] || null,
           balance: Number(j.balance || 0) / 100,
           amountSpent: Number(j.amount_spent || 0) / 100,
           spendCap: j.spend_cap ? Number(j.spend_cap) / 100 : null,
           currency: j.currency,
+          health,
         };
       } catch (e) {
-        return { id: acctId, error: String(e), status: "ERROR", statusCode: 0 };
+        return {
+          id: acctId,
+          error: String(e),
+          status: "ERROR",
+          statusCode: 0,
+          health: { level: "critical" as const, message: `Erro na consulta: ${String(e)}` },
+        };
       }
     }));
 
