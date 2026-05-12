@@ -1,4 +1,4 @@
-import { Star, AlertTriangle, ChevronRight, Activity, Loader2 } from "lucide-react";
+import { Star, AlertTriangle, AlertOctagon, ChevronRight, Activity, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
