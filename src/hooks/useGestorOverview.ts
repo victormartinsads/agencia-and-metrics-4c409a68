@@ -102,7 +102,7 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
       avgCTR: ov.avgCTR || 0,
       avgROAS: ov.avgROAS || 0,
       alerts,
-      accountIssues: badAccounts.length,
+      accountIssues: accounts.filter((a: any) => a.health?.level !== "ok").length,
       budgetAlertsCount: budgetAlerts.length,
       highCpaCount: highCpa.length,
     };
