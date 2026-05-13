@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrgSwitcher } from "@/components/crm-app/OrgSwitcher";
+import { PipelineSwitcher } from "@/components/crm-app/PipelineSwitcher";
+import { usePipelines } from "@/hooks/usePipelines";
 import { KanbanBoard } from "@/components/crm-app/KanbanBoard";
 import { LeadsList } from "@/components/crm-app/LeadsList";
 import { LeadDetail } from "@/components/crm-app/LeadDetail";
@@ -20,6 +22,7 @@ export default function CrmAppPage() {
   const [searchParams] = useSearchParams();
   const queryOrg = searchParams.get("org");
   const [orgId, setOrgId] = useState<string | null>(() => queryOrg || localStorage.getItem("crm-app:orgId"));
+  const [pipelineId, setPipelineId] = useState<string | null>(() => localStorage.getItem("crm-app:pipelineId"));
   useEffect(() => {
     if (queryOrg && queryOrg !== orgId) {
       setOrgId(queryOrg);
@@ -27,13 +30,24 @@ export default function CrmAppPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryOrg]);
-  const { data: leads = [], isLoading } = useLeadsForOrg(orgId || undefined);
+  const { data: allLeads = [], isLoading } = useLeadsForOrg(orgId || undefined);
+  const { data: pipelines = [] } = usePipelines(orgId || undefined);
+  const leads = pipelineId
+    ? allLeads.filter((l: any) => l.pipeline_id === pipelineId)
+    : allLeads;
   const { data: orgClient } = useOrgClient(orgId);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
 
   const handleOrgChange = (id: string) => { setOrgId(id); localStorage.setItem("crm-app:orgId", id); };
+  const handlePipelineChange = (id: string | null) => {
+    setPipelineId(id);
+    if (id) localStorage.setItem("crm-app:pipelineId", id);
+    else localStorage.removeItem("crm-app:pipelineId");
+  };
+
+  const currentPipeline = pipelines.find((p) => p.id === pipelineId) || null;
 
   const header = (
     <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3 flex-wrap">
@@ -44,6 +58,7 @@ export default function CrmAppPage() {
         <p className="text-xs text-muted-foreground">{leads.length} leads</p>
       </div>
       <OrgSwitcher value={orgId} onChange={handleOrgChange} />
+      {orgId && <PipelineSwitcher orgId={orgId} value={pipelineId} onChange={handlePipelineChange} />}
       <Button size="sm" className="gap-1.5" onClick={() => setOpenAdd(true)} disabled={!orgId}>
         <Plus className="h-3.5 w-3.5" /> Novo lead
       </Button>
@@ -86,14 +101,14 @@ export default function CrmAppPage() {
               {orgClient ? <EmbedFrame title="Pódio de Criativos" url={`/podio/${orgClient.slug}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
             </TabsContent>
             <TabsContent value="webhooks" className="mt-4 max-w-2xl">
-              <WebhookPanel orgId={orgId} />
+              <WebhookPanel orgId={orgId} pipelineId={pipelineId} pipelineName={currentPipeline?.name} />
             </TabsContent>
           </Tabs>
         )}
       </main>
 
       <LeadDetail lead={selected} orgId={orgId || ""} open={openDetail} onClose={() => setOpenDetail(false)} />
-      {orgId && <AddLeadDialog orgId={orgId} open={openAdd} onClose={() => setOpenAdd(false)} />}
+      {orgId && <AddLeadDialog orgId={orgId} pipelineId={pipelineId} open={openAdd} onClose={() => setOpenAdd(false)} />}
     </AppShell>
   );
 }
