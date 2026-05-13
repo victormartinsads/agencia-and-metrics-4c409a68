@@ -9,9 +9,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
 import { toast } from "sonner";
 
-export function AddLeadDialog({ orgId, open, onClose }: { orgId: string; open: boolean; onClose: () => void; }) {
+export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { orgId: string; pipelineId?: string | null; open: boolean; onClose: () => void; }) {
   const qc = useQueryClient();
-  const { data: defs = [] } = useLeadCustomFieldDefs(orgId);
+  const { data: defs = [] } = useLeadCustomFieldDefs(orgId, pipelineId);
   const [form, setForm] = useState<any>({ name: "", email: "", phone: "", company: "", source: "manual", value: "", message: "", custom_fields: {} });
   const [saving, setSaving] = useState(false);
 
@@ -19,7 +19,7 @@ export function AddLeadDialog({ orgId, open, onClose }: { orgId: string; open: b
     if (!form.name && !form.email && !form.phone) { toast.error("Informe nome, email ou telefone"); return; }
     setSaving(true);
     try {
-      const payload: any = { ...form, organization_id: orgId, status: 'new' };
+      const payload: any = { ...form, organization_id: orgId, pipeline_id: pipelineId, status: 'new' };
       payload.value = form.value ? Number(form.value) : null;
       payload.custom_fields = form.custom_fields || {};
       const { error } = await (supabase as any).from("leads").insert(payload);
