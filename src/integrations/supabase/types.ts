@@ -936,10 +936,44 @@ export type Database = {
           },
         ]
       }
+      lead_custom_field_defs: {
+        Row: {
+          created_at: string
+          field_type: string
+          id: string
+          key: string
+          label: string
+          organization_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          key: string
+          label: string
+          organization_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          key?: string
+          label?: string
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           company: string | null
           created_at: string
+          custom_fields: Json
           email: string | null
           fclid: string | null
           id: string
@@ -964,6 +998,7 @@ export type Database = {
         Insert: {
           company?: string | null
           created_at?: string
+          custom_fields?: Json
           email?: string | null
           fclid?: string | null
           id?: string
@@ -988,6 +1023,7 @@ export type Database = {
         Update: {
           company?: string | null
           created_at?: string
+          custom_fields?: Json
           email?: string | null
           fclid?: string | null
           id?: string

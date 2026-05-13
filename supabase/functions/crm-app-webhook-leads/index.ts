@@ -25,6 +25,21 @@ Deno.serve(async (req) => {
     if (!tk || !tk.active) return json({ error: "Token inválido" }, 401);
 
     const body = await req.json().catch(() => ({}));
+    const KNOWN_FIELDS = new Set([
+      "source","name","nome","email","phone","telefone","company","empresa",
+      "message","mensagem","product","instagram","value",
+      "utm_campaign","utm_medium","utm_term","utm_content","fclid","status"
+    ]);
+    const customFields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(body || {})) {
+      if (!KNOWN_FIELDS.has(k) && v !== null && v !== undefined && typeof v !== "object") {
+        customFields[k] = v;
+      }
+    }
+    // Allow explicit nested object too
+    if (body && typeof body.custom_fields === "object" && body.custom_fields) {
+      Object.assign(customFields, body.custom_fields);
+    }
     const payload: any = {
       organization_id: tk.organization_id,
       status: 'new',
@@ -43,6 +58,7 @@ Deno.serve(async (req) => {
       utm_content: body.utm_content || null,
       fclid: body.fclid || null,
       raw_data: body,
+      custom_fields: customFields,
     };
 
     const { data: lead, error } = await supabase.from("leads").insert(payload).select().single();
