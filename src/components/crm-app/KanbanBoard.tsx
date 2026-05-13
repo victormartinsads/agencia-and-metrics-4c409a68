@@ -6,7 +6,19 @@ import { toast } from "sonner";
 
 const COLUMNS: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposal', 'closed', 'lost'];
 
-export function KanbanBoard({ leads, orgId, onCardClick }: { leads: Lead[]; orgId: string; onCardClick: (l: Lead) => void; }) {
+export function KanbanBoard({
+  leads,
+  orgId,
+  onCardClick,
+  selectedIds,
+  onToggleSelect,
+}: {
+  leads: Lead[];
+  orgId: string;
+  onCardClick: (l: Lead) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+}) {
   const update = useUpdateLeadStatus(orgId);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -51,7 +63,14 @@ export function KanbanBoard({ leads, orgId, onCardClick }: { leads: Lead[]; orgI
               </div>
               <div className="space-y-2 overflow-y-auto flex-1 max-h-[65vh]">
                 {list.map((l) => (
-                  <LeadCard key={l.id} lead={l} onClick={() => onCardClick(l)} onDragStart={() => setDraggingId(l.id)} />
+                  <LeadCard
+                    key={l.id}
+                    lead={l}
+                    onClick={() => onCardClick(l)}
+                    onDragStart={() => setDraggingId(l.id)}
+                    selected={selectedIds?.has(l.id)}
+                    onToggleSelect={onToggleSelect ? () => onToggleSelect(l.id) : undefined}
+                  />
                 ))}
                 {list.length === 0 && (
                   <div className="text-[11px] text-muted-foreground text-center py-6">Vazio</div>
