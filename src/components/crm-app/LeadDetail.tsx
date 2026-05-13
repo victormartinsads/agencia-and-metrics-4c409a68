@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateLead, useDeleteLead, useUpdateLeadStatus } from "@/hooks/useCrmAppLeads";
+import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   const update = useUpdateLead(orgId);
   const del = useDeleteLead(orgId);
   const updStatus = useUpdateLeadStatus(orgId);
+  const { data: defs = [] } = useLeadCustomFieldDefs(orgId);
   const [form, setForm] = useState<Partial<Lead>>({});
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
       name: form.name, email: form.email, phone: form.phone, company: form.company,
       instagram: form.instagram, source: form.source, product: form.product,
       value: form.value ?? null, notes: form.notes,
+      custom_fields: form.custom_fields || {},
     };
     try {
       await update.mutateAsync({ id: lead.id, patch });
@@ -79,6 +82,30 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
           <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.value ?? ""} onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })} /></div>
           <div className="col-span-2"><Label>Mensagem</Label><Textarea readOnly value={form.message || lead.message || ""} className="bg-muted/40" /></div>
           <div className="col-span-2"><Label>Notas</Label><Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={4} /></div>
+          {defs.length > 0 && (
+            <div className="col-span-2 border-t border-border pt-3 mt-1">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Campos personalizados</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {defs.map((d) => {
+                  const cf = (form.custom_fields || {}) as Record<string, any>;
+                  const val = cf[d.key] ?? "";
+                  return (
+                    <div key={d.id}>
+                      <Label>{d.label}</Label>
+                      <Input
+                        type={d.field_type === "number" ? "number" : d.field_type === "date" ? "date" : "text"}
+                        value={val}
+                        onChange={(e) => setForm({
+                          ...form,
+                          custom_fields: { ...cf, [d.key]: e.target.value },
+                        })}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex justify-between mt-2">
           <Button variant="ghost" onClick={remove} className="text-destructive">
