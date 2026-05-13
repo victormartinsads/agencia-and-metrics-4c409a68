@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Copy, Webhook, Plus, Trash2 } from "lucide-react";
 import { useWebhookTokens } from "@/hooks/useCrmAppLeads";
 import { webhookService } from "@/lib/crm-app";
+import { OutboundWebhooksPanel } from "./OutboundWebhooksPanel";
 import {
   useLeadCustomFieldDefs,
   useUpsertLeadCustomFieldDef,
@@ -105,6 +106,8 @@ export function WebhookPanel({ orgId }: { orgId: string }) {
           </Button>
         </div>
       </Card>
+
+      <OutboundWebhooksPanel orgId={orgId} />
     </div>
   );
 }
