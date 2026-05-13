@@ -19,12 +19,22 @@ Deno.serve(async (req) => {
 
     const { data: tk } = await supabase
       .from("webhook_tokens")
-      .select("organization_id, active, pipeline_id")
+      .select("organization_id, active, pipeline_id, field_mapping")
       .eq("token", token)
       .maybeSingle();
     if (!tk || !tk.active) return json({ error: "Token inválido" }, 401);
 
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    // Apply field mapping: { "<incoming key>": "<internal key>" }
+    // Internal key may be a known CRM field (name,email,...) or any custom field key.
+    const mapping = (tk.field_mapping || {}) as Record<string, string>;
+    const body: Record<string, any> = { ...rawBody };
+    for (const [from, to] of Object.entries(mapping)) {
+      if (!to) continue;
+      if (rawBody[from] !== undefined && body[to] === undefined) {
+        body[to] = rawBody[from];
+      }
+    }
     const KNOWN_FIELDS = new Set([
       "source","name","nome","email","phone","telefone","company","empresa",
       "message","mensagem","product","instagram","value",
@@ -58,7 +68,7 @@ Deno.serve(async (req) => {
       utm_term: body.utm_term || null,
       utm_content: body.utm_content || null,
       fclid: body.fclid || null,
-      raw_data: body,
+      raw_data: rawBody,
       custom_fields: customFields,
     };
 
