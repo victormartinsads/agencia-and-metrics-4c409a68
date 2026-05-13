@@ -68,13 +68,13 @@ export function useDeleteLead(orgId?: string) {
   });
 }
 
-export function useWebhookTokens(orgId?: string) {
+export function useWebhookTokens(orgId?: string, pipelineId?: string | null) {
   return useQuery({
-    queryKey: ["crm-app-webhooks", orgId],
+    queryKey: ["crm-app-webhooks", orgId, pipelineId ?? null],
     enabled: !!orgId,
     queryFn: async () => {
-      await webhookService.ensureToken(orgId!);
-      return webhookService.getTokens(orgId!);
+      await webhookService.ensureToken(orgId!, pipelineId ?? null);
+      return webhookService.getTokens(orgId!, pipelineId ?? null);
     },
   });
 }

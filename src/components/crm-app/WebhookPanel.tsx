@@ -16,12 +16,12 @@ import {
 } from "@/hooks/useLeadCustomFields";
 import { toast } from "sonner";
 
-export function WebhookPanel({ orgId }: { orgId: string }) {
-  const { data: tokens = [] } = useWebhookTokens(orgId);
+export function WebhookPanel({ orgId, pipelineId = null, pipelineName }: { orgId: string; pipelineId?: string | null; pipelineName?: string }) {
+  const { data: tokens = [] } = useWebhookTokens(orgId, pipelineId);
   const t = tokens[0];
   const url = t ? webhookService.getWebhookUrl(t.token) : "";
-  const { data: defs = [] } = useLeadCustomFieldDefs(orgId);
-  const upsert = useUpsertLeadCustomFieldDef(orgId);
+  const { data: defs = [] } = useLeadCustomFieldDefs(orgId, pipelineId);
+  const upsert = useUpsertLeadCustomFieldDef(orgId, pipelineId);
   const del = useDeleteLeadCustomFieldDef(orgId);
   const [draft, setDraft] = useState<{ key: string; label: string; field_type: LeadCustomFieldDef["field_type"] }>({
     key: "", label: "", field_type: "text",
@@ -45,10 +45,13 @@ export function WebhookPanel({ orgId }: { orgId: string }) {
     <div className="space-y-4">
       <Card className="p-4 space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-2">
-          <Webhook className="h-4 w-4" /> Webhook de entrada
+          <Webhook className="h-4 w-4" /> Webhook de entrada{pipelineName ? ` — ${pipelineName}` : " (organização)"}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Envie POST para esta URL para criar leads automaticamente. Campos padrão: <code>name, email, phone, company, message, source, value, product, instagram, utm_*, fclid</code>.
+          {pipelineId
+            ? "URL exclusiva deste pipeline. Leads recebidos aqui serão automaticamente associados a ele."
+            : "URL geral da organização (leads ficam sem pipeline)."}{" "}
+          Campos padrão: <code>name, email, phone, company, message, source, value, product, instagram, utm_*, fclid</code>.
           Qualquer outro parâmetro enviado será salvo automaticamente em <code>custom_fields</code> e exibido no lead se houver um campo personalizado correspondente (mesma <code>key</code>).
           Você também pode enviar <code>custom_fields</code> como objeto.
         </p>
@@ -61,9 +64,13 @@ export function WebhookPanel({ orgId }: { orgId: string }) {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="text-sm font-semibold">Campos personalizados</h2>
+        <h2 className="text-sm font-semibold">
+          Campos personalizados{pipelineName ? ` deste pipeline` : " globais"}
+        </h2>
         <p className="text-xs text-muted-foreground">
-          Defina campos extras que aparecerão no formulário de leads e serão preenchidos pelo webhook.
+          {pipelineId
+            ? "Campos específicos deste pipeline (somam-se aos campos globais)."
+            : "Campos globais — disponíveis em todos os pipelines da organização."}
         </p>
 
         <div className="space-y-2">
@@ -107,7 +114,7 @@ export function WebhookPanel({ orgId }: { orgId: string }) {
         </div>
       </Card>
 
-      <OutboundWebhooksPanel orgId={orgId} />
+      <OutboundWebhooksPanel orgId={orgId} pipelineId={pipelineId} pipelineName={pipelineName} />
     </div>
   );
 }

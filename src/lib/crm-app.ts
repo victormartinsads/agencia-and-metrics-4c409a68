@@ -86,19 +86,25 @@ export const leadsService = {
 };
 
 export const webhookService = {
-  async getTokens(orgId: string): Promise<WebhookToken[]> {
-    const { data, error } = await sb
-      .from('webhook_tokens')
-      .select('*')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
+  async getTokens(orgId: string, pipelineId?: string | null): Promise<WebhookToken[]> {
+    let q = sb.from('webhook_tokens').select('*').eq('organization_id', orgId);
+    if (pipelineId === null || pipelineId === undefined) q = q.is('pipeline_id', null);
+    else q = q.eq('pipeline_id', pipelineId);
+    const { data, error } = await q.order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as WebhookToken[];
   },
-  async ensureToken(orgId: string): Promise<void> {
-    const { data } = await sb.from('webhook_tokens').select('id').eq('organization_id', orgId).limit(1);
+  async ensureToken(orgId: string, pipelineId?: string | null, name?: string): Promise<void> {
+    let q = sb.from('webhook_tokens').select('id').eq('organization_id', orgId);
+    if (pipelineId === null || pipelineId === undefined) q = q.is('pipeline_id', null);
+    else q = q.eq('pipeline_id', pipelineId);
+    const { data } = await q.limit(1);
     if (data && data.length > 0) return;
-    await sb.from('webhook_tokens').insert({ organization_id: orgId, name: 'Webhook Principal' });
+    await sb.from('webhook_tokens').insert({
+      organization_id: orgId,
+      pipeline_id: pipelineId ?? null,
+      name: name || (pipelineId ? 'Webhook do pipeline' : 'Webhook Principal'),
+    });
   },
   getWebhookUrl(token: string): string {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;

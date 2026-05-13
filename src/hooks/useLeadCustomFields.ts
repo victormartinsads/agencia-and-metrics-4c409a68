@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface LeadCustomFieldDef {
   id: string;
   organization_id: string;
+  pipeline_id: string | null;
   key: string;
   label: string;
   field_type: "text" | "number" | "date" | "url";
@@ -12,9 +13,15 @@ export interface LeadCustomFieldDef {
 
 const sb = supabase as any;
 
-export function useLeadCustomFieldDefs(orgId?: string) {
+/**
+ * Loads custom field defs for the org.
+ * - When pipelineId is undefined: returns ALL defs (used by display contexts).
+ * - When pipelineId is null: returns ONLY global defs (pipeline_id IS NULL).
+ * - When pipelineId is a string: returns global + that pipeline's defs.
+ */
+export function useLeadCustomFieldDefs(orgId?: string, pipelineId?: string | null) {
   return useQuery({
-    queryKey: ["lead-custom-field-defs", orgId],
+    queryKey: ["lead-custom-field-defs", orgId, pipelineId === undefined ? "__all__" : pipelineId ?? null],
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await sb
@@ -23,17 +30,21 @@ export function useLeadCustomFieldDefs(orgId?: string) {
         .eq("organization_id", orgId)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []) as LeadCustomFieldDef[];
+      const all = (data || []) as LeadCustomFieldDef[];
+      if (pipelineId === undefined) return all;
+      if (pipelineId === null) return all.filter((d) => !d.pipeline_id);
+      return all.filter((d) => !d.pipeline_id || d.pipeline_id === pipelineId);
     },
   });
 }
 
-export function useUpsertLeadCustomFieldDef(orgId?: string) {
+export function useUpsertLeadCustomFieldDef(orgId?: string, pipelineId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (def: Partial<LeadCustomFieldDef> & { key: string; label: string }) => {
       const payload = {
         organization_id: orgId,
+        pipeline_id: def.pipeline_id !== undefined ? def.pipeline_id : pipelineId ?? null,
         key: def.key.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_"),
         label: def.label,
         field_type: def.field_type || "text",

@@ -944,6 +944,7 @@ export type Database = {
           key: string
           label: string
           organization_id: string
+          pipeline_id: string | null
           sort_order: number
           updated_at: string
         }
@@ -954,6 +955,7 @@ export type Database = {
           key: string
           label: string
           organization_id: string
+          pipeline_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -964,10 +966,19 @@ export type Database = {
           key?: string
           label?: string
           organization_id?: string
+          pipeline_id?: string | null
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lead_custom_field_defs_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -984,6 +995,7 @@ export type Database = {
           notes: string | null
           organization_id: string | null
           phone: string | null
+          pipeline_id: string | null
           product: string | null
           raw_data: Json | null
           source: string | null
@@ -1009,6 +1021,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           phone?: string | null
+          pipeline_id?: string | null
           product?: string | null
           raw_data?: Json | null
           source?: string | null
@@ -1034,6 +1047,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           phone?: string | null
+          pipeline_id?: string | null
           product?: string | null
           raw_data?: Json | null
           source?: string | null
@@ -1051,6 +1065,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -1272,6 +1293,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string | null
+          pipeline_id: string | null
           secret: string
           updated_at: string
           url: string
@@ -1283,6 +1305,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string | null
+          pipeline_id?: string | null
           secret?: string
           updated_at?: string
           url: string
@@ -1294,6 +1317,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string | null
+          pipeline_id?: string | null
           secret?: string
           updated_at?: string
           url?: string
@@ -1304,6 +1328,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_webhooks_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -1358,6 +1389,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pipelines: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipelines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1624,6 +1696,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string | null
+          pipeline_id: string | null
           token: string
         }
         Insert: {
@@ -1632,6 +1705,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string | null
+          pipeline_id?: string | null
           token?: string
         }
         Update: {
@@ -1640,6 +1714,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string | null
+          pipeline_id?: string | null
           token?: string
         }
         Relationships: [
@@ -1648,6 +1723,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_tokens_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
         ]

@@ -6,6 +6,7 @@ const sb = supabase as any;
 export interface OutboundWebhook {
   id: string;
   organization_id: string;
+  pipeline_id: string | null;
   name: string;
   url: string;
   events: string[];
@@ -36,15 +37,14 @@ export const ALL_EVENTS = [
   { key: "lost", label: "Perdido" },
 ];
 
-export function useOutboundWebhooks(orgId: string) {
+export function useOutboundWebhooks(orgId: string, pipelineId?: string | null) {
   return useQuery({
-    queryKey: ["outbound-webhooks", orgId],
+    queryKey: ["outbound-webhooks", orgId, pipelineId ?? null],
     queryFn: async () => {
-      const { data, error } = await sb
-        .from("outbound_webhooks")
-        .select("*")
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: true });
+      let q = sb.from("outbound_webhooks").select("*").eq("organization_id", orgId);
+      if (pipelineId === null || pipelineId === undefined) q = q.is("pipeline_id", null);
+      else q = q.eq("pipeline_id", pipelineId);
+      const { data, error } = await q.order("created_at", { ascending: true });
       if (error) throw error;
       return (data || []) as OutboundWebhook[];
     },
@@ -69,12 +69,13 @@ export function useOutboundEvents(orgId: string) {
   });
 }
 
-export function useUpsertOutboundWebhook(orgId: string) {
+export function useUpsertOutboundWebhook(orgId: string, pipelineId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutboundWebhook> & { url: string; name: string; events: string[]; active: boolean }) => {
       const payload: any = {
         organization_id: orgId,
+        pipeline_id: input.pipeline_id !== undefined ? input.pipeline_id : pipelineId ?? null,
         name: input.name,
         url: input.url,
         events: input.events,
