@@ -23,6 +23,7 @@ export interface Lead {
   product: string | null;
   raw_data: Record<string, unknown> | null;
   custom_fields: Record<string, unknown> | null;
+  tags: string[] | null;
   organization_id: string | null;
   created_at: string;
   updated_at: string;
