@@ -33,8 +33,11 @@ export interface WebhookToken {
   id: string;
   token: string;
   name: string;
+  description?: string | null;
   active: boolean;
   organization_id: string | null;
+  pipeline_id?: string | null;
+  field_mapping?: Record<string, string>;
   created_at: string;
 }
 
@@ -110,6 +113,40 @@ export const webhookService = {
   getWebhookUrl(token: string): string {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     return `https://${projectId}.supabase.co/functions/v1/crm-app-webhook-leads?token=${token}`;
+  },
+};
+
+export const integrationsService = {
+  async list(orgId: string): Promise<WebhookToken[]> {
+    const { data, error } = await sb
+      .from('webhook_tokens')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as WebhookToken[];
+  },
+  async create(input: { orgId: string; pipelineId: string | null; name: string; description?: string | null }) {
+    const { data, error } = await sb
+      .from('webhook_tokens')
+      .insert({
+        organization_id: input.orgId,
+        pipeline_id: input.pipelineId,
+        name: input.name,
+        description: input.description ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as WebhookToken;
+  },
+  async update(id: string, patch: Partial<Pick<WebhookToken, 'name' | 'description' | 'active' | 'field_mapping' | 'pipeline_id'>>) {
+    const { error } = await sb.from('webhook_tokens').update(patch).eq('id', id);
+    if (error) throw error;
+  },
+  async remove(id: string) {
+    const { error } = await sb.from('webhook_tokens').delete().eq('id', id);
+    if (error) throw error;
   },
 };
 
