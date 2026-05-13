@@ -13,6 +13,7 @@ import { LeadDetail } from "@/components/crm-app/LeadDetail";
 import { AddLeadDialog } from "@/components/crm-app/AddLeadDialog";
 import { WebhookPanel } from "@/components/crm-app/WebhookPanel";
 import { CrmDashboard } from "@/components/crm-app/CrmDashboard";
+import { BulkActionsBar } from "@/components/crm-app/BulkActionsBar";
 import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
 import { useOrgClient } from "@/hooks/useClientCrm";
 import { Lead } from "@/lib/crm-app";
@@ -39,6 +40,17 @@ export default function CrmAppPage() {
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  const toggleAll = (checked: boolean) =>
+    setSelectedIds(checked ? new Set(leads.map((l) => l.id)) : new Set());
+  const clearSelection = () => setSelectedIds(new Set());
 
   const handleOrgChange = (id: string) => { setOrgId(id); localStorage.setItem("crm-app:orgId", id); };
   const handlePipelineChange = (id: string | null) => {
@@ -88,11 +100,28 @@ export default function CrmAppPage() {
               {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : <CrmDashboard leads={leads} />}
             </TabsContent>
             <TabsContent value="board" className="mt-4">
-              {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> :
-                <KanbanBoard leads={leads} orgId={orgId} onCardClick={(l) => { setSelected(l); setOpenDetail(true); }} />}
+              {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : (
+                <>
+                  <BulkActionsBar orgId={orgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+                  <KanbanBoard
+                    leads={leads}
+                    orgId={orgId}
+                    onCardClick={(l) => { setSelected(l); setOpenDetail(true); }}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                  />
+                </>
+              )}
             </TabsContent>
             <TabsContent value="list" className="mt-4">
-              <LeadsList leads={leads} onClick={(l) => { setSelected(l); setOpenDetail(true); }} />
+              <BulkActionsBar orgId={orgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+              <LeadsList
+                leads={leads}
+                onClick={(l) => { setSelected(l); setOpenDetail(true); }}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleAll={toggleAll}
+              />
             </TabsContent>
             <TabsContent value="overview" className="mt-4">
               {orgClient ? <EmbedFrame title="Visão Geral" url={`/share/${orgClient.id}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
