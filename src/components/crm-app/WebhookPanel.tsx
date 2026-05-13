@@ -106,6 +106,8 @@ export function WebhookPanel({ orgId }: { orgId: string }) {
           </Button>
         </div>
       </Card>
+
+      <OutboundWebhooksPanel orgId={orgId} />
     </div>
   );
 }
