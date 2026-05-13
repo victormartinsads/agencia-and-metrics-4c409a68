@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
     const { data: tk } = await supabase
       .from("webhook_tokens")
-      .select("organization_id, active")
+      .select("organization_id, active, pipeline_id")
       .eq("token", token)
       .maybeSingle();
     if (!tk || !tk.active) return json({ error: "Token inválido" }, 401);
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     }
     const payload: any = {
       organization_id: tk.organization_id,
+      pipeline_id: tk.pipeline_id || null,
       status: 'new',
       source: body.source || 'webhook',
       name: body.name || body.nome || null,
