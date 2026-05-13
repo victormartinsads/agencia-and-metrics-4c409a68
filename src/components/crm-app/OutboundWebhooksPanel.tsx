@@ -38,10 +38,10 @@ const SAMPLE_PAYLOAD_PREVIEW = `{
   "old_status": "new"
 }`;
 
-export function OutboundWebhooksPanel({ orgId }: { orgId: string }) {
-  const { data: hooks = [] } = useOutboundWebhooks(orgId);
+export function OutboundWebhooksPanel({ orgId, pipelineId = null, pipelineName }: { orgId: string; pipelineId?: string | null; pipelineName?: string }) {
+  const { data: hooks = [] } = useOutboundWebhooks(orgId, pipelineId);
   const { data: events = [], refetch: refetchEvents } = useOutboundEvents(orgId);
-  const upsert = useUpsertOutboundWebhook(orgId);
+  const upsert = useUpsertOutboundWebhook(orgId, pipelineId);
   const del = useDeleteOutboundWebhook(orgId);
 
   const [draft, setDraft] = useState<{ name: string; url: string; events: string[] }>({
@@ -97,9 +97,12 @@ export function OutboundWebhooksPanel({ orgId }: { orgId: string }) {
     <div className="space-y-4">
       <Card className="p-4 space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-2">
-          <Webhook className="h-4 w-4" /> Webhooks de saída (envio para terceiros)
+          <Webhook className="h-4 w-4" /> Webhooks de saída{pipelineName ? ` — ${pipelineName}` : " (organização)"}
         </h2>
         <p className="text-xs text-muted-foreground">
+          {pipelineId
+            ? "Disparados apenas para leads deste pipeline."
+            : "Disparados para leads sem pipeline."}{" "}
           Configure URLs que receberão notificações automáticas quando leads mudarem de status.
           Cada requisição envia POST com JSON e header <code>x-webhook-secret</code>.
         </p>
