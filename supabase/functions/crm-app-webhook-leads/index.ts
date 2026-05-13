@@ -19,26 +19,27 @@ Deno.serve(async (req) => {
 
     const { data: tk } = await supabase
       .from("webhook_tokens")
-      .select("organization_id, active, pipeline_id, field_mapping")
+      .select("id, name, organization_id, active, pipeline_id, field_mapping")
       .eq("token", token)
       .maybeSingle();
     if (!tk || !tk.active) return json({ error: "Token inválido" }, 401);
 
     const rawBody = await req.json().catch(() => ({}));
     // Apply field mapping: { "<incoming key>": "<internal key>" }
-    // Internal key may be a known CRM field (name,email,...) or any custom field key.
+    // Translate raw payload keys to internal CRM keys. Only the mapped/translated
+    // keys end up in `body` to avoid duplicates between source and destination.
     const mapping = (tk.field_mapping || {}) as Record<string, string>;
-    const body: Record<string, any> = { ...rawBody };
-    for (const [from, to] of Object.entries(mapping)) {
-      if (!to) continue;
-      if (rawBody[from] !== undefined && body[to] === undefined) {
-        body[to] = rawBody[from];
-      }
+    const body: Record<string, any> = {};
+    for (const [k, v] of Object.entries(rawBody || {})) {
+      const mapped = mapping[k];
+      const dest = mapped && mapped.trim() ? mapped : k;
+      if (body[dest] === undefined) body[dest] = v;
     }
     const KNOWN_FIELDS = new Set([
       "source","name","nome","email","phone","telefone","company","empresa",
       "message","mensagem","product","instagram","value",
-      "utm_campaign","utm_medium","utm_term","utm_content","fclid","status"
+      "utm_campaign","utm_medium","utm_term","utm_content","utm_source","fclid","status",
+      "custom_fields","raw_data"
     ]);
     const customFields: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body || {})) {
@@ -50,6 +51,14 @@ Deno.serve(async (req) => {
     if (body && typeof body.custom_fields === "object" && body.custom_fields) {
       Object.assign(customFields, body.custom_fields);
     }
+    console.log("[crm-app-webhook-leads]", {
+      token_id: tk.id,
+      token_name: tk.name,
+      pipeline_id: tk.pipeline_id,
+      mapping_keys: Object.keys(mapping).length,
+      raw_keys: Object.keys(rawBody || {}),
+      custom_field_keys: Object.keys(customFields),
+    });
     const payload: any = {
       organization_id: tk.organization_id,
       pipeline_id: tk.pipeline_id || null,
@@ -84,7 +93,12 @@ Deno.serve(async (req) => {
       });
     } catch { /* non-blocking */ }
 
-    return json({ success: true, lead_id: lead.id });
+    return json({
+      success: true,
+      lead_id: lead.id,
+      webhook: { id: tk.id, name: tk.name, pipeline_id: tk.pipeline_id },
+      mapped_custom_fields: Object.keys(customFields),
+    });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Erro" }, 500);
   }
