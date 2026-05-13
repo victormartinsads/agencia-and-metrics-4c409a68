@@ -89,7 +89,13 @@ Deno.serve(async (req) => {
       .eq("organization_id", lead.organization_id)
       .eq("active", true);
 
-    const targets = (hooks || []).filter((h: any) => Array.isArray(h.events) && h.events.includes(event_type));
+    const leadPipelineId = lead.pipeline_id || null;
+    const targets = (hooks || []).filter((h: any) => {
+      if (!Array.isArray(h.events) || !h.events.includes(event_type)) return false;
+      // Dispatch to webhooks matching the lead's pipeline. Org-level webhooks (pipeline_id null) only fire for leads without pipeline.
+      const hookPipeline = h.pipeline_id || null;
+      return hookPipeline === leadPipelineId;
+    });
 
     await Promise.all(targets.map(async (h: any) => {
       let success = false; let status = 0; let resBody = "";
