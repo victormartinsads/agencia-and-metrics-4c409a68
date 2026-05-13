@@ -980,6 +980,30 @@ export type Database = {
           },
         ]
       }
+      lead_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           company: string | null
@@ -1000,6 +1024,7 @@ export type Database = {
           raw_data: Json | null
           source: string | null
           status: string
+          tags: string[]
           updated_at: string
           utm_campaign: string | null
           utm_content: string | null
@@ -1026,6 +1051,7 @@ export type Database = {
           raw_data?: Json | null
           source?: string | null
           status?: string
+          tags?: string[]
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -1052,6 +1078,7 @@ export type Database = {
           raw_data?: Json | null
           source?: string | null
           status?: string
+          tags?: string[]
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
