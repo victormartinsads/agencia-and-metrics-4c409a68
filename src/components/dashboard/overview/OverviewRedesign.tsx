@@ -675,6 +675,9 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       </div>
 
+      {/* Top KPI strip — same look across Visão Geral, Como Estamos e Funis */}
+      <KpiRow items={topKpis} />
+
       {/* Container fluido: cards crescem o suficiente para mostrar todo o conteúdo, alinhados na grid. */}
       <div className="mx-auto w-full">
       <ResponsiveGridLayout
