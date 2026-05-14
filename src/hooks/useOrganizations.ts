@@ -32,10 +32,33 @@ export function useMyOrganizations() {
         .select("organization_id, role, organizations(*)")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (members || []).map((m: any) => ({
-        ...m.organizations,
-        role: m.role,
-      })) as (Organization & { role: OrgMember["role"] })[];
+      const own = (members || [])
+        .filter((m: any) => m.organizations)
+        .map((m: any) => ({ ...m.organizations, role: m.role }));
+
+      // Admin/editor da plataforma: incluir TODAS as orgs vinculadas a clientes
+      const { data: roles } = await sb
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id);
+      const isPlatformStaff = (roles || []).some(
+        (r: any) => r.role === "admin" || r.role === "editor",
+      );
+
+      let merged = own;
+      if (isPlatformStaff) {
+        const { data: clientOrgs } = await sb
+          .from("organizations")
+          .select("*")
+          .not("client_id", "is", null);
+        const ids = new Set(merged.map((o: any) => o.id));
+        for (const o of clientOrgs || []) {
+          if (!ids.has(o.id)) merged.push({ ...o, role: "admin" });
+        }
+      }
+      // Ordena por nome
+      merged.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+      return merged as (Organization & { role: OrgMember["role"] })[];
     },
   });
 

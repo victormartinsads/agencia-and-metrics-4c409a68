@@ -1941,6 +1941,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_client_org: { Args: { _org_id: string }; Returns: boolean }
       is_member_of_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
