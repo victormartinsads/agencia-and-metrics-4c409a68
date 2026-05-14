@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.funnel-chat]
 verify_jwt = false
+
+[functions.sheets-sync-all]
+verify_jwt = false
