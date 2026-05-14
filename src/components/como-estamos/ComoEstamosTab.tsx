@@ -18,6 +18,10 @@ import { getFunnelLabelOrNull } from "@/lib/funnelGrouping";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { SlidersHorizontal } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -82,131 +86,137 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
   }, [podiumCampaignId, campaigns, analysis]);
 
   return (
-    <div className="space-y-6">
-      {/* Controls: Campaign Selector + Toggles */}
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Campaign Selector */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">Campanha</label>
-            <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Todas as campanhas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as campanhas</SelectItem>
-                {campaigns.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} {c.status !== "active" && `(${c.status})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Active-only toggle */}
-          <div className="flex items-center gap-2">
-            <Switch checked={showActiveOnly} onCheckedChange={setShowActiveOnly} id="active-only" />
-            <Label htmlFor="active-only" className="text-xs cursor-pointer">Só ativas</Label>
-          </div>
-
-          {/* AI toggle */}
-          <div className="flex items-center gap-2">
-            <Switch checked={showAIRecommendations} onCheckedChange={setShowAIRecommendations} id="ai-toggle" />
-            <Label htmlFor="ai-toggle" className="text-xs cursor-pointer">IA</Label>
-          </div>
-        </div>
-      </div>
-
-      {/* Health Score + Metric Selector */}
-      <div className="flex flex-wrap items-start gap-4">
-        <HealthScoreCard health={analysis.healthScore} />
-        <MetricSelector selected={visibleMetrics} onChange={setVisibleMetrics} />
-      </div>
-
-      {/* Revenue & ROAS */}
-      <RevenueRoasCard
-        clientId={clientId}
-        totalSpend={analysis.metrics.totalSpend}
-        currentRevenue={clientData?.monthly_revenue || 0}
-        currencySymbol={currencySymbol}
-      />
-
-      {/* Alerts */}
-      {analysis.alerts.length > 0 && (
-        <ComoEstamosAlerts alerts={analysis.alerts} />
-      )}
-
-      {/* KPI Cards */}
-      <KPIOverview metrics={analysis.metrics} variations={analysis.variations} visible={visibleMetrics} currencySymbol={currencySymbol} />
-
-      {/* Campaign Analysis Table */}
-      <CampaignAnalysisTable campaigns={analysis.classified} currencySymbol={currencySymbol} />
-
-      {/* Winning Ad Sets */}
-      <WinningAdSets adSets={analysis.topAdSets} currencySymbol={currencySymbol} />
-
-      {/* Creative Podium with campaign filter */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-card-foreground">🏅 Pódio de Criativos</h3>
-          <Select value={podiumCampaignId} onValueChange={setPodiumCampaignId}>
-            <SelectTrigger className="h-8 text-xs w-[220px]">
-              <SelectValue placeholder="Todas" />
+    <div className="space-y-5">
+      {/* Unified toolbar — período vem do header do dashboard, aqui ficam só filtros do módulo */}
+      <div className="rounded-xl border border-border/60 bg-surface-elevated/50 backdrop-blur p-3 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[220px]">
+          <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Todas as campanhas" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as campanhas</SelectItem>
-              {campaigns.filter(c => c.creatives.length > 0).map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              {campaigns.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name} {c.status !== "active" && `(${c.status})`}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <CreativePodium
-          byCPA={podiumCreatives.topCreativesByCPA}
-          byCTR={podiumCreatives.topCreativesByCTR}
-          byConversions={podiumCreatives.topCreativesByConv}
-          clientId={clientId}
-          currencySymbol={currencySymbol}
-        />
+        <div className="flex items-center gap-2 px-2 border-l border-border/60">
+          <Switch checked={showActiveOnly} onCheckedChange={setShowActiveOnly} id="active-only" />
+          <Label htmlFor="active-only" className="text-xs cursor-pointer whitespace-nowrap">Só ativas</Label>
+        </div>
+        <div className="flex items-center gap-2 px-2 border-l border-border/60">
+          <Switch checked={showAIRecommendations} onCheckedChange={setShowAIRecommendations} id="ai-toggle" />
+          <Label htmlFor="ai-toggle" className="text-xs cursor-pointer">IA</Label>
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Métricas
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[320px] p-3">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+              Métricas visíveis nos KPIs
+            </p>
+            <MetricSelector selected={visibleMetrics} onChange={setVisibleMetrics} />
+          </PopoverContent>
+        </Popover>
       </div>
 
-      {/* Objective Analysis */}
-      <ObjectiveAnalysis groups={analysis.objectiveGroups} currencySymbol={currencySymbol} />
+      {/* Alerts (above health) */}
+      {analysis.alerts.length > 0 && <ComoEstamosAlerts alerts={analysis.alerts} />}
 
-      {/* Editable Funnel */}
-      <EditableFunnel
-        clientId={clientId}
-        campaigns={filteredCampaigns}
-        selectedCampaignId={selectedCampaignId !== "all" ? selectedCampaignId : undefined}
-        currencySymbol={currencySymbol}
-      />
+      {/* Health row — score + receita/roas lado a lado */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1"><HealthScoreCard health={analysis.healthScore} /></div>
+        <div className="lg:col-span-2">
+          <RevenueRoasCard
+            clientId={clientId}
+            totalSpend={analysis.metrics.totalSpend}
+            currentRevenue={clientData?.monthly_revenue || 0}
+            currencySymbol={currencySymbol}
+          />
+        </div>
+      </div>
 
-      {/* Editable AI Insights */}
-      <EditableInsights
-        clientId={clientId}
-        datePreset={datePreset}
-        metrics={analysis.metrics}
-        prevMetrics={analysis.prevMetrics}
-        classified={analysis.classified}
-        alerts={analysis.alerts}
-        showAI={showAIRecommendations}
-      />
+      {/* KPI cards (always visible) */}
+      <KPIOverview metrics={analysis.metrics} variations={analysis.variations} visible={visibleMetrics} currencySymbol={currencySymbol} />
 
-      {/* Weekly Notes */}
-      <WeeklyNotesPanel clientId={clientId} datePreset={datePreset} />
+      {/* Tabs internas — agrupam o resto pra reduzir scroll infinito */}
+      <Tabs defaultValue="performance" className="space-y-4">
+        <TabsList className="bg-card border border-border flex-wrap h-auto">
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="criativos">Criativos</TabsTrigger>
+          <TabsTrigger value="funil">Funil & Notas</TabsTrigger>
+          {showAIRecommendations && <TabsTrigger value="ia">IA</TabsTrigger>}
+        </TabsList>
 
-      {/* AI Final Report */}
-      {showAIRecommendations && (
-        <ComoEstamosAIReport
-          clientId={clientId}
-          metrics={analysis.metrics}
-          prevMetrics={analysis.prevMetrics}
-          classified={analysis.classified}
-          alerts={analysis.alerts}
-          datePreset={datePreset}
-        />
-      )}
+        <TabsContent value="performance" className="space-y-4">
+          <CampaignAnalysisTable campaigns={analysis.classified} currencySymbol={currencySymbol} />
+          <WinningAdSets adSets={analysis.topAdSets} currencySymbol={currencySymbol} />
+        </TabsContent>
+
+        <TabsContent value="criativos" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-card-foreground">🏅 Pódio de Criativos</h3>
+            <Select value={podiumCampaignId} onValueChange={setPodiumCampaignId}>
+              <SelectTrigger className="h-8 text-xs w-[220px]">
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as campanhas</SelectItem>
+                {campaigns.filter(c => c.creatives.length > 0).map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <CreativePodium
+            byCPA={podiumCreatives.topCreativesByCPA}
+            byCTR={podiumCreatives.topCreativesByCTR}
+            byConversions={podiumCreatives.topCreativesByConv}
+            clientId={clientId}
+            currencySymbol={currencySymbol}
+          />
+          <ObjectiveAnalysis groups={analysis.objectiveGroups} currencySymbol={currencySymbol} />
+        </TabsContent>
+
+        <TabsContent value="funil" className="space-y-4">
+          <EditableFunnel
+            clientId={clientId}
+            campaigns={filteredCampaigns}
+            selectedCampaignId={selectedCampaignId !== "all" ? selectedCampaignId : undefined}
+            currencySymbol={currencySymbol}
+          />
+          <WeeklyNotesPanel clientId={clientId} datePreset={datePreset} />
+        </TabsContent>
+
+        {showAIRecommendations && (
+          <TabsContent value="ia" className="space-y-4">
+            <EditableInsights
+              clientId={clientId}
+              datePreset={datePreset}
+              metrics={analysis.metrics}
+              prevMetrics={analysis.prevMetrics}
+              classified={analysis.classified}
+              alerts={analysis.alerts}
+              showAI={showAIRecommendations}
+            />
+            <ComoEstamosAIReport
+              clientId={clientId}
+              metrics={analysis.metrics}
+              prevMetrics={analysis.prevMetrics}
+              classified={analysis.classified}
+              alerts={analysis.alerts}
+              datePreset={datePreset}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

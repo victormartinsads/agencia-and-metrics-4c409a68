@@ -22,6 +22,8 @@ import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 import { MetricSourceEditor } from "./MetricSourceEditor";
 import { TemplatePicker } from "./TemplatePicker";
 import { Button } from "@/components/ui/button";
+import { KpiRow, KpiItem } from "@/components/dashboard/shared/KpiRow";
+import { DollarSign, TrendingUp, ShoppingCart, Users, Target } from "lucide-react";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
@@ -333,6 +335,42 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const hasData = (weekly?.length || 0) > 0;
   const campaigns = metaData?.campaigns || [];
 
+  // Top KPI strip — same look across Visão Geral, Como Estamos and Funis.
+  const topKpis: KpiItem[] = [
+    {
+      label: "Investimento",
+      value: formatCurrency(totalSpend, currencySymbol),
+      delta: prevSpend ? pctDelta(totalSpend, prevSpend) : null,
+      inverse: true,
+      icon: DollarSign,
+    },
+    {
+      label: "Faturamento",
+      value: formatCurrency(curr.revenue, currencySymbol),
+      delta: prev.revenue ? pctDelta(curr.revenue, prev.revenue) : null,
+      icon: TrendingUp,
+      emphasis: true,
+    },
+    {
+      label: "ROAS",
+      value: roas > 0 ? roas.toFixed(2) + "x" : "—",
+      delta: prevRoas ? pctDelta(roas, prevRoas) : null,
+      icon: Target,
+    },
+    {
+      label: "Vendas",
+      value: curr.sales.toLocaleString("pt-BR"),
+      delta: prev.sales ? pctDelta(curr.sales, prev.sales) : null,
+      icon: ShoppingCart,
+    },
+    {
+      label: "Leads",
+      value: leads.toLocaleString("pt-BR"),
+      delta: prev.leads ? pctDelta(leads, prev.leads || prev.mql) : null,
+      icon: Users,
+    },
+  ];
+
   // ============ Block renderers ============
   const visibleOrder = layout.order.filter((id) => layout.blocks[id].visible);
 
@@ -636,6 +674,9 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
           />
         </div>
       </div>
+
+      {/* Top KPI strip — same look across Visão Geral, Como Estamos e Funis */}
+      <KpiRow items={topKpis} />
 
       {/* Container fluido: cards crescem o suficiente para mostrar todo o conteúdo, alinhados na grid. */}
       <div className="mx-auto w-full">
