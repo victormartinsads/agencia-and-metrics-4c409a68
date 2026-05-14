@@ -93,3 +93,31 @@ export function useDeleteSavedDiagnostic() {
     },
   });
 }
+
+export function useUpdateSavedDiagnostic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      client_id: string;
+      title?: string;
+      snapshot?: any;
+    }) => {
+      const patch: any = { updated_at: new Date().toISOString() };
+      if (input.title !== undefined) patch.title = input.title;
+      if (input.snapshot !== undefined) patch.snapshot = input.snapshot;
+      const { data, error } = await supabase
+        .from("saved_diagnostics" as any)
+        .update(patch)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as SavedDiagnostic;
+    },
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: ["saved-diagnostics", d.client_id] });
+      qc.invalidateQueries({ queryKey: ["public-saved-diagnostic"] });
+    },
+  });
+}
