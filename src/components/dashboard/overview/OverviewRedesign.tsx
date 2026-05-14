@@ -22,6 +22,8 @@ import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 import { MetricSourceEditor } from "./MetricSourceEditor";
 import { TemplatePicker } from "./TemplatePicker";
 import { Button } from "@/components/ui/button";
+import { KpiRow, KpiItem } from "@/components/dashboard/shared/KpiRow";
+import { DollarSign, TrendingUp, ShoppingCart, Users, Target } from "lucide-react";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
