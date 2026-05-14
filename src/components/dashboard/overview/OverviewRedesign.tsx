@@ -335,6 +335,42 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const hasData = (weekly?.length || 0) > 0;
   const campaigns = metaData?.campaigns || [];
 
+  // Top KPI strip — same look across Visão Geral, Como Estamos and Funis.
+  const topKpis: KpiItem[] = [
+    {
+      label: "Investimento",
+      value: formatCurrency(totalSpend, currencySymbol),
+      delta: prevSpend ? pctDelta(totalSpend, prevSpend) : null,
+      inverse: true,
+      icon: DollarSign,
+    },
+    {
+      label: "Faturamento",
+      value: formatCurrency(curr.revenue, currencySymbol),
+      delta: prev.revenue ? pctDelta(curr.revenue, prev.revenue) : null,
+      icon: TrendingUp,
+      emphasis: true,
+    },
+    {
+      label: "ROAS",
+      value: roas > 0 ? roas.toFixed(2) + "x" : "—",
+      delta: prevRoas ? pctDelta(roas, prevRoas) : null,
+      icon: Target,
+    },
+    {
+      label: "Vendas",
+      value: curr.sales.toLocaleString("pt-BR"),
+      delta: prev.sales ? pctDelta(curr.sales, prev.sales) : null,
+      icon: ShoppingCart,
+    },
+    {
+      label: "Leads",
+      value: leads.toLocaleString("pt-BR"),
+      delta: prev.leads ? pctDelta(leads, prev.leads || prev.mql) : null,
+      icon: Users,
+    },
+  ];
+
   // ============ Block renderers ============
   const visibleOrder = layout.order.filter((id) => layout.blocks[id].visible);
 
