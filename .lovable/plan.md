@@ -1,107 +1,35 @@
-## Visão Geral do Gestor + edição completa de campanhas
+## 1. Sincronização automática das planilhas (1x/dia)
 
-### 1. Nova rota `/gestor` (visão geral) e renomear atual
+- Habilitar extensões `pg_cron` e `pg_net` no banco.
+- Criar uma edge function `sheets-sync-all` que percorre todos os `dashboard_sheet_config` com `spreadsheet_id` configurado e invoca `sheets-sync-v2` para cada `client_id` (em sequência, com tolerância a falhas individuais).
+- Agendar via `cron.schedule` para rodar 1x por dia (06:00 UTC ≈ 03:00 BRT) chamando essa função via `net.http_post`.
+- Mostrar no painel do cliente o `last_synced_at` e um botão "Sincronizar agora" (já temos o "Atualizar"; vamos garantir o feedback do último sync).
 
-- `/gestor` passa a ser a **Visão Geral** (lista de todos os clientes com alertas).
-- A visão atual (cockpit de 1 cliente) vira `/gestor/:clientId`.
-- Atualizar `App.tsx` e o link no `AppShell`.
+## 2. Painel de configurações por cliente
 
-### 2. Painel Visão Geral (`src/pages/GestorOverview.tsx`)
+Hoje toda configuração mora na lista global `/clients`. Vamos centralizar tudo dentro do dashboard de cada cliente.
 
-Layout: header com filtros (Apenas favoritos / Período / Busca) + grid responsivo de cards, 1 card por cliente.
+- Nova rota `/clients/:clientId/settings` com a página `ClientSettings.tsx` em formato de abas:
+  - **Geral**: nome, slug, moeda, metas (CPA lead/purchase, multiplicador alerta, % alerta orçamento), abas visíveis.
+  - **Meta Ads**: token de acesso, contas de anúncio (até 5), tipos de ação para leads.
+  - **Google**: Google Ads Customer ID, GA4 Property ID, status do OAuth (com botão "conectar/desconectar").
+  - **Planilhas**: embute o conteúdo atual de `ClientSheetsConfig`.
+  - **Webhooks**: embute o conteúdo atual de `ClientWebhooksConfig`.
+  - **Usuários do cliente**: gerencia `client_users` (já existe lógica em `useClientUsers`).
+  - **CRM**: ativar/desativar CRM do cliente (move o switch atual da lista global para cá).
+- Trocar o botão "Configurações" no header de `ClientDashboard` para apontar para `/clients/:clientId/settings` (hoje vai pra lista global `/clients`).
+- A lista `/clients` continua existindo só para criar/excluir clientes e listar; a edição completa passa a ser feita no painel individual.
 
-Cada card mostra:
-- Nome do cliente em CAIXA ALTA + estrela (favoritar via `useToggleAssignment` já existente).
-- Badge de severidade (verde/amarelo/vermelho) calculado a partir de:
-  - Status da BM/conta (`meta-account-status`).
-  - % do budget consumido (vs `budget_alert_threshold_pct` do cliente).
-  - CPA acima do alvo (`target_cpa_lead` × `cpa_alert_multiplier`, idem purchase).
-- KPIs do cliente: Gasto 7d, Conversões, ROAS, CTR, # alertas ativos.
-- Lista compacta dos 3 alertas mais críticos.
-- Botão **"Abrir gestor →"** que navega para `/gestor/:clientId`.
+## 3. CRM dos clientes acessível a todos os membros
 
-Ordenação automática:
-- Favoritos primeiro, depois por nº de alertas críticos desc, depois alfabético.
+Hoje o `OrgSwitcher` lista apenas organizações em que o usuário é membro de fato (`organization_members`). Admin/editor já têm policy de leitura nos leads e orgs vinculados a clientes, mas não aparecem no seletor.
 
-Hook novo `useGestorOverview(clientIds, period)`:
-- Busca em paralelo `meta-ads` (cache 2h já existente) + `meta-account-status` para cada cliente.
-- Calcula severidade do mesmo jeito que `AlertsPanel` (regras já implementadas).
-- Trata "sem token" / "sem dados" como warning leve, não como erro fatal do card.
+- Atualizar `useMyOrganizations` para, quando o usuário for `admin` ou `editor` da plataforma, retornar também todas as organizações com `client_id` preenchido (orgs de clientes), unificadas com as orgs em que ele já é membro.
+- Garantir que admin/editor consigam operar (criar leads, mover etapas, criar pipelines, tags, etc.) nessas orgs — adicionar policies "Platform admins manage" para as tabelas que ainda só têm `is_member_of_org` (`pipelines`, `lead_tags`, `lead_custom_field_defs`, `outbound_webhooks`, `webhook_tokens`, `webhook_integrations` se existir) espelhando a policy já existente em `leads`.
+- Sem mudança em UX para clientes finais (eles continuam vendo só a org do próprio cliente).
 
-### 3. Edição completa de campanhas / adsets / ads
+## Notas técnicas
 
-#### 3.1 Backend — estender `meta-ads-action`
-
-Hoje só suporta `pause`, `activate`, `set_daily_budget`, `set_lifetime_budget`. Adicionar:
-
-- `rename` — `{ name }`
-- `set_bid_strategy` — `{ bid_strategy: "LOWEST_COST_WITHOUT_CAP" | "LOWEST_COST_WITH_BID_CAP" | "COST_CAP" }` + `bid_amount` opcional
-- `set_bid_amount` — `{ value }` (centavos)
-- `set_optimization_goal` — `{ optimization_goal }` (apenas adset)
-- `set_billing_event` — `{ billing_event }` (apenas adset)
-- `set_targeting` — `{ targeting }` (JSON Meta API; passar direto ao Graph)
-- `set_start_end` — `{ start_time?, end_time? }`
-- `update_creative` — somente nível `ad`, `{ creative: { ... } }` ou `{ creative_id }`
-- `set_promoted_object` — adset
-
-Bug do mesmo arquivo: import inválido `from "...supabase-js@2.103.0/cors"`. Trocar por `corsHeaders` literal (mesmo fix que fiz no `paid-media-chat`). Aplicar em `meta-ads-action`, `meta-ads-detail`, `meta-account-status`, `meta-optimization-suggestions`, `campaign-draft-ai`, `meta-campaign-create` se também afetados — verificar.
-
-Validação Zod no body. Sempre limpar `meta_ads_cache` do cliente após mutação.
-
-#### 3.2 Backend — estender `meta-ads-detail`
-
-Adicionar campos retornados:
-- Campaign: `objective`, `bid_strategy`, `buying_type`, `special_ad_categories`, `start_time`, `stop_time`, `budget_remaining`, `lifetime_budget`, `daily_budget`, `spend_cap`.
-- AdSet: `optimization_goal`, `billing_event`, `bid_amount`, `bid_strategy`, `targeting`, `promoted_object`, `start_time`, `end_time`, `attribution_setting`.
-- Ad: `creative{...}`, `effective_status`, `tracking_specs`, `preview_shareable_link`.
-- Insights: TODAS as métricas que a Meta envia (já vem hoje em `insights.data[0]` — expor inteiro no painel "Métricas avançadas").
-
-#### 3.3 Frontend — `CampaignEditPanel` (Sheet à direita)
-
-Substitui o atual `CampaignDrillDown` (refator). Estrutura em abas:
-
-1. **Visão geral** — KPIs principais + funil interno (já existente).
-2. **Editar campanha** — formulário com: nome, status, objetivo (read-only), bid strategy, daily/lifetime budget, spend cap, datas de início/fim. Botão Salvar.
-3. **Conjuntos (AdSets)** — tabela com inline edit por linha; clicar abre drawer secundário com formulário completo (nome, status, optimization_goal, billing_event, bid_amount, datas, budget, **targeting JSON editor** com syntax highlight + preview de público).
-4. **Anúncios (Ads)** — tabela com thumbnail do criativo, status; clicar abre editor com: nome, status, troca de creative (selecionar de criativos existentes da conta via `/act_xxx/adcreatives` ou enviar novo `image_hash` + texto + título + CTA + link).
-5. **Métricas (Meta completas)** — todas as colunas Meta agrupadas (delivery, engagement, video, conversions, cost, attribution). Selector de granularidade (campaign/adset/ad) + breakdown opcional (age, gender, placement, device).
-
-Reutiliza `meta-ads-action` para todas as mutações; cada Save invalida queries.
-
-### 4. Rotas e navegação
-
-- `/gestor` → `GestorOverview`
-- `/gestor/:clientId` → `GestorView` (atual; lê `clientId` da URL em vez de state).
-- Botão "Voltar" no header do `GestorView` para `/gestor`.
-- `AppShell` "Visão do Gestor" aponta para `/gestor`.
-
-### 5. Detalhes técnicos
-
-- Tudo mantém o estilo híbrido Meta + TráfegoIA (gradiente, cards arredondados).
-- Cores semânticas: severidade `--meta-red`/`--meta-orange`/`--meta-green` já existem.
-- Permissões: tela e ações exigem admin/editor (RLS já garante).
-- Cache: respeita `meta_ads_cache` (2h). Após qualquer ação, invalida o cache do cliente afetado.
-- Performance: requests em paralelo no overview com `Promise.all`, esqueletos de loading por card.
-
-### 6. Arquivos afetados
-
-**Criar**
-- `src/pages/GestorOverview.tsx`
-- `src/hooks/useGestorOverview.ts`
-- `src/components/gestor/ClientOverviewCard.tsx`
-- `src/components/gestor/CampaignEditPanel.tsx` (substitui `CampaignDrillDown`)
-- `src/components/gestor/AdSetEditDrawer.tsx`
-- `src/components/gestor/AdEditDrawer.tsx`
-- `src/components/gestor/TargetingEditor.tsx`
-
-**Editar**
-- `src/App.tsx` — adicionar rotas
-- `src/pages/GestorView.tsx` — ler `clientId` da URL, botão voltar, usar novo `CampaignEditPanel`
-- `supabase/functions/meta-ads-action/index.ts` — fix CORS + novas ações + Zod
-- `supabase/functions/meta-ads-detail/index.ts` — fix CORS + mais campos
-- `src/components/layout/AppShell.tsx` — link Gestor → `/gestor`
-
-### 7. Fora do escopo desta entrega
-
-- Criação de creatives novos com upload de imagem (já existe `campaign-draft-ai` para isso; integrar como atalho mas não recriar).
-- Editor visual de público (mantemos editor JSON com validação; visual pode vir depois).
+- Migration única para: habilitar `pg_cron`/`pg_net`, criar o cron job (usando `insert` para os dados sensíveis do projeto), e adicionar policies de admin/editor nas tabelas da seção 3.
+- A edge function `sheets-sync-all` reusa o serviço atual; nenhum schema novo é necessário.
+- O painel de configurações reutiliza componentes/hooks existentes (`VisibleTabsEditor`, `useClientUsers`, `useEnableClientCrm`, conteúdo de `ClientSheetsConfig`/`ClientWebhooksConfig`) para evitar duplicação.
