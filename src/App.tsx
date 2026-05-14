@@ -10,6 +10,7 @@ import Clients from "./pages/Clients.tsx";
 import ClientDashboard from "./pages/ClientDashboard.tsx";
 import ClientSheetsConfig from "./pages/ClientSheetsConfig.tsx";
 import ClientWebhooksConfig from "./pages/ClientWebhooksConfig.tsx";
+import ClientSettings from "./pages/ClientSettings.tsx";
 import SharedDashboard from "./pages/SharedDashboard.tsx";
 import SharedCreatives from "./pages/SharedCreatives.tsx";
 import PodioCreatives from "./pages/PodioCreatives.tsx";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/dashboard/:clientId" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId/sheets" element={<ProtectedRoute><ClientSheetsConfig /></ProtectedRoute>} />
             <Route path="/clients/:clientId/webhooks" element={<ProtectedRoute><ClientWebhooksConfig /></ProtectedRoute>} />
+            <Route path="/clients/:clientId/settings" element={<ProtectedRoute><ClientSettings /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/gestor" element={<ProtectedRoute><GestorOverview /></ProtectedRoute>} />
             <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
