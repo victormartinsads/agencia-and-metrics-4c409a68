@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedDiagnostics, useDeleteSavedDiagnostic, SavedDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 import { SendDiagnosticWhatsAppDialog } from "./SendDiagnosticWhatsAppDialog";
+import { EditSavedDiagnosticDialog } from "./EditSavedDiagnosticDialog";
 
 interface Props {
   clientId: string;
@@ -22,6 +23,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
   const del = useDeleteSavedDiagnostic();
   const [viewing, setViewing] = useState<SavedDiagnostic | null>(null);
   const [sharing, setSharing] = useState<SavedDiagnostic | null>(null);
+  const [editing, setEditing] = useState<SavedDiagnostic | null>(null);
 
   if (isLoading) {
     return (
@@ -68,6 +70,9 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                 <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
                   <Eye className="h-4 w-4" /> Visualizar
                 </Button>
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
+                  <Pencil className="h-4 w-4" /> Editar
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -112,6 +117,14 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           onOpenChange={(v) => !v && setSharing(null)}
           diagnosticUrl={`${window.location.origin}${sharing.slug ? `/como-estamos/${sharing.slug}` : `/diagnostico/${sharing.id}`}`}
           diagnosticTitle={sharing.title}
+        />
+      )}
+
+      {editing && (
+        <EditSavedDiagnosticDialog
+          item={editing}
+          open={!!editing}
+          onOpenChange={(v) => !v && setEditing(null)}
         />
       )}
     </>
