@@ -8,7 +8,7 @@ import {
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [compareEnabled, setCompareEnabled] = useState(false);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
@@ -94,51 +96,66 @@ export default function ClientDashboard() {
     );
   }
 
+  const TABS = [
+    { id: "overview", label: "Visão Geral" },
+    { id: "diagnostico", label: "Como Estamos" },
+    { id: "funnel", label: "Análise de Funis" },
+    { id: "creatives", label: "Criativos" },
+    { id: "branding", label: "Distribuição" },
+    { id: "spreadsheet", label: "Planilha" },
+  ];
+
   const header = (
-    <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <Link
-          to="/"
-          className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center hover:bg-accent transition-colors shrink-0"
-        >
-          <ArrowLeft className="h-4 w-4 text-secondary-foreground" />
-        </Link>
-        <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-          <span className="text-xs font-bold text-primary">
-            {client.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+    <div className="flex flex-col">
+      {/* Mini context bar: client + utility actions */}
+      <div className="flex items-center justify-between gap-3 px-5 pt-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Link
+            to="/"
+            className="h-7 w-7 rounded-md bg-secondary/60 hover:bg-secondary flex items-center justify-center shrink-0"
+            title="Voltar"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 text-secondary-foreground" />
+          </Link>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Cliente</span>
+          <span className="text-[13px] font-bold text-foreground uppercase truncate">{client.name}</span>
+          <span className="text-[11px] text-muted-foreground hidden md:inline">
+            · {client.ad_account_ids.length} conta(s)
           </span>
         </div>
-        <div className="min-w-0">
-          <h1 className="text-lg md:text-xl font-bold text-foreground uppercase truncate">{client.name}</h1>
-          <p className="text-[11px] md:text-xs text-muted-foreground">
-            {client.ad_account_ids.length} conta(s) de anúncio • Dashboard Meta Ads
-          </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshAll}
+            disabled={refreshing}
+            className="gap-1.5 h-8"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Atualizando..." : "Atualizar"}
+          </Button>
+          <Button onClick={handleShare} size="sm" variant="outline" className="gap-1.5 h-8">
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+            {copied ? "Copiado" : "Compartilhar"}
+          </Button>
+          <Link to={`/clients/${clientId}/settings`}>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8">
+              <Settings className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Configurações</span>
+            </Button>
+          </Link>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefreshAll}
-          disabled={refreshing}
-          className="gap-1.5"
-          title="Buscar novamente API, webhook e planilhas"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Atualizando..." : "Atualizar"}
-        </Button>
-        <DateRangePicker value={datePreset} onChange={setDatePreset} />
-        <Button onClick={handleShare} size="sm" className="gap-1.5">
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-          {copied ? "Copiado!" : "Compartilhar"}
-        </Button>
-        <Link to={`/clients/${clientId}/settings`}>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Configurações</span>
-          </Button>
-        </Link>
-      </div>
+
+      <DashboardTopBar
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        datePreset={datePreset}
+        onDatePresetChange={setDatePreset}
+        compareEnabled={compareEnabled}
+        onToggleCompare={() => setCompareEnabled((v) => !v)}
+      />
     </div>
   );
 
@@ -151,6 +168,9 @@ export default function ClientDashboard() {
         metaLoading={metaLoading}
         metaError={metaError as Error | null}
         currencySymbol={client.currency_symbol || "R$"}
+        activeTab={activeTab}
+        onActiveTabChange={setActiveTab}
+        hideTabList
       />
     </AppShell>
   );
