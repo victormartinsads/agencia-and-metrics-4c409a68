@@ -121,6 +121,7 @@ export type Database = {
       clients: {
         Row: {
           ad_account_ids: string[]
+          archived_at: string | null
           budget_alert_threshold_pct: number | null
           cpa_alert_multiplier: number | null
           created_at: string
@@ -129,6 +130,7 @@ export type Database = {
           google_ads_customer_id: string | null
           id: string
           lead_action_types: string[]
+          logo_url: string | null
           meta_access_token: string
           monthly_revenue: number | null
           name: string
@@ -140,6 +142,7 @@ export type Database = {
         }
         Insert: {
           ad_account_ids?: string[]
+          archived_at?: string | null
           budget_alert_threshold_pct?: number | null
           cpa_alert_multiplier?: number | null
           created_at?: string
@@ -148,6 +151,7 @@ export type Database = {
           google_ads_customer_id?: string | null
           id?: string
           lead_action_types?: string[]
+          logo_url?: string | null
           meta_access_token: string
           monthly_revenue?: number | null
           name: string
@@ -159,6 +163,7 @@ export type Database = {
         }
         Update: {
           ad_account_ids?: string[]
+          archived_at?: string | null
           budget_alert_threshold_pct?: number | null
           cpa_alert_multiplier?: number | null
           created_at?: string
@@ -167,6 +172,7 @@ export type Database = {
           google_ads_customer_id?: string | null
           id?: string
           lead_action_types?: string[]
+          logo_url?: string | null
           meta_access_token?: string
           monthly_revenue?: number | null
           name?: string
