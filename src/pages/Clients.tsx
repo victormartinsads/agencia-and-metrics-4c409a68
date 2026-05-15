@@ -327,9 +327,13 @@ export default function ClientsPage() {
                     <Card className="group relative overflow-hidden border-0 bg-surface p-4 transition-all hover:bg-surface-elevated hover:shadow-[0_10px_40px_-16px_hsl(var(--primary)/0.4)]">
                       <div className="flex items-start justify-between gap-2">
                         <Link to={`/dashboard/${c.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-sm font-semibold">
-                            {getInitials(c.name)}
-                          </div>
+                          {c.logo_url ? (
+                            <img src={c.logo_url} alt={c.name} className="h-10 w-10 shrink-0 rounded-md object-cover bg-black border border-border" />
+                          ) : (
+                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-sm font-semibold">
+                              {getInitials(c.name)}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground uppercase">{c.name}</p>
                             <p className="truncate font-mono text-[11px] text-muted-foreground">/{c.slug || c.id.slice(0, 8)}</p>
@@ -433,9 +437,13 @@ export default function ClientsPage() {
                           <button onClick={() => handleToggleFav(c)} className="text-muted-foreground hover:text-warning">
                             <Star className={`h-3.5 w-3.5 ${isFav ? "fill-primary text-primary" : ""}`} />
                           </button>
-                          <div className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-xs font-semibold">
-                            {getInitials(c.name)}
-                          </div>
+                          {c.logo_url ? (
+                            <img src={c.logo_url} alt={c.name} className="h-8 w-8 rounded-md object-cover bg-black border border-border" />
+                          ) : (
+                            <div className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-xs font-semibold">
+                              {getInitials(c.name)}
+                            </div>
+                          )}
                           <div>
                             <Link to={`/dashboard/${c.id}`} className="text-sm font-medium text-foreground uppercase hover:text-primary">
                               {c.name}
