@@ -83,7 +83,10 @@ export function DashboardTopBar({
         </div>
 
         {/* Tabs */}
-        <nav className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
+        <nav
+          className="flex-1 flex items-center gap-1 overflow-x-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
           {tabs.map((t) => {
             const active = t.id === activeTab;
             return (
