@@ -8,14 +8,14 @@ import { InsightsStrip, InsightItem } from "./InsightsStrip";
 import { ChannelsDonut } from "./ChannelsDonut";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
+import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
+import { AgeBarsPanel } from "./AgeBarsPanel";
 import { ProductSalesChart } from "../ProductSalesChart";
 import { LowTicketChart } from "../LowTicketChart";
 import { LeadsChart } from "../LeadsChart";
 import { BestAdsList } from "../BestAdsList";
 import { UtmTrafficTable } from "../UtmTrafficTable";
 import { SheetUtmTable, SheetUtmRow } from "../SheetUtmTable";
-import { EditableOverviewFunnel } from "../EditableOverviewFunnel";
-import { DemographicsBlock } from "../DemographicsBlock";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
@@ -400,39 +400,24 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       {/* Row 2: Funil + Canais Donut + Demografico */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
         <PanelCard title="Funil de Conversão">
-          {clientId ? (
-            <EditableOverviewFunnel
-              clientId={clientId}
-              metrics={{
-                current: {
-                  impressions: metaTotals.impressions,
-                  reach: metaTotals.reach,
-                  clicks: metaTotals.clicks,
-                  landing_page_views: metaTotals.landing_page_views,
-                  add_to_cart: metaTotals.add_to_cart,
-                  initiate_checkout: metaTotals.initiate_checkout,
-                  purchases: metaTotals.purchases || sales,
-                  conversions: metaTotals.lead_actions,
-                  pageviews,
-                  leads,
-                  meetings: curr.smql,
-                  sales,
-                  revenue: curr.revenue,
-                },
-                previous: {
-                  impressions: 0, reach: 0, clicks: 0, pageviews: 0,
-                  leads: prev.leads || prev.mql, meetings: prev.smql,
-                  sales: prev.sales, revenue: prev.revenue, purchases: prev.sales,
-                },
-              }}
-              extraMetricLabels={[
-                { key: "pageviews", label: "Pageviews (GA4)" },
-                { key: "meetings", label: "Reuniões" },
-                { key: "sales", label: "Vendas" },
-                { key: "revenue", label: "Faturamento" },
-              ]}
-            />
-          ) : null}
+          <ConversionFunnelPremium
+            steps={[
+              { name: "Visualização", value: metaTotals.impressions || pageviews },
+              { name: "Clique", value: metaTotals.clicks },
+              { name: "Lead", value: leads },
+              { name: "Venda", value: sales },
+            ]}
+            summary={[
+              {
+                label: "Taxa clique→lead",
+                value: metaTotals.clicks > 0 ? `${((leads / metaTotals.clicks) * 100).toFixed(2)}%` : "—",
+              },
+              {
+                label: "Taxa lead→venda",
+                value: leads > 0 ? `${((sales / leads) * 100).toFixed(1)}%` : "—",
+              },
+            ]}
+          />
         </PanelCard>
 
         <PanelCard title="Canais">
@@ -448,8 +433,8 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           />
         </PanelCard>
 
-        <PanelCard title="Demográfico">
-          <DemographicsBlock clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
+        <PanelCard title="Demográfico — Idade">
+          <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
         </PanelCard>
       </div>
 
