@@ -21,6 +21,7 @@ import { LayoutToolbar } from "./LayoutToolbar";
 import { BlockSettingsDialog, MetricOption } from "./BlockSettingsDialog";
 import { MetricSourceEditor } from "./MetricSourceEditor";
 import { TemplatePicker } from "./TemplatePicker";
+import { DemographicsBlock } from "./DemographicsBlock";
 import { Button } from "@/components/ui/button";
 import { KpiRow, KpiItem } from "@/components/dashboard/shared/KpiRow";
 import { DollarSign, TrendingUp, ShoppingCart, Users, Target } from "lucide-react";
@@ -395,26 +396,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       case "resultados":
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <ProgressMetric
-                label="Investimento Total"
-                value={fmtNum(totalSpend)}
-                delta={pctDelta(totalSpend, prevSpend)}
-                current={totalSpend}
-                goal={monthlyInvestmentBudget}
-                goalLabel={monthlyInvestmentBudget ? fmtNum(monthlyInvestmentBudget) : undefined}
-                tone="warn"
-              />
-              <ProgressMetric
-                label="Faturamento"
-                value={fmtNum(curr.revenue)}
-                delta={pctDelta(curr.revenue, prev.revenue)}
-                current={curr.revenue}
-                goal={monthlyRevenueGoal}
-                goalLabel={monthlyRevenueGoal ? fmtNum(monthlyRevenueGoal) : undefined}
-                tone="primary"
-              />
-            </div>
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </SectionCard>
         );
@@ -591,6 +572,13 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         return (
           <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
             <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />
+          </SectionCard>
+        );
+
+      case "demographics":
+        return (
+          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+            <DemographicsBlock clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           </SectionCard>
         );
 
