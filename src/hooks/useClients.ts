@@ -15,6 +15,8 @@ export interface Client {
   target_cpa_purchase?: number;
   cpa_alert_multiplier?: number;
   budget_alert_threshold_pct?: number;
+  archived_at?: string | null;
+  logo_url?: string | null;
 }
 
 export type ClientInsert = {
@@ -40,14 +42,17 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function useClients() {
+export function useClients(opts?: { includeArchived?: boolean; onlyArchived?: boolean }) {
   return useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", opts?.includeArchived ? "all" : opts?.onlyArchived ? "archived" : "active"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("clients").select("*").order("created_at", { ascending: false });
+      if (opts?.onlyArchived) {
+        q = q.not("archived_at", "is", null);
+      } else if (!opts?.includeArchived) {
+        q = q.is("archived_at", null);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return data as Client[];
     },
@@ -92,6 +97,21 @@ export function useDeleteClient() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("clients").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+  });
+}
+
+/** Soft-archive (move to "Desativados") or unarchive a client. */
+export function useArchiveClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      const { error } = await supabase
+        .from("clients")
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),

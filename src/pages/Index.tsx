@@ -288,7 +288,7 @@ export default function Index() {
         </motion.section>
 
         <p className="mt-12 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-          <Sparkles className="h-3 w-3" /> Insights Hub · Agência AND
+          <Sparkles className="h-3 w-3" /> CENTRAL AND · Agência AND
         </p>
       </div>
     </AppShell>

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Client, useClients, useUpdateClient } from "@/hooks/useClients";
 import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
+import { ClientLogoUploader } from "@/components/clients/ClientLogoUploader";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 
 export default function ClientSettings() {
@@ -23,7 +24,7 @@ export default function ClientSettings() {
   const disableCrm = useDisableClientCrm();
   const org = client ? clientOrgs?.[client.id] : null;
 
-  const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string }>({});
+  const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string; logo_url?: string | null }>({});
 
   useEffect(() => {
     if (client) {
@@ -39,6 +40,7 @@ export default function ClientSettings() {
         budget_alert_threshold_pct: client.budget_alert_threshold_pct ?? 90,
         google_ads_customer_id: (client as any).google_ads_customer_id || "",
         ga_property_id: (client as any).ga_property_id || "",
+        logo_url: client.logo_url ?? null,
       });
     }
   }, [client?.id]);
@@ -78,6 +80,7 @@ export default function ClientSettings() {
         budget_alert_threshold_pct: Number(form.budget_alert_threshold_pct) || 90,
         google_ads_customer_id: form.google_ads_customer_id || null,
         ga_property_id: form.ga_property_id || null,
+        logo_url: form.logo_url ?? null,
       };
       await update.mutateAsync(payload);
       toast.success("Configurações salvas");
@@ -118,6 +121,20 @@ export default function ClientSettings() {
 
           <TabsContent value="general" className="mt-4">
             <Card className="p-6 space-y-4">
+              <div>
+                <Label className="mb-2 block">Foto / logo do cliente</Label>
+                <ClientLogoUploader
+                  clientId={client.id}
+                  clientName={form.name || client.name}
+                  logoUrl={form.logo_url}
+                  onChange={async (url) => {
+                    setForm((f) => ({ ...f, logo_url: url }));
+                    try {
+                      await update.mutateAsync({ id: client.id, logo_url: url } as any);
+                    } catch {}
+                  }}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Nome</Label>
