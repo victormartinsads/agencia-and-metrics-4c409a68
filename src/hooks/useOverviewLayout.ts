@@ -9,7 +9,8 @@ export type OverviewBlockId =
   | "leads"
   | "mql"
   | "best-ads"
-  | "utm-traffic";
+  | "utm-traffic"
+  | "demographics";
 
 export interface BlockConfig {
   id: OverviewBlockId;
@@ -37,7 +38,7 @@ export interface OverviewLayout {
  * Total height target: ~10 rows × 56px ≈ 560px (fits ~720px usable A4 area).
  */
 const DEFAULT_LAYOUT: OverviewLayout = {
-  order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "utm-traffic"],
+  order: ["resultados", "custos", "funil", "lowticket", "leads", "mql", "best-ads", "demographics", "utm-traffic"],
   blocks: {
     resultados:    { id: "resultados",    visible: true, title: "Resultados Gerais", x: 0, y: 0,  w: 8, h: 6 },
     custos:        { id: "custos",        visible: true, title: "Custos", metrics: ["cps", "cpl", "cpc", "cpm"], x: 8, y: 0,  w: 4, h: 6 },
@@ -47,6 +48,7 @@ const DEFAULT_LAYOUT: OverviewLayout = {
     leads:         { id: "leads",         visible: true, title: "Leads", x: 0, y: 12, w: 4, h: 5 },
     mql:           { id: "mql",           visible: true, title: "MQL & sMQL", x: 4, y: 12, w: 4, h: 5 },
     "utm-traffic": { id: "utm-traffic",   visible: true, title: "Fontes (UTMs)", x: 8, y: 12, w: 4, h: 5 },
+    demographics:  { id: "demographics",  visible: true, title: "Demográficos (Meta)", x: 0, y: 17, w: 12, h: 6 },
   },
 };
 
