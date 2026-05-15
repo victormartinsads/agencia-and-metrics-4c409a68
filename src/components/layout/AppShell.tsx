@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { cn } from "@/lib/utils";
+import andLogo from "@/assets/and-logo.png";
 
 interface AppShellProps {
   children: ReactNode;
@@ -143,16 +144,18 @@ export default function AppShell({
           <Link
             to="/"
             className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-sidebar-accent/40 transition-colors"
-            aria-label="Ir para Início"
+            aria-label="Ir para CENTRAL AND"
           >
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] text-primary-foreground neon-glow">
-              <Sparkles className="h-4 w-4" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-black overflow-hidden">
+              <img src={andLogo} alt="AND" className="h-7 w-7 object-contain" />
             </span>
             {open && (
               <div className="flex flex-col leading-tight min-w-0">
-                <span className="text-sm font-semibold tracking-tight truncate">Agência AND</span>
+                <span className="text-sm font-bold tracking-[0.18em] truncate text-primary">
+                  CENTRAL AND
+                </span>
                 <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Insights Hub
+                  Mídia · Criativos · CRM
                 </span>
               </div>
             )}
