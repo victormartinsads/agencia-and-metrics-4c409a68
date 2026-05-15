@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import { OverviewRedesign } from "@/components/dashboard/overview/OverviewRedesign";
+import { OverviewPremium } from "@/components/dashboard/overview/premium/OverviewPremium";
 import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
@@ -100,7 +100,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           </TabsList>
 
           {showTab("overview") && <TabsContent value="overview" className="space-y-6">
-            <OverviewRedesign
+            <OverviewPremium
               clientId={clientId}
               datePreset={datePreset || "last_7d"}
               metaData={metaData}
