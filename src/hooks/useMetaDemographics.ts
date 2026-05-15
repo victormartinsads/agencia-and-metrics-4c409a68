@@ -14,6 +14,7 @@ export interface MetaDemographicsData {
   ageGender: DemographicsRow[];
   region: DemographicsRow[];
   country: DemographicsRow[];
+  platform?: DemographicsRow[];
   fetched_at?: string;
 }
 
