@@ -99,10 +99,11 @@ Deno.serve(async (req) => {
       return all;
     };
 
-    const [ageGenderRows, regionRows, countryRows] = await Promise.all([
+    const [ageGenderRows, regionRows, countryRows, platformRows] = await Promise.all([
       fetchBreakdown("age,gender"),
       fetchBreakdown("region"),
       fetchBreakdown("country"),
+      fetchBreakdown("publisher_platform"),
     ]);
 
     // Custom aggregation for age,gender combined
@@ -123,6 +124,7 @@ Deno.serve(async (req) => {
       ageGender: Array.from(agMap.values()).sort((a, b) => b.spend - a.spend),
       region: aggregate(regionRows, "region").slice(0, 20),
       country: aggregate(countryRows, "country").slice(0, 20),
+      platform: aggregate(platformRows, "publisher_platform"),
       fetched_at: new Date().toISOString(),
     };
 
