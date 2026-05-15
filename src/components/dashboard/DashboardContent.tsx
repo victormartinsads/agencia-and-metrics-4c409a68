@@ -26,9 +26,12 @@ interface Props {
   currencySymbol?: string;
   hideDiagnostico?: boolean;
   visibleTabs?: string[];
+  activeTab?: string;
+  onActiveTabChange?: (id: string) => void;
+  hideTabList?: boolean;
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false }: Props) {
   const showTab = (k: string) => !visibleTabs || visibleTabs.includes(k);
   const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
   const { data: clientInfo } = useQuery({
@@ -89,15 +92,20 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
       )}
 
       {!metaLoading && !metaError && overview && (
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-card border border-border flex-wrap h-auto">
+        <Tabs
+          value={activeTab}
+          defaultValue={activeTab ? undefined : "overview"}
+          onValueChange={onActiveTabChange}
+          className="space-y-6"
+        >
+          {!hideTabList && <TabsList className="bg-card border border-border flex-wrap h-auto">
             {showTab("overview") && <TabsTrigger value="overview">Visão Geral</TabsTrigger>}
             {!hideDiagnostico && showTab("diagnostico") && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
             {showTab("funnel") && <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>}
             {showTab("spreadsheet") && <TabsTrigger value="spreadsheet">Planilha de Métricas</TabsTrigger>}
             {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
             {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
-          </TabsList>
+          </TabsList>}
 
           {showTab("overview") && <TabsContent value="overview" className="space-y-6">
             <OverviewPremium
