@@ -594,9 +594,9 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
-              { l: "Total", v: ltTotal, delta: pctDelta(ltTotal, prevLt), tone: "text-foreground" },
-              { l: "Meta Ads", v: sheetsCurr.low_ticket_meta, delta: pctDelta(sheetsCurr.low_ticket_meta, prev.low_ticket_meta), tone: "text-primary" },
-              { l: "Google Ads", v: sheetsCurr.low_ticket_google, delta: pctDelta(sheetsCurr.low_ticket_google, prev.low_ticket_google), tone: "text-muted-foreground" },
+              { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
+              { l: "Meta Ads", v: lowTicketMetaDisplay, delta: pctDelta(lowTicketMetaDisplay, prevLtMeta), tone: "text-primary" },
+              { l: "Google Ads", v: lowTicketGoogleDisplay, delta: pctDelta(lowTicketGoogleDisplay, prev.low_ticket_google), tone: "text-muted-foreground" },
             ].map((c, i) => (
               <div key={i} className={`px-4 py-3.5 ${i < 2 ? "border-r border-border/60" : ""}`}>
                 <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-1">{c.l}</div>
@@ -612,7 +612,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             ))}
           </div>
           <div className="p-4">
-            <LowTicketChart data={lowTicketData} />
+            <LowTicketChart data={lowTicketDataDisplay} />
           </div>
         </PanelCard>
 
