@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users } from "lucide-react";
 
@@ -6,6 +6,7 @@ import { KpiCardPremium } from "./KpiCardPremium";
 import { PanelCard } from "./PanelCard";
 import { InsightsStrip, InsightItem } from "./InsightsStrip";
 import { ChannelsDonut } from "./ChannelsDonut";
+import { MetricSourceEditor } from "../MetricSourceEditor";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
 import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
@@ -46,6 +47,17 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+
+  useEffect(() => {
+    const openSrc = () => setSourcesOpen(true);
+    window.addEventListener("overview:open-sources", openSrc);
+    window.addEventListener("overview:open-template", openSrc);
+    return () => {
+      window.removeEventListener("overview:open-sources", openSrc);
+      window.removeEventListener("overview:open-template", openSrc);
+    };
+  }, []);
 
   const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
   const salesRange = useMemo(() => ({ from: periods.current.start, to: periods.current.end }), [periods]);
