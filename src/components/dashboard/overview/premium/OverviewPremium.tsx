@@ -51,6 +51,16 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
 
+  const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => (
+    <button
+      onClick={() => setSourcesOpen(true)}
+      className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+      title={title}
+    >
+      <Pencil className="h-3.5 w-3.5" />
+    </button>
+  );
+
   useEffect(() => {
     const openSrc = () => setSourcesOpen(true);
     window.addEventListener("overview:open-sources", openSrc);
@@ -391,7 +401,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
       {/* Row 1: Performance + Custos/Produtos (1.7fr / 1fr) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-3.5">
-        <PanelCard title="Performance do período" noPadding>
+        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />}>
           <div className="grid grid-cols-2 border-b border-border/60">
             <div className="px-5 py-4 border-r border-border/60">
               <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
@@ -415,7 +425,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           </div>
         </PanelCard>
 
-        <PanelCard title="Custos & Produtos" noPadding>
+        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />}>
           <div className="grid grid-cols-2 gap-px bg-border/60">
             {[
               { l: "Custo / Venda", v: cps > 0 ? formatCurrency(cps, currencySymbol) : "—" },
@@ -445,13 +455,16 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         <PanelCard
           title="Funil de Conversão"
           actions={
-            <button
-              onClick={() => setFunnelEdit((v) => !v)}
-              className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              title={funnelEdit ? "Ver funil" : "Editar funil"}
-            >
-              {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-            </button>
+            <>
+              <button
+                onClick={() => setFunnelEdit((v) => !v)}
+                className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title={funnelEdit ? "Ver funil" : "Editar funil"}
+              >
+                {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+              </button>
+              <EditSourceBtn title="Editar fontes do funil" />
+            </>
           }
         >
           {funnelEdit && clientId ? (
@@ -508,7 +521,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           )}
         </PanelCard>
 
-        <PanelCard title="Canais (UTM)">
+        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />}>
           <ChannelsDonut
             rows={channelRows}
             centerValue={
@@ -525,14 +538,14 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           />
         </PanelCard>
 
-        <PanelCard title="Demográfico — Idade">
+        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />}>
           <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
         </PanelCard>
       </div>
 
       {/* Row 3: Low ticket + Top ads + Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <PanelCard title="Low Ticket" noPadding>
+        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
               { l: "Total", v: ltTotal, delta: pctDelta(ltTotal, prevLt), tone: "text-foreground" },
@@ -557,13 +570,13 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           </div>
         </PanelCard>
 
-        <PanelCard title="Melhores Criativos" noPadding>
+        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />}>
           <div className="p-2">
             <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
 
-        <PanelCard title="Leads" noPadding>
+        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />}>
           <div className="p-5 pb-3">
             <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
               Leads Gerados
@@ -598,7 +611,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       </div>
 
       {/* Row 4: UTMs full width */}
-      <PanelCard title="Fontes de tráfego (UTM)" noPadding>
+      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />}>
         <div className="p-4">
           {sheetUtmRows.length > 0
             ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
