@@ -242,6 +242,41 @@ Deno.serve(async (req) => {
     );
     const utmData = await utmRes.json();
 
+    // Age demographics (requires user_age_bracket dim — available in GA4)
+    let ageDemographics: { age: string; gender?: string; sessions: number; users: number }[] = [];
+    try {
+      const ageRes = await fetch(
+        `${GA4_API}/properties/${gaPropertyId}:runReport`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dateRanges: [{ startDate, endDate }],
+            dimensions: [{ name: "userAgeBracket" }, { name: "userGender" }],
+            metrics: [{ name: "sessions" }, { name: "totalUsers" }],
+            orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+            limit: 50,
+          }),
+        },
+      );
+      const ageData = await ageRes.json();
+      if (ageRes.ok) {
+        ageDemographics = (ageData.rows || []).map((row: any) => ({
+          age: row.dimensionValues[0]?.value || "unknown",
+          gender: row.dimensionValues[1]?.value || "unknown",
+          sessions: Number(row.metricValues[0]?.value || 0),
+          users: Number(row.metricValues[1]?.value || 0),
+        }));
+      } else {
+        console.warn("GA4 age demographics error:", ageData);
+      }
+    } catch (e) {
+      console.warn("GA4 age demographics fetch failed:", e);
+    }
+
     // Parse overview
     const overviewRow = reportData.rows?.[0]?.metricValues || [];
     const overview = {
@@ -287,7 +322,7 @@ Deno.serve(async (req) => {
       revenue: Number(row.metricValues[4]?.value || 0),
     }));
 
-    return new Response(JSON.stringify({ overview, daily, sources, utms }), {
+    return new Response(JSON.stringify({ overview, daily, sources, utms, ageDemographics }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
