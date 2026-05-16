@@ -63,7 +63,7 @@ export function AgeBarsPanel({ clientId, datePreset, currencySymbol }: Props) {
         <div className="pt-3 mt-2 border-t border-border/60 flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm bg-primary shrink-0" />
           <span className="text-[10px] text-muted-foreground">
-            Faixa <strong className="text-foreground">{top.age}</strong> é a maior em investimento:{" "}
+            Faixa <strong className="text-foreground">{top.age}</strong> é a maior audiência:{" "}
             <strong className="text-primary">{top.sessions.toLocaleString("pt-BR")} sessões</strong>
           </span>
         </div>
