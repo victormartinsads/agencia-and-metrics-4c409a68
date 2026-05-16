@@ -43,8 +43,11 @@ export function RevenueRoasCard({ clientId, totalSpend, currentRevenue = 0, curr
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <h4 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 space-y-3 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+        <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
+        <h4
+          className="text-[10px] uppercase tracking-[0.1em] font-semibold text-muted-foreground/80 flex items-center gap-2"
+        >
           <DollarSign className="h-4 w-4 text-primary" /> Faturamento & ROAS
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -65,13 +68,19 @@ export function RevenueRoasCard({ clientId, totalSpend, currentRevenue = 0, curr
           </div>
           <div className="text-center">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Investimento</label>
-            <p className="text-lg font-bold text-card-foreground mt-1">
+            <p
+              className="font-display text-[22px] leading-none font-bold tracking-tight text-foreground mt-1"
+              style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+            >
               {currencySymbol} {totalSpend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div className="text-center">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wide">ROAS Geral</label>
-            <p className={`text-2xl font-bold mt-1 flex items-center justify-center gap-1 ${roasColor}`}>
+            <p
+              className={`font-display text-[26px] leading-none font-bold tracking-tight mt-1 flex items-center justify-center gap-1 ${roasColor}`}
+              style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+            >
               <TrendingUp className="h-5 w-5" />
               {roas.toFixed(2)}x
             </p>
