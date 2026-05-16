@@ -27,6 +27,7 @@ import { useMetaDemographics } from "@/hooks/useMetaDemographics";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
+import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
 
 interface Props {
   clientId?: string;
@@ -48,6 +49,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
+  const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
 
@@ -209,6 +211,25 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   );
   const ltTotal = sheetsCurr.low_ticket_meta + sheetsCurr.low_ticket_google;
   const prevLt = prev.low_ticket_meta + prev.low_ticket_google;
+
+  // Fallback: se planilha não trouxer Meta low ticket, usa Vendas (purchases) da Meta API
+  const lowTicketMetaDisplay = sheetsCurr.low_ticket_meta > 0
+    ? sheetsCurr.low_ticket_meta
+    : (metaTotals.purchases || 0);
+  const lowTicketGoogleDisplay = sheetsCurr.low_ticket_google;
+  const ltTotalDisplay = lowTicketMetaDisplay + lowTicketGoogleDisplay;
+  const prevLtMeta = prev.low_ticket_meta || 0;
+
+  // Se chart sheet data está vazio mas temos vendas Meta, sintetiza 1 ponto
+  const lowTicketDataDisplay = useMemo(() => {
+    const hasSheetData = lowTicketData.some((d) => d.meta > 0 || d.google > 0);
+    if (hasSheetData) return lowTicketData;
+    if (lowTicketMetaDisplay > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      return [{ date: today, meta: lowTicketMetaDisplay, google: 0, total: lowTicketMetaDisplay }];
+    }
+    return lowTicketData;
+  }, [lowTicketData, lowTicketMetaDisplay]);
 
   const leadsData = useMemo(
     () =>
@@ -499,26 +520,51 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                 { key: "revenue", label: "Faturamento" },
               ]}
             />
-          ) : (
-            <ConversionFunnelPremium
-            steps={[
-              { name: "Visualização", value: metaTotals.impressions || pageviews },
-              { name: "Clique", value: metaTotals.clicks },
-              { name: "Lead", value: leads },
-              { name: "Venda", value: sales },
-            ]}
-            summary={[
-              {
-                label: "Taxa clique→lead",
-                value: metaTotals.clicks > 0 ? `${((leads / metaTotals.clicks) * 100).toFixed(2)}%` : "—",
-              },
-              {
-                label: "Taxa lead→venda",
-                value: leads > 0 ? `${((sales / leads) * 100).toFixed(1)}%` : "—",
-              },
-            ]}
-          />
-          )}
+          ) : (() => {
+            const metricResolver: Record<string, number> = {
+              impressions: metaTotals.impressions,
+              reach: metaTotals.reach,
+              clicks: metaTotals.clicks,
+              landing_page_views: metaTotals.landing_page_views,
+              messaging_conversations_started: metaTotals.messaging_started,
+              add_to_cart: metaTotals.add_to_cart,
+              initiate_checkout: metaTotals.initiate_checkout,
+              purchases: metaTotals.purchases || sales,
+              conversions: metaTotals.lead_actions,
+              leads,
+              sales,
+              revenue: curr.revenue,
+              pageviews,
+            };
+            const stages = (savedFunnelStages && savedFunnelStages.length > 0)
+              ? savedFunnelStages.map((s) => ({ name: s.name, metric_key: s.metric_key }))
+              : DEFAULT_STAGES.map((s) => ({ name: s.name, metric_key: s.metric_key }));
+            const steps = stages.map((s) => ({
+              name: s.name,
+              value: Number(metricResolver[s.metric_key] ?? 0),
+            }));
+            const firstClickIdx = stages.findIndex((s) => s.metric_key === "clicks");
+            const leadIdx = stages.findIndex((s) => ["leads", "conversions"].includes(s.metric_key));
+            const saleIdx = stages.findIndex((s) => ["purchases", "sales"].includes(s.metric_key));
+            const summary: { label: string; value: string }[] = [];
+            if (firstClickIdx >= 0 && leadIdx > firstClickIdx) {
+              const c = steps[firstClickIdx].value;
+              const l = steps[leadIdx].value;
+              summary.push({
+                label: `Taxa ${stages[firstClickIdx].name.toLowerCase()}→${stages[leadIdx].name.toLowerCase()}`,
+                value: c > 0 ? `${((l / c) * 100).toFixed(2)}%` : "—",
+              });
+            }
+            if (leadIdx >= 0 && saleIdx > leadIdx) {
+              const l = steps[leadIdx].value;
+              const v = steps[saleIdx].value;
+              summary.push({
+                label: `Taxa ${stages[leadIdx].name.toLowerCase()}→${stages[saleIdx].name.toLowerCase()}`,
+                value: l > 0 ? `${((v / l) * 100).toFixed(1)}%` : "—",
+              });
+            }
+            return <ConversionFunnelPremium steps={steps} summary={summary} />;
+          })()}
         </PanelCard>
 
         <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />}>
@@ -548,9 +594,9 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
-              { l: "Total", v: ltTotal, delta: pctDelta(ltTotal, prevLt), tone: "text-foreground" },
-              { l: "Meta Ads", v: sheetsCurr.low_ticket_meta, delta: pctDelta(sheetsCurr.low_ticket_meta, prev.low_ticket_meta), tone: "text-primary" },
-              { l: "Google Ads", v: sheetsCurr.low_ticket_google, delta: pctDelta(sheetsCurr.low_ticket_google, prev.low_ticket_google), tone: "text-muted-foreground" },
+              { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
+              { l: "Meta Ads", v: lowTicketMetaDisplay, delta: pctDelta(lowTicketMetaDisplay, prevLtMeta), tone: "text-primary" },
+              { l: "Google Ads", v: lowTicketGoogleDisplay, delta: pctDelta(lowTicketGoogleDisplay, prev.low_ticket_google), tone: "text-muted-foreground" },
             ].map((c, i) => (
               <div key={i} className={`px-4 py-3.5 ${i < 2 ? "border-r border-border/60" : ""}`}>
                 <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-1">{c.l}</div>
@@ -566,7 +612,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             ))}
           </div>
           <div className="p-4">
-            <LowTicketChart data={lowTicketData} />
+            <LowTicketChart data={lowTicketDataDisplay} />
           </div>
         </PanelCard>
 

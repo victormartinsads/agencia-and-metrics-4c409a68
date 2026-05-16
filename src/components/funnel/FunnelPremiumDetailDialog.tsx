@@ -118,9 +118,11 @@ export function FunnelPremiumDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto bg-background">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent
+        className="!max-w-none !w-screen !h-screen !left-0 !top-0 !translate-x-0 !translate-y-0 !rounded-none p-0 gap-0 border-0 bg-background overflow-hidden flex flex-col"
+      >
+        <DialogHeader className="px-8 py-4 border-b border-border/60 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <span className="text-[10px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border border-primary/40 text-primary">
               {funnelCode}
             </span>
@@ -130,7 +132,7 @@ export function FunnelPremiumDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto px-8 py-6 flex-1 min-h-0">
           {/* KPI Strip — mesmo padrão do print */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCardPremium label="Investimento" value={formatCurrency(totals.spend, currencySymbol)} sub="vs. período anterior" icon={<DollarSign className="h-3 w-3" />} />
