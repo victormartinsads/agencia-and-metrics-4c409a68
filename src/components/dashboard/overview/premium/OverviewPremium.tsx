@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users } from "lucide-react";
 
@@ -6,6 +6,7 @@ import { KpiCardPremium } from "./KpiCardPremium";
 import { PanelCard } from "./PanelCard";
 import { InsightsStrip, InsightItem } from "./InsightsStrip";
 import { ChannelsDonut } from "./ChannelsDonut";
+import { MetricSourceEditor } from "../MetricSourceEditor";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
 import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
@@ -46,6 +47,17 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+
+  useEffect(() => {
+    const openSrc = () => setSourcesOpen(true);
+    window.addEventListener("overview:open-sources", openSrc);
+    window.addEventListener("overview:open-template", openSrc);
+    return () => {
+      window.removeEventListener("overview:open-sources", openSrc);
+      window.removeEventListener("overview:open-template", openSrc);
+    };
+  }, []);
 
   const periods = useMemo(() => getPeriodPair(datePreset), [datePreset]);
   const salesRange = useMemo(() => ({ from: periods.current.start, to: periods.current.end }), [periods]);
@@ -202,6 +214,35 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     }
     return rows;
   }, [inCurr]);
+
+  // Channels rows derived from UTMs (planilha) — fallback to GA4 UTMs
+  const channelRows = useMemo(() => {
+    const map = new Map<string, { revenue: number; sales: number; impressions: number }>();
+    for (const r of sheetUtmRows) {
+      const key = (r.source || "(direct)").toLowerCase();
+      const cur = map.get(key) || { revenue: 0, sales: 0, impressions: 0 };
+      cur.revenue += r.revenue;
+      cur.sales += r.sales;
+      map.set(key, cur);
+    }
+    if (map.size === 0 && ga?.utms?.length) {
+      for (const u of ga.utms as any[]) {
+        const key = (u.source || u.utm_source || "(direct)").toLowerCase();
+        const cur = map.get(key) || { revenue: 0, sales: 0, impressions: 0 };
+        cur.impressions += Number(u.sessions || u.users || u.impressions || 0);
+        map.set(key, cur);
+      }
+    }
+    return Array.from(map.entries()).map(([label, v]) => ({
+      label,
+      // ChannelsDonut sorts by `impressions`; use revenue if present, else session impressions
+      impressions: v.revenue > 0 ? v.revenue : v.impressions,
+      spend: 0,
+      reach: 0,
+      clicks: 0,
+      results: v.sales,
+    }));
+  }, [sheetUtmRows, ga?.utms]);
 
   // Auto-derived insights
   const insights = useMemo<InsightItem[]>(() => {
@@ -420,11 +461,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           />
         </PanelCard>
 
-        <PanelCard title="Canais">
+        <PanelCard title="Canais (UTM)">
           <ChannelsDonut
-            rows={demographics?.platform}
-            centerValue={compactImpr}
-            centerLabel="Impressões"
+            rows={channelRows}
+            centerValue={
+              channelRows.length > 0
+                ? formatCurrency(channelRows.reduce((a, b) => a + b.impressions, 0), currencySymbol)
+                : compactImpr
+            }
+            centerLabel={channelRows.length > 0 ? "Receita UTM" : "Impressões"}
             extraStats={[
               { label: "Frequência", value: freq > 0 ? freq.toFixed(2) : "—" },
               { label: "CTR", value: ctr > 0 ? `${ctr.toFixed(2)}%` : "—", emphasis: true },
@@ -513,6 +558,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
         </div>
       </PanelCard>
+
+      {clientId && (
+        <MetricSourceEditor
+          clientId={clientId}
+          open={sourcesOpen}
+          onOpenChange={setSourcesOpen}
+          metaTotals={metaTotals}
+        />
+      )}
     </div>
   );
 }

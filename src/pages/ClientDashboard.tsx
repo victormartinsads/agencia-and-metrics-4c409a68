@@ -106,57 +106,50 @@ export default function ClientDashboard() {
   ];
 
   const header = (
-    <div className="flex flex-col">
-      {/* Mini context bar: client + utility actions */}
-      <div className="flex items-center justify-between gap-3 px-5 pt-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Link
-            to="/"
-            className="h-7 w-7 rounded-md bg-secondary/60 hover:bg-secondary flex items-center justify-center shrink-0"
-            title="Voltar"
-          >
-            <ArrowLeft className="h-3.5 w-3.5 text-secondary-foreground" />
+    <DashboardTopBar
+      tabs={TABS}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      datePreset={datePreset}
+      onDatePresetChange={setDatePreset}
+      compareEnabled={compareEnabled}
+      onToggleCompare={() => setCompareEnabled((v) => !v)}
+      clientName={client.name}
+      clientLogoUrl={(client as any).logo_url}
+      onSources={() => window.dispatchEvent(new CustomEvent("overview:open-sources"))}
+      onEdit={() => window.dispatchEvent(new CustomEvent("overview:open-sources"))}
+      onTemplate={() => window.dispatchEvent(new CustomEvent("overview:open-template"))}
+      rightExtra={
+        <div className="flex items-center gap-1.5">
+          <Link to="/" title="Voltar">
+            <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-muted-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </Button>
           </Link>
-          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Cliente</span>
-          <span className="text-[13px] font-bold text-foreground uppercase truncate">{client.name}</span>
-          <span className="text-[11px] text-muted-foreground hidden md:inline">
-            · {client.ad_account_ids.length} conta(s)
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={refreshing}
-            className="gap-1.5 h-8"
+            variant="ghost" size="sm"
+            onClick={handleRefreshAll} disabled={refreshing}
+            className="h-7 px-2 gap-1 text-muted-foreground"
+            title="Atualizar"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Atualizando..." : "Atualizar"}
           </Button>
-          <Button onClick={handleShare} size="sm" variant="outline" className="gap-1.5 h-8">
+          <Button
+            variant="ghost" size="sm"
+            onClick={handleShare}
+            className="h-7 px-2 gap-1 text-muted-foreground"
+            title="Compartilhar"
+          >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-            {copied ? "Copiado" : "Compartilhar"}
           </Button>
           <Link to={`/clients/${clientId}/settings`}>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8">
+            <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-muted-foreground" title="Configurações">
               <Settings className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Configurações</span>
             </Button>
           </Link>
         </div>
-      </div>
-
-      <DashboardTopBar
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        datePreset={datePreset}
-        onDatePresetChange={setDatePreset}
-        compareEnabled={compareEnabled}
-        onToggleCompare={() => setCompareEnabled((v) => !v)}
-      />
-    </div>
+      }
+    />
   );
 
   return (
