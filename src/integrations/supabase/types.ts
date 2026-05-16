@@ -825,6 +825,48 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_metric_sources: {
+        Row: {
+          client_id: string
+          created_at: string
+          funnel_code: string
+          id: string
+          meta_action_type: string | null
+          meta_campaign_id: string | null
+          metric_key: string
+          sheet_field: string | null
+          sheet_product_code: string | null
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          funnel_code: string
+          id?: string
+          meta_action_type?: string | null
+          meta_campaign_id?: string | null
+          metric_key: string
+          sheet_field?: string | null
+          sheet_product_code?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          funnel_code?: string
+          id?: string
+          meta_action_type?: string | null
+          meta_campaign_id?: string | null
+          metric_key?: string
+          sheet_field?: string | null
+          sheet_product_code?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_notes: {
         Row: {
           client_id: string
@@ -859,6 +901,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      funnel_period_metrics: {
+        Row: {
+          client_id: string
+          created_at: string
+          funnel_code: string
+          id: string
+          metric_key: string
+          metric_label: string
+          metric_value: number
+          period_end: string
+          period_start: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          funnel_code: string
+          id?: string
+          metric_key: string
+          metric_label: string
+          metric_value?: number
+          period_end: string
+          period_start: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          funnel_code?: string
+          id?: string
+          metric_key?: string
+          metric_label?: string
+          metric_value?: number
+          period_end?: string
+          period_start?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       funnel_stages: {
         Row: {
