@@ -646,6 +646,41 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_custom_labels: {
+        Row: {
+          client_id: string
+          created_at: string
+          funnel_code: string
+          id: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          funnel_code: string
+          id?: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          funnel_code?: string
+          id?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_custom_labels_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_dated_notes: {
         Row: {
           author: string | null
