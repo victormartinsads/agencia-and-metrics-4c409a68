@@ -26,6 +26,8 @@ interface Props {
   extraMetricLabels?: { key: string; label: string }[];
   /** Optional scope key (e.g. "F1", "F2") to persist a separate funnel per group. */
   campaignId?: string | null;
+  /** If true, start in edit mode immediately. */
+  startInEdit?: boolean;
 }
 
 interface StageRow {
@@ -34,11 +36,11 @@ interface StageRow {
   sort_order: number;
 }
 
-export function EditableOverviewFunnel({ clientId, metrics, extraMetricLabels = [], campaignId = null }: Props) {
+export function EditableOverviewFunnel({ clientId, metrics, extraMetricLabels = [], campaignId = null, startInEdit = false }: Props) {
   const { data: savedStages } = useFunnelStages(clientId, campaignId);
   const saveMutation = useSaveFunnelStages();
   const [stages, setStages] = useState<StageRow[]>([]);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startInEdit);
 
   const allMetrics = useMemo(
     () => [...AVAILABLE_METRICS, ...extraMetricLabels.filter(

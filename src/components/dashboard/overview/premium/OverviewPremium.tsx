@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye } from "lucide-react";
 
 import { KpiCardPremium } from "./KpiCardPremium";
 import { PanelCard } from "./PanelCard";
 import { InsightsStrip, InsightItem } from "./InsightsStrip";
 import { ChannelsDonut } from "./ChannelsDonut";
 import { MetricSourceEditor } from "../MetricSourceEditor";
+import { EditableOverviewFunnel } from "../EditableOverviewFunnel";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
 import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
@@ -48,6 +49,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [funnelEdit, setFunnelEdit] = useState(false);
 
   useEffect(() => {
     const openSrc = () => setSourcesOpen(true);
@@ -440,8 +442,52 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
       {/* Row 2: Funil + Canais Donut + Demografico */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <PanelCard title="Funil de Conversão">
-          <ConversionFunnelPremium
+        <PanelCard
+          title="Funil de Conversão"
+          actions={
+            <button
+              onClick={() => setFunnelEdit((v) => !v)}
+              className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              title={funnelEdit ? "Ver funil" : "Editar funil"}
+            >
+              {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            </button>
+          }
+        >
+          {funnelEdit && clientId ? (
+            <EditableOverviewFunnel
+              clientId={clientId}
+              startInEdit
+              metrics={{
+                current: {
+                  impressions: metaTotals.impressions,
+                  reach: metaTotals.reach,
+                  clicks: metaTotals.clicks,
+                  landing_page_views: metaTotals.landing_page_views,
+                  add_to_cart: metaTotals.add_to_cart,
+                  initiate_checkout: metaTotals.initiate_checkout,
+                  purchases: metaTotals.purchases || sales,
+                  conversions: metaTotals.lead_actions,
+                  pageviews,
+                  leads,
+                  sales,
+                  revenue: curr.revenue,
+                },
+                previous: {
+                  leads: prev.leads || prev.mql,
+                  sales: prev.sales,
+                  revenue: prev.revenue,
+                  purchases: prev.sales,
+                },
+              }}
+              extraMetricLabels={[
+                { key: "pageviews", label: "Pageviews (GA4)" },
+                { key: "sales", label: "Vendas" },
+                { key: "revenue", label: "Faturamento" },
+              ]}
+            />
+          ) : (
+            <ConversionFunnelPremium
             steps={[
               { name: "Visualização", value: metaTotals.impressions || pageviews },
               { name: "Clique", value: metaTotals.clicks },
@@ -459,6 +505,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
               },
             ]}
           />
+          )}
         </PanelCard>
 
         <PanelCard title="Canais (UTM)">
