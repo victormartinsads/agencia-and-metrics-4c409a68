@@ -48,6 +48,7 @@ export interface GAData {
   daily: GADaily[];
   sources: GASource[];
   utms?: GAUtm[];
+  ageDemographics?: { age: string; gender?: string; sessions: number; users: number }[];
   needsPropertySelection?: boolean;
   properties?: GAProperty[];
   notConnected?: boolean;
