@@ -132,7 +132,7 @@ export function FunnelPremiumDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto px-8 py-6 h-[calc(100vh-72px)]">
+        <div className="space-y-4 overflow-y-auto px-8 py-6 flex-1 min-h-0">
           {/* KPI Strip — mesmo padrão do print */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCardPremium label="Investimento" value={formatCurrency(totals.spend, currencySymbol)} sub="vs. período anterior" icon={<DollarSign className="h-3 w-3" />} />
