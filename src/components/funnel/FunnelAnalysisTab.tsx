@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Campaign, DailyMetric } from "@/data/mockMetaData";
 import { extractFunnelCode, FUNNEL_DEFINITIONS } from "@/lib/funnelGrouping";
-import { FunnelCard } from "@/components/funnel/FunnelCard";
+import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
+import { FunnelPremiumDetailDialog } from "@/components/funnel/FunnelPremiumDetailDialog";
 import { FunnelChatWidget } from "@/components/funnel/FunnelChatWidget";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export function FunnelAnalysisTab({
 }: Props) {
   const [search, setSearch] = useState("");
   const [openConsolidatedSettings, setOpenConsolidatedSettings] = useState(false);
+  const [detailFunnel, setDetailFunnel] = useState<{ code: string; label: string } | null>(null);
 
   // Consolidated metrics (all campaigns)
   const consolidatedTotals = useMemo(
@@ -109,7 +111,13 @@ export function FunnelAnalysisTab({
     return [...orderedFunnels, ...fallbackFunnels];
   }, [campaigns]);
 
-  const filtered = funnelGroups.filter(
+  // Apenas funis ativos (com gasto > 0)
+  const activeFunnels = useMemo(
+    () => funnelGroups.filter((g) => g.campaigns.some((c) => (c.spend || 0) > 0)),
+    [funnelGroups],
+  );
+
+  const filtered = activeFunnels.filter(
     (g) =>
       !search ||
       g.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -237,31 +245,47 @@ export function FunnelAnalysisTab({
         </div>
       </div>
 
-      {/* Funnel grid */}
+      {/* Funnel previews — mesmo padrão visual da Visão Geral */}
       {filtered.length === 0 ? (
         <Card className="p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            Nenhuma campanha com gasto encontrada para esse período.
+            Nenhum funil ativo com gasto encontrado para esse período.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             Campanhas fora do padrão <code>[F1]_NOME_CAMPANHA</code> agora aparecem como cards avulsos, mas padronizar os nomes melhora o agrupamento.
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="space-y-4">
           {filtered.map((g) => (
-            <FunnelCard
+            <FunnelPreviewCard
               key={g.code}
               clientId={clientId}
               funnelCode={g.code}
               funnelLabel={g.label}
               campaigns={g.campaigns}
               currencySymbol={currencySymbol}
-              datePreset={datePreset}
               readOnly={readOnly}
+              onOpenDetail={() => setDetailFunnel({ code: g.code, label: g.label })}
             />
           ))}
         </div>
+      )}
+
+      {detailFunnel && (
+        <FunnelPremiumDetailDialog
+          open={!!detailFunnel}
+          onClose={() => setDetailFunnel(null)}
+          clientId={clientId}
+          funnelCode={detailFunnel.code}
+          funnelLabel={detailFunnel.label}
+          campaigns={
+            activeFunnels.find((g) => g.code === detailFunnel.code)?.campaigns || []
+          }
+          currencySymbol={currencySymbol}
+          datePreset={datePreset}
+          readOnly={readOnly}
+        />
       )}
 
       {/* Floating AI chat */}
