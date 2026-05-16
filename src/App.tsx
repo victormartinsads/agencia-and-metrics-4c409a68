@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Index from "./pages/Index.tsx";
 import Clients from "./pages/Clients.tsx";
 import ClientDashboard from "./pages/ClientDashboard.tsx";
 import ClientSheetsConfig from "./pages/ClientSheetsConfig.tsx";
@@ -47,7 +46,7 @@ const App = () => (
             <Route path="/visao-cliente/:slug" element={<ClientView />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
             {/* Protected routes */}
-            <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Index /></ClientPortalRouter></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Navigate to="/clients" replace /></ClientPortalRouter></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId/sheets" element={<ProtectedRoute><ClientSheetsConfig /></ProtectedRoute>} />
