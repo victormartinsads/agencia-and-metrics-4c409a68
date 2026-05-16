@@ -564,8 +564,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
               });
             }
             return <ConversionFunnelPremium steps={steps} summary={summary} />;
-          })()
-          )}
+          })()}
         </PanelCard>
 
         <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />}>
