@@ -5,7 +5,6 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { toast } from "sonner";
-import andLogo from "@/assets/and-logo.png";
 
 export interface DashboardTab {
   id: string;
@@ -23,6 +22,9 @@ interface Props {
   onEdit?: () => void;
   onTemplate?: () => void;
   onSources?: () => void;
+  clientName?: string;
+  clientLogoUrl?: string | null;
+  rightExtra?: React.ReactNode;
 }
 
 function fmtPreset(value: string): string {
@@ -56,6 +58,7 @@ export function DashboardTopBar({
   datePreset, onDatePresetChange,
   compareEnabled = false, onToggleCompare,
   onEdit, onTemplate, onSources,
+  clientName, clientLogoUrl, rightExtra,
 }: Props) {
   const [customOpen, setCustomOpen] = useState(false);
 
@@ -69,17 +72,30 @@ export function DashboardTopBar({
     <div className="bg-background border-b border-border/60">
       {/* Row 1 — logo + nav + actions */}
       <div className="h-[68px] flex items-center gap-6 px-5">
-        {/* Logo */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-black overflow-hidden ring-1 ring-primary/30">
-            <img src={andLogo} alt="AND" className="h-7 w-7 object-contain" />
-          </span>
-          <span
-            className="text-[15px] font-extrabold tracking-[0.22em] text-primary"
-            style={{ fontFamily: "'Syne',sans-serif" }}
-          >
-            AND
-          </span>
+        {/* Client identity */}
+        <div className="flex items-center gap-2.5 shrink-0 min-w-0 max-w-[260px]">
+          {clientLogoUrl ? (
+            <img
+              src={clientLogoUrl}
+              alt={clientName || "Cliente"}
+              className="h-9 w-9 rounded-md object-cover bg-black ring-1 ring-primary/30 shrink-0"
+            />
+          ) : (
+            <span className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 ring-1 ring-primary/30 shrink-0">
+              <span className="text-[11px] font-extrabold text-primary tracking-wider">
+                {(clientName || "·").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+              </span>
+            </span>
+          )}
+          {clientName && (
+            <span
+              className="text-[14px] font-extrabold tracking-[0.12em] text-foreground uppercase truncate"
+              style={{ fontFamily: "'Syne',sans-serif" }}
+              title={clientName}
+            >
+              {clientName}
+            </span>
+          )}
         </div>
 
         {/* Tabs */}
@@ -195,7 +211,8 @@ export function DashboardTopBar({
           )}
         </div>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {rightExtra}
           <button
             onClick={() => onToggleCompare?.()}
             className={cn(
