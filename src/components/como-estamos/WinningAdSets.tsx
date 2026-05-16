@@ -14,10 +14,14 @@ export function WinningAdSets({ adSets, currencySymbol = "R$" }: Props) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-      <h3 className="text-lg font-bold text-card-foreground flex items-center gap-2">
+      <h3
+        className="font-display text-lg font-bold tracking-tight text-foreground flex items-center gap-2"
+        style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+      >
         🏆 Conjuntos Vencedores
       </h3>
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card">
+        <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
         <Table>
           <TableHeader>
             <TableRow>

@@ -49,17 +49,21 @@ export function KPIOverview({ metrics, variations, visible, currencySymbol = "R$
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: i * 0.03 }}
-            className="rounded-xl border border-border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+            className="relative overflow-hidden rounded-2xl border border-border/60 bg-card px-5 pt-4 pb-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/30"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground truncate">{config.label}</span>
-              <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                <Icon className="h-3.5 w-3.5 text-accent-foreground" />
-              </div>
+            <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] font-semibold text-muted-foreground/80 mb-2.5">
+              <span className="truncate">{config.label}</span>
+              <Icon className="h-3 w-3 text-primary/70 shrink-0" />
             </div>
-            <div className="text-xl font-bold text-card-foreground">{config.format(value)}</div>
+            <div
+              className="font-display text-[22px] leading-none font-bold tracking-tight text-foreground mb-1"
+              style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+            >
+              {config.format(value)}
+            </div>
             {variation && variation.change !== 0 && (
-              <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${isPositive ? "text-green-400" : "text-red-400"}`}>
+              <div className={`flex items-center gap-1 mt-1 text-[10px] font-bold ${isPositive ? "text-primary" : "text-destructive"}`}>
                 {variation.trend === "up" ? <TrendingUp className="h-3 w-3" /> : variation.trend === "down" ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                 <span>{variation.change > 0 ? "+" : ""}{variation.change.toFixed(1)}%</span>
               </div>

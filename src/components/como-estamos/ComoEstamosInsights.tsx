@@ -66,7 +66,10 @@ Formato: use bullet points com insights claros e acionáveis.`;
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-card-foreground flex items-center gap-2">
+        <h3
+          className="font-display text-lg font-bold tracking-tight text-foreground flex items-center gap-2"
+          style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+        >
           <Brain className="h-5 w-5 text-primary" /> Insights Automáticos
         </h3>
         <Button onClick={generate} disabled={loading} size="sm" className="gap-2">
@@ -75,7 +78,8 @@ Formato: use bullet points com insights claros e acionáveis.`;
         </Button>
       </div>
       {insights && (
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-5">
+          <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
           <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap text-sm text-card-foreground">
             {insights}
           </div>

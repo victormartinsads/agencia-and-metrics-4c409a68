@@ -14,8 +14,9 @@ export function HealthScoreCard({ health }: Props) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="rounded-xl border border-border bg-card p-4 shadow-sm flex items-center gap-4"
+      className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 flex items-center gap-4 transition-all hover:-translate-y-0.5 hover:border-primary/30"
     >
+      <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
       <div className="relative w-20 h-20">
         <svg className="w-20 h-20 -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--border))" strokeWidth="8" />
@@ -30,15 +31,23 @@ export function HealthScoreCard({ health }: Props) {
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-lg font-bold ${health.color}`}>{health.score}</span>
+          <span
+            className={`text-xl font-bold ${health.color}`}
+            style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+          >{health.score}</span>
         </div>
       </div>
       <div>
-        <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-[0.1em] font-semibold text-muted-foreground/80">
           <Activity className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">Score de Saúde</span>
+          <span>Score de Saúde</span>
         </div>
-        <span className={`text-lg font-bold ${health.color}`}>{health.label}</span>
+        <span
+          className={`font-display text-[22px] leading-none font-bold tracking-tight ${health.color}`}
+          style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+        >
+          {health.label}
+        </span>
       </div>
     </motion.div>
   );
