@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Check, X, ArrowRight, DollarSign, TrendingUp, Target, ShoppingCart, Users, Settings2, MousePointerClick, Eye, BarChart3, Percent, Activity } from "lucide-react";
+import { Pencil, Check, X, ArrowRight, DollarSign, TrendingUp, Target, ShoppingCart, Users, Settings2, MousePointerClick, Eye, BarChart3, Percent, Activity, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,10 @@ import { useFunnelLabels, useSaveFunnelLabel } from "@/hooks/useFunnelLabels";
 import {
   useFunnelLeadMapping,
 } from "@/hooks/useFunnelLeadMapping";
+import { useFunnelMetricSources } from "@/hooks/useFunnelMetricSources";
+import { useFunnelPeriodMetrics } from "@/hooks/useFunnelPeriodMetrics";
+import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
+import { MetricSourceMenu } from "@/components/funnel/MetricSourceMenu";
 import { toast } from "sonner";
 
 interface Props {
@@ -23,6 +27,7 @@ interface Props {
   currencySymbol?: string;
   readOnly?: boolean;
   onOpenDetail: () => void;
+  datePreset?: string;
 }
 
 function compact(n: number) {
@@ -32,6 +37,7 @@ function compact(n: number) {
 }
 
 const DEFAULT_KPIS = ["spend", "revenue", "roas", "sales", "leads"];
+const CONFIGURABLE = new Set(["revenue", "sales"]);
 
 export function FunnelPreviewCard({
   clientId,
@@ -41,10 +47,15 @@ export function FunnelPreviewCard({
   currencySymbol = "R$",
   readOnly = false,
   onOpenDetail,
+  datePreset,
 }: Props) {
   const { data: labelMap } = useFunnelLabels(clientId);
   const saveLabel = useSaveFunnelLabel();
   const { data: leadMap } = useFunnelLeadMapping(clientId);
+  const { data: sourceMap } = useFunnelMetricSources(clientId);
+  const { data: periodMetrics } = useFunnelPeriodMetrics(clientId, funnelCode, datePreset);
+  const { data: weeklyMetrics } = useWeeklyMetrics(clientId);
+  const { data: sheetCfg } = useDashboardSheet(clientId);
 
   const leadActionTypes = leadMap?.[funnelCode] || [];
   const totals = aggregateCampaignMetrics(campaigns, { leadActionTypes });
@@ -67,10 +78,33 @@ export function FunnelPreviewCard({
     }
   };
 
+  const revenueSource = sourceMap?.[`${funnelCode}:revenue`];
+  const salesSource = sourceMap?.[`${funnelCode}:sales`];
+
+  const resolveMetric = (
+    metric: "revenue" | "sales",
+    src: typeof revenueSource,
+    autoValue: number,
+  ) => {
+    if (!src || src.source_type === "auto") return autoValue;
+    if (src.source_type === "meta") {
+      const c = campaigns.find((x) => x.id === src.meta_campaign_id);
+      if (!c) return autoValue;
+      return metric === "revenue" ? (c.purchaseValue || 0) : (c.purchases || 0);
+    }
+    if (src.source_type === "sheet" && weeklyMetrics) {
+      const code = src.sheet_product_code;
+      const rows = code ? weeklyMetrics.filter((r) => r.product_code === code) : weeklyMetrics;
+      const field = metric === "revenue" ? "revenue" : "sales";
+      return rows.reduce((s, r) => s + (Number((r as any)[field]) || 0), 0);
+    }
+    return autoValue;
+  };
+
   const spend = totals.spend || 0;
-  const revenue = totals.purchaseValue || 0;
-  const roas = totals.roas || (spend > 0 ? revenue / spend : 0);
-  const sales = totals.purchases || 0;
+  const revenue = resolveMetric("revenue", revenueSource, totals.purchaseValue || 0);
+  const sales = resolveMetric("sales", salesSource, totals.purchases || 0);
+  const roas = spend > 0 ? revenue / spend : 0;
   const leads = totals.leads || totals.conversions || 0;
   const cpv = sales > 0 ? spend / sales : 0;
   const impressions = (totals as any).impressions || 0;
@@ -79,6 +113,12 @@ export function FunnelPreviewCard({
   const cpc = clicks > 0 ? spend / clicks : 0;
   const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
   const cpl = leads > 0 ? spend / leads : 0;
+
+  // Custo por seguidor (apenas F1 / Captação)
+  const followersEntry = periodMetrics?.find((m) => m.metric_key === "followers");
+  const followers = followersEntry?.metric_value || 0;
+  const cps = followers > 0 ? spend / followers : 0;
+  const isCaptacao = funnelCode === "F1";
 
   const KPI_CATALOG: Record<string, { label: string; value: string; sub?: string; icon: JSX.Element; emphasis?: boolean }> = {
     spend:      { label: "Investimento", value: formatCurrency(spend, currencySymbol), sub: "vs. período anterior", icon: <DollarSign className="h-3 w-3" /> },
@@ -93,6 +133,8 @@ export function FunnelPreviewCard({
     cpm:        { label: "CPM", value: formatCurrency(cpm, currencySymbol), icon: <Activity className="h-3 w-3" /> },
     cpa:        { label: "CPA", value: formatCurrency(sales > 0 ? spend / sales : 0, currencySymbol), icon: <Target className="h-3 w-3" /> },
     cpl:        { label: "CPL", value: formatCurrency(cpl, currencySymbol), icon: <Users className="h-3 w-3" /> },
+    followers:  { label: "Seguidores", value: compact(followers), sub: followers > 0 ? "input do Como Estamos" : "sem input no período", icon: <UserPlus className="h-3 w-3" /> },
+    cps:        { label: "Custo / Seguidor", value: cps > 0 ? formatCurrency(cps, currencySymbol) : "—", sub: followers > 0 ? `${compact(followers)} seguidores` : "defina no Como Estamos", icon: <UserPlus className="h-3 w-3" />, emphasis: true },
   };
 
   const storageKey = `funnel-preview-kpis:${clientId}:${funnelCode}`;
@@ -101,11 +143,21 @@ export function FunnelPreviewCard({
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return DEFAULT_KPIS;
+    return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
   });
   useEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(selected)); } catch {}
   }, [storageKey, selected]);
+
+  // Garantir que F1 sempre exiba o custo por seguidor (fixo) mesmo se o user mudar
+  const visibleKeys = useMemo(() => {
+    const base = selected.filter((k) => KPI_CATALOG[k]);
+    if (isCaptacao) {
+      if (!base.includes("cps")) base.unshift("cps");
+      if (!base.includes("followers")) base.unshift("followers");
+    }
+    return base.slice(0, 6);
+  }, [selected, KPI_CATALOG, isCaptacao]);
 
   const toggleKpi = (key: string) => {
     setSelected((prev) => {
@@ -121,8 +173,15 @@ export function FunnelPreviewCard({
     });
   };
 
-  const visible = useMemo(() => selected.filter((k) => KPI_CATALOG[k]), [selected, KPI_CATALOG]);
+  const visible = visibleKeys;
   const gridCols = visible.length >= 5 ? "lg:grid-cols-5" : visible.length === 4 ? "lg:grid-cols-4" : visible.length === 3 ? "lg:grid-cols-3" : visible.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-6";
+
+  // produtos disponíveis na planilha (para a fonte sheet)
+  const sheetProducts = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of weeklyMetrics || []) if (r.product_code) set.add(r.product_code);
+    return Array.from(set);
+  }, [weeklyMetrics]);
 
   return (
     <motion.section
@@ -232,15 +291,27 @@ export function FunnelPreviewCard({
       <div className={`grid grid-cols-2 sm:grid-cols-3 ${gridCols} gap-3 p-4`}>
         {visible.map((key) => {
           const cfg = KPI_CATALOG[key];
+          const sourceConfigurable = !readOnly && CONFIGURABLE.has(key);
           return (
-            <KpiCardPremium
-              key={key}
-              label={cfg.label}
-              value={cfg.value}
-              sub={cfg.sub}
-              emphasis={cfg.emphasis}
-              icon={cfg.icon}
-            />
+            <div key={key} className="relative">
+              <KpiCardPremium
+                label={cfg.label}
+                value={cfg.value}
+                sub={cfg.sub}
+                emphasis={cfg.emphasis}
+                icon={cfg.icon}
+              />
+              {sourceConfigurable && (
+                <MetricSourceMenu
+                  clientId={clientId}
+                  funnelCode={funnelCode}
+                  metricKey={key as "revenue" | "sales"}
+                  current={key === "revenue" ? revenueSource : salesSource}
+                  campaigns={campaigns}
+                  sheetProducts={sheetProducts}
+                />
+              )}
+            </div>
           );
         })}
       </div>

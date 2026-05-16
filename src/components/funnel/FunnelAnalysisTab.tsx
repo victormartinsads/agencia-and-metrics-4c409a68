@@ -112,6 +112,7 @@ export function FunnelAnalysisTab({
               campaigns={g.campaigns}
               currencySymbol={currencySymbol}
               readOnly={readOnly}
+              datePreset={datePreset}
               onOpenDetail={() => setDetailFunnel({ code: g.code, label: g.label })}
             />
           ))}
