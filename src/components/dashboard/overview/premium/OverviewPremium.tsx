@@ -215,6 +215,34 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     return rows;
   }, [inCurr]);
 
+  // Channels rows derived from UTMs (planilha) — fallback to GA4 UTMs
+  const channelRows = useMemo(() => {
+    const map = new Map<string, { revenue: number; sales: number; impressions: number }>();
+    for (const r of sheetUtmRows) {
+      const key = (r.source || "(direct)").toLowerCase();
+      const cur = map.get(key) || { revenue: 0, sales: 0, impressions: 0 };
+      cur.revenue += r.revenue;
+      cur.sales += r.sales;
+      map.set(key, cur);
+    }
+    if (map.size === 0 && ga?.utms?.length) {
+      for (const u of ga.utms as any[]) {
+        const key = (u.source || u.utm_source || "(direct)").toLowerCase();
+        const cur = map.get(key) || { revenue: 0, sales: 0, impressions: 0 };
+        cur.impressions += Number(u.sessions || u.users || u.impressions || 0);
+        map.set(key, cur);
+      }
+    }
+    return Array.from(map.entries()).map(([label, v]) => ({
+      label,
+      // ChannelsDonut sorts by `impressions`; use revenue if present, else session impressions
+      impressions: v.revenue > 0 ? v.revenue : v.impressions,
+      spend: 0,
+      reach: 0,
+      results: v.sales,
+    }));
+  }, [sheetUtmRows, ga?.utms]);
+
   // Auto-derived insights
   const insights = useMemo<InsightItem[]>(() => {
     const out: InsightItem[] = [];
