@@ -63,11 +63,16 @@ export default function CrmAppPage() {
 
   const header = (
     <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3 flex-wrap">
-      <div className="flex-1 min-w-0">
-        <h1 className="text-lg font-bold flex items-center gap-2">
-          <KanbanSquare className="h-5 w-5 text-primary" /> CRM
-        </h1>
-        <p className="text-xs text-muted-foreground">{leads.length} leads</p>
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="h-10 w-10 rounded-xl bg-[image:var(--gradient-hero)] flex items-center justify-center shadow-[var(--shadow-elevated)]">
+          <KanbanSquare className="h-5 w-5 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="font-display text-xl font-extrabold tracking-tight uppercase">
+            <span className="bg-[image:var(--gradient-hero)] bg-clip-text text-transparent">CRM</span>
+          </h1>
+          <p className="text-[11px] text-muted-foreground">{leads.length} leads</p>
+        </div>
       </div>
       <OrgSwitcher value={orgId} onChange={handleOrgChange} />
       {orgId && <PipelineSwitcher orgId={orgId} value={pipelineId} onChange={handlePipelineChange} />}

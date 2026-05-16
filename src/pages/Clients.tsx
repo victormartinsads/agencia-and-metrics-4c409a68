@@ -216,7 +216,9 @@ export default function ClientsPage() {
           className="flex flex-wrap items-end justify-between gap-4"
         >
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Clientes</h1>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground uppercase">
+              <span className="bg-[image:var(--gradient-hero)] bg-clip-text text-transparent">Clientes</span>
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {clients.length} clientes na base · {favoriteIds.size} favoritados
             </p>

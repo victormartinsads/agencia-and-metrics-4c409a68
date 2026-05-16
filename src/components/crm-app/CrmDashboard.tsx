@@ -105,12 +105,13 @@ export function CrmDashboard({ leads }: Props) {
   }, [leads]);
 
   const KPI = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
-    <Card className="p-4">
+    <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60 hover:border-primary/40 transition-all hover:-translate-y-0.5">
+      <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-bold mt-1 tabular-nums">{value}</p>
-          {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+          <p className="font-display text-2xl font-extrabold mt-1 tabular-nums tracking-tight">{value}</p>
+          {sub && <p className="text-[10.5px] text-muted-foreground mt-0.5">{sub}</p>}
         </div>
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
           <Icon className="h-4 w-4 text-primary" />
@@ -141,8 +142,9 @@ export function CrmDashboard({ leads }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-4 lg:col-span-2">
-          <h3 className="text-sm font-semibold mb-3">Leads por dia (30d)</h3>
+        <Card className="relative overflow-hidden p-4 lg:col-span-2 rounded-2xl border-border/60">
+          <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Leads por dia (30d)</h3>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dailyData} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
@@ -156,8 +158,9 @@ export function CrmDashboard({ leads }: Props) {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3">Funil</h3>
+        <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60">
+          <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Funil</h3>
           <div className="space-y-2">
             {funnelData.map((s) => {
               const max = Math.max(...funnelData.map((x) => x.value), 1);
@@ -179,8 +182,9 @@ export function CrmDashboard({ leads }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3">Top fontes</h3>
+        <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60">
+          <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Top fontes</h3>
           {topSources.length === 0 ? (
             <p className="text-xs text-muted-foreground">Sem dados de fonte.</p>
           ) : (
@@ -198,8 +202,9 @@ export function CrmDashboard({ leads }: Props) {
           )}
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3">Top campanhas (UTM)</h3>
+        <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60">
+          <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Top campanhas (UTM)</h3>
           {topCampaigns.length === 0 ? (
             <p className="text-xs text-muted-foreground">Sem dados de campanha.</p>
           ) : (
