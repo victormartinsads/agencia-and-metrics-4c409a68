@@ -239,6 +239,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       impressions: v.revenue > 0 ? v.revenue : v.impressions,
       spend: 0,
       reach: 0,
+      clicks: 0,
       results: v.sales,
     }));
   }, [sheetUtmRows, ga?.utms]);
