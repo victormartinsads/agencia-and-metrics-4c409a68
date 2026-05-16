@@ -182,7 +182,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
             clientId={clientId}
             currencySymbol={currencySymbol}
           />
-          <ObjectiveAnalysis groups={analysis.objectiveGroups} currencySymbol={currencySymbol} />
+          <ObjectiveAnalysis groups={analysis.objectiveGroups} currencySymbol={currencySymbol} campaigns={filteredCampaigns} clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="funil" className="space-y-4">

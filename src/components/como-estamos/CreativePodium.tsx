@@ -104,8 +104,14 @@ export function CreativePodium({ byCPA, byCTR, byConversions, clientId, currency
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-        <h3 className="text-lg font-bold text-card-foreground">🏅 Pódio de Criativos</h3>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <h3
+          className="text-lg font-bold text-card-foreground"
+          style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+        >
+          🏅 Pódio de Criativos
+        </h3>
+        <div className="rounded-2xl border border-border/60 bg-card p-4 relative overflow-hidden">
+          <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
           <Tabs defaultValue="cpa">
             <TabsList className="bg-secondary/50">
               <TabsTrigger value="cpa">Menor CPA</TabsTrigger>
