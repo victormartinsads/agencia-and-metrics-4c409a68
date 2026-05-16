@@ -27,6 +27,7 @@ import { useMetaDemographics } from "@/hooks/useMetaDemographics";
 import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
+import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
 
 interface Props {
   clientId?: string;
@@ -48,6 +49,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
+  const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
 
@@ -209,6 +211,25 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   );
   const ltTotal = sheetsCurr.low_ticket_meta + sheetsCurr.low_ticket_google;
   const prevLt = prev.low_ticket_meta + prev.low_ticket_google;
+
+  // Fallback: se planilha não trouxer Meta low ticket, usa Vendas (purchases) da Meta API
+  const lowTicketMetaDisplay = sheetsCurr.low_ticket_meta > 0
+    ? sheetsCurr.low_ticket_meta
+    : (metaTotals.purchases || 0);
+  const lowTicketGoogleDisplay = sheetsCurr.low_ticket_google;
+  const ltTotalDisplay = lowTicketMetaDisplay + lowTicketGoogleDisplay;
+  const prevLtMeta = prev.low_ticket_meta || 0;
+
+  // Se chart sheet data está vazio mas temos vendas Meta, sintetiza 1 ponto
+  const lowTicketDataDisplay = useMemo(() => {
+    const hasSheetData = lowTicketData.some((d) => d.meta > 0 || d.google > 0);
+    if (hasSheetData) return lowTicketData;
+    if (lowTicketMetaDisplay > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      return [{ date: today, meta: lowTicketMetaDisplay, google: 0, total: lowTicketMetaDisplay }];
+    }
+    return lowTicketData;
+  }, [lowTicketData, lowTicketMetaDisplay]);
 
   const leadsData = useMemo(
     () =>
