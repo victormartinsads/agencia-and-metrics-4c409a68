@@ -18,6 +18,7 @@ import { useFunnelPeriodMetrics } from "@/hooks/useFunnelPeriodMetrics";
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { MetricSourceMenu } from "@/components/funnel/MetricSourceMenu";
 import { toast } from "sonner";
+import { getPeriodPair } from "@/lib/period";
 
 interface Props {
   clientId: string;
@@ -94,7 +95,19 @@ export function FunnelPreviewCard({
     }
     if (src.source_type === "sheet" && weeklyMetrics) {
       const code = src.sheet_product_code;
-      const rows = code ? weeklyMetrics.filter((r) => r.product_code === code) : weeklyMetrics;
+      let rows = code ? weeklyMetrics.filter((r) => r.product_code === code) : weeklyMetrics;
+      // filtra pelo período selecionado no header
+      if (datePreset) {
+        try {
+          const { current } = getPeriodPair(datePreset);
+          const startMs = current.start.getTime();
+          const endMs = current.end.getTime();
+          rows = rows.filter((r) => {
+            const dt = new Date((r as any).reference_date).getTime();
+            return dt >= startMs && dt <= endMs;
+          });
+        } catch {}
+      }
       const field = metric === "revenue" ? "revenue" : "sales";
       return rows.reduce((s, r) => s + (Number((r as any)[field]) || 0), 0);
     }
