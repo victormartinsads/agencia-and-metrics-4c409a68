@@ -460,11 +460,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           />
         </PanelCard>
 
-        <PanelCard title="Canais">
+        <PanelCard title="Canais (UTM)">
           <ChannelsDonut
-            rows={demographics?.platform}
-            centerValue={compactImpr}
-            centerLabel="Impressões"
+            rows={channelRows}
+            centerValue={
+              channelRows.length > 0
+                ? formatCurrency(channelRows.reduce((a, b) => a + b.impressions, 0), currencySymbol)
+                : compactImpr
+            }
+            centerLabel={channelRows.length > 0 ? "Receita UTM" : "Impressões"}
             extraStats={[
               { label: "Frequência", value: freq > 0 ? freq.toFixed(2) : "—" },
               { label: "CTR", value: ctr > 0 ? `${ctr.toFixed(2)}%` : "—", emphasis: true },
@@ -553,6 +557,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
         </div>
       </PanelCard>
+
+      {clientId && (
+        <MetricSourceEditor
+          clientId={clientId}
+          open={sourcesOpen}
+          onOpenChange={setSourcesOpen}
+          metaTotals={metaTotals}
+        />
+      )}
     </div>
   );
 }
