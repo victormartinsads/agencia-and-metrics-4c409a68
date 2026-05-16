@@ -119,7 +119,7 @@ export function FunnelPremiumDetailDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="max-w-none w-screen h-screen sm:rounded-none p-0 gap-0 border-0 bg-background overflow-hidden"
+        className="!max-w-none !w-screen !h-screen !left-0 !top-0 !translate-x-0 !translate-y-0 !rounded-none p-0 gap-0 border-0 bg-background overflow-hidden flex flex-col"
       >
         <DialogHeader className="px-8 py-4 border-b border-border/60 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg">
