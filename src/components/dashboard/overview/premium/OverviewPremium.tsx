@@ -520,25 +520,51 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                 { key: "revenue", label: "Faturamento" },
               ]}
             />
-          ) : (
-            <ConversionFunnelPremium
-            steps={[
-              { name: "Visualização", value: metaTotals.impressions || pageviews },
-              { name: "Clique", value: metaTotals.clicks },
-              { name: "Lead", value: leads },
-              { name: "Venda", value: sales },
-            ]}
-            summary={[
-              {
-                label: "Taxa clique→lead",
-                value: metaTotals.clicks > 0 ? `${((leads / metaTotals.clicks) * 100).toFixed(2)}%` : "—",
-              },
-              {
-                label: "Taxa lead→venda",
-                value: leads > 0 ? `${((sales / leads) * 100).toFixed(1)}%` : "—",
-              },
-            ]}
-          />
+          ) : (() => {
+            const metricResolver: Record<string, number> = {
+              impressions: metaTotals.impressions,
+              reach: metaTotals.reach,
+              clicks: metaTotals.clicks,
+              landing_page_views: metaTotals.landing_page_views,
+              messaging_conversations_started: metaTotals.messaging_started,
+              add_to_cart: metaTotals.add_to_cart,
+              initiate_checkout: metaTotals.initiate_checkout,
+              purchases: metaTotals.purchases || sales,
+              conversions: metaTotals.lead_actions,
+              leads,
+              sales,
+              revenue: curr.revenue,
+              pageviews,
+            };
+            const stages = (savedFunnelStages && savedFunnelStages.length > 0)
+              ? savedFunnelStages.map((s) => ({ name: s.name, metric_key: s.metric_key }))
+              : DEFAULT_STAGES.map((s) => ({ name: s.name, metric_key: s.metric_key }));
+            const steps = stages.map((s) => ({
+              name: s.name,
+              value: Number(metricResolver[s.metric_key] ?? 0),
+            }));
+            const firstClickIdx = stages.findIndex((s) => s.metric_key === "clicks");
+            const leadIdx = stages.findIndex((s) => ["leads", "conversions"].includes(s.metric_key));
+            const saleIdx = stages.findIndex((s) => ["purchases", "sales"].includes(s.metric_key));
+            const summary: { label: string; value: string }[] = [];
+            if (firstClickIdx >= 0 && leadIdx > firstClickIdx) {
+              const c = steps[firstClickIdx].value;
+              const l = steps[leadIdx].value;
+              summary.push({
+                label: `Taxa ${stages[firstClickIdx].name.toLowerCase()}→${stages[leadIdx].name.toLowerCase()}`,
+                value: c > 0 ? `${((l / c) * 100).toFixed(2)}%` : "—",
+              });
+            }
+            if (leadIdx >= 0 && saleIdx > leadIdx) {
+              const l = steps[leadIdx].value;
+              const v = steps[saleIdx].value;
+              summary.push({
+                label: `Taxa ${stages[leadIdx].name.toLowerCase()}→${stages[saleIdx].name.toLowerCase()}`,
+                value: l > 0 ? `${((v / l) * 100).toFixed(1)}%` : "—",
+              });
+            }
+            return <ConversionFunnelPremium steps={steps} summary={summary} />;
+          })()
           )}
         </PanelCard>
 
