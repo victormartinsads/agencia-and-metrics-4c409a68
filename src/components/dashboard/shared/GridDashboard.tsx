@@ -1,0 +1,75 @@
+import { ReactNode, useMemo } from "react";
+import GridLayout, { Layout, WidthProvider } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+import { useDashboardLayout, useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
+
+const RGL = WidthProvider(GridLayout);
+
+export interface DashboardBlock {
+  id: string;
+  /** default w/h/x/y in 12-column grid */
+  defaultLayout?: { w: number; h: number; x?: number; y?: number; minW?: number; minH?: number };
+  node: ReactNode;
+}
+
+interface Props {
+  clientId?: string;
+  dashboardKey: string;
+  editMode: boolean;
+  blocks: DashboardBlock[];
+  rowHeight?: number;
+  cols?: number;
+}
+
+/**
+ * Wrapper around react-grid-layout that persists positions per (client, dashboard)
+ * and locks drag/resize unless `editMode` is true.
+ */
+export function GridDashboard({
+  clientId, dashboardKey, editMode, blocks, rowHeight = 60, cols = 12,
+}: Props) {
+  const { data: saved } = useDashboardLayout(clientId, dashboardKey);
+  const save = useSaveDashboardLayout();
+
+  const layout: Layout[] = useMemo(() => {
+    const byId = new Map<string, Layout>();
+    (saved || []).forEach(l => byId.set(l.i, l));
+    let cursorY = 0;
+    return blocks.map((b, idx) => {
+      const existing = byId.get(b.id);
+      if (existing) return existing;
+      const def = b.defaultLayout || { w: 12, h: 4 };
+      const x = def.x ?? ((idx * (def.w)) % cols);
+      const y = def.y ?? cursorY;
+      cursorY += def.h;
+      return { i: b.id, x, y, w: def.w, h: def.h, minW: def.minW || 2, minH: def.minH || 2 };
+    });
+  }, [saved, blocks, cols]);
+
+  const handleLayoutChange = (newLayout: Layout[]) => {
+    if (!editMode || !clientId) return;
+    save.mutate({ clientId, dashboardKey, layout: newLayout });
+  };
+
+  return (
+    <RGL
+      className={`layout ${editMode ? "is-editing" : ""}`}
+      layout={layout}
+      cols={cols}
+      rowHeight={rowHeight}
+      isDraggable={editMode}
+      isResizable={editMode}
+      onLayoutChange={handleLayoutChange}
+      draggableHandle=".rgl-drag-handle"
+      margin={[16, 16]}
+      containerPadding={[0, 0]}
+    >
+      {blocks.map(b => (
+        <div key={b.id} className="overflow-hidden">
+          {b.node}
+        </div>
+      ))}
+    </RGL>
+  );
+}
