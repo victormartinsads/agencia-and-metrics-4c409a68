@@ -13,6 +13,7 @@ const ALL = [
   { key: "creatives", label: "Pódio de Criativos" },
   { key: "branding", label: "Distribuição" },
   { key: "analytics", label: "Analytics" },
+  { key: "google-ads", label: "Google Ads" },
 ];
 
 export function VisibleTabsEditor({ clientId }: { clientId: string }) {
