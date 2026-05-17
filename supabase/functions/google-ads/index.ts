@@ -175,11 +175,18 @@ Deno.serve(async (req) => {
     }
 
     if (!res.ok || !data) {
-      const msg = data?.error?.message
-        || (raw.includes("login-customer-id") ? "Esta conta exige um manager (login-customer-id). Configure-o nas configurações do cliente."
-        :   raw.includes("DEVELOPER_TOKEN") ? "Developer token inválido ou ainda não aprovado pelo Google Ads."
-        :   raw.slice(0, 300));
-      return new Response(JSON.stringify({ error: "Google Ads API error", status: res.status, message: msg }), {
+      const detailStr = JSON.stringify(data || {});
+      const errMsg = data?.error?.message || raw.slice(0, 300);
+      let friendly = errMsg;
+      if (res.status === 403 || /caller does not have permission|PERMISSION_DENIED/i.test(detailStr)) {
+        friendly = "Sem permissão (403). Causa comum: seu Developer Token está em modo de Teste e só funciona com contas de teste do Google Ads. Solicite acesso 'Basic' em https://ads.google.com/aw/apicenter — depois reconecte o Google neste cliente.";
+      } else if (raw.includes("login-customer-id")) {
+        friendly = "Esta conta exige um manager (login-customer-id). Configure GOOGLE_ADS_LOGIN_CUSTOMER_ID nos secrets.";
+      } else if (/DEVELOPER_TOKEN|developer-token/i.test(detailStr)) {
+        friendly = "Developer token inválido ou não aprovado pelo Google Ads.";
+      }
+      console.error("google-ads non-ok:", res.status, errMsg);
+      return new Response(JSON.stringify({ error: "Google Ads API error", status: res.status, message: friendly, detail: errMsg }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
