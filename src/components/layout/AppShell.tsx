@@ -34,7 +34,6 @@ import { cn } from "@/lib/utils";
 import andLogo from "@/assets/and-logo.png";
 import { useNavigate } from "react-router-dom";
 import {
-  Command as CommandRoot,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
