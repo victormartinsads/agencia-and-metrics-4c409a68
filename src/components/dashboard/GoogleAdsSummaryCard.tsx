@@ -1,7 +1,6 @@
 import { useGoogleAds } from "@/hooks/useGoogleAds";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
-import { SiGoogleads } from "react-icons/si";
 
 interface Props {
   clientId?: string;
