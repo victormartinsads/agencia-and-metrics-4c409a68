@@ -165,6 +165,32 @@ Deno.serve(async (req) => {
     const reportData = await reportRes.json();
     if (!reportRes.ok) {
       console.error("GA4 report error:", reportData);
+      // If user doesn't have access to this property, re-open the picker
+      const code = reportData?.error?.code;
+      const status = reportData?.error?.status;
+      if (reportRes.status === 403 || code === 403 || status === "PERMISSION_DENIED" || code === 404) {
+        const accountsRes = await fetch(
+          "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const accountsData = await accountsRes.json().catch(() => ({}));
+        const properties: { id: string; name: string; account: string }[] = [];
+        for (const account of accountsData.accountSummaries || []) {
+          for (const prop of account.propertySummaries || []) {
+            properties.push({
+              id: prop.property?.replace("properties/", "") || "",
+              name: prop.displayName || "",
+              account: account.displayName || "",
+            });
+          }
+        }
+        return new Response(JSON.stringify({
+          needsPropertySelection: true,
+          properties,
+          scopes: tokenRow.scopes,
+          message: `A conta Google conectada não tem acesso ao Property ID ${gaPropertyId}. Selecione outro abaixo.`,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({ error: "GA4 API error", details: reportData }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
