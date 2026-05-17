@@ -29,8 +29,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useProfile, displayName } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import andLogo from "@/assets/and-logo.png";
+import { useNavigate } from "react-router-dom";
+import {
+  Command as CommandRoot,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { useClients } from "@/hooks/useClients";
+import { useEffect as useEffectReact } from "react";
 
 interface AppShellProps {
   children: ReactNode;
@@ -46,8 +59,8 @@ interface AppShellProps {
 }
 
 const PAGE_LABELS: Record<string, string> = {
-  "": "Início",
-  clients: "Clientes",
+  "": "Home",
+  clients: "Home",
   dashboard: "Dashboard",
   "crm-app": "CRM",
   gestor: "Gestor",
@@ -66,11 +79,26 @@ export default function AppShell({
   const [open, setOpen] = useState(true);
   const { signOut, user } = useAuth();
   const { data: role } = useUserRole();
+  const { data: profile } = useProfile();
+  const { data: clientsList = [] } = useClients();
+  const navigate = useNavigate();
   const location = useLocation();
   const [pwdOpen, setPwdOpen] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [savingPwd, setSavingPwd] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffectReact(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleChangePassword = async () => {
     if (newPwd.length < 6) return toast.error("Senha deve ter ao menos 6 caracteres");
@@ -89,8 +117,7 @@ export default function AppShell({
     {
       label: "Visão geral",
       items: [
-        { id: "dashboard", label: "Início", icon: LayoutDashboard, href: "/" },
-        { id: "manage", label: "Clientes", icon: Users, href: "/clients" },
+        { id: "manage", label: "Home", icon: Users, href: "/clients" },
       ],
     },
     {
@@ -129,6 +156,8 @@ export default function AppShell({
   }).filter(Boolean) as string[];
 
   const userInitial = (user?.email?.[0] || "U").toUpperCase();
+  const userName = displayName(profile, user?.email);
+  const userAvatar = profile?.avatar_url || null;
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden">
@@ -263,8 +292,8 @@ export default function AppShell({
             </svg>
           </button>
           <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm min-w-0 overflow-hidden">
-            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-              Início
+            <Link to="/clients" className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+              Home
             </Link>
             {breadcrumbs.map((label, i) => (
               <span key={i} className="flex items-center gap-2 text-muted-foreground min-w-0">
@@ -278,6 +307,7 @@ export default function AppShell({
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setSearchOpen(true)}
               aria-label="Busca global"
               className="group hidden md:flex h-9 items-center gap-2 rounded-md border border-border/60 bg-surface px-2.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground sm:w-64"
             >
@@ -287,12 +317,22 @@ export default function AppShell({
                 <Command className="h-3 w-3" />K
               </span>
             </button>
-            <div
-              className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] ring-2 ring-background grid place-items-center text-[11px] font-semibold text-primary-foreground"
-              aria-label="Sua conta"
-            >
-              {userInitial}
-            </div>
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName || "Sua conta"}
+                title={userName || undefined}
+                className="h-8 w-8 rounded-full object-cover ring-2 ring-background"
+              />
+            ) : (
+              <div
+                className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] ring-2 ring-background grid place-items-center text-[11px] font-semibold text-primary-foreground"
+                aria-label="Sua conta"
+                title={userName || undefined}
+              >
+                {userInitial}
+              </div>
+            )}
           </div>
         </header>
 
@@ -337,6 +377,46 @@ export default function AppShell({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <CommandInput placeholder="Buscar clientes, páginas…" />
+        <CommandList>
+          <CommandEmpty>Nada encontrado.</CommandEmpty>
+          <CommandGroup heading="Clientes">
+            {clientsList.slice(0, 30).map((c) => (
+              <CommandItem
+                key={c.id}
+                value={`${c.name} ${c.slug}`}
+                onSelect={() => {
+                  setSearchOpen(false);
+                  navigate(`/dashboard/${c.id}`);
+                }}
+              >
+                <Users className="h-3.5 w-3.5 mr-2" />
+                <span className="uppercase">{c.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Navegação">
+            <CommandItem onSelect={() => { setSearchOpen(false); navigate("/clients"); }}>
+              <Users className="h-3.5 w-3.5 mr-2" /> Home (clientes)
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchOpen(false); navigate("/crm-app"); }}>
+              <KanbanSquare className="h-3.5 w-3.5 mr-2" /> CRM
+            </CommandItem>
+            {role?.isAdmin && (
+              <>
+                <CommandItem onSelect={() => { setSearchOpen(false); navigate("/gestor"); }}>
+                  <Brain className="h-3.5 w-3.5 mr-2" /> Gestor
+                </CommandItem>
+                <CommandItem onSelect={() => { setSearchOpen(false); navigate("/settings"); }}>
+                  <SettingsIcon className="h-3.5 w-3.5 mr-2" /> Configurações
+                </CommandItem>
+              </>
+            )}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }
