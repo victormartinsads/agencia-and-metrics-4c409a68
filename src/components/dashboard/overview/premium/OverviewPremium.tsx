@@ -33,6 +33,7 @@ import { MetaAdsData } from "@/hooks/useMetaAds";
 import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
+import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
 
 interface Props {
   clientId?: string;
