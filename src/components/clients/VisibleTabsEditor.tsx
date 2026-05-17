@@ -12,6 +12,7 @@ const ALL = [
   { key: "spreadsheet", label: "Planilha de Métricas" },
   { key: "creatives", label: "Pódio de Criativos" },
   { key: "branding", label: "Distribuição" },
+  { key: "analytics", label: "Analytics" },
 ];
 
 export function VisibleTabsEditor({ clientId }: { clientId: string }) {
