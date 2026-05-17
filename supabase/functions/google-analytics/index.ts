@@ -79,6 +79,13 @@ Deno.serve(async (req) => {
 
     // Get property ID from client or request
     let gaPropertyId = propertyId;
+    // GA4 Data API requires a numeric Property ID (e.g. "123456789"),
+    // not the Measurement ID (e.g. "G-XXXXXXX"). If invalid, force the picker.
+    if (gaPropertyId && !/^\d+$/.test(String(gaPropertyId))) {
+      console.warn(`Invalid GA property ID format: ${gaPropertyId} — forcing property selection`);
+      gaPropertyId = null;
+    }
+
     if (!gaPropertyId) {
       const { data: client } = await supabase
         .from("clients")
