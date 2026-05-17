@@ -21,9 +21,11 @@ async function refreshAccessToken(refreshToken: string) {
       grant_type: "refresh_token",
     }),
   });
-  const data = await res.json();
-  if (!res.ok || !data.access_token) {
-    throw new Error(`Token refresh failed: ${JSON.stringify(data)}`);
+  const raw = await res.text();
+  let data: any = null;
+  try { data = JSON.parse(raw); } catch { /* not JSON */ }
+  if (!res.ok || !data?.access_token) {
+    throw new Error(`Token refresh failed (${res.status}): ${raw.slice(0, 300)}`);
   }
   return data as { access_token: string; expires_in: number };
 }
