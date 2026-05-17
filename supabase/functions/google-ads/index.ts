@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_ADS_API = "https://googleads.googleapis.com/v17";
+const GOOGLE_ADS_API = "https://googleads.googleapis.com/v18";
 
 async function refreshAccessToken(refreshToken: string) {
   const clientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
@@ -127,10 +127,16 @@ Deno.serve(async (req) => {
     const res = await fetch(`${GOOGLE_ADS_API}/customers/${customerId}/googleAds:search`, {
       method: "POST", headers, body: JSON.stringify({ query }),
     });
-    const data = await res.json();
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: "Google Ads API error", details: data }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const raw = await res.text();
+    let data: any = null;
+    try { data = JSON.parse(raw); } catch { /* not JSON */ }
+    if (!res.ok || !data) {
+      const msg = data?.error?.message
+        || (raw.includes("login-customer-id") ? "Esta conta exige um manager (login-customer-id). Configure-o nas configurações do cliente."
+        :   raw.includes("DEVELOPER_TOKEN") ? "Developer token inválido ou ainda não aprovado pelo Google Ads."
+        :   raw.slice(0, 300));
+      return new Response(JSON.stringify({ error: "Google Ads API error", status: res.status, message: msg }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
