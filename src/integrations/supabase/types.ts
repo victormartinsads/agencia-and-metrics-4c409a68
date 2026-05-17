@@ -112,6 +112,60 @@ export type Database = {
           },
         ]
       }
+      client_sheets: {
+        Row: {
+          client_id: string
+          created_at: string
+          field_mapping: Json
+          header_row: number
+          id: string
+          last_sync_error: string | null
+          last_sync_rows: number | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          name: string
+          range_a1: string | null
+          sheet_name: string
+          spreadsheet_id: string
+          spreadsheet_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          field_mapping?: Json
+          header_row?: number
+          id?: string
+          last_sync_error?: string | null
+          last_sync_rows?: number | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name: string
+          range_a1?: string | null
+          sheet_name?: string
+          spreadsheet_id: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          field_mapping?: Json
+          header_row?: number
+          id?: string
+          last_sync_error?: string | null
+          last_sync_rows?: number | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          name?: string
+          range_a1?: string | null
+          sheet_name?: string
+          spreadsheet_id?: string
+          spreadsheet_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_tasks: {
         Row: {
           client_id: string
@@ -529,6 +583,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dashboard_block_layouts: {
+        Row: {
+          client_id: string
+          created_at: string
+          dashboard_key: string
+          id: string
+          layout: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          dashboard_key: string
+          id?: string
+          layout?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          dashboard_key?: string
+          id?: string
+          layout?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dashboard_block_sources: {
+        Row: {
+          block_id: string
+          client_id: string
+          config: Json
+          created_at: string
+          dashboard_key: string
+          id: string
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          block_id: string
+          client_id: string
+          config?: Json
+          created_at?: string
+          dashboard_key: string
+          id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          block_id?: string
+          client_id?: string
+          config?: Json
+          created_at?: string
+          dashboard_key?: string
+          id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       dashboard_sheet_config: {
         Row: {
