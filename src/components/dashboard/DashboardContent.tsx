@@ -14,6 +14,7 @@ import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 import { MetricsSpreadsheet } from "@/components/funnel/MetricsSpreadsheet";
 import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
+import { AnalyticsTab } from "@/components/analytics/AnalyticsTab";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -105,6 +106,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             {showTab("spreadsheet") && <TabsTrigger value="spreadsheet">Planilha de Métricas</TabsTrigger>}
             {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
             {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
+            {showTab("analytics") && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           </TabsList>}
 
           {showTab("overview") && <TabsContent value="overview" className="space-y-6">
@@ -175,6 +177,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           {showTab("branding") && <TabsContent value="branding" className="space-y-6">
             <BrandingPanel data={igData} isLoading={igLoading} error={igError as Error | null} currencySymbol={currencySymbol} />
+          </TabsContent>}
+
+          {showTab("analytics") && <TabsContent value="analytics" className="space-y-6">
+            <AnalyticsTab clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           </TabsContent>}
         </Tabs>
       )}
