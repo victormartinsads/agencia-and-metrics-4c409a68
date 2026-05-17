@@ -103,6 +103,7 @@ export default function ClientDashboard() {
     { id: "creatives", label: "Criativos" },
     { id: "branding", label: "Distribuição" },
     { id: "spreadsheet", label: "Planilha" },
+    { id: "analytics", label: "Analytics" },
   ];
 
   const header = (
