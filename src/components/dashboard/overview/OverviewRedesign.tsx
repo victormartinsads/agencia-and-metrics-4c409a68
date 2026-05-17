@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileSpreadsheet, AlertCircle, Wrench, Sparkles, Database } from "lucide-react";
-// react-grid-layout default export is the basic grid; named exports are inconsistent across builds.
-// Use require-style namespace import to grab Responsive + WidthProvider safely.
-import { Responsive, WidthProvider } from "react-grid-layout/legacy";
+import { Responsive, WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 
 import { SectionCard } from "./SectionCard";

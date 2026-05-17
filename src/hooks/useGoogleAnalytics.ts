@@ -49,6 +49,14 @@ export interface GAData {
   sources: GASource[];
   utms?: GAUtm[];
   ageDemographics?: { age: string; gender?: string; sessions: number; users: number }[];
+  countries?: { country: string; sessions: number; users: number }[];
+  devices?: { device: string; sessions: number; users: number }[];
+  landingPages?: { page: string; sessions: number; bounceRate: number; conversions: number; avgDuration: number }[];
+  events?: { name: string; count: number }[];
+  browsers?: { browser: string; sessions: number }[];
+  newVsReturning?: { type: string; users: number }[];
+  campaigns?: { campaign: string; sessions: number }[];
+  engagementBuckets?: { bucket: string; sessions: number }[];
   needsPropertySelection?: boolean;
   properties?: GAProperty[];
   notConnected?: boolean;

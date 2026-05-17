@@ -242,40 +242,80 @@ Deno.serve(async (req) => {
     );
     const utmData = await utmRes.json();
 
-    // Age demographics (requires user_age_bracket dim — available in GA4)
-    let ageDemographics: { age: string; gender?: string; sessions: number; users: number }[] = [];
-    try {
-      const ageRes = await fetch(
-        `${GA4_API}/properties/${gaPropertyId}:runReport`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            dateRanges: [{ startDate, endDate }],
-            dimensions: [{ name: "userAgeBracket" }, { name: "userGender" }],
-            metrics: [{ name: "sessions" }, { name: "totalUsers" }],
-            orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-            limit: 50,
-          }),
-        },
-      );
-      const ageData = await ageRes.json();
-      if (ageRes.ok) {
-        ageDemographics = (ageData.rows || []).map((row: any) => ({
-          age: row.dimensionValues[0]?.value || "unknown",
-          gender: row.dimensionValues[1]?.value || "unknown",
-          sessions: Number(row.metricValues[0]?.value || 0),
-          users: Number(row.metricValues[1]?.value || 0),
-        }));
-      } else {
-        console.warn("GA4 age demographics error:", ageData);
+    // Helper: run a GA4 report and return parsed rows
+    const runReport = async (body: any) => {
+      const r = await fetch(`${GA4_API}/properties/${gaPropertyId}:runReport`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        console.warn("GA4 report failed:", JSON.stringify(j).slice(0, 300));
+        return null;
       }
-    } catch (e) {
-      console.warn("GA4 age demographics fetch failed:", e);
-    }
+      return j;
+    };
+
+    // Run all additional reports in parallel
+    const [
+      ageData, countryData, deviceData, landingData, eventsData,
+      browserData, durationData, newVsRetData, campaignData,
+    ] = await Promise.all([
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "userAgeBracket" }, { name: "userGender" }], metrics: [{ name: "sessions" }, { name: "totalUsers" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 50 }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "country" }], metrics: [{ name: "sessions" }, { name: "totalUsers" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 10 }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "sessions" }, { name: "totalUsers" }] }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "landingPage" }], metrics: [{ name: "sessions" }, { name: "bounceRate" }, { name: "conversions" }, { name: "averageSessionDuration" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 15 }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "eventName" }], metrics: [{ name: "eventCount" }], orderBys: [{ metric: { metricName: "eventCount" }, desc: true }], limit: 20 }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "browser" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 8 }),
+      runReport({ dateRanges: [{ startDate, endDate }], metrics: [{ name: "sessions" }], dimensions: [{ name: "averageSessionDuration" }] }).catch(() => null),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "newVsReturning" }], metrics: [{ name: "totalUsers" }] }),
+      runReport({ dateRanges: [{ startDate, endDate }], dimensions: [{ name: "sessionCampaignName" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 10 }),
+    ]);
+
+    const ageDemographics = (ageData?.rows || []).map((row: any) => ({
+      age: row.dimensionValues[0]?.value || "unknown",
+      gender: row.dimensionValues[1]?.value || "unknown",
+      sessions: Number(row.metricValues[0]?.value || 0),
+      users: Number(row.metricValues[1]?.value || 0),
+    }));
+    const countries = (countryData?.rows || []).map((r: any) => ({
+      country: r.dimensionValues[0]?.value || "(unknown)",
+      sessions: Number(r.metricValues[0]?.value || 0),
+      users: Number(r.metricValues[1]?.value || 0),
+    }));
+    const devices = (deviceData?.rows || []).map((r: any) => ({
+      device: r.dimensionValues[0]?.value || "unknown",
+      sessions: Number(r.metricValues[0]?.value || 0),
+      users: Number(r.metricValues[1]?.value || 0),
+    }));
+    const landingPages = (landingData?.rows || []).map((r: any) => ({
+      page: r.dimensionValues[0]?.value || "/",
+      sessions: Number(r.metricValues[0]?.value || 0),
+      bounceRate: Number(Number(r.metricValues[1]?.value || 0).toFixed(2)),
+      conversions: Number(r.metricValues[2]?.value || 0),
+      avgDuration: Number(Number(r.metricValues[3]?.value || 0).toFixed(1)),
+    }));
+    const events = (eventsData?.rows || []).map((r: any) => ({
+      name: r.dimensionValues[0]?.value || "(unknown)",
+      count: Number(r.metricValues[0]?.value || 0),
+    }));
+    const browsers = (browserData?.rows || []).map((r: any) => ({
+      browser: r.dimensionValues[0]?.value || "(unknown)",
+      sessions: Number(r.metricValues[0]?.value || 0),
+    }));
+    const newVsReturning = (newVsRetData?.rows || []).map((r: any) => ({
+      type: r.dimensionValues[0]?.value || "unknown",
+      users: Number(r.metricValues[0]?.value || 0),
+    }));
+    const campaigns = (campaignData?.rows || []).map((r: any) => ({
+      campaign: r.dimensionValues[0]?.value || "(not set)",
+      sessions: Number(r.metricValues[0]?.value || 0),
+    }));
+
+    // Engagement buckets derived from sessions × avg session duration is non-trivial without raw data.
+    // We approximate using % from utms aggregated avg engagement — leave empty for now.
+    const engagementBuckets: { bucket: string; sessions: number }[] = [];
 
     // Parse overview
     const overviewRow = reportData.rows?.[0]?.metricValues || [];
@@ -322,7 +362,11 @@ Deno.serve(async (req) => {
       revenue: Number(row.metricValues[4]?.value || 0),
     }));
 
-    return new Response(JSON.stringify({ overview, daily, sources, utms, ageDemographics }), {
+    return new Response(JSON.stringify({
+      overview, daily, sources, utms, ageDemographics,
+      countries, devices, landingPages, events, browsers, newVsReturning, campaigns,
+      engagementBuckets,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
