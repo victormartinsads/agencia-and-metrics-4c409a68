@@ -490,8 +490,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       <InsightsStrip items={insights} />
 
       {/* Row 1: Performance + Custos/Produtos (1.7fr / 1fr) */}
+      {(isVisible("performance") || isVisible("custos")) && (
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-3.5">
-        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />}>
+        {isVisible("performance") && (
+        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />} panelId="performance" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 border-b border-border/60">
             <div className="px-5 py-4 border-r border-border/60">
               <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
@@ -514,8 +516,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />}>
+        {isVisible("custos") && (
+        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />} panelId="custos" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 gap-px bg-border/60">
             {[
               { l: "Custo / Venda", v: cps > 0 ? formatCurrency(cps, currencySymbol) : "—" },
@@ -538,12 +542,19 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <ProductSalesChart data={productData} />
           </div>
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 2: Funil + Canais Donut + Demografico */}
+      {(isVisible("funil") || isVisible("canais") || isVisible("demografico")) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+        {isVisible("funil") && (
         <PanelCard
           title="Funil de Conversão"
+          panelId="funil"
+          editMode={editMode}
+          onHide={hidePanel}
           actions={
             <>
               <button
@@ -635,8 +646,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             return <ConversionFunnelPremium steps={steps} summary={summary} />;
           })()}
         </PanelCard>
+        )}
 
-        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />}>
+        {isVisible("canais") && (
+        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />} panelId="canais" editMode={editMode} onHide={hidePanel}>
           <ChannelsDonut
             rows={channelRows}
             centerValue={
@@ -652,15 +665,21 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             ]}
           />
         </PanelCard>
+        )}
 
-        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />}>
+        {isVisible("demografico") && (
+        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />} panelId="demografico" editMode={editMode} onHide={hidePanel}>
           <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 3: Low ticket + Top ads + Leads */}
+      {(isVisible("lowticket") || isVisible("bestads") || isVisible("leads")) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />}>
+        {isVisible("lowticket") && (
+        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />} panelId="lowticket" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
               { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
@@ -684,14 +703,18 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <LowTicketChart data={lowTicketDataDisplay} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />}>
+        {isVisible("bestads") && (
+        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />} panelId="bestads" editMode={editMode} onHide={hidePanel}>
           <div className="p-2">
             <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />}>
+        {isVisible("leads") && (
+        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />} panelId="leads" editMode={editMode} onHide={hidePanel}>
           <div className="p-5 pb-3">
             <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
               Leads Gerados
@@ -723,16 +746,20 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             </div>
           </div>
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 4: UTMs full width */}
-      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />}>
+      {isVisible("utms") && (
+      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />} panelId="utms" editMode={editMode} onHide={hidePanel}>
         <div className="p-4">
           {sheetUtmRows.length > 0
             ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
             : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
         </div>
       </PanelCard>
+      )}
 
       {clientId && (
         <MetricSourceEditor
