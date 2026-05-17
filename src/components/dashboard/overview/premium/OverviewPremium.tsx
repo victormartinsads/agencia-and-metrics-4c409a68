@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye, LayoutGrid, Plus, RotateCcw } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 import { KpiCardPremium } from "./KpiCardPremium";
 import { PanelCard } from "./PanelCard";
@@ -52,6 +56,35 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
+
+  // Edit / hide mode
+  const HIDE_KEY = `overview-premium-hidden:${clientId || "default"}`;
+  const [editMode, setEditMode] = useState(false);
+  const [hidden, setHidden] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(HIDE_KEY) : null;
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set(); }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(HIDE_KEY, JSON.stringify(Array.from(hidden))); } catch {}
+  }, [hidden, HIDE_KEY]);
+  const hidePanel = useCallback((id: string) => setHidden((s) => new Set([...s, id])), []);
+  const showPanel = useCallback((id: string) => setHidden((s) => { const n = new Set(s); n.delete(id); return n; }), []);
+  const resetHidden = useCallback(() => setHidden(new Set()), []);
+  const isVisible = (id: string) => !hidden.has(id);
+
+  const PANEL_LABELS: Record<string, string> = {
+    performance: "Performance do período",
+    custos: "Custos & Produtos",
+    funil: "Funil de Conversão",
+    canais: "Canais (UTM)",
+    demografico: "Demográfico — Idade",
+    lowticket: "Low Ticket",
+    bestads: "Melhores Criativos",
+    leads: "Leads",
+    utms: "Fontes de tráfego (UTM)",
+  };
 
   const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => (
     <button
@@ -350,6 +383,42 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
   return (
     <div className="space-y-4 max-w-[1500px]">
+      {/* Edit toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        {editMode && hidden.size > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                <Plus className="h-3.5 w-3.5" /> Mostrar bloco ({hidden.size})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Blocos ocultos</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {Array.from(hidden).map((id) => (
+                <DropdownMenuItem key={id} onClick={() => showPanel(id)}>
+                  {PANEL_LABELS[id] || id}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {editMode && hidden.size > 0 && (
+          <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
+            <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+          </Button>
+        )}
+        <Button
+          variant={editMode ? "default" : "outline"}
+          size="sm"
+          className="gap-1.5 h-8 text-xs"
+          onClick={() => setEditMode((v) => !v)}
+        >
+          {editMode ? <Eye className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+          {editMode ? "Concluir" : "Editar layout"}
+        </Button>
+      </div>
+
       {!hasSheets && (
         <div className="rounded-2xl border border-primary/20 bg-card p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
