@@ -96,7 +96,7 @@ export default function ClientDashboard() {
     );
   }
 
-  const TABS = [
+  const ALL_TABS: { id: string; label: string }[] = [
     { id: "overview", label: "Visão Geral" },
     { id: "diagnostico", label: "Como Estamos" },
     { id: "funnel", label: "Análise de Funis" },
@@ -104,7 +104,18 @@ export default function ClientDashboard() {
     { id: "branding", label: "Distribuição" },
     { id: "spreadsheet", label: "Planilha" },
     { id: "analytics", label: "Analytics" },
+    { id: "google-ads", label: "Google Ads" },
   ];
+  const visibleTabs = ((client as any).visible_tabs as string[] | null) || null;
+  const hasGAds = !!(client as any).google_ads_customer_id;
+  const hasGA4 = !!(client as any).ga_property_id;
+  const TABS = ALL_TABS.filter((t) => {
+    // Auto-show google-ads/analytics whenever their source is configured,
+    // regardless of the saved visible_tabs list.
+    if (t.id === "google-ads") return hasGAds || (visibleTabs ? visibleTabs.includes(t.id) : true);
+    if (t.id === "analytics") return hasGA4 || (visibleTabs ? visibleTabs.includes(t.id) : true);
+    return visibleTabs ? visibleTabs.includes(t.id) : true;
+  });
 
   const header = (
     <DashboardTopBar
