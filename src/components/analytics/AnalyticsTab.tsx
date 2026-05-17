@@ -73,6 +73,11 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
   });
   const hide = (id: string) => setHidden(prev => new Set(prev).add(id));
 
+  const utms = useMemo(
+    () => (ga?.utms || []).slice().sort((a, b) => (b.sessions || 0) - (a.sessions || 0)).slice(0, 50),
+    [ga?.utms]
+  );
+
   // Fallback: not connected or needs setup
   if (statusLoading || !connected || ga?.needsPropertySelection || (!ga?.overview && !gaLoading)) {
     return <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />;
@@ -96,10 +101,6 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
   const browsers = ga.browsers || [];
   const newVsReturning = ga.newVsReturning || [];
   const campaigns = ga.campaigns || [];
-  const utms = useMemo(
-    () => (ga.utms || []).slice().sort((a, b) => (b.sessions || 0) - (a.sessions || 0)).slice(0, 50),
-    [ga.utms]
-  );
 
   const eventsTotal = events.reduce((s, e) => s + e.count, 0) || 1;
 
