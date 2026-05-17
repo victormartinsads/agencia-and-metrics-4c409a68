@@ -23,10 +23,10 @@ export function useBlockValue(params: {
   const type = cfg?.source_type || "auto";
   const config = cfg?.config || {};
 
-  const meta = useMetaAds(clientId, datePreset, type === "meta");
+  const meta = useMetaAds(type === "meta" ? clientId : undefined, datePreset);
   const gAds = useGoogleAds(clientId, datePreset, type === "google_ads");
   const ga4  = useGoogleAnalytics(clientId, datePreset, type === "ga4");
-  const ig   = useInstagramInsights(clientId, type === "instagram");
+  const ig   = useInstagramInsights(type === "instagram" ? clientId : undefined);
 
   return useMemo(() => {
     if (!cfg || type === "auto") return { source: "auto" as const, value: undefined, loading: false };
@@ -47,12 +47,12 @@ export function useBlockValue(params: {
     }
 
     if (type === "ga4") {
-      const k = ga4.data?.kpis as any;
+      const k = ga4.data?.overview as any;
       return { source: type, value: k?.[config.metric], loading: ga4.isLoading };
     }
 
     if (type === "instagram") {
-      const k = (ig.data as any)?.kpis || (ig.data as any);
+      const k = ig.data as any;
       return { source: type, value: k?.[config.metric], loading: ig.isLoading };
     }
 
