@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, X, FileSpreadsheet, Webhook, Settings as SettingsIcon, KanbanSquare, Power, PowerOff, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, FileSpreadsheet, Webhook, Settings as SettingsIcon, KanbanSquare, Power, PowerOff, ExternalLink, Loader2, Database } from "lucide-react";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Client, useClients, useUpdateClient } from "@/hooks/useClients";
 import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
 import { ClientLogoUploader } from "@/components/clients/ClientLogoUploader";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
+import { DataSourcesPanel } from "@/components/settings/DataSourcesPanel";
 
 export default function ClientSettings() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -112,12 +113,17 @@ export default function ClientSettings() {
         <Tabs defaultValue="general">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="general">Geral</TabsTrigger>
+            <TabsTrigger value="sources">Fontes de dados</TabsTrigger>
             <TabsTrigger value="meta">Meta Ads</TabsTrigger>
             <TabsTrigger value="google">Google</TabsTrigger>
             <TabsTrigger value="sheets">Planilhas</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="crm">CRM</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="sources" className="mt-4">
+            <DataSourcesPanel client={client} />
+          </TabsContent>
 
           <TabsContent value="general" className="mt-4">
             <Card className="p-6 space-y-4">
