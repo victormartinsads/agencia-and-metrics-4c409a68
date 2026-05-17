@@ -147,16 +147,25 @@ Deno.serve(async (req) => {
         const listRes = await fetch(`${GOOGLE_ADS_API}/customers:listAccessibleCustomers`, {
           headers: { Authorization: `Bearer ${accessToken}`, "developer-token": developerToken },
         });
-        const listJson: any = await listRes.json().catch(() => ({}));
+        const listRaw = await listRes.text();
+        let listJson: any = {};
+        try { listJson = JSON.parse(listRaw); } catch { /* */ }
         const ids: string[] = (listJson?.resourceNames || []).map((r: string) => r.split("/")[1]);
+        console.log(`google-ads: listAccessibleCustomers status=${listRes.status} ids=${JSON.stringify(ids)} raw=${listRaw.slice(0,200)}`);
         for (const id of ids) {
           if (id === customerId) continue;
           const r2 = await doSearch(id);
           const raw2 = await r2.text();
+          console.log(`google-ads: try login-customer-id=${id} status=${r2.status}`);
           if (r2.ok) {
             res = r2; raw = raw2;
             try { data = JSON.parse(raw2); } catch { /* */ }
             console.log(`google-ads: succeeded with login-customer-id=${id}`);
+            break;
+          } else if (r2.status !== 403) {
+            // Surface non-403 error
+            res = r2; raw = raw2;
+            try { data = JSON.parse(raw2); } catch { /* */ }
             break;
           }
         }
