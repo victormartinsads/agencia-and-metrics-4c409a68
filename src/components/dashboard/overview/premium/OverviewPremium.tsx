@@ -25,6 +25,7 @@ import { SheetUtmTable, SheetUtmRow } from "../SheetUtmTable";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
+import { useGoogleAds } from "@/hooks/useGoogleAds";
 import { useSalesEvents, aggregateSales } from "@/hooks/useSalesEvents";
 import { useMetricSources, resolveMetricValue } from "@/hooks/useMetricSources";
 import { useMetaDemographics } from "@/hooks/useMetaDemographics";
@@ -51,6 +52,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: sheetsConfig } = useDashboardSheet(clientId);
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
+  const { data: gAds } = useGoogleAds(clientId, datePreset, !!clientId);
   const { data: metricSources } = useMetricSources(clientId);
   const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
   const { data: savedFunnelStages } = useFunnelStages(clientId, null);
@@ -147,7 +149,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   };
 
   const metaTotals: Record<string, number> = {
-    spend: metaData?.overviewMetrics?.totalSpend || 0,
+    spend: (metaData?.overviewMetrics?.totalSpend || 0) + (gAds?.totals?.cost || 0),
     impressions: metaData?.overviewMetrics?.totalImpressions || 0,
     clicks: metaData?.overviewMetrics?.totalClicks || 0,
     reach: (metaData?.overviewMetrics as any)?.totalReach || 0,

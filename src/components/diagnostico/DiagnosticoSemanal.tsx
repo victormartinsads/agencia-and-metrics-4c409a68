@@ -20,6 +20,7 @@ import {
 import { useSaveDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
 import { supabase } from "@/integrations/supabase/client";
+import { GoogleAdsSummaryCard } from "@/components/dashboard/GoogleAdsSummaryCard";
 import type { MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 
 function formatPeriodRange(preset: string): string {
@@ -251,6 +252,7 @@ export function DiagnosticoSemanal({
         </TabsContent>
 
         <TabsContent value="atual" className="space-y-6">
+          <GoogleAdsSummaryCard clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           {activeCampaigns.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
               Nenhuma campanha com gasto nos {DATE_LABEL[datePreset] || datePreset}.

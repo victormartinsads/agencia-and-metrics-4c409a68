@@ -15,6 +15,7 @@ import { FunnelAnalysisTab } from "@/components/funnel/FunnelAnalysisTab";
 import { MetricsSpreadsheet } from "@/components/funnel/MetricsSpreadsheet";
 import { DiagnosticoSemanal } from "@/components/diagnostico/DiagnosticoSemanal";
 import { AnalyticsTab } from "@/components/analytics/AnalyticsTab";
+import { GoogleAdsPanel } from "@/components/dashboard/GoogleAdsPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,6 +108,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
             {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
             {showTab("analytics") && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+            {showTab("google-ads") && <TabsTrigger value="google-ads">Google Ads</TabsTrigger>}
           </TabsList>}
 
           {showTab("overview") && <TabsContent value="overview" className="space-y-6">
@@ -181,6 +183,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           {showTab("analytics") && <TabsContent value="analytics" className="space-y-6">
             <AnalyticsTab clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
+          </TabsContent>}
+
+          {showTab("google-ads") && <TabsContent value="google-ads" className="space-y-6">
+            <GoogleAdsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           </TabsContent>}
         </Tabs>
       )}

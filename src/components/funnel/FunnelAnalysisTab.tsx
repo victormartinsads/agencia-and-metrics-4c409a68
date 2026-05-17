@@ -7,6 +7,7 @@ import { FunnelChatWidget } from "@/components/funnel/FunnelChatWidget";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { GoogleAdsSummaryCard } from "@/components/dashboard/GoogleAdsSummaryCard";
 
 interface Props {
   clientId: string;
@@ -72,6 +73,7 @@ export function FunnelAnalysisTab({
 
   return (
     <div className="space-y-5 relative">
+      <GoogleAdsSummaryCard clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
       {/* Search */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
