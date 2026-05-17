@@ -221,10 +221,30 @@ export function DiagnosticoSemanal({
   return (
     <>
       <Tabs defaultValue="atual" className="space-y-4">
-        <TabsList className="bg-card border border-border">
-          <TabsTrigger value="atual">Como estamos agora</TabsTrigger>
-          <TabsTrigger value="salvos" className="gap-1"><Archive className="h-3.5 w-3.5" /> Diagnósticos salvos</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList className="bg-card border border-border">
+            <TabsTrigger value="atual">Como estamos agora</TabsTrigger>
+            <TabsTrigger value="salvos" className="gap-1"><Archive className="h-3.5 w-3.5" /> Diagnósticos salvos</TabsTrigger>
+          </TabsList>
+          {activeCampaigns.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <Button onClick={handleRefresh} disabled={refreshing} variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Atualizar
+              </Button>
+              <Button onClick={handleGenerateAI} disabled={generating} variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10">
+                {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                IA
+              </Button>
+              <Button onClick={() => setPresenting(true)} variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                <Presentation className="h-3.5 w-3.5" /> Apresentar
+              </Button>
+              <Button onClick={() => setSaveOpen(true)} size="sm" className="h-8 px-3 gap-1.5 text-xs">
+                <Save className="h-3.5 w-3.5" /> Salvar
+              </Button>
+            </div>
+          )}
+        </div>
 
         <TabsContent value="salvos">
           <SavedDiagnosticsList clientId={clientId} clientName={clientName} currencySymbol={currencySymbol} />
@@ -236,32 +256,16 @@ export function DiagnosticoSemanal({
               Nenhuma campanha com gasto nos {DATE_LABEL[datePreset] || datePreset}.
             </div>
           ) : (<>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 sticky top-0 z-20">
+      {/* Compact header — buttons moved next to the tabs above */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
         <div>
-          <h2 className="text-lg font-bold text-card-foreground">
-            📊 Como Estamos — {periodRange}
+          <h2 className="text-base font-bold text-card-foreground">
+            Como Estamos — {periodRange}
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             {clientName} • {DATE_LABEL[datePreset] || datePreset} • {groups.length} funil(s)/campanha(s) ativos
             {saving && <span className="ml-2 text-primary">• salvando...</span>}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleRefresh} disabled={refreshing} variant="outline" size="sm" className="gap-2">
-            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            {refreshing ? "Atualizando..." : "Atualizar dados"}
-          </Button>
-          <Button onClick={handleGenerateAI} disabled={generating} size="sm" className="gap-2">
-            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {generating ? "Gerando..." : "Gerar diagnóstico com IA"}
-          </Button>
-          <Button onClick={() => setPresenting(true)} variant="outline" size="sm" className="gap-2">
-            <Presentation className="h-4 w-4" /> Apresentar
-          </Button>
-          <Button onClick={() => setSaveOpen(true)} size="sm" className="gap-2" variant="default">
-            <Save className="h-4 w-4" /> Salvar diagnóstico
-          </Button>
         </div>
       </div>
 

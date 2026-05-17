@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye, LayoutGrid, Plus, RotateCcw } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 import { KpiCardPremium } from "./KpiCardPremium";
 import { PanelCard } from "./PanelCard";
@@ -52,6 +56,35 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
+
+  // Edit / hide mode
+  const HIDE_KEY = `overview-premium-hidden:${clientId || "default"}`;
+  const [editMode, setEditMode] = useState(false);
+  const [hidden, setHidden] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(HIDE_KEY) : null;
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set(); }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(HIDE_KEY, JSON.stringify(Array.from(hidden))); } catch {}
+  }, [hidden, HIDE_KEY]);
+  const hidePanel = useCallback((id: string) => setHidden((s) => new Set([...s, id])), []);
+  const showPanel = useCallback((id: string) => setHidden((s) => { const n = new Set(s); n.delete(id); return n; }), []);
+  const resetHidden = useCallback(() => setHidden(new Set()), []);
+  const isVisible = (id: string) => !hidden.has(id);
+
+  const PANEL_LABELS: Record<string, string> = {
+    performance: "Performance do período",
+    custos: "Custos & Produtos",
+    funil: "Funil de Conversão",
+    canais: "Canais (UTM)",
+    demografico: "Demográfico — Idade",
+    lowticket: "Low Ticket",
+    bestads: "Melhores Criativos",
+    leads: "Leads",
+    utms: "Fontes de tráfego (UTM)",
+  };
 
   const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => (
     <button
@@ -350,6 +383,42 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
   return (
     <div className="space-y-4 max-w-[1500px]">
+      {/* Edit toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        {editMode && hidden.size > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                <Plus className="h-3.5 w-3.5" /> Mostrar bloco ({hidden.size})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Blocos ocultos</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {Array.from(hidden).map((id) => (
+                <DropdownMenuItem key={id} onClick={() => showPanel(id)}>
+                  {PANEL_LABELS[id] || id}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {editMode && hidden.size > 0 && (
+          <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
+            <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+          </Button>
+        )}
+        <Button
+          variant={editMode ? "default" : "outline"}
+          size="sm"
+          className="gap-1.5 h-8 text-xs"
+          onClick={() => setEditMode((v) => !v)}
+        >
+          {editMode ? <Eye className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+          {editMode ? "Concluir" : "Editar layout"}
+        </Button>
+      </div>
+
       {!hasSheets && (
         <div className="rounded-2xl border border-primary/20 bg-card p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
@@ -421,8 +490,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       <InsightsStrip items={insights} />
 
       {/* Row 1: Performance + Custos/Produtos (1.7fr / 1fr) */}
+      {(isVisible("performance") || isVisible("custos")) && (
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-3.5">
-        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />}>
+        {isVisible("performance") && (
+        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />} panelId="performance" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 border-b border-border/60">
             <div className="px-5 py-4 border-r border-border/60">
               <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
@@ -445,8 +516,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />}>
+        {isVisible("custos") && (
+        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />} panelId="custos" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 gap-px bg-border/60">
             {[
               { l: "Custo / Venda", v: cps > 0 ? formatCurrency(cps, currencySymbol) : "—" },
@@ -469,12 +542,19 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <ProductSalesChart data={productData} />
           </div>
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 2: Funil + Canais Donut + Demografico */}
+      {(isVisible("funil") || isVisible("canais") || isVisible("demografico")) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+        {isVisible("funil") && (
         <PanelCard
           title="Funil de Conversão"
+          panelId="funil"
+          editMode={editMode}
+          onHide={hidePanel}
           actions={
             <>
               <button
@@ -566,8 +646,10 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             return <ConversionFunnelPremium steps={steps} summary={summary} />;
           })()}
         </PanelCard>
+        )}
 
-        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />}>
+        {isVisible("canais") && (
+        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />} panelId="canais" editMode={editMode} onHide={hidePanel}>
           <ChannelsDonut
             rows={channelRows}
             centerValue={
@@ -583,15 +665,21 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             ]}
           />
         </PanelCard>
+        )}
 
-        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />}>
+        {isVisible("demografico") && (
+        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />} panelId="demografico" editMode={editMode} onHide={hidePanel}>
           <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 3: Low ticket + Top ads + Leads */}
+      {(isVisible("lowticket") || isVisible("bestads") || isVisible("leads")) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />}>
+        {isVisible("lowticket") && (
+        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />} panelId="lowticket" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
               { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
@@ -615,14 +703,18 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <LowTicketChart data={lowTicketDataDisplay} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />}>
+        {isVisible("bestads") && (
+        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />} panelId="bestads" editMode={editMode} onHide={hidePanel}>
           <div className="p-2">
             <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
+        )}
 
-        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />}>
+        {isVisible("leads") && (
+        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />} panelId="leads" editMode={editMode} onHide={hidePanel}>
           <div className="p-5 pb-3">
             <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
               Leads Gerados
@@ -654,16 +746,20 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             </div>
           </div>
         </PanelCard>
+        )}
       </div>
+      )}
 
       {/* Row 4: UTMs full width */}
-      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />}>
+      {isVisible("utms") && (
+      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />} panelId="utms" editMode={editMode} onHide={hidePanel}>
         <div className="p-4">
           {sheetUtmRows.length > 0
             ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
             : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
         </div>
       </PanelCard>
+      )}
 
       {clientId && (
         <MetricSourceEditor

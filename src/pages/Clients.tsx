@@ -34,6 +34,8 @@ import {
   useClientOrgs, useEnableClientCrm, useDisableClientCrm,
 } from "@/hooks/useClientCrm";
 import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignments";
+import { useProfile, displayName } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Filter = "all" | "mine" | "active" | "with-crm";
 
@@ -64,6 +66,11 @@ function emptyForm(): ClientInsert {
 
 export default function ClientsPage() {
   const [tab, setTab] = useState<"active" | "archived">("active");
+  const { user } = useAuth();
+  const { data: profile } = useProfile();
+  const welcomeName = displayName(profile, user?.email);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const { data: clients = [], isLoading } = useClients(
     tab === "archived" ? { onlyArchived: true } : undefined,
   );
@@ -217,9 +224,14 @@ export default function ClientsPage() {
         >
           <div>
             <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground uppercase">
-              <span className="bg-[image:var(--gradient-hero)] bg-clip-text text-transparent">Clientes</span>
+              <span className="bg-[image:var(--gradient-hero)] bg-clip-text text-transparent">Home</span>
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-foreground/80">
+              {greeting}{welcomeName ? `, ` : ""}
+              {welcomeName && <span className="font-semibold text-foreground">{welcomeName}</span>}
+              {" "}— bem-vindo de volta 👋
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {clients.length} clientes na base · {favoriteIds.size} favoritados
             </p>
           </div>

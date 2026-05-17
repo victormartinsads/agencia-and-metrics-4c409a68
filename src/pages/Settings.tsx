@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
-import { useState } from "react";
-import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,9 @@ import {
   useRemoveClientUser,
 } from "@/hooks/useClientUsers";
 import AppShell from "@/components/layout/AppShell";
+import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -47,17 +50,15 @@ export default function SettingsPage() {
     );
   }
 
-  if (!role?.isAdmin) {
-    return <Navigate to="/" replace />;
-  }
+  const isAdmin = !!role?.isAdmin;
 
   const header = (
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-4">
       <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-        <SettingsIcon className="h-5 w-5 text-primary" /> Configurações Gerais
+        <SettingsIcon className="h-5 w-5 text-primary" /> Configurações
       </h1>
       <p className="text-xs text-muted-foreground mt-0.5">
-        Painel exclusivo para administradores
+        {isAdmin ? "Painel de administração e conta pessoal" : "Configurações da sua conta"}
       </p>
     </div>
   );
@@ -65,47 +66,213 @@ export default function SettingsPage() {
   return (
     <AppShell currentPage="settings" header={header} noContainer>
       <main className="max-w-[1100px] mx-auto px-4 md:px-6 py-6">
-        <Tabs defaultValue="google" className="space-y-6">
+        <Tabs defaultValue="account" className="space-y-6">
           <TabsList className="bg-card border border-border">
-            <TabsTrigger value="google" className="gap-1.5">
-              <Globe className="h-3.5 w-3.5" /> Google Analytics
+            <TabsTrigger value="account" className="gap-1.5">
+              <UserIcon className="h-3.5 w-3.5" /> Minha conta
             </TabsTrigger>
-            <TabsTrigger value="sheets" className="gap-1.5">
-              <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
-            </TabsTrigger>
-            <TabsTrigger value="members" className="gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Membros
-            </TabsTrigger>
-            <TabsTrigger value="client-access" className="gap-1.5">
-              <KanbanSquare className="h-3.5 w-3.5" /> Acessos de Clientes
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="gap-1.5">
-              <Shield className="h-3.5 w-3.5" /> Permissões
-            </TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger value="google" className="gap-1.5">
+                  <Globe className="h-3.5 w-3.5" /> Google Analytics
+                </TabsTrigger>
+                <TabsTrigger value="sheets" className="gap-1.5">
+                  <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
+                </TabsTrigger>
+                <TabsTrigger value="members" className="gap-1.5">
+                  <Users className="h-3.5 w-3.5" /> Membros
+                </TabsTrigger>
+                <TabsTrigger value="client-access" className="gap-1.5">
+                  <KanbanSquare className="h-3.5 w-3.5" /> Acessos de Clientes
+                </TabsTrigger>
+                <TabsTrigger value="permissions" className="gap-1.5">
+                  <Shield className="h-3.5 w-3.5" /> Permissões
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
-          <TabsContent value="google">
-            <GoogleAnalyticsSection />
+          <TabsContent value="account">
+            <MyAccountSection />
           </TabsContent>
 
-          <TabsContent value="sheets">
-            <SheetsSection />
-          </TabsContent>
-
-          <TabsContent value="members">
-            <MembersSection />
-          </TabsContent>
-
-          <TabsContent value="client-access">
-            <ClientAccessSection />
-          </TabsContent>
-
-          <TabsContent value="permissions">
-            <PermissionsSection />
-          </TabsContent>
+          {isAdmin && (
+            <>
+              <TabsContent value="google"><GoogleAnalyticsSection /></TabsContent>
+              <TabsContent value="sheets"><SheetsSection /></TabsContent>
+              <TabsContent value="members"><MembersSection /></TabsContent>
+              <TabsContent value="client-access"><ClientAccessSection /></TabsContent>
+              <TabsContent value="permissions"><PermissionsSection /></TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
     </AppShell>
+  );
+}
+
+function MyAccountSection() {
+  const { user } = useAuth();
+  const { data: profile, isLoading } = useProfile();
+  const updateProfile = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [roleTitle, setRoleTitle] = useState("");
+  const [emailValue, setEmailValue] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [savingPwd, setSavingPwd] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.first_name || "");
+      setLastName(profile.last_name || "");
+      setRoleTitle(profile.role_title || "");
+    }
+    if (user?.email && !emailValue) setEmailValue(user.email);
+  }, [profile, user]);
+
+  const initials = ((firstName || user?.email || "U")[0] || "U").toUpperCase();
+
+  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await uploadAvatar.mutateAsync(file);
+      toast.success("Foto atualizada");
+    } catch (err: any) { toast.error(err.message || "Erro ao enviar foto"); }
+  };
+
+  const saveProfile = async () => {
+    try {
+      await updateProfile.mutateAsync({
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        role_title: roleTitle.trim() || null,
+        full_name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || null,
+      });
+      toast.success("Perfil atualizado");
+    } catch (e: any) { toast.error(e.message || "Erro ao salvar"); }
+  };
+
+  const saveEmail = async () => {
+    if (!emailValue.includes("@")) return toast.error("Email inválido");
+    setSavingEmail(true);
+    const { error } = await supabase.auth.updateUser({ email: emailValue.trim() });
+    setSavingEmail(false);
+    if (error) return toast.error(error.message);
+    toast.success("Enviamos um link de confirmação para o novo email");
+  };
+
+  const changePassword = async () => {
+    if (newPwd.length < 6) return toast.error("Senha deve ter ao menos 6 caracteres");
+    if (newPwd !== confirmPwd) return toast.error("As senhas não conferem");
+    setSavingPwd(true);
+    const { error } = await supabase.auth.updateUser({ password: newPwd });
+    setSavingPwd(false);
+    if (error) return toast.error(error.message);
+    toast.success("Senha alterada");
+    setNewPwd(""); setConfirmPwd("");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-6 space-y-5">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">Perfil</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Essas informações aparecem em todo o sistema. O nome será exibido na tela de boas-vindas.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-border" />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] grid place-items-center text-lg font-semibold text-primary-foreground">
+              {initials}
+            </div>
+          )}
+          <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-background hover:bg-surface text-xs font-medium text-foreground">
+            <Upload className="h-3.5 w-3.5" />
+            {uploadAvatar.isPending ? "Enviando..." : "Trocar foto"}
+            <input type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="first_name">Nome</Label>
+            <Input id="first_name" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Seu nome" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="last_name">Sobrenome</Label>
+            <Input id="last_name" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Sobrenome" />
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label htmlFor="role_title">Cargo</Label>
+            <Input id="role_title" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="Ex. Gestor de Mídia" />
+          </div>
+        </div>
+
+        <div>
+          <Button onClick={saveProfile} disabled={updateProfile.isPending} className="gap-2">
+            {updateProfile.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
+            Salvar perfil
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">Email</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Ao alterar, enviaremos um link de confirmação para o novo endereço.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div className="flex-1 space-y-1.5">
+            <Label htmlFor="email">Endereço de email</Label>
+            <Input id="email" type="email" value={emailValue} onChange={(e) => setEmailValue(e.target.value)} />
+          </div>
+          <Button onClick={saveEmail} disabled={savingEmail} variant="outline" className="gap-2">
+            {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />} Atualizar email
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">Senha</h2>
+          <p className="text-sm text-muted-foreground mt-1">Mínimo de 6 caracteres.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="new-pwd">Nova senha</Label>
+            <Input id="new-pwd" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="••••••••" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm-pwd">Confirmar</Label>
+            <Input id="confirm-pwd" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="••••••••" />
+          </div>
+        </div>
+        <Button onClick={changePassword} disabled={savingPwd} className="gap-2">
+          {savingPwd ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+          Alterar senha
+        </Button>
+      </Card>
+    </div>
   );
 }
 
