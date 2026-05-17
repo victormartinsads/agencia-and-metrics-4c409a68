@@ -492,10 +492,13 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       {/* Insights strip */}
       <InsightsStrip items={insights} />
 
-      {/* Row 1: Performance + Custos/Produtos (1.7fr / 1fr) */}
-      {(isVisible("performance") || isVisible("custos")) && (
-      <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-3.5">
-        {isVisible("performance") && (
+      {(() => {
+        const blocks: DashboardBlock[] = [];
+
+        if (isVisible("performance")) blocks.push({
+          id: "performance",
+          defaultLayout: { w: 8, h: 8, x: 0, y: 0 },
+          node: (
         <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />} panelId="performance" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 border-b border-border/60">
             <div className="px-5 py-4 border-r border-border/60">
@@ -519,9 +522,13 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
-        )}
+          ),
+        });
 
-        {isVisible("custos") && (
+        if (isVisible("custos")) blocks.push({
+          id: "custos",
+          defaultLayout: { w: 4, h: 8, x: 8, y: 0 },
+          node: (
         <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />} panelId="custos" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-2 gap-px bg-border/60">
             {[
@@ -545,14 +552,13 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <ProductSalesChart data={productData} />
           </div>
         </PanelCard>
-        )}
-      </div>
-      )}
+          ),
+        });
 
-      {/* Row 2: Funil + Canais Donut + Demografico */}
-      {(isVisible("funil") || isVisible("canais") || isVisible("demografico")) && (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        {isVisible("funil") && (
+        if (isVisible("funil")) blocks.push({
+          id: "funil",
+          defaultLayout: { w: 4, h: 8, x: 0, y: 8 },
+          node: (
         <PanelCard
           title="Funil de Conversão"
           panelId="funil"
@@ -649,9 +655,13 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             return <ConversionFunnelPremium steps={steps} summary={summary} />;
           })()}
         </PanelCard>
-        )}
+          ),
+        });
 
-        {isVisible("canais") && (
+        if (isVisible("canais")) blocks.push({
+          id: "canais",
+          defaultLayout: { w: 4, h: 8, x: 4, y: 8 },
+          node: (
         <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />} panelId="canais" editMode={editMode} onHide={hidePanel}>
           <ChannelsDonut
             rows={channelRows}
@@ -668,20 +678,23 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             ]}
           />
         </PanelCard>
-        )}
+          ),
+        });
 
-        {isVisible("demografico") && (
+        if (isVisible("demografico")) blocks.push({
+          id: "demografico",
+          defaultLayout: { w: 4, h: 8, x: 8, y: 8 },
+          node: (
         <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />} panelId="demografico" editMode={editMode} onHide={hidePanel}>
           <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
         </PanelCard>
-        )}
-      </div>
-      )}
+          ),
+        });
 
-      {/* Row 3: Low ticket + Top ads + Leads */}
-      {(isVisible("lowticket") || isVisible("bestads") || isVisible("leads")) && (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        {isVisible("lowticket") && (
+        if (isVisible("lowticket")) blocks.push({
+          id: "lowticket",
+          defaultLayout: { w: 4, h: 8, x: 0, y: 16 },
+          node: (
         <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />} panelId="lowticket" editMode={editMode} onHide={hidePanel}>
           <div className="grid grid-cols-3 border-b border-border/60">
             {[
@@ -706,17 +719,25 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <LowTicketChart data={lowTicketDataDisplay} />
           </div>
         </PanelCard>
-        )}
+          ),
+        });
 
-        {isVisible("bestads") && (
+        if (isVisible("bestads")) blocks.push({
+          id: "bestads",
+          defaultLayout: { w: 4, h: 8, x: 4, y: 16 },
+          node: (
         <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />} panelId="bestads" editMode={editMode} onHide={hidePanel}>
           <div className="p-2">
             <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
           </div>
         </PanelCard>
-        )}
+          ),
+        });
 
-        {isVisible("leads") && (
+        if (isVisible("leads")) blocks.push({
+          id: "leads",
+          defaultLayout: { w: 4, h: 8, x: 8, y: 16 },
+          node: (
         <PanelCard title="Leads" noPadding actions={<EditSourceBtn />} panelId="leads" editMode={editMode} onHide={hidePanel}>
           <div className="p-5 pb-3">
             <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
@@ -749,20 +770,33 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             </div>
           </div>
         </PanelCard>
-        )}
-      </div>
-      )}
+          ),
+        });
 
-      {/* Row 4: UTMs full width */}
-      {isVisible("utms") && (
-      <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />} panelId="utms" editMode={editMode} onHide={hidePanel}>
+        if (isVisible("utms")) blocks.push({
+          id: "utms",
+          defaultLayout: { w: 12, h: 7, x: 0, y: 24 },
+          node: (
+        <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />} panelId="utms" editMode={editMode} onHide={hidePanel}>
         <div className="p-4">
           {sheetUtmRows.length > 0
             ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
             : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
         </div>
       </PanelCard>
-      )}
+          ),
+        });
+
+        return (
+          <GridDashboard
+            clientId={clientId}
+            dashboardKey="overview-premium"
+            editMode={editMode}
+            blocks={blocks}
+            rowHeight={56}
+          />
+        );
+      })()}
 
       {clientId && (
         <MetricSourceEditor
