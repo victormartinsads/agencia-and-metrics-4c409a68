@@ -90,12 +90,12 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard label="Investimento" value={formatCurrency(totals.cost, currencySymbol)} icon={DollarSign} />
-        <KpiCard label="Impressões" value={totals.impressions.toLocaleString("pt-BR")} icon={Eye} />
-        <KpiCard label="Cliques" value={totals.clicks.toLocaleString("pt-BR")} icon={MousePointerClick} />
-        <KpiCard label="CTR" value={`${ctr.toFixed(2)}%`} icon={TrendingUp} />
-        <KpiCard label="Conversões" value={totals.conversions.toLocaleString("pt-BR")} icon={Target} />
-        <KpiCard label="CPA" value={formatCurrency(cpa, currencySymbol)} icon={DollarSign} />
+        <KpiCard title="Investimento" value={formatCurrency(totals.cost, currencySymbol)} icon={DollarSign} />
+        <KpiCard title="Impressões" value={totals.impressions.toLocaleString("pt-BR")} icon={Eye} />
+        <KpiCard title="Cliques" value={totals.clicks.toLocaleString("pt-BR")} icon={MousePointerClick} />
+        <KpiCard title="CTR" value={`${ctr.toFixed(2)}%`} icon={TrendingUp} />
+        <KpiCard title="Conversões" value={totals.conversions.toLocaleString("pt-BR")} icon={Target} />
+        <KpiCard title="CPA" value={formatCurrency(cpa, currencySymbol)} icon={DollarSign} />
       </div>
 
       <Card className="p-0 overflow-hidden">
