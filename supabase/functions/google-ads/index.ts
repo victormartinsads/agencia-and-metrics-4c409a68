@@ -124,14 +124,47 @@ Deno.serve(async (req) => {
       "developer-token": developerToken,
       "Content-Type": "application/json",
     };
-    if (loginCustomerId) headers["login-customer-id"] = String(loginCustomerId).replace(/-/g, "");
+    const envLogin = Deno.env.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID");
+    const explicitLogin = loginCustomerId || envLogin;
+    if (explicitLogin) headers["login-customer-id"] = String(explicitLogin).replace(/-/g, "");
 
-    const res = await fetch(`${GOOGLE_ADS_API}/customers/${customerId}/googleAds:search`, {
-      method: "POST", headers, body: JSON.stringify({ query }),
-    });
-    const raw = await res.text();
+    const url = `${GOOGLE_ADS_API}/customers/${customerId}/googleAds:search`;
+    const doSearch = (loginId?: string) => {
+      const h = { ...headers };
+      if (loginId) h["login-customer-id"] = loginId;
+      else delete h["login-customer-id"];
+      return fetch(url, { method: "POST", headers: h, body: JSON.stringify({ query }) });
+    };
+
+    let res = await doSearch(explicitLogin ? String(explicitLogin).replace(/-/g, "") : undefined);
+    let raw = await res.text();
     let data: any = null;
     try { data = JSON.parse(raw); } catch { /* not JSON */ }
+
+    // Auto-discover login-customer-id (manager) by trying accessible customers
+    if (res.status === 403 && !explicitLogin) {
+      try {
+        const listRes = await fetch(`${GOOGLE_ADS_API}/customers:listAccessibleCustomers`, {
+          headers: { Authorization: `Bearer ${accessToken}`, "developer-token": developerToken },
+        });
+        const listJson: any = await listRes.json().catch(() => ({}));
+        const ids: string[] = (listJson?.resourceNames || []).map((r: string) => r.split("/")[1]);
+        for (const id of ids) {
+          if (id === customerId) continue;
+          const r2 = await doSearch(id);
+          const raw2 = await r2.text();
+          if (r2.ok) {
+            res = r2; raw = raw2;
+            try { data = JSON.parse(raw2); } catch { /* */ }
+            console.log(`google-ads: succeeded with login-customer-id=${id}`);
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn("listAccessibleCustomers failed:", e);
+      }
+    }
+
     if (!res.ok || !data) {
       const msg = data?.error?.message
         || (raw.includes("login-customer-id") ? "Esta conta exige um manager (login-customer-id). Configure-o nas configurações do cliente."
