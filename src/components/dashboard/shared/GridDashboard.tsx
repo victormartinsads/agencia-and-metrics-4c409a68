@@ -1,10 +1,11 @@
 import { ReactNode, useMemo } from "react";
-import GridLayout, { Layout, WidthProvider } from "react-grid-layout";
+import { Responsive as RGLResponsive, WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useDashboardLayout, useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
 
-const RGL = WidthProvider(GridLayout);
+type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
+const RGL = WidthProvider(RGLResponsive);
 
 export interface DashboardBlock {
   id: string;
@@ -32,9 +33,9 @@ export function GridDashboard({
   const { data: saved } = useDashboardLayout(clientId, dashboardKey);
   const save = useSaveDashboardLayout();
 
-  const layout: Layout[] = useMemo(() => {
-    const byId = new Map<string, Layout>();
-    (saved || []).forEach(l => byId.set(l.i, l));
+  const layout: LayoutItem[] = useMemo(() => {
+    const byId = new Map<string, LayoutItem>();
+    ((saved as any) || []).forEach((l: LayoutItem) => byId.set(l.i, l));
     let cursorY = 0;
     return blocks.map((b, idx) => {
       const existing = byId.get(b.id);
@@ -47,16 +48,17 @@ export function GridDashboard({
     });
   }, [saved, blocks, cols]);
 
-  const handleLayoutChange = (newLayout: Layout[]) => {
+  const handleLayoutChange = (newLayout: LayoutItem[]) => {
     if (!editMode || !clientId) return;
-    save.mutate({ clientId, dashboardKey, layout: newLayout });
+    save.mutate({ clientId, dashboardKey, layout: newLayout as any });
   };
 
   return (
     <RGL
       className={`layout ${editMode ? "is-editing" : ""}`}
-      layout={layout}
-      cols={cols}
+      layouts={{ lg: layout, md: layout, sm: layout, xs: layout, xxs: layout }}
+      breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+      cols={{ lg: cols, md: cols, sm: cols, xs: 4, xxs: 2 }}
       rowHeight={rowHeight}
       isDraggable={editMode}
       isResizable={editMode}
