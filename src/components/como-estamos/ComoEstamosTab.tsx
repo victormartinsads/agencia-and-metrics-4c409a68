@@ -211,6 +211,35 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
         </TabsContent>
 
         <TabsContent value="funil" className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="text-base font-bold text-card-foreground">Funis Manuais</h3>
+              <p className="text-xs text-muted-foreground">
+                Crie um funil 100% manual (ex.: Google Ads) e edite as métricas no lápis. Os valores sincronizam com a aba "Análise de Funis".
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setCreateManualOpen(true)}>
+              <Plus className="h-3.5 w-3.5" /> Novo funil manual
+            </Button>
+          </div>
+          {(manualFunnels || []).length > 0 && (
+            <div className="space-y-4">
+              {(manualFunnels || []).map((m) => (
+                <FunnelPreviewCard
+                  key={m.id}
+                  clientId={clientId}
+                  funnelCode={m.code}
+                  funnelLabel={m.label}
+                  campaigns={[]}
+                  currencySymbol={currencySymbol}
+                  datePreset={datePreset}
+                  isManual
+                  manualId={m.id}
+                  onOpenDetail={() => setDetailManual({ code: m.code, label: m.label })}
+                />
+              ))}
+            </div>
+          )}
           <EditableFunnel
             clientId={clientId}
             campaigns={filteredCampaigns}
@@ -242,6 +271,54 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
           </TabsContent>
         )}
       </Tabs>
+
+      {detailManual && (
+        <FunnelPremiumDetailDialog
+          open={!!detailManual}
+          onClose={() => setDetailManual(null)}
+          clientId={clientId}
+          funnelCode={detailManual.code}
+          funnelLabel={detailManual.label}
+          campaigns={[]}
+          currencySymbol={currencySymbol}
+          datePreset={datePreset}
+          isManual
+        />
+      )}
+
+      <Dialog open={createManualOpen} onOpenChange={setCreateManualOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo funil manual</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Código curto</Label>
+              <Input
+                value={newManualCode}
+                onChange={(e) => setNewManualCode(e.target.value.toUpperCase())}
+                placeholder="GADS"
+                maxLength={12}
+                className="h-8 text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">Identificador único (ex.: GADS, ORG, OUTROS).</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Nome de exibição</Label>
+              <Input
+                value={newManualLabel}
+                onChange={(e) => setNewManualLabel(e.target.value)}
+                placeholder="Google Ads — Performance Max"
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateManualOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateManual} disabled={createManual.isPending}>Criar funil</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
