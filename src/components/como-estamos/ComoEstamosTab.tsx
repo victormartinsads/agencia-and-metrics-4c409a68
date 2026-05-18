@@ -51,6 +51,25 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
   const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [showAIRecommendations, setShowAIRecommendations] = useState(true);
   const [podiumCampaignId, setPodiumCampaignId] = useState<string>("all");
+  const [createManualOpen, setCreateManualOpen] = useState(false);
+  const [newManualCode, setNewManualCode] = useState("");
+  const [newManualLabel, setNewManualLabel] = useState("");
+  const [detailManual, setDetailManual] = useState<{ code: string; label: string } | null>(null);
+  const { data: manualFunnels } = useManualFunnels(clientId);
+  const createManual = useCreateManualFunnel();
+
+  const handleCreateManual = async () => {
+    const code = newManualCode.trim().toUpperCase();
+    const label = newManualLabel.trim();
+    if (!code || !label) { toast.error("Informe código e nome"); return; }
+    try {
+      await createManual.mutateAsync({ client_id: clientId, code, label });
+      toast.success("Funil manual criado");
+      setNewManualCode(""); setNewManualLabel(""); setCreateManualOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message?.includes("duplicate") ? "Já existe um funil com esse código" : "Erro ao criar funil");
+    }
+  };
 
   // Fetch monthly_revenue
   const { data: clientData } = useQuery({
