@@ -2,8 +2,6 @@ import { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PanelCard } from "@/components/dashboard/overview/premium/PanelCard";
 import { Campaign } from "@/data/mockMetaData";
-import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
-import { aggregateCampaignMetrics } from "@/lib/metaMetrics";
 import { FunnelCard } from "@/components/funnel/FunnelCard";
 import { EditableOverviewFunnel } from "@/components/dashboard/overview/EditableOverviewFunnel";
 import { BestAdsList } from "@/components/dashboard/overview/BestAdsList";
