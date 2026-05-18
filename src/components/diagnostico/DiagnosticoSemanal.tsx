@@ -445,6 +445,7 @@ export function DiagnosticoSemanal({
           periodRange={periodRange}
           datePresetKey={datePreset}
           groups={groups}
+          manualFunnels={manualFunnels || []}
           blocks={blocks}
           whatWeDid={whatWeDid}
           nextActions={nextActions}
