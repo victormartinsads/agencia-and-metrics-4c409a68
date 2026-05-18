@@ -37,6 +37,8 @@ interface Props {
   isManual?: boolean;
   /** ID of the manual funnel row, used for rename/delete. */
   manualId?: string;
+  /** When true, hides the "Análise completa" button (used when embedded inside the dialog). */
+  hideOpenDetail?: boolean;
 }
 
 function compact(n: number) {
@@ -84,6 +86,7 @@ export function FunnelPreviewCard({
   datePreset,
   isManual = false,
   manualId,
+  hideOpenDetail = false,
 }: Props) {
   const { data: labelMap } = useFunnelLabels(clientId);
   const saveLabel = useSaveFunnelLabel();
@@ -379,13 +382,14 @@ export function FunnelPreviewCard({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
+          {!hideOpenDetail && (
           <Button
             size="sm" variant="outline"
             className="h-7 text-[11px] gap-1 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
             onClick={onOpenDetail}
           >
             Análise completa <ArrowRight className="h-3 w-3" />
-          </Button>
+          </Button>)}
         </div>
       </header>
 
