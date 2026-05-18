@@ -69,3 +69,27 @@ export function useSaveFunnelPeriodMetric() {
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: [KEY, vars.client_id] }),
   });
 }
+
+export function useDeleteFunnelPeriodMetric() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (m: {
+      client_id: string;
+      funnel_code: string;
+      metric_key: string;
+      period_start: string;
+      period_end: string;
+    }) => {
+      const { error } = await (supabase as any)
+        .from("funnel_period_metrics")
+        .delete()
+        .eq("client_id", m.client_id)
+        .eq("funnel_code", m.funnel_code)
+        .eq("metric_key", m.metric_key)
+        .eq("period_start", m.period_start)
+        .eq("period_end", m.period_end);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: [KEY, vars.client_id] }),
+  });
+}
