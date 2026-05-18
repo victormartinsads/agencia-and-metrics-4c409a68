@@ -21,9 +21,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
+import { FunnelPremiumDetailDialog } from "@/components/funnel/FunnelPremiumDetailDialog";
+import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnels";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface Props {
   clientId: string;
