@@ -11,16 +11,6 @@ import {
   formatCustomValue,
   useDiagnosticMetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
-import { useFunnelLeadMapping, aggregateLeadsFromMapping } from "@/hooks/useFunnelLeadMapping";
-
-const DEFAULT_LEAD_TYPES = [
-  "lead",
-  "offsite_conversion.fb_pixel_lead",
-  "onsite_conversion.lead_grouped",
-  "leadgen.other",
-  "leadgen_grouped",
-  "onsite_conversion.messaging_conversation_started_7d",
-];
 
 interface Props {
   group: FunnelGroup;
@@ -33,11 +23,11 @@ function formatMoney(v: number, symbol: string) {
   return `${symbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function aggregate(campaigns: Campaign[], leadsByCampaign: Record<string, number>) {
+function aggregate(campaigns: Campaign[]) {
   const spend = campaigns.reduce((s, c) => s + c.spend, 0);
   const impressions = campaigns.reduce((s, c) => s + c.impressions, 0);
   const clicks = campaigns.reduce((s, c) => s + c.clicks, 0);
-  const conversions = campaigns.reduce((s, c) => s + (leadsByCampaign[c.id] ?? c.conversions), 0);
+  const conversions = campaigns.reduce((s, c) => s + c.conversions, 0);
   const reach = campaigns.reduce((s, c) => s + c.reach, 0);
   const purchaseValue = campaigns.reduce((s, c) => s + (c.purchaseValue || 0), 0);
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
@@ -80,25 +70,11 @@ function aggregateAdsets(campaigns: Campaign[]) {
 }
 
 export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
-  const { data: leadMap } = useFunnelLeadMapping(clientId);
-  const leadActionTypes = (leadMap?.[group.key] && leadMap[group.key].length > 0)
-    ? leadMap[group.key]
-    : DEFAULT_LEAD_TYPES;
-  const resultLabelRaw =
-    group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
-  const isLeadsMetric = /lead/i.test(resultLabelRaw);
-  const leadsByCampaign = useMemo(() => {
-    const m: Record<string, number> = {};
-    if (!isLeadsMetric) return m;
-    for (const c of group.campaigns) {
-      m[c.id] = aggregateLeadsFromMapping([c as any], leadActionTypes);
-    }
-    return m;
-  }, [group.campaigns, leadActionTypes, isLeadsMetric]);
-  const totals = useMemo(() => aggregate(group.campaigns, leadsByCampaign), [group.campaigns, leadsByCampaign]);
+  const totals = useMemo(() => aggregate(group.campaigns), [group.campaigns]);
   const adsets = useMemo(() => aggregateAdsets(group.campaigns), [group.campaigns]);
   const [showAdsets, setShowAdsets] = useState(true);
-  const resultLabel = resultLabelRaw;
+  const resultLabel =
+    group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
   const { config } = useDiagnosticMetricsConfig(
     clientId || "",
@@ -202,15 +178,13 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                 {group.campaigns
                   .slice()
                   .sort((a, b) => b.spend - a.spend)
-                  .map(c => {
-                    const v = leadsByCampaign[c.id] ?? c.conversions;
-                    return (
+                  .map(c => (
                     <tr key={c.id} className="border-t border-border">
                       <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={c.name}>{c.name}</td>
                       <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(c.spend, currencySymbol)}</td>
-                      <td className="px-3 py-2 text-right text-card-foreground font-semibold">{v}</td>
+                      <td className="px-3 py-2 text-right text-card-foreground font-semibold">{c.conversions}</td>
                       <td className="px-3 py-2 text-right text-card-foreground">
-                        {v > 0 ? formatMoney(c.spend / v, currencySymbol) : "—"}
+                        {c.conversions > 0 ? formatMoney(c.spend / c.conversions, currencySymbol) : "—"}
                       </td>
                       <td className="px-3 py-2 text-right text-card-foreground">{c.ctr.toFixed(2)}%</td>
                       <td className="px-3 py-2 text-right">
@@ -219,8 +193,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                         }`}>{c.status}</span>
                       </td>
                     </tr>
-                    );
-                  })}
+                  ))}
               </tbody>
             </table>
           </div>

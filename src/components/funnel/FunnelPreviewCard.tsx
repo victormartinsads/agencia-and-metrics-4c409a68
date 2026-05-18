@@ -126,7 +126,7 @@ export function FunnelPreviewCard({
   const spendR = resolve("spend", totals.spend || 0);
   const revenueR = resolve("revenue", totals.purchaseValue || 0);
   const salesR = resolve("sales", totals.purchases || 0);
-  const leadsR = resolve("leads", totals.leads || 0);
+  const leadsR = resolve("leads", totals.leads || totals.conversions || 0);
   const impressionsR = resolve("impressions", (totals as any).impressions || 0);
   const clicksR = resolve("clicks", (totals as any).clicks || 0);
   const followersR = resolve("followers", 0);
