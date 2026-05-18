@@ -946,6 +946,39 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_manual_groups: {
+        Row: {
+          client_id: string
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnel_manual_metrics: {
         Row: {
           client_id: string

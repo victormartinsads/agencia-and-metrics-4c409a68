@@ -1,109 +1,78 @@
+## O que será feito
 
-## Objetivo
+Hoje, na aba **Análise de Funis**, cada card (F1, F2, F3...) calcula KPIs automaticamente a partir do Meta Ads. Você quer:
 
-Transformar todos os dashboards (Visão Geral, Analytics, Como Estamos, Funil) em painéis modulares onde:
-
-1. Cada bloco aceita escolha de **fonte de dados** (Google Ads, Sheets multi-planilha, Meta Ads, Instagram, GA4, Manual).
-2. Blocos podem ser **arrastados e redimensionados**.
-3. O dashboard **Analytics** ganha todos os blocos do print de referência (mantendo a identidade visual atual: tema escuro + verde neon).
-4. A configuração de fontes fica em um painel limpo, único e fácil de operar.
+1. **Editar qualquer métrica manualmente** no card do funil (e adicionar novas), com persistência por período.
+2. **Sincronizar** esses valores entre o card resumido e a **Análise completa** (modal cheia tela).
+3. **Criar funis manuais do zero** (ex.: um funil "Google Ads" totalmente preenchido à mão), sem depender de campanhas do Meta.
 
 ---
 
-## Etapa 1 — Novos blocos do Analytics (visual já existente)
+## 1. Override manual por métrica (sincronizado)
 
-Adicionar ao `AnalyticsTab.tsx` (mantendo `PanelCard` + verde neon):
+Cada KPI do card (`Investimento`, `Faturamento`, `ROAS`, `Vendas`, `Leads`, `Seguidores`, etc.) vai ter um **ícone de lápis** ao passar o mouse. Clicando:
 
-- Sessions by Country (barras verticais com bandeira)
-- Sessions by Campaign (barras horizontais)
-- Sessions by Device Category (donut)
-- Landing Pages (tabela)
-- Events (tabela com nome / contagem / %)
-- Sessions by Source/Medium (barras empilhadas, toggle Absoluto/%)
-- User Count: New vs Returning (donut)
-- Sessions by Browser (barras verticais)
-- Engagement Bucket (0–30s, 30–60s, 1–3m, 3–5m, 5–10m) — barras
+- Abre um popover com:
+  - Campo numérico para o valor manual
+  - Botão "Usar valor automático" (remove override)
+- Salva em `funnel_period_metrics` (tabela já existente), atrelado ao período selecionado no header (ex.: últimos 7 dias).
+- O valor manual **prevalece** sobre o cálculo automático tanto no card quanto na Análise completa.
 
-Backend (`google-analytics` edge function): adicionar dimensions `country`, `deviceCategory`, `landingPage`, `eventName`, `browser`, `sessionEngagementDuration` e `newVsReturning`. Cada widget é opcional, então só renderiza se vier dado.
+Métricas calculadas (ROAS, CPL, CPV, CPS) recalculam automaticamente a partir dos valores manuais salvos.
 
-## Etapa 2 — Sistema de "Fonte de dados por bloco"
+Também será possível **adicionar métricas personalizadas** (ex.: "Visualizações de Reels", "Inscritos no canal") pelo mesmo popover de "Métricas visíveis" — basta digitar nome + valor.
 
-Nova tabela `dashboard_block_sources`:
-```
-client_id, dashboard_key (overview|analytics|como_estamos|funnel),
-block_id, source_type (ga4|meta|google_ads|sheet|instagram|manual),
-config jsonb  -- { metric, sheetId, range, campaignId, accountId, value... }
-```
+### Sincronização com Análise completa
 
-Hook `useBlockSource(dashboardKey, blockId)` que retorna `{ source, save, data }`.
+A Análise completa (modal de tela cheia) hoje renderiza KPIs fixos calculados do Meta. Vou trocar para usar o **mesmo conjunto de métricas e overrides** do card. Assim:
 
-Componente reutilizável `<BlockSourceMenu />` aberto via **clique no card** (ou ícone de engrenagem que já aparece no editMode). Modal limpo com:
-- Tabs por tipo de fonte (ícones grandes, descrição curta)
-- Campos contextuais por tipo
-- Preview do valor/dataset retornado
-- Botão "Salvar"
+- Editou no card → aparece na Análise completa
+- Editou na Análise completa → aparece no card
+- O KPI Strip do modal passa a respeitar quais métricas você selecionou no card
 
-`PanelCard` ganha prop `onConfigureSource` — quando setada, aparece engrenagem no canto e/ou o card vira clicável em modo edição.
+---
 
-## Etapa 3 — Drag & resize
+## 2. Funil 100% manual (Google Ads e outros)
 
-Adicionar `react-grid-layout` (já alinhado ao stack). Wrapper `<GridDashboard>` que:
-- Persiste posições em `localStorage` (chave `dashboard-layout:${dashboardKey}:${clientId}`)
-- Em modo "Editar layout" libera drag/resize; fora desse modo o layout fica travado
-- Cada `PanelCard` vira um item da grid (12 cols, rowHeight ~ 60px)
+Botão **"+ Novo funil manual"** no topo da aba Análise de Funis. Ao clicar:
 
-Aplicado a: Overview Premium, AnalyticsTab, ComoEstamosTab (blocos principais), FunnelAnalysisTab.
+- Pede: código (ex.: `GADS`), nome (ex.: "Google Ads — Performance Max"), e ícone/cor opcional.
+- Cria um card vazio, no mesmo layout dos outros, **sem campanhas Meta vinculadas**.
+- Todas as métricas começam em branco — você edita pelo lápis (mesmo fluxo do item 1).
+- Persistido em uma nova tabela `funnel_manual_groups` (cliente, código, label, ordem).
+- Pode ser renomeado, removido e ter Análise completa própria.
 
-## Etapa 4 — Painel central de "Fontes de dados" (ClientSettings)
+Esses funis manuais aparecem na lista junto com os automáticos, marcados com um badge "MANUAL".
 
-Nova aba **"Fontes de dados"** com cards por integração:
-- Google Ads (status, customer ID)
-- Google Analytics 4 (status, property)
-- Meta Ads (contas vinculadas)
-- Instagram (conta)
-- Google Sheets — **lista** de planilhas (botão +Adicionar planilha, cada uma com nome, URL, range, último sync)
-- Entradas manuais (lista de métricas manuais criadas)
-
-UI: grid 2 colunas, cada card com ícone, status (verde/cinza), botões Conectar/Configurar/Remover. Sem ruído visual extra.
+---
 
 ## Detalhes técnicos
 
-```text
-src/
-  components/
-    dashboard/
-      shared/
-        GridDashboard.tsx          // wrapper react-grid-layout
-        BlockSourceMenu.tsx        // modal de seleção de fonte
-        useBlockSource.ts
-    analytics/
-      AnalyticsTab.tsx             // novos blocos
-      widgets/                     // 1 arquivo por widget novo
-    settings/
-      DataSourcesPanel.tsx         // novo painel central
-  hooks/
-    useDashboardLayout.ts
-    useClientSheets.ts             // multi-planilhas
-supabase/migrations/
-  *_block_sources_and_sheets.sql   // dashboard_block_sources + client_sheets
-supabase/functions/
-  google-analytics/index.ts        // novos dimensions
-```
+### Banco
+- **Nova tabela** `funnel_manual_groups`:
+  - `client_id`, `code`, `label`, `sort_order`, `created_by`
+  - RLS: leitura/edição via admin/editor (mesmo padrão dos outros recursos do cliente)
+- **Reusa** `funnel_period_metrics` (já existe) para overrides — chave: `client_id + funnel_code + metric_key + period_start + period_end`. Já tem o hook `useSaveFunnelPeriodMetric`.
+- **Reusa** localStorage `funnel-preview-kpis` para métricas visíveis e adiciona suporte a chaves customizadas.
 
-Dependência nova: `react-grid-layout` + `@types/react-grid-layout`.
+### Componentes
+- `FunnelPreviewCard.tsx`: 
+  - Cada `KpiCardPremium` ganha edição inline (pencil + popover com input + "usar automático").
+  - Lê overrides via `useFunnelPeriodMetrics(clientId, funnelCode, datePreset)`.
+  - Aceita métricas custom (objeto `{key, label, value, isManual}`) no catálogo.
+- `FunnelAnalysisTab.tsx`:
+  - Botão "+ Novo funil manual" + dialog de criação.
+  - Mescla `activeFunnels` (do Meta) com `manualFunnels` (do banco).
+- `FunnelPremiumDetailDialog.tsx`:
+  - KPI Strip passa a vir da mesma fonte que o card (mesmas métricas selecionadas + mesmos overrides).
+  - Suporta funis manuais (sem `campaigns`).
+- Novo hook: `useManualFunnels(clientId)` (list/create/delete/rename).
 
-Mantém estilo: `bg-card`, `border-border`, `text-primary` verde neon, fonte `Syne` nos títulos.
+### Period scope
+Os overrides ficam ligados ao período exibido (`period_start`/`period_end` derivados do `datePreset`). Trocar para "últimos 30 dias" mostra outro conjunto de valores (e edição cria novo registro para aquele período).
 
 ---
 
-## Entregáveis em ordem
-
-1. Migration (block_sources, client_sheets).
-2. Backend GA4 — novos dimensions.
-3. `GridDashboard` + integração em Overview e Analytics.
-4. Novos widgets do print no AnalyticsTab.
-5. `BlockSourceMenu` + hook, plugado em todos os PanelCards.
-6. `DataSourcesPanel` em ClientSettings.
-7. Aplicar grid nos dashboards restantes (Como Estamos, Funil).
-
-Quer que eu siga nessa ordem? Posso começar entregando 1–4 num primeiro turno (já visível no preview) e 5–7 no seguinte para não estourar.
+## Fora de escopo
+- Importação automática do Google Ads para preencher o funil manual (continua manual mesmo).
+- Compartilhamento dos overrides com a aba "Como Estamos" (que já tem seu próprio fluxo de inputs semanais).
