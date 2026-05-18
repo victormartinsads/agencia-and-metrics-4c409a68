@@ -8,7 +8,7 @@ import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Save, Loader2, Presentation, ClipboardList, ArrowRight, RefreshCw, Archive } from "lucide-react";
+import { Sparkles, Save, Loader2, Presentation, ClipboardList, ArrowRight, RefreshCw, Archive, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { getPeriodPair, presetLabel } from "@/lib/period";
@@ -22,6 +22,9 @@ import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
 import { supabase } from "@/integrations/supabase/client";
 import { GoogleAdsSummaryCard } from "@/components/dashboard/GoogleAdsSummaryCard";
 import type { MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
+import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
+import { FunnelPremiumDetailDialog } from "@/components/funnel/FunnelPremiumDetailDialog";
+import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnels";
 
 function formatPeriodRange(preset: string): string {
   const { current } = getPeriodPair(preset);
@@ -81,6 +84,12 @@ export function DiagnosticoSemanal({
 
   const [presenting, setPresenting] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const [createManualOpen, setCreateManualOpen] = useState(false);
+  const [newManualCode, setNewManualCode] = useState("");
+  const [newManualLabel, setNewManualLabel] = useState("");
+  const [detailManual, setDetailManual] = useState<{ code: string; label: string } | null>(null);
+  const { data: manualFunnels } = useManualFunnels(clientId);
+  const createManual = useCreateManualFunnel();
 
   // Salvar snapshot
   const saveDiag = useSaveDiagnostic();
@@ -209,6 +218,24 @@ export function DiagnosticoSemanal({
       return;
     }
     generateWithAI(summaryForAI);
+  };
+
+  const handleCreateManual = async () => {
+    const code = newManualCode.trim().toUpperCase();
+    const label = newManualLabel.trim();
+    if (!code || !label) {
+      toast.error("Informe código e nome");
+      return;
+    }
+    try {
+      await createManual.mutateAsync({ client_id: clientId, code, label });
+      toast.success("Funil manual criado");
+      setNewManualCode("");
+      setNewManualLabel("");
+      setCreateManualOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message?.includes("duplicate") ? "Já existe um funil com esse código" : "Erro ao criar funil");
+    }
   };
 
   // ESC fecha apresentação
