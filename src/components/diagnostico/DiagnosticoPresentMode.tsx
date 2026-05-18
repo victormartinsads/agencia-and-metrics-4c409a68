@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FunnelGroup } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
+import { ManualFunnel } from "@/hooks/useManualFunnels";
+import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
 import {
   AVAILABLE_METRICS,
   formatCustomValue,
@@ -18,6 +20,8 @@ interface Props {
   /** Faixa de datas formatada (ex: "01/04 – 07/04"). */
   periodRange?: string;
   groups: FunnelGroup[];
+  /** Funis manuais adicionados pelo usuário — apresentados como slides após os funis de campanha. */
+  manualFunnels?: ManualFunnel[];
   blocks: DiagnosticBlocks;
   whatWeDid: string;
   nextActions: string;
@@ -36,6 +40,7 @@ type Slide =
   | { kind: "cover" }
   | { kind: "notes" }
   | { kind: "group"; group: FunnelGroup }
+  | { kind: "manual"; manual: ManualFunnel }
   | { kind: "diagnostic"; key: keyof DiagnosticBlocks; title: string; emoji: string; accent: string };
 
 function fmtMoney(v: number, sym: string) {
@@ -48,17 +53,18 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs,
+  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs,
 }: Props) {
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
     { kind: "notes" },
     ...groups.map(g => ({ kind: "group" as const, group: g })),
+    ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
     { kind: "diagnostic", key: "positives", title: "O que foi positivo", emoji: "✅", accent: "from-green-500/20" },
     { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
     { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
     { kind: "diagnostic", key: "client_requests", title: "Pedidos ao cliente", emoji: "🤝", accent: "from-amber-500/20" },
-  ], [groups]);
+  ], [groups, manualFunnels]);
 
   const [idx, setIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -150,6 +156,28 @@ export function DiagnosticoPresentMode({
                 datePreset={datePresetKey || datePreset}
                 overrideConfig={groupConfigs?.[slide.group.key]}
               />
+            )}
+
+            {slide.kind === "manual" && clientId && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-primary font-semibold">Funil manual</p>
+                  <h2 className="text-4xl font-bold text-card-foreground mt-1">{slide.manual.label}</h2>
+                </div>
+                <FunnelPreviewCard
+                  clientId={clientId}
+                  funnelCode={slide.manual.code}
+                  funnelLabel={slide.manual.label}
+                  campaigns={[]}
+                  currencySymbol={currencySymbol}
+                  datePreset={datePresetKey || datePreset}
+                  isManual
+                  manualId={slide.manual.id}
+                  readOnly
+                  hideOpenDetail
+                  onOpenDetail={() => {}}
+                />
+              </div>
             )}
 
             {slide.kind === "diagnostic" && (
