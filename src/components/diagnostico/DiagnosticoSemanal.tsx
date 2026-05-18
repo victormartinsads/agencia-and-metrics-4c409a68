@@ -267,6 +267,9 @@ export function DiagnosticoSemanal({
               <Button onClick={() => setPresenting(true)} variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
                 <Presentation className="h-3.5 w-3.5" /> Apresentar
               </Button>
+              <Button onClick={() => setCreateManualOpen(true)} variant="outline" size="sm" className="h-8 px-3 gap-1.5 text-xs">
+                <Plus className="h-3.5 w-3.5" /> Funil manual
+              </Button>
               <Button onClick={() => setSaveOpen(true)} size="sm" className="h-8 px-3 gap-1.5 text-xs">
                 <Save className="h-3.5 w-3.5" /> Salvar
               </Button>
@@ -343,6 +346,39 @@ export function DiagnosticoSemanal({
             </div>
           </div>
         </section>
+
+        {/* Funis manuais */}
+        {(manualFunnels || []).length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="text-lg font-bold text-card-foreground">Funis Manuais</h3>
+                <p className="text-xs text-muted-foreground">
+                  Os valores editados aqui sincronizam com a aba Análise de Funis.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setCreateManualOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> Novo funil manual
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {(manualFunnels || []).map((m) => (
+                <FunnelPreviewCard
+                  key={m.id}
+                  clientId={clientId}
+                  funnelCode={m.code}
+                  funnelLabel={m.label}
+                  campaigns={[]}
+                  currencySymbol={currencySymbol}
+                  datePreset={datePreset}
+                  isManual
+                  manualId={m.id}
+                  onOpenDetail={() => setDetailManual({ code: m.code, label: m.label })}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Funis / Campanhas */}
         <div className="space-y-6">
@@ -436,6 +472,57 @@ export function DiagnosticoSemanal({
               {saveDiag.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Salvar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {detailManual && (
+        <FunnelPremiumDetailDialog
+          open={!!detailManual}
+          onClose={() => setDetailManual(null)}
+          clientId={clientId}
+          funnelCode={detailManual.code}
+          funnelLabel={detailManual.label}
+          campaigns={[]}
+          currencySymbol={currencySymbol}
+          datePreset={datePreset}
+          isManual
+        />
+      )}
+
+      <Dialog open={createManualOpen} onOpenChange={setCreateManualOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo funil manual</DialogTitle>
+            <DialogDescription>
+              Crie um funil 100% manual para preencher dados como Google Ads e editar métricas no lápis.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-card-foreground">Código curto</label>
+              <Input
+                value={newManualCode}
+                onChange={(e) => setNewManualCode(e.target.value.toUpperCase())}
+                placeholder="GADS"
+                maxLength={12}
+                className="h-8 text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">Identificador único (ex.: GADS, PMAX, SEARCH).</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-card-foreground">Nome de exibição</label>
+              <Input
+                value={newManualLabel}
+                onChange={(e) => setNewManualLabel(e.target.value)}
+                placeholder="Google Ads — Performance Max"
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateManualOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateManual} disabled={createManual.isPending}>Criar funil</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
