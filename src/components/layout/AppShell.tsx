@@ -123,12 +123,12 @@ export default function AppShell({
       label: "Operação",
       items: [
         { id: "crm", label: "CRM", icon: KanbanSquare, href: "/crm-app" },
-        ...(role?.isAdmin
+        ...((role?.isAdmin || role?.isEditor)
           ? [{ id: "manager", label: "Gestor", icon: Brain, href: "/gestor" }]
           : []),
       ],
     },
-    ...(role?.isAdmin
+    ...((role?.isAdmin || role?.isEditor)
       ? [
           {
             label: "Conta",
