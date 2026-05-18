@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Check, X, ArrowRight, DollarSign, TrendingUp, Target, ShoppingCart, Users, Settings2, MousePointerClick, Eye, BarChart3, Percent, Activity, UserPlus } from "lucide-react";
+import {
+  Pencil, Check, X, ArrowRight, DollarSign, TrendingUp, Target, ShoppingCart, Users,
+  Settings2, MousePointerClick, Eye, BarChart3, Percent, Activity, UserPlus, Plus, Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -8,17 +11,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Campaign } from "@/data/mockMetaData";
 import { aggregateCampaignMetrics } from "@/lib/metaMetrics";
 import { formatCurrency } from "@/lib/format";
-import { KpiCardPremium } from "@/components/dashboard/overview/premium/KpiCardPremium";
-import { useFunnelLabels, useSaveFunnelLabel } from "@/hooks/useFunnelLabels";
+import { EditableKpiCell } from "@/components/funnel/EditableKpiCell";
 import {
-  useFunnelLeadMapping,
-} from "@/hooks/useFunnelLeadMapping";
-import { useFunnelMetricSources } from "@/hooks/useFunnelMetricSources";
-import { useFunnelPeriodMetrics } from "@/hooks/useFunnelPeriodMetrics";
-import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
-import { MetricSourceMenu } from "@/components/funnel/MetricSourceMenu";
+  useFunnelLabels, useSaveFunnelLabel,
+} from "@/hooks/useFunnelLabels";
+import { useFunnelLeadMapping } from "@/hooks/useFunnelLeadMapping";
+import {
+  useFunnelPeriodMetrics,
+  useSaveFunnelPeriodMetric,
+  presetToRange,
+} from "@/hooks/useFunnelPeriodMetrics";
+import { useUpdateManualFunnel, useDeleteManualFunnel } from "@/hooks/useManualFunnels";
 import { toast } from "sonner";
-import { getPeriodPair } from "@/lib/period";
 
 interface Props {
   clientId: string;
@@ -29,6 +33,12 @@ interface Props {
   readOnly?: boolean;
   onOpenDetail: () => void;
   datePreset?: string;
+  /** When true, no Meta auto-values are computed; everything comes from manual overrides. */
+  isManual?: boolean;
+  /** ID of the manual funnel row, used for rename/delete. */
+  manualId?: string;
+  /** When true, hides the "Análise completa" button (used when embedded inside the dialog). */
+  hideOpenDetail?: boolean;
 }
 
 function compact(n: number) {
@@ -38,7 +48,32 @@ function compact(n: number) {
 }
 
 const DEFAULT_KPIS = ["spend", "revenue", "roas", "sales", "leads"];
-const CONFIGURABLE = new Set(["revenue", "sales"]);
+
+type Format = "currency" | "number" | "percent" | "multiplier";
+interface MetricSpec {
+  key: string;
+  label: string;
+  format: Format;
+  icon: JSX.Element;
+  sub?: string;
+  emphasis?: boolean;
+  /** Whether the value comes from a manual override. */
+  isManualOverride: boolean;
+  /** Raw numeric value. */
+  value: number;
+  /** Whether this is a fully user-added (custom) metric. */
+  isCustom?: boolean;
+}
+
+function formatValue(v: number, fmt: Format, currencySymbol: string, blankWhenZero = false) {
+  if (blankWhenZero && (!v || v === 0)) return "—";
+  switch (fmt) {
+    case "currency": return formatCurrency(v, currencySymbol);
+    case "percent":  return `${v.toFixed(2)}%`;
+    case "multiplier": return `${v.toFixed(2)}x`;
+    default: return compact(v);
+  }
+}
 
 export function FunnelPreviewCard({
   clientId,
@@ -49,17 +84,22 @@ export function FunnelPreviewCard({
   readOnly = false,
   onOpenDetail,
   datePreset,
+  isManual = false,
+  manualId,
+  hideOpenDetail = false,
 }: Props) {
   const { data: labelMap } = useFunnelLabels(clientId);
   const saveLabel = useSaveFunnelLabel();
   const { data: leadMap } = useFunnelLeadMapping(clientId);
-  const { data: sourceMap } = useFunnelMetricSources(clientId);
   const { data: periodMetrics } = useFunnelPeriodMetrics(clientId, funnelCode, datePreset);
-  const { data: weeklyMetrics } = useWeeklyMetrics(clientId);
-  const { data: sheetCfg } = useDashboardSheet(clientId);
+  const saveMetric = useSaveFunnelPeriodMetric();
+  const updateManual = useUpdateManualFunnel();
+  const deleteManual = useDeleteManualFunnel();
 
   const leadActionTypes = leadMap?.[funnelCode] || [];
-  const totals = aggregateCampaignMetrics(campaigns, { leadActionTypes });
+  const totals = isManual
+    ? { spend: 0, purchaseValue: 0, purchases: 0, leads: 0, conversions: 0, impressions: 0, clicks: 0 } as any
+    : aggregateCampaignMetrics(campaigns, { leadActionTypes });
 
   const baseLabel = (labelMap?.[funnelCode] || funnelLabel || funnelCode).replace(/^F\d+\s*[\-—]\s*/, "");
 
@@ -67,110 +107,120 @@ export function FunnelPreviewCard({
   const [draft, setDraft] = useState(baseLabel);
   useEffect(() => setDraft(baseLabel), [baseLabel]);
 
-  const onSave = async () => {
-    const v = draft.trim();
-    if (!v) return;
-    try {
-      await saveLabel.mutateAsync({ clientId, funnelCode, label: v });
-      toast.success("Nome do funil salvo");
-      setEditing(false);
-    } catch {
-      toast.error("Erro ao salvar nome");
+  // ---------- helpers to read overrides ----------
+  const overrideMap = useMemo(() => {
+    const m: Record<string, { value: number; label: string }> = {};
+    for (const r of periodMetrics || []) {
+      m[r.metric_key] = { value: Number(r.metric_value) || 0, label: r.metric_label || r.metric_key };
     }
+    return m;
+  }, [periodMetrics]);
+
+  const getOverride = (key: string) => overrideMap[key];
+  const resolve = (key: string, auto: number) => {
+    const o = getOverride(key);
+    return o ? { value: o.value, isManualOverride: true } : { value: auto, isManualOverride: false };
   };
 
-  const revenueSource = sourceMap?.[`${funnelCode}:revenue`];
-  const salesSource = sourceMap?.[`${funnelCode}:sales`];
+  // ---------- base metric values ----------
+  const spendR = resolve("spend", totals.spend || 0);
+  const revenueR = resolve("revenue", totals.purchaseValue || 0);
+  const salesR = resolve("sales", totals.purchases || 0);
+  const leadsR = resolve("leads", totals.leads || totals.conversions || 0);
+  const impressionsR = resolve("impressions", (totals as any).impressions || 0);
+  const clicksR = resolve("clicks", (totals as any).clicks || 0);
+  const followersR = resolve("followers", 0);
 
-  const resolveMetric = (
-    metric: "revenue" | "sales",
-    src: typeof revenueSource,
-    autoValue: number,
-  ) => {
-    if (!src || src.source_type === "auto") return autoValue;
-    if (src.source_type === "meta") {
-      const c = campaigns.find((x) => x.id === src.meta_campaign_id);
-      if (!c) return autoValue;
-      return metric === "revenue" ? (c.purchaseValue || 0) : (c.purchases || 0);
-    }
-    if (src.source_type === "sheet" && weeklyMetrics) {
-      const code = src.sheet_product_code;
-      let rows = code ? weeklyMetrics.filter((r) => r.product_code === code) : weeklyMetrics;
-      // filtra pelo período selecionado no header
-      if (datePreset) {
-        try {
-          const { current } = getPeriodPair(datePreset);
-          const startMs = current.start.getTime();
-          const endMs = current.end.getTime();
-          rows = rows.filter((r) => {
-            const dt = new Date((r as any).reference_date).getTime();
-            return dt >= startMs && dt <= endMs;
-          });
-        } catch {}
-      }
-      const field = metric === "revenue" ? "revenue" : "sales";
-      return rows.reduce((s, r) => s + (Number((r as any)[field]) || 0), 0);
-    }
-    return autoValue;
-  };
+  // derived (allow override too)
+  const spend = spendR.value, revenue = revenueR.value, sales = salesR.value, leads = leadsR.value;
+  const impressions = impressionsR.value, clicks = clicksR.value, followers = followersR.value;
 
-  const spend = totals.spend || 0;
-  const revenue = resolveMetric("revenue", revenueSource, totals.purchaseValue || 0);
-  const sales = resolveMetric("sales", salesSource, totals.purchases || 0);
-  const roas = spend > 0 ? revenue / spend : 0;
-  const leads = totals.leads || totals.conversions || 0;
-  const cpv = sales > 0 ? spend / sales : 0;
-  const impressions = (totals as any).impressions || 0;
-  const clicks = (totals as any).clicks || 0;
-  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-  const cpc = clicks > 0 ? spend / clicks : 0;
-  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-  const cpl = leads > 0 ? spend / leads : 0;
+  const autoRoas = spend > 0 ? revenue / spend : 0;
+  const autoCtr  = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  const autoCpc  = clicks > 0 ? spend / clicks : 0;
+  const autoCpm  = impressions > 0 ? (spend / impressions) * 1000 : 0;
+  const autoCpl  = leads > 0 ? spend / leads : 0;
+  const autoCpa  = sales > 0 ? spend / sales : 0;
+  const autoCps  = followers > 0 ? spend / followers : 0;
 
-  // Custo por seguidor (apenas F1 / Captação)
-  const followersEntry = periodMetrics?.find((m) => m.metric_key === "followers");
-  const followers = followersEntry?.metric_value || 0;
-  const cps = followers > 0 ? spend / followers : 0;
+  const roasR = resolve("roas", autoRoas);
+  const ctrR  = resolve("ctr",  autoCtr);
+  const cpcR  = resolve("cpc",  autoCpc);
+  const cpmR  = resolve("cpm",  autoCpm);
+  const cplR  = resolve("cpl",  autoCpl);
+  const cpaR  = resolve("cpa",  autoCpa);
+  const cpsR  = resolve("cps",  autoCps);
+
   const isCaptacao = funnelCode === "F1";
 
-  const KPI_CATALOG: Record<string, { label: string; value: string; sub?: string; icon: JSX.Element; emphasis?: boolean }> = {
-    spend:      { label: "Investimento", value: formatCurrency(spend, currencySymbol), sub: "vs. período anterior", icon: <DollarSign className="h-3 w-3" /> },
-    revenue:    { label: "Faturamento", value: formatCurrency(revenue, currencySymbol), sub: "vs. período anterior", emphasis: true, icon: <TrendingUp className="h-3 w-3" /> },
-    roas:       { label: "ROAS", value: `${roas.toFixed(2)}x`, sub: "Meta: 3.5x", icon: <Target className="h-3 w-3" /> },
-    sales:      { label: "Vendas", value: compact(sales), sub: cpv > 0 ? `CPV ${formatCurrency(cpv, currencySymbol)}` : "—", icon: <ShoppingCart className="h-3 w-3" /> },
-    leads:      { label: "Leads", value: compact(leads), sub: cpl > 0 ? `CPL ${formatCurrency(cpl, currencySymbol)}` : undefined, icon: <Users className="h-3 w-3" /> },
-    impressions:{ label: "Impressões", value: compact(impressions), icon: <Eye className="h-3 w-3" /> },
-    clicks:     { label: "Cliques", value: compact(clicks), icon: <MousePointerClick className="h-3 w-3" /> },
-    ctr:        { label: "CTR", value: `${ctr.toFixed(2)}%`, icon: <Percent className="h-3 w-3" /> },
-    cpc:        { label: "CPC", value: formatCurrency(cpc, currencySymbol), icon: <BarChart3 className="h-3 w-3" /> },
-    cpm:        { label: "CPM", value: formatCurrency(cpm, currencySymbol), icon: <Activity className="h-3 w-3" /> },
-    cpa:        { label: "CPA", value: formatCurrency(sales > 0 ? spend / sales : 0, currencySymbol), icon: <Target className="h-3 w-3" /> },
-    cpl:        { label: "CPL", value: formatCurrency(cpl, currencySymbol), icon: <Users className="h-3 w-3" /> },
-    followers:  { label: "Seguidores", value: compact(followers), sub: followers > 0 ? "input do Como Estamos" : "sem input no período", icon: <UserPlus className="h-3 w-3" /> },
-    cps:        { label: "Custo / Seguidor", value: cps > 0 ? formatCurrency(cps, currencySymbol) : "—", sub: followers > 0 ? `${compact(followers)} seguidores` : "defina no Como Estamos", icon: <UserPlus className="h-3 w-3" />, emphasis: true },
+  const KPI_CATALOG: Record<string, MetricSpec> = {
+    spend:       { key: "spend", label: "Investimento", format: "currency", value: spend, isManualOverride: spendR.isManualOverride, sub: "vs. período anterior", icon: <DollarSign className="h-3 w-3" /> },
+    revenue:     { key: "revenue", label: "Faturamento", format: "currency", value: revenue, isManualOverride: revenueR.isManualOverride, emphasis: true, sub: "vs. período anterior", icon: <TrendingUp className="h-3 w-3" /> },
+    roas:        { key: "roas", label: "ROAS", format: "multiplier", value: roasR.value, isManualOverride: roasR.isManualOverride, sub: "Meta: 3.5x", icon: <Target className="h-3 w-3" /> },
+    sales:       { key: "sales", label: "Vendas", format: "number", value: sales, isManualOverride: salesR.isManualOverride, sub: cpaR.value > 0 ? `CPV ${formatCurrency(cpaR.value, currencySymbol)}` : "—", icon: <ShoppingCart className="h-3 w-3" /> },
+    leads:       { key: "leads", label: "Leads", format: "number", value: leads, isManualOverride: leadsR.isManualOverride, sub: cplR.value > 0 ? `CPL ${formatCurrency(cplR.value, currencySymbol)}` : undefined, icon: <Users className="h-3 w-3" /> },
+    impressions: { key: "impressions", label: "Impressões", format: "number", value: impressions, isManualOverride: impressionsR.isManualOverride, icon: <Eye className="h-3 w-3" /> },
+    clicks:      { key: "clicks", label: "Cliques", format: "number", value: clicks, isManualOverride: clicksR.isManualOverride, icon: <MousePointerClick className="h-3 w-3" /> },
+    ctr:         { key: "ctr", label: "CTR", format: "percent", value: ctrR.value, isManualOverride: ctrR.isManualOverride, icon: <Percent className="h-3 w-3" /> },
+    cpc:         { key: "cpc", label: "CPC", format: "currency", value: cpcR.value, isManualOverride: cpcR.isManualOverride, icon: <BarChart3 className="h-3 w-3" /> },
+    cpm:         { key: "cpm", label: "CPM", format: "currency", value: cpmR.value, isManualOverride: cpmR.isManualOverride, icon: <Activity className="h-3 w-3" /> },
+    cpa:         { key: "cpa", label: "CPA", format: "currency", value: cpaR.value, isManualOverride: cpaR.isManualOverride, icon: <Target className="h-3 w-3" /> },
+    cpl:         { key: "cpl", label: "CPL", format: "currency", value: cplR.value, isManualOverride: cplR.isManualOverride, icon: <Users className="h-3 w-3" /> },
+    followers:   { key: "followers", label: "Seguidores", format: "number", value: followers, isManualOverride: followersR.isManualOverride, sub: followers > 0 ? "input manual" : "sem input", icon: <UserPlus className="h-3 w-3" /> },
+    cps:         { key: "cps", label: "Custo / Seguidor", format: "currency", value: cpsR.value, isManualOverride: cpsR.isManualOverride, emphasis: true, sub: followers > 0 ? `${compact(followers)} seguidores` : "defina seguidores", icon: <UserPlus className="h-3 w-3" /> },
   };
 
+  // Custom user-added metrics (any periodMetric with key starting custom:)
+  const customMetrics: MetricSpec[] = useMemo(() => {
+    return (periodMetrics || [])
+      .filter((m) => m.metric_key.startsWith("custom:"))
+      .map((m) => ({
+        key: m.metric_key,
+        label: m.metric_label || m.metric_key.replace("custom:", ""),
+        format: "number" as Format,
+        value: Number(m.metric_value) || 0,
+        isManualOverride: true,
+        isCustom: true,
+        icon: <Activity className="h-3 w-3" />,
+      }));
+  }, [periodMetrics]);
+
+  const fullCatalog: Record<string, MetricSpec> = { ...KPI_CATALOG };
+  for (const c of customMetrics) fullCatalog[c.key] = c;
+
+  // ---------- visible selection ----------
   const storageKey = `funnel-preview-kpis:${clientId}:${funnelCode}`;
   const [selected, setSelected] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
+    if (isManual) return ["spend", "leads", "sales", "revenue", "roas"];
     return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
   });
   useEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(selected)); } catch {}
   }, [storageKey, selected]);
 
-  // Garantir que F1 sempre exiba o custo por seguidor (fixo) mesmo se o user mudar
+  // Auto-include any custom metric not yet in selection
+  useEffect(() => {
+    if (!customMetrics.length) return;
+    setSelected((prev) => {
+      const next = [...prev];
+      for (const c of customMetrics) if (!next.includes(c.key)) next.push(c.key);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customMetrics.length]);
+
   const visibleKeys = useMemo(() => {
-    const base = selected.filter((k) => KPI_CATALOG[k]);
-    if (isCaptacao) {
+    const base = selected.filter((k) => fullCatalog[k]);
+    if (isCaptacao && !isManual) {
       if (!base.includes("cps")) base.unshift("cps");
       if (!base.includes("followers")) base.unshift("followers");
     }
     return base.slice(0, 6);
-  }, [selected, KPI_CATALOG, isCaptacao]);
+  }, [selected, fullCatalog, isCaptacao, isManual]);
 
   const toggleKpi = (key: string) => {
     setSelected((prev) => {
@@ -178,23 +228,66 @@ export function FunnelPreviewCard({
         if (prev.length <= 1) return prev;
         return prev.filter((k) => k !== key);
       }
-      if (prev.length >= 6) {
-        toast.info("Máximo de 6 métricas");
-        return prev;
-      }
+      if (prev.length >= 6) { toast.info("Máximo de 6 métricas"); return prev; }
       return [...prev, key];
     });
   };
 
+  // ---------- label save ----------
+  const onSaveLabel = async () => {
+    const v = draft.trim();
+    if (!v) return;
+    try {
+      if (isManual && manualId) {
+        await updateManual.mutateAsync({ id: manualId, client_id: clientId, label: v });
+      } else {
+        await saveLabel.mutateAsync({ clientId, funnelCode, label: v });
+      }
+      toast.success("Nome do funil salvo");
+      setEditing(false);
+    } catch { toast.error("Erro ao salvar nome"); }
+  };
+
+  // ---------- add custom metric ----------
+  const [newName, setNewName] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const handleAddCustom = async () => {
+    const name = newName.trim();
+    if (!name) { toast.error("Informe um nome"); return; }
+    const v = Number(String(newValue).replace(",", "."));
+    if (!Number.isFinite(v)) { toast.error("Valor inválido"); return; }
+    if (!datePreset) return;
+    const range = presetToRange(datePreset);
+    const key = `custom:${name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")}`;
+    try {
+      await saveMetric.mutateAsync({
+        client_id: clientId,
+        funnel_code: funnelCode,
+        metric_key: key,
+        metric_label: name,
+        metric_value: v,
+        period_start: range.start,
+        period_end: range.end,
+        source: "manual_custom",
+      });
+      toast.success("Métrica adicionada");
+      setNewName(""); setNewValue("");
+      setSelected((prev) => prev.includes(key) ? prev : [...prev, key]);
+    } catch { toast.error("Erro ao adicionar métrica"); }
+  };
+
+  // ---------- delete manual funnel ----------
+  const handleDeleteManual = async () => {
+    if (!manualId) return;
+    if (!confirm("Remover este funil manual? Os valores salvos serão mantidos no histórico.")) return;
+    try {
+      await deleteManual.mutateAsync({ id: manualId, client_id: clientId });
+      toast.success("Funil removido");
+    } catch { toast.error("Erro ao remover"); }
+  };
+
   const visible = visibleKeys;
   const gridCols = visible.length >= 5 ? "lg:grid-cols-5" : visible.length === 4 ? "lg:grid-cols-4" : visible.length === 3 ? "lg:grid-cols-3" : visible.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-6";
-
-  // produtos disponíveis na planilha (para a fonte sheet)
-  const sheetProducts = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of weeklyMetrics || []) if (r.product_code) set.add(r.product_code);
-    return Array.from(set);
-  }, [weeklyMetrics]);
 
   return (
     <motion.section
@@ -205,56 +298,40 @@ export function FunnelPreviewCard({
       <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
-          <span
-            className="text-[10px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border border-primary/40 text-primary"
-          >
+          <span className="text-[10px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border border-primary/40 text-primary">
             {funnelCode}
           </span>
+          {isManual && (
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+              Manual
+            </span>
+          )}
           {editing ? (
             <div className="flex items-center gap-1 flex-1">
               <Input
-                autoFocus
-                value={draft}
+                autoFocus value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") onSave();
-                  if (e.key === "Escape") {
-                    setDraft(baseLabel);
-                    setEditing(false);
-                  }
+                  if (e.key === "Enter") onSaveLabel();
+                  if (e.key === "Escape") { setDraft(baseLabel); setEditing(false); }
                 }}
                 className="h-7 text-sm flex-1 max-w-xs"
               />
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onSave}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onSaveLabel}>
                 <Check className="h-3.5 w-3.5 text-primary" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => {
-                  setDraft(baseLabel);
-                  setEditing(false);
-                }}
-              >
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setDraft(baseLabel); setEditing(false); }}>
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
           ) : (
             <>
-              <h3
-                className="text-sm font-bold uppercase tracking-[0.06em] truncate"
-                style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
-                title={baseLabel}
-              >
+              <h3 className="text-sm font-bold uppercase tracking-[0.06em] truncate"
+                  style={{ fontFamily: "'Syne', system-ui, sans-serif" }} title={baseLabel}>
                 {baseLabel}
               </h3>
               {!readOnly && (
-                <button
-                  className="text-muted-foreground hover:text-primary p-1 rounded"
-                  onClick={() => setEditing(true)}
-                  title="Renomear funil"
-                >
+                <button className="text-muted-foreground hover:text-primary p-1 rounded" onClick={() => setEditing(true)} title="Renomear funil">
                   <Pencil className="h-3 w-3" />
                 </button>
               )}
@@ -264,67 +341,82 @@ export function FunnelPreviewCard({
 
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-[10px] text-muted-foreground/70 hidden sm:inline">
-            {campaigns.length} campanha{campaigns.length > 1 ? "s" : ""}
+            {isManual ? "manual" : `${campaigns.length} campanha${campaigns.length !== 1 ? "s" : ""}`}
           </span>
           {!readOnly && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Escolher métricas">
+                <Button size="icon" variant="ghost" className="h-7 w-7" title="Escolher / adicionar métricas">
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-64 p-3">
+              <PopoverContent align="end" className="w-72 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Métricas visíveis</p>
-                <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                  {Object.entries(KPI_CATALOG).map(([key, cfg]) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer py-1 text-xs">
-                      <Checkbox
-                        checked={selected.includes(key)}
-                        onCheckedChange={() => toggleKpi(key)}
-                      />
-                      <span>{cfg.label}</span>
+                <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+                  {Object.entries(fullCatalog).map(([key, cfg]) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer py-0.5 text-xs">
+                      <Checkbox checked={selected.includes(key)} onCheckedChange={() => toggleKpi(key)} />
+                      <span className="flex-1">{cfg.label}</span>
+                      {cfg.isCustom && (
+                        <span className="text-[9px] uppercase text-primary/80">custom</span>
+                      )}
                     </label>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">Selecione entre 1 e 6 métricas.</p>
+                <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Adicionar métrica personalizada
+                  </p>
+                  <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome (ex.: Inscritos)" className="h-7 text-xs" />
+                  <Input type="number" step="0.01" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="Valor" className="h-7 text-xs" />
+                  <Button size="sm" onClick={handleAddCustom} disabled={saveMetric.isPending} className="w-full h-7 text-xs gap-1">
+                    <Plus className="h-3 w-3" /> Adicionar
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">1 a 6 métricas visíveis. Valores ligados ao período selecionado.</p>
               </PopoverContent>
             </Popover>
           )}
+          {isManual && manualId && !readOnly && (
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Remover funil manual" onClick={handleDeleteManual}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {!hideOpenDetail && (
           <Button
-            size="sm"
-            variant="outline"
+            size="sm" variant="outline"
             className="h-7 text-[11px] gap-1 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
             onClick={onOpenDetail}
           >
             Análise completa <ArrowRight className="h-3 w-3" />
-          </Button>
+          </Button>)}
         </div>
       </header>
 
       <div className={`grid grid-cols-2 sm:grid-cols-3 ${gridCols} gap-3 p-4`}>
         {visible.map((key) => {
-          const cfg = KPI_CATALOG[key];
-          const sourceConfigurable = !readOnly && CONFIGURABLE.has(key);
+          const cfg = fullCatalog[key];
+          if (!cfg) return null;
+          const display = formatValue(cfg.value, cfg.format, currencySymbol, isManual && !cfg.isManualOverride);
           return (
-            <div key={key} className="relative">
-              <KpiCardPremium
-                label={cfg.label}
-                value={cfg.value}
-                sub={cfg.sub}
-                emphasis={cfg.emphasis}
-                icon={cfg.icon}
-              />
-              {sourceConfigurable && (
-                <MetricSourceMenu
-                  clientId={clientId}
-                  funnelCode={funnelCode}
-                  metricKey={key as "revenue" | "sales"}
-                  current={key === "revenue" ? revenueSource : salesSource}
-                  campaigns={campaigns}
-                  sheetProducts={sheetProducts}
-                />
-              )}
-            </div>
+            <EditableKpiCell
+              key={key}
+              clientId={clientId}
+              funnelCode={funnelCode}
+              metricKey={cfg.key}
+              metricLabel={cfg.label}
+              displayLabel={cfg.label}
+              displayValue={display}
+              sub={cfg.sub}
+              icon={cfg.icon}
+              emphasis={cfg.emphasis}
+              rawValue={cfg.value}
+              isManualOverride={cfg.isManualOverride}
+              isCustomMetric={cfg.isCustom}
+              onCustomRemoved={() => setSelected((p) => p.filter((k) => k !== cfg.key))}
+              datePreset={datePreset}
+              readOnly={readOnly}
+            />
           );
         })}
       </div>
