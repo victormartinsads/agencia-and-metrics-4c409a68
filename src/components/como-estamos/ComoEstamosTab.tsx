@@ -150,6 +150,14 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
             <MetricSelector selected={visibleMetrics} onChange={setVisibleMetrics} />
           </PopoverContent>
         </Popover>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 gap-1.5 text-xs"
+          onClick={() => setCreateManualOpen(true)}
+        >
+          <Plus className="h-3.5 w-3.5" /> Funil manual
+        </Button>
       </div>
 
       {/* Alerts (above health) */}
