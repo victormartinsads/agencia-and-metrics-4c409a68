@@ -4,12 +4,10 @@ import { PanelCard } from "@/components/dashboard/overview/premium/PanelCard";
 import { Campaign } from "@/data/mockMetaData";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { aggregateCampaignMetrics } from "@/lib/metaMetrics";
-import { formatCurrency } from "@/lib/format";
 import { FunnelCard } from "@/components/funnel/FunnelCard";
 import { EditableOverviewFunnel } from "@/components/dashboard/overview/EditableOverviewFunnel";
 import { BestAdsList } from "@/components/dashboard/overview/BestAdsList";
-import { KpiCardPremium } from "@/components/dashboard/overview/premium/KpiCardPremium";
-import { DollarSign, TrendingUp, Target, ShoppingCart, Users } from "lucide-react";
+import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
 import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 
 interface Props {
@@ -22,6 +20,7 @@ interface Props {
   currencySymbol?: string;
   datePreset: string;
   readOnly?: boolean;
+  isManual?: boolean;
 }
 
 interface AdSetRow {
@@ -34,12 +33,6 @@ interface AdSetRow {
   ctr: number;
   cpa: number;
   adsCount: number;
-}
-
-function compact(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
-  return n.toLocaleString("pt-BR");
 }
 
 function aggregateAdSets(campaigns: Campaign[]): AdSetRow[] {
@@ -88,12 +81,11 @@ export function FunnelPremiumDetailDialog({
   currencySymbol = "R$",
   datePreset,
   readOnly = false,
+  isManual = false,
 }: Props) {
   const { data: labelMap } = useFunnelLabels(clientId);
   const displayLabel = (labelMap?.[funnelCode] || funnelLabel || funnelCode).replace(/^F\d+\s*[\-—]\s*/, "");
 
-  const totals = useMemo(() => aggregateCampaignMetrics(campaigns), [campaigns]);
-  const analysis = useFunnelAnalysis(campaigns);
   const adSets = useMemo(() => aggregateAdSets(campaigns), [campaigns]);
 
   const metaTotals = useMemo(() => {
@@ -129,19 +121,30 @@ export function FunnelPremiumDetailDialog({
             <span style={{ fontFamily: "'Syne', system-ui, sans-serif" }} className="uppercase tracking-[0.06em]">
               {displayLabel}
             </span>
+            {isManual && (
+              <span className="ml-2 text-[10px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+                Manual
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto px-8 py-6 flex-1 min-h-0">
-          {/* KPI Strip — mesmo padrão do print */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <KpiCardPremium label="Investimento" value={formatCurrency(totals.spend, currencySymbol)} sub="vs. período anterior" icon={<DollarSign className="h-3 w-3" />} />
-            <KpiCardPremium label="Faturamento" value={formatCurrency(totals.purchaseValue, currencySymbol)} sub="vs. período anterior" emphasis icon={<TrendingUp className="h-3 w-3" />} />
-            <KpiCardPremium label="ROAS" value={`${(totals.roas || 0).toFixed(2)}x`} sub="Meta: 3.5x" icon={<Target className="h-3 w-3" />} />
-            <KpiCardPremium label="Vendas" value={compact(totals.purchases || 0)} sub={(totals.purchases || 0) > 0 ? `CPV ${formatCurrency(totals.spend / (totals.purchases || 1), currencySymbol)}` : "—"} icon={<ShoppingCart className="h-3 w-3" />} />
-            <KpiCardPremium label="Leads" value={compact(totals.conversions || 0)} icon={<Users className="h-3 w-3" />} />
-          </div>
+          {/* KPI Strip — sincronizado com o card resumido (mesmas métricas + overrides) */}
+          <FunnelPreviewCard
+            clientId={clientId}
+            funnelCode={funnelCode}
+            funnelLabel={displayLabel}
+            campaigns={campaigns}
+            currencySymbol={currencySymbol}
+            readOnly={readOnly}
+            datePreset={datePreset}
+            isManual={isManual}
+            onOpenDetail={() => {}}
+          />
 
+          {!isManual && (
+          <>
           {/* Métricas editáveis (todas) */}
           <PanelCard title="Métricas do funil" subtitle="Clique no ⚙️ para escolher o que exibir">
             <FunnelCard
@@ -189,9 +192,9 @@ export function FunnelPremiumDetailDialog({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[12px] font-bold tabular-nums">{s.conversions.toLocaleString("pt-BR")}</p>
+                        <p className="text-[12px] font-bold tabular-nums">{(s.conversions || 0).toLocaleString("pt-BR")}</p>
                         <p className="text-[10px] text-muted-foreground tabular-nums">
-                          {formatCurrency(s.spend, currencySymbol)} • CPA {formatCurrency(s.cpa, currencySymbol)}
+                          {currencySymbol} {(s.spend || 0).toFixed(2)} • CPA {currencySymbol} {(s.cpa || 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -210,6 +213,17 @@ export function FunnelPremiumDetailDialog({
               currencySymbol={currencySymbol}
             />
           </PanelCard>
+          </>
+          )}
+
+          {isManual && (
+            <PanelCard title="Funil manual" subtitle="Todos os valores são editados manualmente pelos cards acima">
+              <p className="text-xs text-muted-foreground">
+                Este funil não está vinculado a campanhas do Meta. Clique no lápis em cada métrica para editar os valores
+                ou no ⚙️ para adicionar/remover métricas. Os valores ficam atrelados ao período selecionado no header.
+              </p>
+            </PanelCard>
+          )}
         </div>
       </DialogContent>
     </Dialog>
