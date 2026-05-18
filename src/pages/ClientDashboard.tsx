@@ -12,9 +12,12 @@ import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
+  const { data: userRole } = useUserRole();
+  const isStaff = !!(userRole?.isAdmin || userRole?.isEditor);
   const [datePreset, setDatePreset] = useState("last_7d");
   const [activeTab, setActiveTab] = useState("overview");
   const [compareEnabled, setCompareEnabled] = useState(false);
@@ -110,6 +113,12 @@ export default function ClientDashboard() {
   const hasGAds = !!(client as any).google_ads_customer_id;
   const hasGA4 = !!(client as any).ga_property_id;
   const TABS = ALL_TABS.filter((t) => {
+    // Admin/editor sempre veem todas as abas, independente de visible_tabs
+    if (isStaff) {
+      if (t.id === "google-ads") return hasGAds || true;
+      if (t.id === "analytics") return hasGA4 || true;
+      return true;
+    }
     // Auto-show google-ads/analytics whenever their source is configured,
     // regardless of the saved visible_tabs list.
     if (t.id === "google-ads") return hasGAds || (visibleTabs ? visibleTabs.includes(t.id) : true);
