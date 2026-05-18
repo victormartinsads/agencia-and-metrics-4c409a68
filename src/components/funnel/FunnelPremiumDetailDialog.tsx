@@ -139,6 +139,7 @@ export function FunnelPremiumDetailDialog({
             datePreset={datePreset}
             isManual={isManual}
             onOpenDetail={() => {}}
+            hideOpenDetail
           />
 
           {!isManual && (
