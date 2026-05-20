@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Pencil, Check, X, ArrowRight, DollarSign, TrendingUp, Target, ShoppingCart, Users,
   Settings2, MousePointerClick, Eye, BarChart3, Percent, Activity, UserPlus, Plus, Trash2,
+  ArrowUp, ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -215,12 +216,8 @@ export function FunnelPreviewCard({
 
   const visibleKeys = useMemo(() => {
     const base = selected.filter((k) => fullCatalog[k]);
-    if (isCaptacao && !isManual) {
-      if (!base.includes("cps")) base.unshift("cps");
-      if (!base.includes("followers")) base.unshift("followers");
-    }
     return base.slice(0, 6);
-  }, [selected, fullCatalog, isCaptacao, isManual]);
+  }, [selected, fullCatalog]);
 
   const toggleKpi = (key: string) => {
     setSelected((prev) => {
@@ -230,6 +227,18 @@ export function FunnelPreviewCard({
       }
       if (prev.length >= 6) { toast.info("Máximo de 6 métricas"); return prev; }
       return [...prev, key];
+    });
+  };
+
+  const moveKpi = (key: string, dir: -1 | 1) => {
+    setSelected((prev) => {
+      const idx = prev.indexOf(key);
+      if (idx < 0) return prev;
+      const newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      return next;
     });
   };
 
@@ -351,17 +360,65 @@ export function FunnelPreviewCard({
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-72 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Métricas visíveis</p>
-                <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
-                  {Object.entries(fullCatalog).map(([key, cfg]) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer py-0.5 text-xs">
-                      <Checkbox checked={selected.includes(key)} onCheckedChange={() => toggleKpi(key)} />
-                      <span className="flex-1">{cfg.label}</span>
-                      {cfg.isCustom && (
-                        <span className="text-[9px] uppercase text-primary/80">custom</span>
-                      )}
-                    </label>
-                  ))}
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Métricas visíveis ({visibleKeys.length}/6)
+                </p>
+                <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                  {(() => {
+                    const selectedOrdered = selected.filter((k) => fullCatalog[k]);
+                    const unselected = Object.keys(fullCatalog).filter((k) => !selected.includes(k));
+                    return (
+                      <>
+                        {selectedOrdered.map((key, idx) => {
+                          const cfg = fullCatalog[key];
+                          return (
+                            <div key={key} className="flex items-center gap-1 py-0.5 text-xs">
+                              <Checkbox checked onCheckedChange={() => toggleKpi(key)} />
+                              <span className="flex-1 truncate">{cfg.label}</span>
+                              {cfg.isCustom && (
+                                <span className="text-[9px] uppercase text-primary/80">custom</span>
+                              )}
+                              <button
+                                className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"
+                                disabled={idx === 0}
+                                onClick={() => moveKpi(key, -1)}
+                                title="Mover para cima"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"
+                                disabled={idx === selectedOrdered.length - 1}
+                                onClick={() => moveKpi(key, 1)}
+                                title="Mover para baixo"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {unselected.length > 0 && (
+                          <div className="pt-2 mt-2 border-t border-border/60">
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-1">
+                              Disponíveis
+                            </p>
+                            {unselected.map((key) => {
+                              const cfg = fullCatalog[key];
+                              return (
+                                <label key={key} className="flex items-center gap-2 cursor-pointer py-0.5 text-xs">
+                                  <Checkbox checked={false} onCheckedChange={() => toggleKpi(key)} />
+                                  <span className="flex-1 truncate">{cfg.label}</span>
+                                  {cfg.isCustom && (
+                                    <span className="text-[9px] uppercase text-primary/80">custom</span>
+                                  )}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
