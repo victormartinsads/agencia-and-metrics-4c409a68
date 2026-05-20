@@ -11,6 +11,8 @@ import {
   formatCustomValue,
   useDiagnosticMetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
+import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
+import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 
 interface Props {
   group: FunnelGroup;
@@ -23,20 +25,6 @@ function formatMoney(v: number, symbol: string) {
   return `${symbol} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function aggregate(campaigns: Campaign[]) {
-  const spend = campaigns.reduce((s, c) => s + c.spend, 0);
-  const impressions = campaigns.reduce((s, c) => s + c.impressions, 0);
-  const clicks = campaigns.reduce((s, c) => s + c.clicks, 0);
-  const conversions = campaigns.reduce((s, c) => s + c.conversions, 0);
-  const reach = campaigns.reduce((s, c) => s + c.reach, 0);
-  const purchaseValue = campaigns.reduce((s, c) => s + (c.purchaseValue || 0), 0);
-  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-  const cpc = clicks > 0 ? spend / clicks : 0;
-  const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-  const cpa = conversions > 0 ? spend / conversions : 0;
-  const roas = spend > 0 && purchaseValue > 0 ? purchaseValue / spend : 0;
-  return { spend, impressions, clicks, conversions, reach, ctr, cpc, cpm, cpa, roas };
-}
 
 function aggregateAdsets(campaigns: Campaign[]) {
   const map = new Map<string, { name: string; spend: number; impressions: number; clicks: number; conversions: number }>();
@@ -70,7 +58,7 @@ function aggregateAdsets(campaigns: Campaign[]) {
 }
 
 export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
-  const totals = useMemo(() => aggregate(group.campaigns), [group.campaigns]);
+  const totals = useMemo(() => aggregateCampaignMetrics(group.campaigns), [group.campaigns]);
   const adsets = useMemo(() => aggregateAdsets(group.campaigns), [group.campaigns]);
   const [showAdsets, setShowAdsets] = useState(true);
   const resultLabel =
@@ -83,24 +71,13 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
   );
 
   const renderMetricValue = (key: string): string => {
-    switch (key) {
-      case "spend": return formatMoney(totals.spend, currencySymbol);
-      case "conversions": return totals.conversions.toLocaleString("pt-BR");
-      case "cpa": return totals.cpa > 0 ? formatMoney(totals.cpa, currencySymbol) : "—";
-      case "ctr": return `${totals.ctr.toFixed(2)}%`;
-      case "cpc": return totals.cpc > 0 ? formatMoney(totals.cpc, currencySymbol) : "—";
-      case "cpm": return formatMoney(totals.cpm, currencySymbol);
-      case "reach": return totals.reach.toLocaleString("pt-BR");
-      case "impressions": return totals.impressions.toLocaleString("pt-BR");
-      case "clicks": return totals.clicks.toLocaleString("pt-BR");
-      case "roas": return totals.roas > 0 ? `${totals.roas.toFixed(2)}x` : "—";
-      default: return "—";
-    }
+    const v = getMetricValue(totals, key);
+    return formatMetricValue(key, v, currencySymbol);
   };
 
   const getMetricLabel = (key: string): string => {
     if (key === "conversions") return resultLabel;
-    return AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
+    return findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
   };
 
   const isHighlight = (key: string) => key === "spend" || key === "conversions";
