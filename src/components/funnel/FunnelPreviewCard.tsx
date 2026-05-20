@@ -242,8 +242,6 @@ export function FunnelPreviewCard({
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
-    const preset = detectFunnelPreset(funnelLabel, funnelCode);
-    if (preset && preset.length) return preset;
     if (isManual) return ["spend", "leads", "sales", "revenue", "roas"];
     return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
   });
