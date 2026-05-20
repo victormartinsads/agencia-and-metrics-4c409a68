@@ -25,7 +25,7 @@ import {
 import { useUpdateManualFunnel, useDeleteManualFunnel } from "@/hooks/useManualFunnels";
 import { toast } from "sonner";
 import { META_METRIC_CATALOG, getMetricValue, resolveMetricKey } from "@/lib/metaMetricCatalog";
-import { useFunnelCardConfig, useSaveFunnelCardConfig } from "@/hooks/useFunnelCardConfig";
+import { useFunnelCardConfig, useSaveFunnelCardConfig, defaultMetricsFor } from "@/hooks/useFunnelCardConfig";
 
 interface Props {
   clientId: string;
@@ -245,8 +245,8 @@ export function FunnelPreviewCard({
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
-    if (isManual) return ["spend", "leads", "sales", "revenue", "roas"];
-    return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
+    if (isManual) return ["spend", "leads", "revenue", "roas"];
+    return defaultMetricsFor(funnelCode);
   });
   // Hydrate from DB (funnel_card_config) once it loads — overrides localStorage/defaults.
   const [hydratedFromDb, setHydratedFromDb] = useState(false);
