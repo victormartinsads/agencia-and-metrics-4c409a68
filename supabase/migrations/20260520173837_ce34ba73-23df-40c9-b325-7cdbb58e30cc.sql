@@ -1,0 +1,1 @@
+TRUNCATE TABLE public.funnel_card_config;
