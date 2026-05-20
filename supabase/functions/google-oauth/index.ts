@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { getUserClaims, canAccessClient, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,12 @@ Deno.serve(async (req) => {
 
   try {
     const { action, clientId, code, redirectUri } = await req.json();
+    const claims = await getUserClaims(req);
+    if (!claims) return unauthorized(corsHeaders);
+    if (clientId && !(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
+    if ((action === "disconnect" || action === "exchange_code") && !(await hasAdminOrEditor(claims.sub))) {
+      return forbidden(corsHeaders, "Admin or editor role required");
+    }
     const clientIdGoogle = Deno.env.get("GOOGLE_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

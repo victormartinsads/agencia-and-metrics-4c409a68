@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { getUserClaims, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,8 @@ const SAMPLE_LEAD = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const claims = await getUserClaims(req);
+  if (!claims) return unauthorized(corsHeaders);
   try {
     const body = await req.json();
     const { lead_id, event_type, old_status, test, webhook_id } = body;
