@@ -32,7 +32,7 @@ export default function ClientView() {
   });
 
   const clientId = client?.id;
-  const { data: metaData, isLoading: metaLoading } = useMetaAds(clientId, datePreset);
+  const { data: metaData, isLoading: metaLoading } = useMetaAds(clientId, datePreset, slug);
   const { data: diagnostics } = useSavedDiagnostics(clientId || "");
 
   if (clientLoading) {
