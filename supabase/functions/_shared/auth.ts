@@ -7,6 +7,11 @@ export async function getUserClaims(req: Request): Promise<AuthClaims | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice("Bearer ".length);
+  // Allow service-role calls (internal function-to-function) to bypass user JWT validation.
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceKey && token === serviceKey) {
+    return { sub: "service-role", role: "service_role" };
+  }
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
