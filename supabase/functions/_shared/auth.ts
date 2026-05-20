@@ -15,12 +15,11 @@ export async function getUserClaims(req: Request): Promise<AuthClaims | null> {
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
   );
   try {
-    const { data, error } = await sb.auth.getClaims(token);
-    if (error || !data?.claims) return null;
-    return data.claims as AuthClaims;
+    const { data, error } = await sb.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return { sub: data.user.id, email: data.user.email } as AuthClaims;
   } catch {
     return null;
   }
