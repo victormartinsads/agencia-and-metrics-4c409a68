@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { getUserClaims, canAccessClient, unauthorized, forbidden } from "../_shared/auth.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -52,6 +53,9 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const claims = await getUserClaims(req);
+    if (!claims) return unauthorized(corsHeaders);
+    if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: client } = await supabase.from("clients").select("meta_access_token").eq("id", clientId).single();
