@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { getUserClaims, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -23,13 +24,10 @@ type Action =
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Auth: apenas usuários autenticados (admin é validado no client por enquanto)
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Validate JWT and require admin/editor role for any Meta mutation.
+  const claims = await getUserClaims(req);
+  if (!claims) return unauthorized(corsHeaders);
+  if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
 
   try {
     const { clientId, level, objectId, action, value, payload } = await req.json() as {

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getUserClaims, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,6 +96,9 @@ Deno.serve(async (req) => {
 
     // ---- Special action: bulk import via CSV (called from app, JWT-authed) ----
     if (platform === "import") {
+      const claims = await getUserClaims(req);
+      if (!claims) return unauthorized(corsHeaders);
+      if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
       const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE);
       const body = await req.json().catch(() => ({}));
       const events = Array.isArray(body?.events) ? body.events : [];

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { getUserClaims, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -171,6 +172,9 @@ async function preview(spreadsheetId: string, sheetName: string, headerRow: numb
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const claims = await getUserClaims(req);
+  if (!claims) return unauthorized(corsHeaders);
+  if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
   try {
     const { action, query, spreadsheet_id, sheet_name, header_row } = await req.json();
     let result;

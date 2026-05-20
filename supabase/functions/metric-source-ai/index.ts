@@ -1,7 +1,16 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
+import { getUserClaims, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const claims = await getUserClaims(req);
+  if (!claims) return unauthorized(corsHeaders);
+  if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
 
   try {
     const { message, currentSources, availableMetrics, sheetColumns } = await req.json();

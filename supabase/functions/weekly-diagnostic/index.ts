@@ -6,6 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+import { getUserClaims, hasAdminOrEditor, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const SYSTEM_PROMPT = `Você é um Head de Tráfego sênior preparando o diagnóstico semanal de um cliente.
 
@@ -24,6 +25,9 @@ Não envolva o JSON em markdown, retorne JSON puro.`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const claims = await getUserClaims(req);
+  if (!claims) return unauthorized(corsHeaders);
+  if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
