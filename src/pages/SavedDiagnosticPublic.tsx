@@ -9,6 +9,8 @@ import remarkBreaks from "remark-breaks";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPresentMode";
 import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
+import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
+import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
