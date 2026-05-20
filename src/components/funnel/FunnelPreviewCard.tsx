@@ -24,6 +24,7 @@ import {
 } from "@/hooks/useFunnelPeriodMetrics";
 import { useUpdateManualFunnel, useDeleteManualFunnel } from "@/hooks/useManualFunnels";
 import { toast } from "sonner";
+import { META_METRIC_CATALOG, getMetricValue, resolveMetricKey } from "@/lib/metaMetricCatalog";
 
 interface Props {
   clientId: string;
@@ -188,6 +189,24 @@ export function FunnelPreviewCard({
 
   const fullCatalog: Record<string, MetricSpec> = { ...KPI_CATALOG };
   for (const c of customMetrics) fullCatalog[c.key] = c;
+
+  // Inclui TODAS as métricas Meta do catálogo unificado (vídeo, engajamento, etc.)
+  // que ainda não estão presentes no KPI_CATALOG curado deste card.
+  for (const def of META_METRIC_CATALOG) {
+    if (fullCatalog[def.key]) continue;
+    const auto = isManual ? 0 : getMetricValue(totals, def.key);
+    const r = resolve(def.key, auto);
+    const fmt: Format =
+      def.format === "decimal" ? "number" : (def.format as Format);
+    fullCatalog[def.key] = {
+      key: def.key,
+      label: def.label,
+      format: fmt,
+      value: r.value,
+      isManualOverride: r.isManualOverride,
+      icon: <Activity className="h-3 w-3" />,
+    };
+  }
 
   // ---------- visible selection ----------
   const storageKey = `funnel-preview-kpis:${clientId}:${funnelCode}`;
