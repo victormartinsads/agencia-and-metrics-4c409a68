@@ -189,7 +189,20 @@ export function aggregateCampaignMetrics(
     postSaves: sum("onsite_conversion.post_save") || sum("postSaves"),
     pageLikes: sum("like") || sum("pageLikes"),
     follows: sum("follow") || sum("follows"),
-    profileVisits: sum("profile_visit") || sum("profileVisits"),
+    // Visitas ao Perfil: Meta API não retorna "profile_visit" como action_type.
+    // O backend (meta-ads) marca campanhas de Captação de Seguidores com
+    // primaryResultKey === "_profile_visit" e usa `conversions = link_click`
+    // como proxy. Espelhamos a mesma lógica do pódio aqui para que a
+    // Análise de Funis exiba o mesmo valor.
+    profileVisits:
+      sum("profile_visit") ||
+      sum("profileVisits") ||
+      campaigns.reduce((s, c: any) => {
+        const isProfileVisit =
+          c?.primaryResultKey === "_profile_visit" ||
+          c?.primaryActionType === "_profile_visit";
+        return s + (isProfileVisit ? num(c?.conversions) : 0);
+      }, 0),
 
     videoPlays,
     videoView3s,
