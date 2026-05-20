@@ -28,7 +28,7 @@ export default function SharedDashboard() {
   });
 
   const clientId = client?.id;
-  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset);
+  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset, client?.slug);
 
   if (clientLoading) {
     return (
