@@ -92,6 +92,29 @@ function parseDate(raw: unknown, format: string): string | null {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Require authenticated caller
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+  if (claimsErr || !claimsData?.claims) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const userId = claimsData.claims.sub as string;
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -100,6 +123,20 @@ serve(async (req) => {
   try {
     const { client_id } = await req.json();
     if (!client_id) throw new Error("client_id required");
+
+    // Verify the user has access to this client_id (admin/editor role OR client_users membership)
+    const [roleAdminRes, roleEditorRes, cuRes] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+      supabase.rpc("has_role", { _user_id: userId, _role: "editor" }),
+      supabase.from("client_users").select("client_id").eq("user_id", userId).eq("client_id", client_id).maybeSingle(),
+    ]);
+    const allowed = roleAdminRes.data === true || roleEditorRes.data === true || !!cuRes.data;
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: cfg, error: cfgErr } = await supabase
       .from("dashboard_sheet_config")
