@@ -25,6 +25,7 @@ import {
 import { useUpdateManualFunnel, useDeleteManualFunnel } from "@/hooks/useManualFunnels";
 import { toast } from "sonner";
 import { META_METRIC_CATALOG, getMetricValue, resolveMetricKey } from "@/lib/metaMetricCatalog";
+import { useFunnelCardConfig, useSaveFunnelCardConfig } from "@/hooks/useFunnelCardConfig";
 
 interface Props {
   clientId: string;
@@ -237,6 +238,8 @@ export function FunnelPreviewCard({
 
   // ---------- visible selection ----------
   const storageKey = `funnel-preview-kpis:${clientId}:${funnelCode}`;
+  const { data: dbConfigMap } = useFunnelCardConfig(clientId);
+  const saveDbConfig = useSaveFunnelCardConfig();
   const [selected, setSelected] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -245,9 +248,25 @@ export function FunnelPreviewCard({
     if (isManual) return ["spend", "leads", "sales", "revenue", "roas"];
     return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
   });
+  // Hydrate from DB (funnel_card_config) once it loads — overrides localStorage/defaults.
+  const [hydratedFromDb, setHydratedFromDb] = useState(false);
+  useEffect(() => {
+    if (hydratedFromDb) return;
+    if (!dbConfigMap) return;
+    const dbSel = dbConfigMap[funnelCode];
+    if (dbSel && dbSel.length > 0) {
+      setSelected(dbSel);
+    }
+    setHydratedFromDb(true);
+  }, [dbConfigMap, funnelCode, hydratedFromDb]);
   useEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(selected)); } catch {}
-  }, [storageKey, selected]);
+    // Persist to DB so config survives across devices/deploys.
+    if (hydratedFromDb && clientId && funnelCode) {
+      saveDbConfig.mutate({ clientId, funnelCode, metrics: selected });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, selected, hydratedFromDb]);
 
   // Auto-include any custom metric not yet in selection
   useEffect(() => {
