@@ -28,6 +28,7 @@ export async function getUserClaims(req: Request): Promise<AuthClaims | null> {
 
 /** Returns true if user has admin or editor role. */
 export async function hasAdminOrEditor(userId: string): Promise<boolean> {
+  if (userId === "service-role") return true;
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -43,6 +44,7 @@ export async function hasAdminOrEditor(userId: string): Promise<boolean> {
 
 /** Returns true if user is admin/editor OR assigned to the client (client_users/client_assignments). */
 export async function canAccessClient(userId: string, clientId: string): Promise<boolean> {
+  if (userId === "service-role") return true;
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
