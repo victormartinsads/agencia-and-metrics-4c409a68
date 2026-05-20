@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { META_METRIC_CATALOG } from "@/lib/metaMetricCatalog";
 
 export type MetricFormat = "currency" | "number" | "percent" | "text";
 
@@ -16,19 +17,9 @@ export interface MetricsConfig {
   custom_metrics: CustomMetric[];
 }
 
-// Métricas padrão disponíveis
-export const AVAILABLE_METRICS: { key: string; label: string }[] = [
-  { key: "spend", label: "Investimento" },
-  { key: "conversions", label: "Resultados (primária)" },
-  { key: "cpa", label: "CPA" },
-  { key: "ctr", label: "CTR" },
-  { key: "cpc", label: "CPC" },
-  { key: "cpm", label: "CPM" },
-  { key: "reach", label: "Alcance" },
-  { key: "impressions", label: "Impressões" },
-  { key: "clicks", label: "Cliques" },
-  { key: "roas", label: "ROAS" },
-];
+// Catálogo completo Meta — único e compartilhado com Funis / Análise de Funis.
+export const AVAILABLE_METRICS: { key: string; label: string; group?: string }[] =
+  META_METRIC_CATALOG.map((m) => ({ key: m.key, label: m.label, group: m.group }));
 
 const DEFAULT: MetricsConfig = {
   visible_metrics: ["spend", "conversions", "cpa", "ctr", "cpm", "reach"],

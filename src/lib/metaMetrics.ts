@@ -248,6 +248,8 @@ const CURRENCY_KEYS = new Set([
   "cpcLink",
   "cpa",
   "cpl",
+  "cpLead",
+  "cpFollow",
   "cpThruplay",
   "cpLpv",
   "cpAddToCart",

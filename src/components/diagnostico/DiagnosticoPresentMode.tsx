@@ -13,6 +13,8 @@ import {
   useDiagnosticMetricsConfig,
   MetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
+import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
+import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 
 interface Props {
   clientName: string;
@@ -224,46 +226,19 @@ function GroupSlide({
   datePreset: string;
   overrideConfig?: MetricsConfig;
 }) {
-  const totals = group.campaigns.reduce(
-    (acc, c) => {
-      acc.spend += c.spend;
-      acc.impressions += c.impressions;
-      acc.clicks += c.clicks;
-      acc.conversions += c.conversions;
-      acc.reach += c.reach || 0;
-      return acc;
-    },
-    { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0 }
-  );
-  const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-  const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
-  const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0;
-  const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
-  const purchaseValue = group.campaigns.reduce((s, c) => s + (c.purchaseValue || 0), 0);
-  const roas = totals.spend > 0 && purchaseValue > 0 ? purchaseValue / totals.spend : 0;
+  const totals = aggregateCampaignMetrics(group.campaigns);
   const resultLabel =
     group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
   const { config: liveConfig } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
   const config = overrideConfig || liveConfig;
 
-  const renderMetricValue = (key: string): string => {
-    switch (key) {
-      case "spend": return fmtMoney(totals.spend, currencySymbol);
-      case "conversions": return totals.conversions.toLocaleString("pt-BR");
-      case "cpa": return cpa > 0 ? fmtMoney(cpa, currencySymbol) : "—";
-      case "ctr": return `${ctr.toFixed(2)}%`;
-      case "cpc": return cpc > 0 ? fmtMoney(cpc, currencySymbol) : "—";
-      case "cpm": return fmtMoney(cpm, currencySymbol);
-      case "reach": return totals.reach.toLocaleString("pt-BR");
-      case "impressions": return totals.impressions.toLocaleString("pt-BR");
-      case "clicks": return totals.clicks.toLocaleString("pt-BR");
-      case "roas": return roas > 0 ? `${roas.toFixed(2)}x` : "—";
-      default: return "—";
-    }
-  };
+  const renderMetricValue = (key: string): string =>
+    formatMetricValue(key, getMetricValue(totals, key), currencySymbol);
   const metricLabel = (key: string) =>
-    key === "conversions" ? resultLabel : AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
+    key === "conversions"
+      ? resultLabel
+      : findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
   const isHighlight = (key: string) => key === "spend" || key === "conversions";
 
   // Top 3 criativos do grupo
