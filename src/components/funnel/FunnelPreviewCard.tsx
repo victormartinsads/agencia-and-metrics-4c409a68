@@ -25,6 +25,7 @@ import {
 import { useUpdateManualFunnel, useDeleteManualFunnel } from "@/hooks/useManualFunnels";
 import { toast } from "sonner";
 import { META_METRIC_CATALOG, getMetricValue, resolveMetricKey } from "@/lib/metaMetricCatalog";
+import { useFunnelCardConfig, useSaveFunnelCardConfig } from "@/hooks/useFunnelCardConfig";
 
 interface Props {
   clientId: string;
