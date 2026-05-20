@@ -98,36 +98,16 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
             {groups.map(g => {
-              const totals = g.campaigns.reduce((acc: any, c: any) => {
-                acc.spend += c.spend; acc.impressions += c.impressions;
-                acc.clicks += c.clicks; acc.conversions += c.conversions;
-                acc.reach += c.reach || 0;
-                acc.purchaseValue += c.purchaseValue || 0;
-                return acc;
-              }, { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchaseValue: 0 });
-              const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-              const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
-              const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
-              const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0;
-              const roas = totals.spend > 0 && totals.purchaseValue > 0 ? totals.purchaseValue / totals.spend : 0;
+              const totals = aggregateCampaignMetrics(g.campaigns);
+              const cpa = totals.cpa;
               const resultLabel = g.campaigns.find((c: any) => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
               const cfg = metricsConfig[g.key];
-              const renderVal = (key: string): string => {
-                switch (key) {
-                  case "spend": return fmtMoney(totals.spend);
-                  case "conversions": return totals.conversions.toLocaleString("pt-BR");
-                  case "cpa": return cpa > 0 ? fmtMoney(cpa) : "—";
-                  case "ctr": return `${ctr.toFixed(2)}%`;
-                  case "cpc": return cpc > 0 ? fmtMoney(cpc) : "—";
-                  case "cpm": return fmtMoney(cpm);
-                  case "reach": return totals.reach.toLocaleString("pt-BR");
-                  case "impressions": return totals.impressions.toLocaleString("pt-BR");
-                  case "clicks": return totals.clicks.toLocaleString("pt-BR");
-                  case "roas": return roas > 0 ? `${roas.toFixed(2)}x` : "—";
-                  default: return "—";
-                }
-              };
-              const labelOf = (key: string) => key === "conversions" ? resultLabel : (AVAILABLE_METRICS.find(m => m.key === key)?.label || key);
+              const renderVal = (key: string): string =>
+                formatMetricValue(key, getMetricValue(totals, key), currencySymbol);
+              const labelOf = (key: string) =>
+                key === "conversions"
+                  ? resultLabel
+                  : findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
               return (
                 <div key={g.key} className="rounded-xl border border-border bg-card p-5">
                   <h4 className="text-base font-bold text-card-foreground">
@@ -147,7 +127,7 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
                       <Mini label="Investimento" value={fmtMoney(totals.spend)} />
                       <Mini label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} />
                       <Mini label="CPA" value={cpa > 0 ? fmtMoney(cpa) : "—"} />
-                      <Mini label="CTR" value={`${ctr.toFixed(2)}%`} />
+                      <Mini label="CTR" value={`${totals.ctr.toFixed(2)}%`} />
                     </div>
                   )}
                 </div>
