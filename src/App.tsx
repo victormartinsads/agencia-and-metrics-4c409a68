@@ -39,10 +39,16 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             {/* Public share routes */}
             <Route path="/share/:clientId" element={<SharedDashboard />} />
+            <Route path="/shared/:clientId" element={<SharedDashboard />} />
+            <Route path="/v/:slug" element={<ClientView />} />
             <Route path="/criativos/:clientId" element={<SharedCreatives />} />
+            <Route path="/creativos/:slug" element={<SharedCreatives />} />
+            <Route path="/criativos-compartilhados/:clientId" element={<SharedCreatives />} />
+            <Route path="/shared-creatives/:clientId" element={<SharedCreatives />} />
             <Route path="/podio/:slug" element={<PodioCreatives />} />
             <Route path="/como-estamos/:slug" element={<ComoEstamosPublic />} />
             <Route path="/diagnostico/:id" element={<SavedDiagnosticPublic />} />
+            <Route path="/saved-diagnostic/:id" element={<SavedDiagnosticPublic />} />
             <Route path="/visao-cliente/:slug" element={<ClientView />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
             {/* Protected routes */}
