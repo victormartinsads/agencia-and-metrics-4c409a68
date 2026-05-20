@@ -40,12 +40,12 @@ export interface MetaAdsData {
   accountErrors?: { accountId: string; message: string }[];
 }
 
-export function useMetaAds(clientId: string | undefined, datePreset = "last_7d") {
+export function useMetaAds(clientId: string | undefined, datePreset = "last_7d", publicSlug?: string) {
   return useQuery<MetaAdsData>({
-    queryKey: ["meta-ads", clientId, datePreset],
+    queryKey: ["meta-ads", clientId, datePreset, publicSlug || ""],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("meta-ads", {
-        body: { clientId, datePreset },
+        body: { clientId, datePreset, publicSlug },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);

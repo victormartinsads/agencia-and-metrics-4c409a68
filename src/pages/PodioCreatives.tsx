@@ -44,7 +44,7 @@ export default function PodioCreatives() {
     enabled: !!slug,
   });
 
-  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(client?.id, datePreset);
+  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(client?.id, datePreset, slug);
 
   const handleRefresh = async () => {
     if (!client?.id || refreshing) return;

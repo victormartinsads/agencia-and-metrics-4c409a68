@@ -34,16 +34,16 @@ export default function SharedCreatives() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, currency_symbol")
+        .select("id, name, currency_symbol, slug")
         .eq("id", clientId!)
         .single();
       if (error) throw error;
-      return data as Pick<Client, "id" | "name" | "currency_symbol">;
+      return data as Pick<Client, "id" | "name" | "currency_symbol" | "slug">;
     },
     enabled: !!clientId,
   });
 
-  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset);
+  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset, client?.slug);
 
   const handleRefresh = async () => {
     if (!clientId || refreshing) return;
