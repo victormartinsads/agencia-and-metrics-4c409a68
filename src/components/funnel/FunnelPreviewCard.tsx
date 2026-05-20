@@ -51,6 +51,33 @@ function compact(n: number) {
 
 const DEFAULT_KPIS = ["spend", "revenue", "roas", "sales", "leads"];
 
+/**
+ * Presets de visualização por tipo de funil (detectado pelo label/código).
+ * Aplicados apenas quando o usuário ainda não personalizou (sem localStorage).
+ * Usuário continua livre para editar e a escolha é persistida.
+ */
+function detectFunnelPreset(label: string, code: string): string[] | null {
+  const l = `${label || ""} ${code || ""}`.toLowerCase();
+  if (/corredor\s*japon/.test(l)) {
+    return ["spend", "impressions", "thruplays"];
+  }
+  if (/capta[cç][aã]o|seguidor/.test(l)) {
+    return ["spend", "reach", "profileVisits"];
+  }
+  if (/low\s*ticket|medium\s*ticket|mid\s*ticket|high\s*ticket|\bticket\b/.test(l)) {
+    return ["spend", "reach", "clicks", "landingPageViews", "initiateCheckout", "purchases", "leads"];
+  }
+  if (/formul[áa]rio\s*nativo|sess[aã]o\s*estrat[ée]gica|sess[aã]o\s*estrategica/.test(l)) {
+    if (/site|p[áa]gina|landing|\blp\b|lead.*site/.test(l)) {
+      return ["spend", "reach", "linkClicks", "landingPageViews", "leads"];
+    }
+    return ["spend", "reach", "linkClicks", "leads"];
+  }
+  return null;
+}
+
+const MAX_VISIBLE_KPIS = 8;
+
 type Format = "currency" | "number" | "percent" | "multiplier";
 interface MetricSpec {
   key: string;
@@ -215,6 +242,8 @@ export function FunnelPreviewCard({
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
+    const preset = detectFunnelPreset(funnelLabel, funnelCode);
+    if (preset && preset.length) return preset;
     if (isManual) return ["spend", "leads", "sales", "revenue", "roas"];
     return isCaptacao ? ["spend", "followers", "cps", "leads", "roas"] : DEFAULT_KPIS;
   });
@@ -235,7 +264,7 @@ export function FunnelPreviewCard({
 
   const visibleKeys = useMemo(() => {
     const base = selected.filter((k) => fullCatalog[k]);
-    return base.slice(0, 6);
+    return base.slice(0, MAX_VISIBLE_KPIS);
   }, [selected, fullCatalog]);
 
   const toggleKpi = (key: string) => {
@@ -244,7 +273,7 @@ export function FunnelPreviewCard({
         if (prev.length <= 1) return prev;
         return prev.filter((k) => k !== key);
       }
-      if (prev.length >= 6) { toast.info("Máximo de 6 métricas"); return prev; }
+      if (prev.length >= MAX_VISIBLE_KPIS) { toast.info(`Máximo de ${MAX_VISIBLE_KPIS} métricas`); return prev; }
       return [...prev, key];
     });
   };
