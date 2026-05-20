@@ -106,25 +106,30 @@ export const ALL_FUNNEL_METRICS: FunnelCardMetric[] = [
 
 /** Default metrics depending on funnel code. */
 export function defaultMetricsFor(code: string): string[] {
-  // Topo de funil → engajamento
+  // Templates oficiais (referência: dashboard interno, mai/2026).
+  // F1 – Captação de Seguidores
   if (["F1", "F14", "F15"].includes(code)) {
-    return ["spend", "impressions", "reach", "clicks", "ctr"];
+    return ["spend", "reach", "profileVisits", "ctr"];
   }
-  // Mensagens / Call de Vendas
+  // F2 – Corredor Japonês (criativos / vídeo)
+  if (code === "F2") {
+    return ["spend", "impressions", "thruplays", "hookRate", "holdRate"];
+  }
+  // F9 – Low/Mid/High Ticket (página de vendas)
+  if (["F8", "F9"].includes(code)) {
+    return ["spend", "clicks", "landingPageViews", "initiateCheckout", "purchases"];
+  }
+  // F10 – Formulário Nativo / Lead Ads
+  if (["F4", "F5", "F6", "F10"].includes(code)) {
+    return ["spend", "reach", "linkClicks", "leads", "cpl"];
+  }
+  // F11/F12/F13 – Workshops / Sessão estratégica
+  if (["F11", "F12", "F13"].includes(code)) {
+    return ["spend", "clicks", "landingPageViews", "leads", "cpl"];
+  }
+  // F3 / F7 – Mensagens / Call de vendas
   if (["F3", "F7"].includes(code)) {
     return ["spend", "clicks", "messages", "conversions", "cpl"];
-  }
-  // Captura/Lead
-  if (["F4", "F5", "F6", "F10"].includes(code)) {
-    return ["spend", "clicks", "landingPageViews", "conversions", "cpl"];
-  }
-  // Workshops
-  if (["F11", "F12", "F13"].includes(code)) {
-    return ["spend", "landingPageViews", "conversions", "cpl", "ctr"];
-  }
-  // Vendas (low/mid/corredor japonês/F2)
-  if (["F2", "F8", "F9"].includes(code)) {
-    return ["spend", "purchases", "purchaseValue", "roas", "cpa"];
   }
   return ["spend", "clicks", "conversions", "cpa", "roas"];
 }
