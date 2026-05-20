@@ -81,7 +81,11 @@ export function MetricSourceEditor({ clientId, open, onOpenChange, focusMetric, 
   const sheetColumns = Object.values(sheetCfg?.field_mapping || {}).filter(Boolean);
 
   const setMetric = (key: string, patch: Partial<MetricSourcesMap[string]>) => {
-    setDraft((d) => ({ ...d, [key]: { source: "sheets", ...d[key], ...patch } as any }));
+    setDraft((d) => {
+      const merged: any = { ...(d[key] || {}), ...patch };
+      if (!merged.source) merged.source = "sheets";
+      return { ...d, [key]: merged };
+    });
   };
 
   const handleSave = async () => {
