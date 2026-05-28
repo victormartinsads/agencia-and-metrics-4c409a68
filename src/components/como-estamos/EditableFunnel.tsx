@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, GripVertical, Save, RotateCcw } from "lucide-react";
+import { Plus, Trash2, GripVertical, Save, RotateCcw, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Campaign } from "@/data/mockMetaData";
 import { useFunnelStages, useSaveFunnelStages, AVAILABLE_METRICS, DEFAULT_STAGES, FunnelStage } from "@/hooks/useFunnelStages";
+import { useFunnelLabels, useSaveFunnelLabel } from "@/hooks/useFunnelLabels";
 import { toast } from "sonner";
 import { ArrowDown } from "lucide-react";
 
@@ -55,6 +56,27 @@ export function EditableFunnel({ clientId, campaigns, selectedCampaignId, curren
   const saveMutation = useSaveFunnelStages();
   const [stages, setStages] = useState<StageRow[]>([]);
   const [editing, setEditing] = useState(false);
+
+  // Editable funnel title (persisted in funnel_custom_labels under a sentinel code)
+  const TITLE_CODE = "__como_estamos__";
+  const { data: labelMap } = useFunnelLabels(clientId);
+  const saveLabel = useSaveFunnelLabel();
+  const savedTitle = labelMap?.[TITLE_CODE] || "Funil de Conversão";
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(savedTitle);
+  useEffect(() => setTitleDraft(savedTitle), [savedTitle]);
+
+  const handleSaveTitle = async () => {
+    const v = titleDraft.trim();
+    if (!v) return;
+    try {
+      await saveLabel.mutateAsync({ clientId, funnelCode: TITLE_CODE, label: v });
+      setTitleEditing(false);
+      toast.success("Nome do funil salvo");
+    } catch {
+      toast.error("Erro ao salvar nome");
+    }
+  };
 
   // Filter campaigns for selected campaign
   const filteredCampaigns = useMemo(() => {
@@ -124,7 +146,38 @@ export function EditableFunnel({ clientId, campaigns, selectedCampaignId, curren
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-card-foreground">🔻 Funil de Conversão</h3>
+        {titleEditing ? (
+          <div className="flex items-center gap-1 flex-1 max-w-md">
+            <span className="text-lg">🔻</span>
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveTitle();
+                if (e.key === "Escape") { setTitleDraft(savedTitle); setTitleEditing(false); }
+              }}
+              className="h-8 text-base font-bold"
+            />
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveTitle}>
+              <Check className="h-3.5 w-3.5 text-primary" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setTitleDraft(savedTitle); setTitleEditing(false); }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <h3 className="text-lg font-bold text-card-foreground flex items-center gap-2 group">
+            <span>🔻 {savedTitle}</span>
+            <button
+              onClick={() => setTitleEditing(true)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+              title="Editar nome"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          </h3>
+        )}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="text-xs">
             {editing ? "Visualizar" : "Editar"}

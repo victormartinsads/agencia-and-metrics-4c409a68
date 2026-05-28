@@ -1,78 +1,58 @@
 ## O que será feito
 
-Hoje, na aba **Análise de Funis**, cada card (F1, F2, F3...) calcula KPIs automaticamente a partir do Meta Ads. Você quer:
-
-1. **Editar qualquer métrica manualmente** no card do funil (e adicionar novas), com persistência por período.
-2. **Sincronizar** esses valores entre o card resumido e a **Análise completa** (modal cheia tela).
-3. **Criar funis manuais do zero** (ex.: um funil "Google Ads" totalmente preenchido à mão), sem depender de campanhas do Meta.
+Três entregas independentes na Análise de Funis e no Como Estamos.
 
 ---
 
-## 1. Override manual por métrica (sincronizado)
+### 1. Funis do Google Ads (na aba Análise de Funis)
 
-Cada KPI do card (`Investimento`, `Faturamento`, `ROAS`, `Vendas`, `Leads`, `Seguidores`, etc.) vai ter um **ícone de lápis** ao passar o mouse. Clicando:
+Hoje os funis (F1, F2…) são derivados exclusivamente das campanhas do Meta. Vou adicionar **um bloco paralelo de funis do Google Ads**, com a mesma estrutura visual e o mesmo nível de edição (lápis por métrica, métricas visíveis, override por período, análise completa, notas).
 
-- Abre um popover com:
-  - Campo numérico para o valor manual
-  - Botão "Usar valor automático" (remove override)
-- Salva em `funnel_period_metrics` (tabela já existente), atrelado ao período selecionado no header (ex.: últimos 7 dias).
-- O valor manual **prevalece** sobre o cálculo automático tanto no card quanto na Análise completa.
+- **Agrupamento por funil** das campanhas Google Ads usando o mesmo regex de `extractFunnelCode` (F1, F2, F3…) sobre o nome da campanha. Campanhas sem código viram um grupo único "Google Ads — Sem Funil" (igual ao fallback do Meta).
+- **Catálogo de métricas Google Ads** (diferente do Meta):
+  - Investimento (cost), Impressões, Cliques, CTR, CPC médio, Conversões, CPA, Receita, ROAS, Taxa de Conversão.
+- **Cards reutilizam** `FunnelPreviewCard` em modo "google ads" — mesmo lápis para override manual (usa a tabela `funnel_period_metrics` já existente, com `funnel_code` prefixado por `GADS-` para não colidir com o Meta).
+- **Análise completa** (modal) também funciona, mostrando as campanhas Google daquele funil, com tabela de campanhas e KPI strip equivalente.
+- **Botão "Origem" no topo da aba** alterna entre `Meta`, `Google Ads` e `Todos`. Quando "Todos", os dois blocos aparecem empilhados com um divisor.
 
-Métricas calculadas (ROAS, CPL, CPV, CPS) recalculam automaticamente a partir dos valores manuais salvos.
+### 2. Visão "por Campanha" na Análise de Funis
 
-Também será possível **adicionar métricas personalizadas** (ex.: "Visualizações de Reels", "Inscritos no canal") pelo mesmo popover de "Métricas visíveis" — basta digitar nome + valor.
+Botão de toggle no topo: **`Por Funil` | `Por Campanha`**.
 
-### Sincronização com Análise completa
+- **Por Funil** (atual): cards agrupam campanhas por F1, F2…
+- **Por Campanha**: cada campanha vira um card individual, no mesmo layout do `FunnelPreviewCard`, usando o nome da campanha como label. Override de métricas, métricas visíveis e análise completa funcionam por campanha (chave `CAMP-<campaignId>`).
+- Funciona tanto para Meta quanto para Google Ads (respeita o toggle de Origem do item 1).
+- Busca textual continua filtrando a lista renderizada.
 
-A Análise completa (modal de tela cheia) hoje renderiza KPIs fixos calculados do Meta. Vou trocar para usar o **mesmo conjunto de métricas e overrides** do card. Assim:
+### 3. Editar o nome do funil no "Como Estamos"
 
-- Editou no card → aparece na Análise completa
-- Editou na Análise completa → aparece no card
-- O KPI Strip do modal passa a respeitar quais métricas você selecionou no card
-
----
-
-## 2. Funil 100% manual (Google Ads e outros)
-
-Botão **"+ Novo funil manual"** no topo da aba Análise de Funis. Ao clicar:
-
-- Pede: código (ex.: `GADS`), nome (ex.: "Google Ads — Performance Max"), e ícone/cor opcional.
-- Cria um card vazio, no mesmo layout dos outros, **sem campanhas Meta vinculadas**.
-- Todas as métricas começam em branco — você edita pelo lápis (mesmo fluxo do item 1).
-- Persistido em uma nova tabela `funnel_manual_groups` (cliente, código, label, ordem).
-- Pode ser renomeado, removido e ter Análise completa própria.
-
-Esses funis manuais aparecem na lista junto com os automáticos, marcados com um badge "MANUAL".
+Na seção **🔻 Funil de Conversão** (`EditableFunnel.tsx`), o título "🔻 Funil de Conversão" passa a ser editável inline (clique no lápis ao lado → input → enter para salvar). O nome é persistido por cliente em uma nova coluna `display_name` em `funnel_stages` (ou, mais simples, em `funnel_custom_labels` reaproveitando com `funnel_code = 'como-estamos'`).
 
 ---
 
 ## Detalhes técnicos
 
 ### Banco
-- **Nova tabela** `funnel_manual_groups`:
-  - `client_id`, `code`, `label`, `sort_order`, `created_by`
-  - RLS: leitura/edição via admin/editor (mesmo padrão dos outros recursos do cliente)
-- **Reusa** `funnel_period_metrics` (já existe) para overrides — chave: `client_id + funnel_code + metric_key + period_start + period_end`. Já tem o hook `useSaveFunnelPeriodMetric`.
-- **Reusa** localStorage `funnel-preview-kpis` para métricas visíveis e adiciona suporte a chaves customizadas.
+- **Nenhuma nova tabela necessária** — reusa `funnel_period_metrics`, `funnel_card_config`, `funnel_custom_labels`.
+- Convenção de chaves para evitar colisão:
+  - Meta por funil: `F1`, `F2`… (atual).
+  - Google Ads por funil: `GADS-F1`, `GADS-F2`…
+  - Meta por campanha: `CAMP-<metaCampaignId>`.
+  - Google Ads por campanha: `GADS-CAMP-<googleCampaignId>`.
+  - Nome do funil Como Estamos: `funnel_custom_labels` com `funnel_code = '__como_estamos__'`.
 
-### Componentes
-- `FunnelPreviewCard.tsx`: 
-  - Cada `KpiCardPremium` ganha edição inline (pencil + popover com input + "usar automático").
-  - Lê overrides via `useFunnelPeriodMetrics(clientId, funnelCode, datePreset)`.
-  - Aceita métricas custom (objeto `{key, label, value, isManual}`) no catálogo.
+### Frontend
 - `FunnelAnalysisTab.tsx`:
-  - Botão "+ Novo funil manual" + dialog de criação.
-  - Mescla `activeFunnels` (do Meta) com `manualFunnels` (do banco).
-- `FunnelPremiumDetailDialog.tsx`:
-  - KPI Strip passa a vir da mesma fonte que o card (mesmas métricas selecionadas + mesmos overrides).
-  - Suporta funis manuais (sem `campaigns`).
-- Novo hook: `useManualFunnels(clientId)` (list/create/delete/rename).
+  - Novo estado `viewMode: "funnel" | "campaign"` e `source: "meta" | "google" | "all"`.
+  - Novo hook `useGoogleAdsFunnelGroups(clientId, datePreset)` que pega `useGoogleAds` e agrupa por `extractFunnelCode`.
+  - Renderiza dois blocos (Meta / Google) conforme o filtro.
+- `FunnelPreviewCard.tsx`:
+  - Aceita prop `source: "meta" | "google"` e `googleCampaigns?: GoogleAdsCampaign[]` opcional.
+  - Calcula KPIs a partir do conjunto certo de dados, usando catálogo de métricas Google quando `source==="google"`.
+- `FunnelPremiumDetailDialog.tsx`: mesmo tratamento (recebe `source` + dados Google).
+- `EditableFunnel.tsx` (Como Estamos): título editável via novo hook `useFunnelDisplayName`.
 
-### Period scope
-Os overrides ficam ligados ao período exibido (`period_start`/`period_end` derivados do `datePreset`). Trocar para "últimos 30 dias" mostra outro conjunto de valores (e edição cria novo registro para aquele período).
-
----
-
-## Fora de escopo
-- Importação automática do Google Ads para preencher o funil manual (continua manual mesmo).
-- Compartilhamento dos overrides com a aba "Como Estamos" (que já tem seu próprio fluxo de inputs semanais).
+### Fora de escopo
+- Tradução automática de métricas Meta ↔ Google (são catálogos diferentes por design).
+- Mesclar campanhas Meta + Google num único funil F1 (continuam separados visualmente).
+- Importação histórica de Google Ads para preencher períodos anteriores.
