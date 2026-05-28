@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnels";
+import { useGoogleAds } from "@/hooks/useGoogleAds";
+import { googleAdsToCampaign } from "@/lib/googleAdsAdapter";
 import { toast } from "sonner";
 
 interface Props {
@@ -33,16 +35,24 @@ export function FunnelAnalysisTab({
   readOnly = false,
 }: Props) {
   const [search, setSearch] = useState("");
-  const [detailFunnel, setDetailFunnel] = useState<{ code: string; label: string; isManual?: boolean } | null>(null);
+  const [detailFunnel, setDetailFunnel] = useState<{ code: string; label: string; isManual?: boolean; campaigns?: Campaign[] } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [viewMode, setViewMode] = useState<"funnel" | "campaign">("funnel");
+  const [source, setSource] = useState<"meta" | "google" | "all">("meta");
   const { data: manualFunnels } = useManualFunnels(clientId);
   const createManual = useCreateManualFunnel();
+  const { data: googleData } = useGoogleAds(clientId, datePreset, source !== "meta");
 
-  const funnelGroups = useMemo(() => {
+  const googleCampaigns: Campaign[] = useMemo(() => {
+    if (!googleData?.campaigns) return [];
+    return googleData.campaigns.map(googleAdsToCampaign);
+  }, [googleData]);
+
+  function buildFunnelGroups(items: Campaign[], codePrefix = ""): { code: string; label: string; campaigns: Campaign[] }[] {
     const map = new Map<string, Campaign[]>();
-    for (const c of campaigns) {
+    for (const c of items) {
       const code = extractFunnelCode(c.name);
       if (!code && c.spend <= 0) continue;
       const fallbackCode = code || `CAMP-${c.id}`;
@@ -50,38 +60,53 @@ export function FunnelAnalysisTab({
       arr.push(c);
       map.set(fallbackCode, arr);
     }
-    const orderedFunnels = FUNNEL_DEFINITIONS.filter((d) => map.has(d.code)).map((d) => ({
-      code: d.code,
+    const ordered = FUNNEL_DEFINITIONS.filter((d) => map.has(d.code)).map((d) => ({
+      code: codePrefix + d.code,
       label: d.label,
       campaigns: map.get(d.code) || [],
     }));
-
-    const fallbackFunnels = Array.from(map.entries())
+    const fallback = Array.from(map.entries())
       .filter(([key]) => !FUNNEL_DEFINITIONS.some((d) => d.code === key))
-      .map(([key, items]) => ({
-        code: key,
-        label: items[0]?.name || key,
-        campaigns: items,
+      .map(([key, list]) => ({
+        code: codePrefix + key,
+        label: list[0]?.name || key,
+        campaigns: list,
       }))
-      .sort((a, b) => b.campaigns.reduce((sum, c) => sum + c.spend, 0) - a.campaigns.reduce((sum, c) => sum + c.spend, 0));
+      .sort((a, b) => b.campaigns.reduce((s, c) => s + c.spend, 0) - a.campaigns.reduce((s, c) => s + c.spend, 0));
+    return [...ordered, ...fallback];
+  }
 
-    return [...orderedFunnels, ...fallbackFunnels];
-  }, [campaigns]);
+  const metaFunnelGroups = useMemo(() => buildFunnelGroups(campaigns), [campaigns]);
+  const googleFunnelGroups = useMemo(() => buildFunnelGroups(googleCampaigns, "GADS-"), [googleCampaigns]);
 
-  // Apenas funis ativos (com gasto > 0)
-  const activeFunnels = useMemo(
-    () => funnelGroups.filter((g) => g.campaigns.some((c) => (c.spend || 0) > 0)),
-    [funnelGroups],
+  function buildCampaignCards(items: Campaign[], codePrefix = ""): { code: string; label: string; campaigns: Campaign[] }[] {
+    return items
+      .filter((c) => (c.spend || 0) > 0)
+      .sort((a, b) => b.spend - a.spend)
+      .map((c) => ({ code: `${codePrefix}CAMP-${c.id}`, label: c.name, campaigns: [c] }));
+  }
+
+  const metaCampaignCards = useMemo(() => buildCampaignCards(campaigns), [campaigns]);
+  const googleCampaignCards = useMemo(() => buildCampaignCards(googleCampaigns, "GADS-"), [googleCampaigns]);
+
+  const metaActive = useMemo(
+    () => (viewMode === "funnel" ? metaFunnelGroups : metaCampaignCards).filter((g) => g.campaigns.some((c) => (c.spend || 0) > 0)),
+    [viewMode, metaFunnelGroups, metaCampaignCards],
+  );
+  const googleActive = useMemo(
+    () => (viewMode === "funnel" ? googleFunnelGroups : googleCampaignCards).filter((g) => g.campaigns.some((c) => (c.spend || 0) > 0)),
+    [viewMode, googleFunnelGroups, googleCampaignCards],
   );
 
-  const filtered = activeFunnels.filter(
-    (g) =>
-      !search ||
-      g.code.toLowerCase().includes(search.toLowerCase()) ||
-      g.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filterFn = (g: { code: string; label: string }) =>
+    !search ||
+    g.code.toLowerCase().includes(search.toLowerCase()) ||
+    g.label.toLowerCase().includes(search.toLowerCase());
 
-  const filteredManual = (manualFunnels || []).filter(
+  const filteredMeta = source === "google" ? [] : metaActive.filter(filterFn);
+  const filteredGoogle = source === "meta" ? [] : googleActive.filter(filterFn);
+
+  const filteredManual = viewMode === "campaign" ? [] : (manualFunnels || []).filter(
     (g) =>
       !search ||
       g.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -113,6 +138,25 @@ export function FunnelAnalysisTab({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border border-border/60 overflow-hidden text-xs">
+            <button
+              onClick={() => setViewMode("funnel")}
+              className={`px-2.5 h-8 ${viewMode === "funnel" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/40"}`}
+            >Por Funil</button>
+            <button
+              onClick={() => setViewMode("campaign")}
+              className={`px-2.5 h-8 border-l border-border/60 ${viewMode === "campaign" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/40"}`}
+            >Por Campanha</button>
+          </div>
+          <div className="inline-flex rounded-md border border-border/60 overflow-hidden text-xs">
+            {(["meta", "google", "all"] as const).map((s, i) => (
+              <button
+                key={s}
+                onClick={() => setSource(s)}
+                className={`px-2.5 h-8 ${i > 0 ? "border-l border-border/60" : ""} ${source === s ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/40"}`}
+              >{s === "meta" ? "Meta" : s === "google" ? "Google" : "Todos"}</button>
+            ))}
+          </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -131,30 +175,55 @@ export function FunnelAnalysisTab({
       </div>
 
       {/* Funnel previews — mesmo padrão visual da Visão Geral */}
-      {filtered.length === 0 && filteredManual.length === 0 ? (
+      {filteredMeta.length === 0 && filteredGoogle.length === 0 && filteredManual.length === 0 ? (
         <Card className="p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            Nenhum funil ativo com gasto encontrado para esse período.
+            Nenhum {viewMode === "funnel" ? "funil" : "campanha"} ativo com gasto encontrado para esse período.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             Você pode criar um funil 100% manual (ex.: Google Ads) usando o botão acima.
           </p>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filtered.map((g) => (
-            <FunnelPreviewCard
-              key={g.code}
-              clientId={clientId}
-              funnelCode={g.code}
-              funnelLabel={g.label}
-              campaigns={g.campaigns}
-              currencySymbol={currencySymbol}
-              readOnly={readOnly}
-              datePreset={datePreset}
-              onOpenDetail={() => setDetailFunnel({ code: g.code, label: g.label })}
-            />
-          ))}
+        <div className="space-y-6">
+          {filteredMeta.length > 0 && (
+            <div className="space-y-4">
+              {source === "all" && (
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Meta Ads</p>
+              )}
+              {filteredMeta.map((g) => (
+                <FunnelPreviewCard
+                  key={g.code}
+                  clientId={clientId}
+                  funnelCode={g.code}
+                  funnelLabel={g.label}
+                  campaigns={g.campaigns}
+                  currencySymbol={currencySymbol}
+                  readOnly={readOnly}
+                  datePreset={datePreset}
+                  onOpenDetail={() => setDetailFunnel({ code: g.code, label: g.label, campaigns: g.campaigns })}
+                />
+              ))}
+            </div>
+          )}
+          {filteredGoogle.length > 0 && (
+            <div className="space-y-4">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Google Ads</p>
+              {filteredGoogle.map((g) => (
+                <FunnelPreviewCard
+                  key={g.code}
+                  clientId={clientId}
+                  funnelCode={g.code}
+                  funnelLabel={g.label}
+                  campaigns={g.campaigns}
+                  currencySymbol={currencySymbol}
+                  readOnly={readOnly}
+                  datePreset={datePreset}
+                  onOpenDetail={() => setDetailFunnel({ code: g.code, label: g.label, campaigns: g.campaigns })}
+                />
+              ))}
+            </div>
+          )}
           {filteredManual.map((m) => (
             <FunnelPreviewCard
               key={m.id}
@@ -180,11 +249,7 @@ export function FunnelAnalysisTab({
           clientId={clientId}
           funnelCode={detailFunnel.code}
           funnelLabel={detailFunnel.label}
-          campaigns={
-            detailFunnel.isManual
-              ? []
-              : activeFunnels.find((g) => g.code === detailFunnel.code)?.campaigns || []
-          }
+          campaigns={detailFunnel.isManual ? [] : (detailFunnel.campaigns || [])}
           currencySymbol={currencySymbol}
           datePreset={datePreset}
           readOnly={readOnly}
