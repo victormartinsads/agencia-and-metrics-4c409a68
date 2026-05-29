@@ -14,7 +14,14 @@ interface Props {
 }
 
 function fmtDate(s: string) {
+  if (!s) return "";
+  if (s.includes("/") && s.length === 5) return s;
+  const parts = s.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}`;
+  }
   const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 

@@ -213,13 +213,31 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const pageviews = resolve("pageviews", ga?.overview?.pageViews || 0);
 
   // Combined chart data
-  const combinedData = useMemo(
-    () =>
-      [...inCurr]
-        .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
-        .map((r) => ({ date: r.reference_date, revenue: Number(r.revenue || 0), sales: Number(r.sales || 0) })),
-    [inCurr],
-  );
+  const combinedData = useMemo(() => {
+    const start = new Date(periods.current.start);
+    const end = new Date(periods.current.end);
+    const dateList: string[] = [];
+    
+    let currentMs = start.getTime();
+    const endMs = end.getTime();
+    while (currentMs <= endMs + 3600000) {
+      const currDate = new Date(currentMs);
+      const yyyyMmDd = currDate.toISOString().slice(0, 10);
+      if (!dateList.includes(yyyyMmDd)) {
+        dateList.push(yyyyMmDd);
+      }
+      currentMs += 24 * 60 * 60 * 1000;
+    }
+
+    return dateList.map((yyyyMmDd) => {
+      const sheetDay = inCurr.find((r) => r.reference_date === yyyyMmDd);
+      return {
+        date: yyyyMmDd,
+        revenue: sheetDay ? Number(sheetDay.revenue || 0) : 0,
+        sales: sheetDay ? Number(sheetDay.sales || 0) : 0,
+      };
+    });
+  }, [periods, inCurr]);
 
   const productData = useMemo(() => {
     const map = new Map<string, number>();
@@ -239,47 +257,102 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       .slice(0, 10);
   }, [inCurr]);
 
-  const lowTicketData = useMemo(
-    () =>
-      [...inCurr]
-        .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
-        .map((r) => ({
-          date: r.reference_date,
-          meta: Number((r as any).low_ticket_meta || 0),
-          google: Number((r as any).low_ticket_google || 0),
-          total: Number((r as any).low_ticket_meta || 0) + Number((r as any).low_ticket_google || 0),
-        })),
-    [inCurr],
-  );
-  const ltTotal = sheetsCurr.low_ticket_meta + sheetsCurr.low_ticket_google;
-  const prevLt = prev.low_ticket_meta + prev.low_ticket_google;
-
-  // Fallback: se planilha não trouxer Meta low ticket, usa Vendas (purchases) da Meta API
   const lowTicketMetaDisplay = sheetsCurr.low_ticket_meta > 0
     ? sheetsCurr.low_ticket_meta
     : (metaTotals.purchases || 0);
   const lowTicketGoogleDisplay = sheetsCurr.low_ticket_google;
   const ltTotalDisplay = lowTicketMetaDisplay + lowTicketGoogleDisplay;
   const prevLtMeta = prev.low_ticket_meta || 0;
+  const ltTotal = sheetsCurr.low_ticket_meta + sheetsCurr.low_ticket_google;
+  const prevLt = prev.low_ticket_meta + prev.low_ticket_google;
 
-  // Se chart sheet data está vazio mas temos vendas Meta, sintetiza 1 ponto
+  // Gerar série temporal de 7 dias (ou range do período selecionado) para Vendas Low Ticket
   const lowTicketDataDisplay = useMemo(() => {
-    const hasSheetData = lowTicketData.some((d) => d.meta > 0 || d.google > 0);
-    if (hasSheetData) return lowTicketData;
-    if (lowTicketMetaDisplay > 0) {
-      const today = new Date().toISOString().slice(0, 10);
-      return [{ date: today, meta: lowTicketMetaDisplay, google: 0, total: lowTicketMetaDisplay }];
-    }
-    return lowTicketData;
-  }, [lowTicketData, lowTicketMetaDisplay]);
+    const start = new Date(periods.current.start);
+    const end = new Date(periods.current.end);
+    const dateList: string[] = [];
 
-  const leadsData = useMemo(
-    () =>
-      [...inCurr]
-        .sort((a, b) => a.reference_date.localeCompare(b.reference_date))
-        .map((r) => ({ date: r.reference_date, leads: Number((r as any).leads || r.mql || 0) })),
-    [inCurr],
-  );
+    let currentMs = start.getTime();
+    const endMs = end.getTime();
+    while (currentMs <= endMs + 3600000) {
+      const currDate = new Date(currentMs);
+      const yyyyMmDd = currDate.toISOString().slice(0, 10);
+      if (!dateList.includes(yyyyMmDd)) {
+        dateList.push(yyyyMmDd);
+      }
+      currentMs += 24 * 60 * 60 * 1000;
+    }
+
+    const lowTicketMetaSource = metricSources?.low_ticket_meta?.source;
+
+    return dateList.map((yyyyMmDd) => {
+      const parts = yyyyMmDd.split("-");
+      const ddMm = `${parts[2]}/${parts[1]}`;
+
+      const sheetDay = inCurr.find((r) => r.reference_date === yyyyMmDd);
+      const apiDay = metaData?.dailyMetrics?.find((m) => m.date === ddMm);
+
+      let metaVal = 0;
+      if (lowTicketMetaSource === "meta") {
+        metaVal = Number(apiDay?.purchases ?? apiDay?.conversions ?? 0);
+      } else {
+        metaVal = (sheetDay && Number((sheetDay as any).low_ticket_meta) > 0)
+          ? Number((sheetDay as any).low_ticket_meta)
+          : Number(apiDay?.purchases ?? apiDay?.conversions ?? 0);
+      }
+
+      const googleVal = Number(sheetDay?.low_ticket_google || 0);
+
+      return {
+        date: yyyyMmDd,
+        meta: metaVal,
+        google: googleVal,
+        total: metaVal + googleVal,
+      };
+    });
+  }, [periods, inCurr, metaData, metricSources]);
+
+  // Gerar série temporal de 7 dias (ou range do período selecionado) para Leads
+  const leadsData = useMemo(() => {
+    const start = new Date(periods.current.start);
+    const end = new Date(periods.current.end);
+    const dateList: string[] = [];
+
+    let currentMs = start.getTime();
+    const endMs = end.getTime();
+    while (currentMs <= endMs + 3600000) {
+      const currDate = new Date(currentMs);
+      const yyyyMmDd = currDate.toISOString().slice(0, 10);
+      if (!dateList.includes(yyyyMmDd)) {
+        dateList.push(yyyyMmDd);
+      }
+      currentMs += 24 * 60 * 60 * 1000;
+    }
+
+    const leadsSource = metricSources?.leads?.source;
+
+    return dateList.map((yyyyMmDd) => {
+      const parts = yyyyMmDd.split("-");
+      const ddMm = `${parts[2]}/${parts[1]}`;
+
+      const sheetDay = inCurr.find((r) => r.reference_date === yyyyMmDd);
+      const apiDay = metaData?.dailyMetrics?.find((m) => m.date === ddMm);
+
+      let leadsVal = 0;
+      if (leadsSource === "meta") {
+        leadsVal = Number(apiDay?.leads ?? apiDay?.conversions ?? 0);
+      } else {
+        leadsVal = (sheetDay && (Number(sheetDay.leads || 0) > 0 || Number(sheetDay.mql || 0) > 0))
+          ? Number(sheetDay.leads || sheetDay.mql || 0)
+          : Number(apiDay?.leads ?? apiDay?.conversions ?? 0);
+      }
+
+      return {
+        date: yyyyMmDd,
+        leads: leadsVal,
+      };
+    });
+  }, [periods, inCurr, metaData, metricSources]);
 
   const sheetUtmRows = useMemo<SheetUtmRow[]>(() => {
     const rows: SheetUtmRow[] = [];
