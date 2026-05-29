@@ -122,10 +122,6 @@ export function aggregateCampaignMetrics(
   const DEFAULT_LEAD_TYPES = [
     "lead",
     "offsite_conversion.fb_pixel_lead",
-    "onsite_conversion.lead_grouped",
-    "leadgen.other",
-    "leadgen_grouped",
-    "onsite_conversion.messaging_conversation_started_7d",
   ];
   const leadActions =
     sum("lead_actions") ||

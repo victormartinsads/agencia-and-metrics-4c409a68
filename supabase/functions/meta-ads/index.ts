@@ -104,6 +104,10 @@ function getActionTypePriority(objective: string, campaignName: string): string[
   if (nameLower.includes("forms_nativo") || nameLower.includes("formulario_nativo") || nameLower.includes("formulário_nativo")) {
     return ["lead", "link_click"];
   }
+  // Check lead captures first so they don't get matched by "whatsapp" lower down
+  if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead") || nameLower.includes("cadastro")) {
+    return ["lead", "offsite_conversion.fb_pixel_lead", "link_click"];
+  }
   if (nameLower.includes("call_vendas") || nameLower.includes("call_de_vendas")) {
     return ["offsite_conversion.fb_pixel_custom", "onsite_conversion.messaging_conversation_started_7d", "purchase", "initiate_checkout", "link_click"];
   }
@@ -115,9 +119,6 @@ function getActionTypePriority(objective: string, campaignName: string): string[
   }
   if (objLower.includes("outcome_sales") || objLower.includes("conversions") || objLower.includes("product_catalog_sales") || nameLower.includes("vendas") || nameLower.includes("sales") || nameLower.includes("compra")) {
     return ["purchase", "initiate_checkout", "link_click"];
-  }
-  if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead")) {
-    return ["lead", "link_click"];
   }
   if (objLower.includes("link_clicks") || objLower.includes("outcome_traffic") || nameLower.includes("tráfego") || nameLower.includes("traffic")) {
     return ["link_click", "landing_page_view"];
@@ -313,8 +314,8 @@ Deno.serve(async (req) => {
               dailyData[date].clicks += Number(day.clicks || 0);
               const purchaseVal = getActionValue(day.actions, "purchase")
                 || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
-              // Daily leads use the client's configured lead action types
-              const dailyLeadTypes = ["lead","offsite_conversion.fb_pixel_lead","onsite_conversion.lead_grouped","leadgen.other","leadgen_grouped","onsite_conversion.messaging_conversation_started_7d"];
+              // Daily leads use the client's configured lead action types (strictly standard leads)
+              const dailyLeadTypes = ["lead", "offsite_conversion.fb_pixel_lead"];
               let leadVal = 0;
               for (const t of dailyLeadTypes) leadVal += getActionValue(day.actions, t);
               dailyData[date].purchases += purchaseVal;
@@ -592,11 +593,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Total Leads = sum of configured lead action types across all campaigns.
-    // The list is configurable per client (clients.lead_action_types).
     const leadActionTypes: string[] = (client.lead_action_types && client.lead_action_types.length > 0)
       ? client.lead_action_types
-      : ["lead", "onsite_conversion.lead_grouped", "onsite_conversion.messaging_conversation_started_7d"];
+      : ["lead", "offsite_conversion.fb_pixel_lead"];
 
     let totalLeadActions = 0;
     for (const result of accountResults) {

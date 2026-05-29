@@ -294,11 +294,11 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
       let metaVal = 0;
       if (lowTicketMetaSource === "meta") {
-        metaVal = Number(apiDay?.purchases ?? apiDay?.conversions ?? 0);
+        metaVal = Number(apiDay?.purchases ?? 0);
       } else {
         metaVal = (sheetDay && Number((sheetDay as any).low_ticket_meta) > 0)
           ? Number((sheetDay as any).low_ticket_meta)
-          : Number(apiDay?.purchases ?? apiDay?.conversions ?? 0);
+          : Number(apiDay?.purchases ?? 0);
       }
 
       const googleVal = Number(sheetDay?.low_ticket_google || 0);
@@ -340,11 +340,11 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
 
       let leadsVal = 0;
       if (leadsSource === "meta") {
-        leadsVal = Number(apiDay?.leads ?? apiDay?.conversions ?? 0);
+        leadsVal = Number(apiDay?.leads ?? 0);
       } else {
         leadsVal = (sheetDay && (Number(sheetDay.leads || 0) > 0 || Number(sheetDay.mql || 0) > 0))
           ? Number(sheetDay.leads || sheetDay.mql || 0)
-          : Number(apiDay?.leads ?? apiDay?.conversions ?? 0);
+          : Number(apiDay?.leads ?? 0);
       }
 
       return {
