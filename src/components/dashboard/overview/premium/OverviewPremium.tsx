@@ -35,6 +35,8 @@ import { formatCurrency } from "@/lib/format";
 import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
 
+import { MqlManualEditDialog } from "./MqlManualEditDialog";
+
 interface Props {
   clientId?: string;
   datePreset: string;
@@ -59,6 +61,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);
+  const [mqlEditOpen, setMqlEditOpen] = useState(false);
 
   // Edit / hide mode
   const HIDE_KEY = `overview-premium-hidden:${clientId || "default"}`;
@@ -196,6 +199,19 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   };
   prev.revenue = resolvePrev("revenue", prev.revenue);
   prev.sales = resolvePrev("sales", prev.sales);
+
+  const mql3 = useMemo(() => {
+    return inCurr.reduce((acc, r) => acc + Number((r as any).raw_row?.mql3 || 0), 0);
+  }, [inCurr]);
+
+  const amostragemMessages = useMemo(() => {
+    const manualSum = inCurr.reduce((acc, r) => acc + Number((r as any).raw_row?.amostragem_mensagens || 0), 0);
+    return manualSum > 0 ? manualSum : (metaTotals.messaging_started || 0);
+  }, [inCurr, metaTotals.messaging_started]);
+
+  const amostragemFollowers = useMemo(() => {
+    return inCurr.reduce((acc, r) => acc + Number((r as any).raw_row?.amostragem_seguidores || 0), 0);
+  }, [inCurr]);
 
   const totalSpend = curr.investment > 0 ? curr.investment : metaTotals.spend;
   const prevSpend = prev.investment;
@@ -848,7 +864,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <div className="lg:col-span-3 flex flex-col">
               <PanelCard
                 title="MQL & sMQL"
-                actions={<EditSourceBtn />}
+                actions={
+                  <button
+                    onClick={() => setMqlEditOpen(true)}
+                    className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Editar Planilha de Qualificação"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                }
                 panelId="mql"
                 editMode={editMode}
                 onHide={hidePanel}
@@ -861,11 +885,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                     </div>
                     <div className="text-center">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">MQL 2</div>
-                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">
+                        {curr.smql > 0 ? curr.smql.toLocaleString("pt-BR") : "—"}
+                      </div>
                     </div>
                     <div className="text-center">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">MQL 3</div>
-                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">
+                        {mql3 > 0 ? mql3.toLocaleString("pt-BR") : "—"}
+                      </div>
                     </div>
                   </div>
                   
@@ -878,11 +906,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                     </div>
                     <div className="text-center">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">C/MQL 2</div>
-                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">
+                        {curr.smql > 0 ? formatCurrency(totalSpend / curr.smql, currencySymbol) : "—"}
+                      </div>
                     </div>
                     <div className="text-center">
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">C/MQL 3</div>
-                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">
+                        {mql3 > 0 ? formatCurrency(totalSpend / mql3, currencySymbol) : "—"}
+                      </div>
                     </div>
                   </div>
 
@@ -895,16 +927,18 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                       <div>
                         <p className="text-[9px] font-semibold text-muted-foreground leading-none">% Mensagens</p>
                         <p className="text-[12px] font-bold text-foreground mt-1 font-mono">
-                          {metaTotals.messaging_started > 0 && curr.qualified_messages > 0
-                            ? `${((curr.qualified_messages / metaTotals.messaging_started) * 100).toFixed(1)}%`
+                          {amostragemMessages > 0 && curr.qualified_messages > 0
+                            ? `${((curr.qualified_messages / amostragemMessages) * 100).toFixed(1)}%`
                             : "—"}
                         </p>
                       </div>
                       <div>
                         <p className="text-[9px] font-semibold text-muted-foreground leading-none">Amostragem</p>
                         <div className="mt-0.5">
-                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">{metaTotals.messaging_started > 0 ? metaTotals.messaging_started.toLocaleString("pt-BR") : "0"}</p>
-                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">N/A</p>
+                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">{amostragemMessages > 0 ? amostragemMessages.toLocaleString("pt-BR") : "0"}</p>
+                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">
+                            {inCurr.some(r => Number((r as any).raw_row?.amostragem_mensagens || 0) > 0) ? "Manual" : "Meta Ads"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -916,13 +950,19 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                       </div>
                       <div>
                         <p className="text-[9px] font-semibold text-muted-foreground leading-none">% Seguidores</p>
-                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">—</p>
+                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">
+                          {amostragemFollowers > 0 && curr.qualified_followers > 0
+                            ? `${((curr.qualified_followers / amostragemFollowers) * 100).toFixed(1)}%`
+                            : "—"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-[9px] font-semibold text-muted-foreground leading-none">Amostragem</p>
                         <div className="mt-0.5">
-                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">0</p>
-                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">N/A</p>
+                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">{amostragemFollowers > 0 ? amostragemFollowers.toLocaleString("pt-BR") : "0"}</p>
+                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">
+                            {amostragemFollowers > 0 ? "Manual" : "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1031,6 +1071,16 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           open={sourcesOpen}
           onOpenChange={setSourcesOpen}
           metaTotals={metaTotals}
+        />
+      )}
+
+      {clientId && (
+        <MqlManualEditDialog
+          open={mqlEditOpen}
+          onClose={() => setMqlEditOpen(false)}
+          clientId={clientId}
+          periods={periods}
+          weeklyMetrics={weekly || []}
         />
       )}
     </div>

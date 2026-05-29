@@ -367,10 +367,77 @@ serve(async (req) => {
     });
 
     if (records.length > 0) {
-      // Delete existing rows for this client to avoid duplicates from rows without product_code
-      await supabase.from("weekly_metrics").delete().eq("client_id", client_id).eq("source", "google_sheets");
-      const { error: insErr } = await supabase.from("weekly_metrics").insert(records);
-      if (insErr) throw new Error(`Insert error: ${insErr.message}`);
+      // 1. Fetch all existing records for this client to perform a merge
+      const { data: existingRows, error: fetchErr } = await supabase
+        .from("weekly_metrics")
+        .select("*")
+        .eq("client_id", client_id);
+      
+      if (fetchErr) throw new Error(`Fetch existing metrics error: ${fetchErr.message}`);
+
+      const existingMap = new Map(existingRows?.map((r) => [r.reference_date, r]) || []);
+      const toUpsert: any[] = [];
+      const incomingDates = new Set(records.map(r => r.reference_date));
+      const toDeleteIds: string[] = [];
+
+      // 2. Merge incoming Google Sheets records with database records
+      for (const record of records) {
+        const existing = existingMap.get(record.reference_date);
+        if (existing) {
+          if (existing.source === "manual") {
+            // Keep it as a manual row, preserve manual fields and merge raw_row
+            toUpsert.push({
+              ...record,
+              id: existing.id,
+              source: "manual",
+              mql: existing.mql,
+              smql: existing.smql,
+              qualified_messages: existing.qualified_messages,
+              qualified_followers: existing.qualified_followers,
+              raw_row: {
+                ...record.raw_row,
+                ...existing.raw_row, // preserves mql3, amostragem_mensagens, amostragem_seguidores
+              },
+            });
+          } else {
+            // Google sheets row overwrite, but keep its ID to update it
+            toUpsert.push({
+              ...record,
+              id: existing.id,
+            });
+          }
+        } else {
+          // Entirely new date
+          toUpsert.push(record);
+        }
+      }
+
+      // 3. Find database records that are not in incoming Google Sheets records
+      // If their source is "google_sheets", we delete them.
+      // If their source is "manual", we keep them.
+      for (const [refDate, existing] of existingMap.entries()) {
+        if (!incomingDates.has(refDate)) {
+          if (existing.source === "google_sheets") {
+            toDeleteIds.push(existing.id);
+          }
+        }
+      }
+
+      // 4. Perform database mutations
+      if (toDeleteIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from("weekly_metrics")
+          .delete()
+          .in("id", toDeleteIds);
+        if (delErr) throw new Error(`Delete sync error: ${delErr.message}`);
+      }
+
+      if (toUpsert.length > 0) {
+        const { error: upsertErr } = await supabase
+          .from("weekly_metrics")
+          .upsert(toUpsert);
+        if (upsertErr) throw new Error(`Upsert error: ${upsertErr.message}`);
+      }
     }
 
     await supabase.from("dashboard_sheet_config").update({
