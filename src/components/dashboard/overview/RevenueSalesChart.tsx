@@ -77,23 +77,25 @@ export function RevenueSalesChart({ data, currencySymbol }: Props) {
             labelFormatter={fmtDate}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} iconType="rect" />
-          <Bar
+          <Line
             yAxisId="right"
+            type="monotone"
             dataKey="revenue"
             name="Faturamento"
-            fill="hsl(var(--primary))"
-            radius={[2, 2, 0, 0]}
+            stroke="hsl(var(--primary))"
+            strokeWidth={2}
+            dot={{ r: 3 }}
           >
             <LabelList dataKey="revenue" position="top" formatter={(v: number) => fmtShort(v)} fontSize={9} fill="hsl(var(--primary))" />
-          </Bar>
+          </Line>
           <Line
             yAxisId="left"
             type="monotone"
             dataKey="sales"
             name="Vendas Realizadas"
-            stroke="hsl(var(--primary))"
+            stroke="#0ea5e9"
             strokeWidth={2}
-            dot={{ r: 2 }}
+            dot={{ r: 3 }}
           />
         </ComposedChart>
       </ResponsiveContainer>

@@ -4,7 +4,7 @@ import remarkBreaks from "remark-breaks";
 import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSavedDiagnostics, useDeleteSavedDiagnostic, SavedDiagnostic } from "@/hooks/useSavedDiagnostics";
-import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
+import { groupCampaignsByFunnel, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { toast } from "sonner";
 import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
@@ -141,6 +141,7 @@ function SavedDiagnosticViewer({
   const whatWeDid = snap.whatWeDid || "";
   const periodRange = snap.periodRange || item.date_preset;
   const metricsConfig: Record<string, MetricsConfig> = snap.metricsConfig || {};
+  const funnelLabels = snap.funnelLabels || {};
   const [exporting, setExporting] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
@@ -229,10 +230,20 @@ function SavedDiagnosticViewer({
                 }
               };
               const labelOf = (key: string) => key === "conversions" ? resultLabel : (AVAILABLE_METRICS.find(m => m.key === key)?.label || key);
+              const customGroupTitle = (() => {
+                if (g.isFunnel) {
+                  const code = extractFunnelCode(g.campaigns[0]?.name);
+                  return (code && funnelLabels[code]) || g.key;
+                } else {
+                  const campaignId = g.campaigns[0]?.id;
+                  return (campaignId && funnelLabels[campaignId]) || g.key;
+                }
+              })();
+
               return (
                 <div key={g.key} className="rounded-xl border border-border bg-card p-5">
                   <h4 className="text-base font-bold text-card-foreground">
-                    {g.isFunnel ? `Funil: ${g.key}` : g.key}
+                    {g.isFunnel ? `Funil: ${customGroupTitle}` : customGroupTitle}
                   </h4>
                   {cfg ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
@@ -280,6 +291,7 @@ function SavedDiagnosticViewer({
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
           groupConfigs={metricsConfig}
+          funnelLabels={funnelLabels}
         />
       )}
     </div>

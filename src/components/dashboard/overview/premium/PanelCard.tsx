@@ -24,12 +24,11 @@ export function PanelCard({
 }: Props) {
   return (
     <section className={`rounded-2xl bg-card border ${editMode ? "border-primary/40 ring-1 ring-primary/20" : "border-border/60"} overflow-hidden flex flex-col h-full ${className || ""}`}>
-      <header className={`flex items-center justify-between px-5 py-3.5 border-b border-border/60 ${editMode ? "rgl-drag-handle cursor-move" : ""}`}>
+      <header className={`flex items-center justify-between px-5 py-3 border-b border-border/60 ${editMode ? "rgl-drag-handle cursor-move" : ""}`}>
         <div className="flex items-center gap-2">
           {editMode && <GripVertical className="h-3.5 w-3.5 text-muted-foreground/70" />}
-          <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
           <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+            className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary"
             style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
           >
             {title}

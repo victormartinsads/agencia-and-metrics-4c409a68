@@ -1,8 +1,9 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { Campaign } from "@/data/mockMetaData";
-import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
+import { groupCampaignsByFunnel, extractFunnelCode } from "@/lib/funnelGrouping";
 import { useWeeklyDiagnostic } from "@/hooks/useWeeklyDiagnostic";
 import { useWeeklyNotes } from "@/hooks/useWeeklyNotes";
+import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 import { DiagnosticoFunnelSection } from "./DiagnosticoFunnelSection";
 import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
@@ -75,6 +76,7 @@ export function DiagnosticoSemanal({
     [campaigns]
   );
   const groups = useMemo(() => groupCampaignsByFunnel(activeCampaigns), [activeCampaigns]);
+  const { data: labelMap } = useFunnelLabels(clientId);
 
   const { whatWeDid, setWhatWeDid, nextActions, setNextActions, save: saveNotes, saving: savingNotes } =
     useWeeklyNotes(clientId, datePreset);
@@ -131,6 +133,7 @@ export function DiagnosticoSemanal({
           clientName,
           currencySymbol,
           metricsConfig,
+          funnelLabels: labelMap || {},
         },
       });
       toast.success("Diagnóstico salvo!");
@@ -177,7 +180,18 @@ export function DiagnosticoSemanal({
       const gClicks = g.campaigns.reduce((s, c) => s + c.clicks, 0);
       const gCtr = gImp > 0 ? (gClicks / gImp) * 100 : 0;
       const gCpa = gConv > 0 ? gSpend / gConv : 0;
-      const label = g.isFunnel ? `Funil: ${g.key}` : `Campanha: ${g.key}`;
+
+      const rawTitle = (() => {
+        if (g.isFunnel) {
+          const code = extractFunnelCode(g.campaigns[0]?.name);
+          return (code && labelMap?.[code]) || g.key;
+        } else {
+          const campaignId = g.campaigns[0]?.id;
+          return (campaignId && labelMap?.[campaignId]) || g.key;
+        }
+      })();
+
+      const label = g.isFunnel ? `Funil: ${rawTitle}` : `Campanha: ${rawTitle}`;
 
       lines.push("");
       lines.push(`### ${label}`);
@@ -186,9 +200,10 @@ export function DiagnosticoSemanal({
       lines.push(`- CTR: ${gCtr.toFixed(2)}% | CPA: ${currencySymbol} ${gCpa.toFixed(2)}`);
 
       // Top 3 criativos do grupo
-      const allCreatives = g.campaigns.flatMap(c =>
-        c.creatives.map(cr => ({ ...cr, _camp: c.name }))
-      );
+      const allCreatives = g.campaigns.flatMap(c => {
+        const customCName = labelMap?.[c.id] || c.name;
+        return c.creatives.map(cr => ({ ...cr, _camp: customCName }));
+      });
       const top = allCreatives
         .filter(cr => cr.spend > 0 || cr.impressions > 0)
         .sort((a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions) || b.ctr - a.ctr)
@@ -210,7 +225,7 @@ export function DiagnosticoSemanal({
     lines.push(`### Próximas ações planejadas\n${nextActions || "(sem anotações)"}`);
 
     return lines.join("\n");
-  }, [activeCampaigns, groups, whatWeDid, nextActions, clientName, datePreset, currencySymbol]);
+  }, [activeCampaigns, groups, whatWeDid, nextActions, clientName, datePreset, currencySymbol, labelMap]);
 
   const handleGenerateAI = () => {
     if (activeCampaigns.length === 0) {

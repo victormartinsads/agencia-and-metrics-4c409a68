@@ -1,8 +1,10 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { getUserClaims, unauthorized } from "../_shared/auth.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 
 // Recebe um prompt em linguagem natural e devolve uma estrutura de campanha (campaign + adsets + ads)
 // usando Lovable AI com tool calling. NÃO publica nada na Meta — só persiste como rascunho.
@@ -111,19 +113,9 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims } = await supabase.auth.getClaims(token);
-    const userId = claims?.claims?.sub;
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const claims = await getUserClaims(req);
+    if (!claims) return unauthorized(corsHeaders);
+    const userId = claims.sub;
 
     const systemPrompt = `Você é um especialista sênior em Meta Ads. Receberá um briefing do gestor e DEVE chamar a ferramenta build_campaign_structure com a melhor estrutura possível para cumprir o objetivo. Pense em: público (lookalike, interesses, retargeting), número de adsets para teste (geralmente 2-3), número de ads por adset (3 variações), copy persuasivo focado em benefício e prova, CTA correto. Use sempre português brasileiro. Se o briefing não especificar país, assuma BR. Se não especificar orçamento, use R$50/dia por adset.`;
 

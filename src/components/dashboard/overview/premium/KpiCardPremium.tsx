@@ -10,14 +10,13 @@ interface Props {
   icon?: React.ReactNode;
 }
 
-export function KpiCardPremium({ label, value, delta, sub, inverse, emphasis, icon }: Props) {
-  const isPos = delta != null && delta > 0.1;
-  const isNeg = delta != null && delta < -0.1;
-  const goodUp = !inverse;
+export function KpiCardPremium({ label, value, delta, sub, emphasis, icon }: Omit<Props, "inverse">) {
+  const isPos = delta != null && delta > 0.01;
+  const isNeg = delta != null && delta < -0.01;
   const tone = delta == null
     ? "neu"
-    : (isPos && goodUp) || (isNeg && !goodUp) ? "up"
-    : (isNeg && goodUp) || (isPos && !goodUp) ? "dn"
+    : isPos ? "up"
+    : isNeg ? "dn"
     : "neu";
   return (
     <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 px-5 pt-4 pb-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/30">

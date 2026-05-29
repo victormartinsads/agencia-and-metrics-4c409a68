@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye, LayoutGrid, Plus, RotateCcw } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye, LayoutGrid, Plus, RotateCcw, Settings, Lightbulb, Trophy, BarChart3, TrendingDown } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -15,7 +15,7 @@ import { EditableOverviewFunnel } from "../EditableOverviewFunnel";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
 import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
-import { AgeBarsPanel } from "./AgeBarsPanel";
+import { DemographicsBlock } from "../DemographicsBlock";
 import { ProductSalesChart } from "../ProductSalesChart";
 import { LowTicketChart } from "../LowTicketChart";
 import { LeadsChart } from "../LeadsChart";
@@ -137,6 +137,8 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     investment: sumKey(inCurr, "investment"),
     low_ticket_meta: sumKey(inCurr, "low_ticket_meta"),
     low_ticket_google: sumKey(inCurr, "low_ticket_google"),
+    qualified_messages: sumKey(inCurr, "qualified_messages"),
+    qualified_followers: sumKey(inCurr, "qualified_followers"),
   };
   const prev = {
     revenue: sumKey(inPrev, "revenue"),
@@ -147,6 +149,8 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     investment: sumKey(inPrev, "investment"),
     low_ticket_meta: sumKey(inPrev, "low_ticket_meta"),
     low_ticket_google: sumKey(inPrev, "low_ticket_google"),
+    qualified_messages: sumKey(inPrev, "qualified_messages"),
+    qualified_followers: sumKey(inPrev, "qualified_followers"),
   };
 
   const metaTotals: Record<string, number> = {
@@ -187,6 +191,8 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     sales: resolve("sales", sheetsCurr.sales),
     mql: resolve("mql", sheetsCurr.mql),
     smql: resolve("smql", sheetsCurr.smql),
+    qualified_messages: resolve("qualified_messages", sheetsCurr.qualified_messages),
+    qualified_followers: resolve("qualified_followers", sheetsCurr.qualified_followers),
   };
   prev.revenue = resolvePrev("revenue", prev.revenue);
   prev.sales = resolvePrev("sales", prev.sales);
@@ -411,6 +417,17 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
             <RotateCcw className="h-3.5 w-3.5" /> Restaurar
           </Button>
         )}
+        {clientId && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-8 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setSourcesOpen(true)}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Configurar Planilhas
+          </Button>
+        )}
         <Button
           variant={editMode ? "default" : "outline"}
           size="sm"
@@ -455,7 +472,6 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           value={formatCurrency(totalSpend, currencySymbol)}
           delta={prevSpend ? pctDelta(totalSpend, prevSpend) : null}
           sub="vs. período anterior"
-          inverse
           icon={<DollarSign className="h-3.5 w-3.5" />}
         />
         <KpiCardPremium
@@ -489,314 +505,452 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         />
       </div>
 
-      {/* Insights strip */}
-      <InsightsStrip items={insights} />
-
+      {/* Insights Row */}
       {(() => {
-        const blocks: DashboardBlock[] = [];
-
-        if (isVisible("performance")) blocks.push({
-          id: "performance",
-          defaultLayout: { w: 8, h: 8, x: 0, y: 0 },
-          node: (
-        <PanelCard title="Performance do período" noPadding actions={<EditSourceBtn />} panelId="performance" editMode={editMode} onHide={hidePanel}>
-          <div className="grid grid-cols-2 border-b border-border/60">
-            <div className="px-5 py-4 border-r border-border/60">
-              <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
-                Investimento Total
-              </div>
-              <div className="text-[28px] leading-none font-bold text-foreground" style={{ fontFamily: "'Syne',sans-serif" }}>
-                {formatCurrency(totalSpend, currencySymbol)}
-              </div>
-            </div>
-            <div className="px-5 py-4">
-              <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
-                Faturamento
-              </div>
-              <div className="text-[28px] leading-none font-bold text-primary" style={{ fontFamily: "'Syne',sans-serif" }}>
-                {formatCurrency(curr.revenue, currencySymbol)}
-              </div>
-            </div>
-          </div>
-          <div className="p-5">
-            <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
-          </div>
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("custos")) blocks.push({
-          id: "custos",
-          defaultLayout: { w: 4, h: 8, x: 8, y: 0 },
-          node: (
-        <PanelCard title="Custos & Produtos" noPadding actions={<EditSourceBtn />} panelId="custos" editMode={editMode} onHide={hidePanel}>
-          <div className="grid grid-cols-2 gap-px bg-border/60">
-            {[
-              { l: "Custo / Venda", v: cps > 0 ? formatCurrency(cps, currencySymbol) : "—" },
-              { l: "Custo / Lead", v: cpl > 0 ? formatCurrency(cpl, currencySymbol) : "—" },
-              { l: "CPC", v: cpc > 0 ? formatCurrency(cpc, currencySymbol) : "—" },
-              { l: "CPM", v: cpm > 0 ? formatCurrency(cpm, currencySymbol) : "—" },
-            ].map((c) => (
-              <div key={c.l} className="bg-muted/30 px-4 py-3.5">
-                <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-1">{c.l}</div>
-                <div className="text-[19px] font-bold text-foreground tracking-tight" style={{ fontFamily: "'Syne',sans-serif" }}>
-                  {c.v}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="px-5 pt-4 pb-2">
-            <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-semibold">Vendas por produto</div>
-          </div>
-          <div className="p-3">
-            <ProductSalesChart data={productData} />
-          </div>
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("funil")) blocks.push({
-          id: "funil",
-          defaultLayout: { w: 4, h: 8, x: 0, y: 8 },
-          node: (
-        <PanelCard
-          title="Funil de Conversão"
-          panelId="funil"
-          editMode={editMode}
-          onHide={hidePanel}
-          actions={
-            <>
-              <button
-                onClick={() => setFunnelEdit((v) => !v)}
-                className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                title={funnelEdit ? "Ver funil" : "Editar funil"}
-              >
-                {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-              </button>
-              <EditSourceBtn title="Editar fontes do funil" />
-            </>
-          }
-        >
-          {funnelEdit && clientId ? (
-            <EditableOverviewFunnel
-              clientId={clientId}
-              startInEdit
-              metrics={{
-                current: {
-                  impressions: metaTotals.impressions,
-                  reach: metaTotals.reach,
-                  clicks: metaTotals.clicks,
-                  landing_page_views: metaTotals.landing_page_views,
-                  add_to_cart: metaTotals.add_to_cart,
-                  initiate_checkout: metaTotals.initiate_checkout,
-                  purchases: metaTotals.purchases || sales,
-                  conversions: metaTotals.lead_actions,
-                  pageviews,
-                  leads,
-                  sales,
-                  revenue: curr.revenue,
-                },
-                previous: {
-                  leads: prev.leads || prev.mql,
-                  sales: prev.sales,
-                  revenue: prev.revenue,
-                  purchases: prev.sales,
-                },
-              }}
-              extraMetricLabels={[
-                { key: "pageviews", label: "Pageviews (GA4)" },
-                { key: "sales", label: "Vendas" },
-                { key: "revenue", label: "Faturamento" },
-              ]}
-            />
-          ) : (() => {
-            const metricResolver: Record<string, number> = {
-              impressions: metaTotals.impressions,
-              reach: metaTotals.reach,
-              clicks: metaTotals.clicks,
-              landing_page_views: metaTotals.landing_page_views,
-              messaging_conversations_started: metaTotals.messaging_started,
-              add_to_cart: metaTotals.add_to_cart,
-              initiate_checkout: metaTotals.initiate_checkout,
-              purchases: metaTotals.purchases || sales,
-              conversions: metaTotals.lead_actions,
-              leads,
-              sales,
-              revenue: curr.revenue,
-              pageviews,
-            };
-            const stages = (savedFunnelStages && savedFunnelStages.length > 0)
-              ? savedFunnelStages.map((s) => ({ name: s.name, metric_key: s.metric_key }))
-              : DEFAULT_STAGES.map((s) => ({ name: s.name, metric_key: s.metric_key }));
-            const steps = stages.map((s) => ({
-              name: s.name,
-              value: Number(metricResolver[s.metric_key] ?? 0),
-            }));
-            const firstClickIdx = stages.findIndex((s) => s.metric_key === "clicks");
-            const leadIdx = stages.findIndex((s) => ["leads", "conversions"].includes(s.metric_key));
-            const saleIdx = stages.findIndex((s) => ["purchases", "sales"].includes(s.metric_key));
-            const summary: { label: string; value: string }[] = [];
-            if (firstClickIdx >= 0 && leadIdx > firstClickIdx) {
-              const c = steps[firstClickIdx].value;
-              const l = steps[leadIdx].value;
-              summary.push({
-                label: `Taxa ${stages[firstClickIdx].name.toLowerCase()}→${stages[leadIdx].name.toLowerCase()}`,
-                value: c > 0 ? `${((l / c) * 100).toFixed(2)}%` : "—",
-              });
-            }
-            if (leadIdx >= 0 && saleIdx > leadIdx) {
-              const l = steps[leadIdx].value;
-              const v = steps[saleIdx].value;
-              summary.push({
-                label: `Taxa ${stages[leadIdx].name.toLowerCase()}→${stages[saleIdx].name.toLowerCase()}`,
-                value: l > 0 ? `${((v / l) * 100).toFixed(1)}%` : "—",
-              });
-            }
-            return <ConversionFunnelPremium steps={steps} summary={summary} />;
-          })()}
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("canais")) blocks.push({
-          id: "canais",
-          defaultLayout: { w: 4, h: 8, x: 4, y: 8 },
-          node: (
-        <PanelCard title="Canais (UTM)" actions={<EditSourceBtn />} panelId="canais" editMode={editMode} onHide={hidePanel}>
-          <ChannelsDonut
-            rows={channelRows}
-            centerValue={
-              channelRows.length > 0
-                ? formatCurrency(channelRows.reduce((a, b) => a + b.impressions, 0), currencySymbol)
-                : compactImpr
-            }
-            centerLabel={channelRows.length > 0 ? "Receita UTM" : "Impressões"}
-            extraStats={[
-              { label: "Frequência", value: freq > 0 ? freq.toFixed(2) : "—" },
-              { label: "CTR", value: ctr > 0 ? `${ctr.toFixed(2)}%` : "—", emphasis: true },
-              { label: "Alcance", value: compactReach },
-            ]}
-          />
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("demografico")) blocks.push({
-          id: "demografico",
-          defaultLayout: { w: 4, h: 8, x: 8, y: 8 },
-          node: (
-        <PanelCard title="Demográfico — Idade" actions={<EditSourceBtn />} panelId="demografico" editMode={editMode} onHide={hidePanel}>
-          <AgeBarsPanel clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("lowticket")) blocks.push({
-          id: "lowticket",
-          defaultLayout: { w: 4, h: 8, x: 0, y: 16 },
-          node: (
-        <PanelCard title="Low Ticket" noPadding actions={<EditSourceBtn />} panelId="lowticket" editMode={editMode} onHide={hidePanel}>
-          <div className="grid grid-cols-3 border-b border-border/60">
-            {[
-              { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
-              { l: "Meta Ads", v: lowTicketMetaDisplay, delta: pctDelta(lowTicketMetaDisplay, prevLtMeta), tone: "text-primary" },
-              { l: "Google Ads", v: lowTicketGoogleDisplay, delta: pctDelta(lowTicketGoogleDisplay, prev.low_ticket_google), tone: "text-muted-foreground" },
-            ].map((c, i) => (
-              <div key={i} className={`px-4 py-3.5 ${i < 2 ? "border-r border-border/60" : ""}`}>
-                <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-1">{c.l}</div>
-                <div className={`text-[24px] font-bold ${c.tone}`} style={{ fontFamily: "'Syne',sans-serif" }}>
-                  {c.v.toLocaleString("pt-BR")}
-                </div>
-                {c.delta != null && (
-                  <div className={`text-[9px] mt-1 font-semibold ${c.delta >= 0 ? "text-primary" : "text-destructive"}`}>
-                    {c.delta >= 0 ? "↑" : "↓"} {Math.abs(c.delta).toFixed(1)}%
+        const INSIGHTS_ICONS = {
+          best: Lightbulb,
+          channel: Target,
+          warn: TrendingDown,
+          winner: Trophy,
+          ticket: BarChart3,
+        };
+        return insights.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {insights.map((it, i) => {
+              const Icon = (INSIGHTS_ICONS as any)[it.icon] || Lightbulb;
+              return (
+                <div
+                  key={i}
+                  className="rounded-2xl bg-card border border-border/60 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/30"
+                >
+                  <Icon className="h-4 w-4 text-primary mb-2" />
+                  <div className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">
+                    {it.title}
                   </div>
-                )}
-              </div>
-            ))}
+                  <div className="text-[11px] leading-relaxed text-muted-foreground [&_strong]:text-foreground [&_strong]:font-semibold [&_strong]:text-primary">
+                    {it.body}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="p-4">
-            <LowTicketChart data={lowTicketDataDisplay} />
-          </div>
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("bestads")) blocks.push({
-          id: "bestads",
-          defaultLayout: { w: 4, h: 8, x: 4, y: 16 },
-          node: (
-        <PanelCard title="Melhores Criativos" noPadding actions={<EditSourceBtn />} panelId="bestads" editMode={editMode} onHide={hidePanel}>
-          <div className="p-2">
-            <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
-          </div>
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("leads")) blocks.push({
-          id: "leads",
-          defaultLayout: { w: 4, h: 8, x: 8, y: 16 },
-          node: (
-        <PanelCard title="Leads" noPadding actions={<EditSourceBtn />} panelId="leads" editMode={editMode} onHide={hidePanel}>
-          <div className="p-5 pb-3">
-            <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-1.5">
-              Leads Gerados
-            </div>
-            <div className="text-[26px] font-bold text-foreground" style={{ fontFamily: "'Syne',sans-serif" }}>
-              {leads.toLocaleString("pt-BR")}
-            </div>
-            {prev.leads > 0 && (
-              <div className={`text-[10px] mt-1 font-semibold ${(pctDelta(leads, prev.leads || prev.mql) ?? 0) >= 0 ? "text-primary" : "text-destructive"}`}>
-                {(pctDelta(leads, prev.leads || prev.mql) ?? 0) >= 0 ? "↑" : "↓"} {Math.abs(pctDelta(leads, prev.leads || prev.mql) || 0).toFixed(1)}% vs. anterior
-              </div>
-            )}
-          </div>
-          <div className="px-2">
-            <LeadsChart data={leadsData} />
-          </div>
-          <div className="border-t border-border/60 p-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2">
-              <div className="text-[8px] uppercase tracking-wider text-muted-foreground mb-0.5">MQL</div>
-              <div className="text-[14px] font-bold text-foreground" style={{ fontFamily: "'Syne',sans-serif" }}>
-                {curr.mql.toLocaleString("pt-BR")}
-              </div>
-            </div>
-            <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2">
-              <div className="text-[8px] uppercase tracking-wider text-muted-foreground mb-0.5">SMQL</div>
-              <div className="text-[14px] font-bold text-foreground" style={{ fontFamily: "'Syne',sans-serif" }}>
-                {curr.smql.toLocaleString("pt-BR")}
-              </div>
-            </div>
-          </div>
-        </PanelCard>
-          ),
-        });
-
-        if (isVisible("utms")) blocks.push({
-          id: "utms",
-          defaultLayout: { w: 12, h: 7, x: 0, y: 24 },
-          node: (
-        <PanelCard title="Fontes de tráfego (UTM)" noPadding actions={<EditSourceBtn />} panelId="utms" editMode={editMode} onHide={hidePanel}>
-        <div className="p-4">
-          {sheetUtmRows.length > 0
-            ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
-            : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
-        </div>
-      </PanelCard>
-          ),
-        });
-
-        return (
-          <GridDashboard
-            clientId={clientId}
-            dashboardKey="overview-premium"
-            editMode={editMode}
-            blocks={blocks}
-            rowHeight={56}
-          />
-        );
+        ) : null;
       })()}
+
+      {/* Main Grid Section */}
+      <div className="space-y-4">
+        {/* Row 3: Resultados Gerais + Custos + Jornada de Compra */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-300">
+          {/* Resultados Gerais */}
+          {isVisible("performance") && (
+            <div className="lg:col-span-6 flex flex-col">
+              <PanelCard
+                title="Resultados Gerais"
+                noPadding
+                actions={<EditSourceBtn />}
+                panelId="performance"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="p-5 flex-1">
+                  <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
+                </div>
+              </PanelCard>
+            </div>
+          )}
+
+          {/* Custos & Vendas por Produto */}
+          {isVisible("custos") && (
+            <div className="lg:col-span-3 flex flex-col">
+              <PanelCard
+                title="Custos"
+                noPadding
+                actions={<EditSourceBtn />}
+                panelId="custos"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="grid grid-cols-2 gap-px bg-border/40">
+                  {[
+                    { l: "Custo por Venda", v: cps > 0 ? formatCurrency(cps, currencySymbol) : "—" },
+                    { l: "Custo por Lead", v: cpl > 0 ? formatCurrency(cpl, currencySymbol) : "—" },
+                    { l: "Custo por Clique", v: cpc > 0 ? formatCurrency(cpc, currencySymbol) : "—" },
+                    { l: "CPM", v: cpm > 0 ? formatCurrency(cpm, currencySymbol) : "—" },
+                  ].map((c) => (
+                    <div key={c.l} className="bg-muted/10 px-4 py-3">
+                      <div className="text-[9px] uppercase tracking-[0.08em] text-muted-foreground font-semibold mb-0.5">{c.l}</div>
+                      <div className="text-[16px] font-bold text-foreground tracking-tight font-mono">
+                        {c.v}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-5 pt-3.5 pb-1">
+                  <div className="text-[9px] uppercase tracking-[0.08em] text-muted-foreground font-semibold">Vendas por produto</div>
+                </div>
+                <div className="px-3 pb-3 flex-1 flex flex-col justify-end">
+                  <ProductSalesChart data={productData} />
+                </div>
+              </PanelCard>
+            </div>
+          )}
+
+          {/* Jornada de Compra */}
+          {isVisible("funil") && (
+            <div className="lg:col-span-3 flex flex-col">
+              <PanelCard
+                title="Jornada de Compra"
+                panelId="funil"
+                editMode={editMode}
+                onHide={hidePanel}
+                actions={
+                  <>
+                    <button
+                      onClick={() => setFunnelEdit((v) => !v)}
+                      className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      title={funnelEdit ? "Ver funil" : "Editar funil"}
+                    >
+                      {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                    </button>
+                    <EditSourceBtn title="Editar fontes do funil" />
+                  </>
+                }
+              >
+                {funnelEdit && clientId ? (
+                  <EditableOverviewFunnel
+                    clientId={clientId}
+                    startInEdit
+                    metrics={{
+                      current: {
+                        impressions: metaTotals.impressions,
+                        reach: metaTotals.reach,
+                        clicks: metaTotals.clicks,
+                        landing_page_views: metaTotals.landing_page_views,
+                        add_to_cart: metaTotals.add_to_cart,
+                        initiate_checkout: metaTotals.initiate_checkout,
+                        purchases: metaTotals.purchases || sales,
+                        conversions: metaTotals.lead_actions,
+                        pageviews,
+                        leads,
+                        sales,
+                        revenue: curr.revenue,
+                      },
+                      previous: {
+                        leads: prev.leads || prev.mql,
+                        sales: prev.sales,
+                        revenue: prev.revenue,
+                        purchases: prev.sales,
+                      },
+                    }}
+                    extraMetricLabels={[
+                      { key: "pageviews", label: "Pageviews (GA4)" },
+                      { key: "sales", label: "Vendas" },
+                      { key: "revenue", label: "Faturamento" },
+                    ]}
+                  />
+                ) : (() => {
+                  const metricResolver: Record<string, number> = {
+                    impressions: metaTotals.impressions,
+                    reach: metaTotals.reach,
+                    clicks: metaTotals.clicks,
+                    landing_page_views: metaTotals.landing_page_views,
+                    messaging_conversations_started: metaTotals.messaging_started,
+                    add_to_cart: metaTotals.add_to_cart,
+                    initiate_checkout: metaTotals.initiate_checkout,
+                    purchases: metaTotals.purchases || sales,
+                    conversions: metaTotals.lead_actions,
+                    leads,
+                    sales,
+                    revenue: curr.revenue,
+                    pageviews,
+                  };
+                  const stages = (savedFunnelStages && savedFunnelStages.length > 0)
+                    ? savedFunnelStages.map((s) => ({ name: s.name, metric_key: s.metric_key }))
+                    : [
+                        { name: "Cliques", metric_key: "clicks" },
+                        { name: "Page Views", metric_key: "landing_page_views" },
+                        { name: "Finalizações de compra", metric_key: "initiate_checkout" },
+                        { name: "Compras", metric_key: "purchases" },
+                      ];
+                  const steps = stages.map((s) => {
+                    const val = Number(metricResolver[s.metric_key] ?? 0);
+                    let subText = "N/A";
+                    let subTextColor = "text-muted-foreground/60";
+                    if (s.metric_key === "purchases" || s.metric_key === "sales") {
+                      const prevVal = prev.sales;
+                      if (prevVal > 0) {
+                        const d = pctDelta(val, prevVal);
+                        if (d != null) {
+                          const isUp = d >= 0;
+                          subText = `${isUp ? "↑" : "↓"} ${Math.abs(d).toFixed(1)}%`;
+                          subTextColor = isUp ? "text-primary font-semibold" : "text-destructive font-semibold";
+                        }
+                      }
+                    } else if (s.metric_key === "leads" || s.metric_key === "conversions") {
+                      const prevVal = prev.leads || prev.mql;
+                      if (prevVal > 0) {
+                        const d = pctDelta(val, prevVal);
+                        if (d != null) {
+                          const isUp = d >= 0;
+                          subText = `${isUp ? "↑" : "↓"} ${Math.abs(d).toFixed(1)}%`;
+                          subTextColor = isUp ? "text-primary font-semibold" : "text-destructive font-semibold";
+                        }
+                      }
+                    }
+                    return {
+                      name: s.name,
+                      value: val,
+                      subText,
+                      subTextColor,
+                    };
+                  });
+                  const firstClickIdx = stages.findIndex((s) => s.metric_key === "clicks");
+                  const leadIdx = stages.findIndex((s) => ["leads", "conversions"].includes(s.metric_key));
+                  const saleIdx = stages.findIndex((s) => ["purchases", "sales"].includes(s.metric_key));
+                  const summary: { label: string; value: string }[] = [];
+                  if (firstClickIdx >= 0 && leadIdx > firstClickIdx) {
+                    const c = Number(metricResolver[stages[firstClickIdx].metric_key] ?? 0);
+                    const l = Number(metricResolver[stages[leadIdx].metric_key] ?? 0);
+                    summary.push({
+                      label: `Taxa ${stages[firstClickIdx].name.toLowerCase()}→${stages[leadIdx].name.toLowerCase()}`,
+                      value: c > 0 ? `${((l / c) * 100).toFixed(2)}%` : "—",
+                    });
+                  }
+                  if (leadIdx >= 0 && saleIdx > leadIdx) {
+                    const l = Number(metricResolver[stages[leadIdx].metric_key] ?? 0);
+                    const v = Number(metricResolver[stages[saleIdx].metric_key] ?? 0);
+                    summary.push({
+                      label: `Taxa ${stages[leadIdx].name.toLowerCase()}→${stages[saleIdx].name.toLowerCase()}`,
+                      value: l > 0 ? `${((v / l) * 100).toFixed(1)}%` : "—",
+                    });
+                  }
+                  return <ConversionFunnelPremium steps={steps} summary={summary} />;
+                })()}
+              </PanelCard>
+            </div>
+          )}
+        </div>
+
+        {/* Row 4: Vendas + MQL & sMQL + Leads */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-300">
+          {/* Vendas */}
+          {isVisible("lowticket") && (
+            <div className="lg:col-span-5 flex flex-col">
+              <PanelCard
+                title="Vendas"
+                noPadding
+                actions={<EditSourceBtn />}
+                panelId="lowticket"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="grid grid-cols-3 border-b border-border/60">
+                  {[
+                    { l: "Total", v: ltTotalDisplay, delta: pctDelta(ltTotalDisplay, prevLt || prevLtMeta), tone: "text-foreground" },
+                    { l: "Meta Ads", v: lowTicketMetaDisplay, delta: pctDelta(lowTicketMetaDisplay, prevLtMeta), tone: "text-primary" },
+                    { l: "Google Ads", v: lowTicketGoogleDisplay, delta: pctDelta(lowTicketGoogleDisplay, prev.low_ticket_google), tone: "text-muted-foreground" },
+                  ].map((c, i) => (
+                    <div key={i} className={`px-4 py-3 ${i < 2 ? "border-r border-border/60" : ""}`}>
+                      <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-0.5">{c.l}</div>
+                      <div className={`text-[18px] font-bold ${c.tone} font-mono`}>
+                        {c.v.toLocaleString("pt-BR")}
+                      </div>
+                      {c.delta != null && (
+                        <div className={`text-[9px] mt-0.5 font-semibold ${c.delta >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {c.delta >= 0 ? "↑" : "↓"} {Math.abs(c.delta).toFixed(1)}%
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-end">
+                  <LowTicketChart data={lowTicketDataDisplay} />
+                </div>
+              </PanelCard>
+            </div>
+          )}
+
+          {/* MQL & sMQL */}
+          {isVisible("mql") && (
+            <div className="lg:col-span-3 flex flex-col">
+              <PanelCard
+                title="MQL & sMQL"
+                actions={<EditSourceBtn />}
+                panelId="mql"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="space-y-3.5 flex-1 flex flex-col justify-between">
+                  <div className="grid grid-cols-3 border-b border-border/40 pb-2.5">
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">MQL 1</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">{curr.mql > 0 ? curr.mql.toLocaleString("pt-BR") : "—"}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">MQL 2</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">MQL 3</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 border-b border-border/40 pb-2.5">
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">C/MQL 1</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">
+                        {curr.mql > 0 ? formatCurrency(totalSpend / curr.mql, currencySymbol) : "—"}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">C/MQL 2</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">C/MQL 3</div>
+                      <div className="text-[14px] font-bold text-foreground font-mono">—</div>
+                    </div>
+                  </div>
+
+                  <div className="pt-0.5 space-y-3">
+                    <div className="grid grid-cols-3 text-center">
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">Mensagens Qualif.</p>
+                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">{curr.qualified_messages > 0 ? curr.qualified_messages.toLocaleString("pt-BR") : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">% Mensagens</p>
+                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">
+                          {metaTotals.messaging_started > 0 && curr.qualified_messages > 0
+                            ? `${((curr.qualified_messages / metaTotals.messaging_started) * 100).toFixed(1)}%`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">Amostragem</p>
+                        <div className="mt-0.5">
+                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">{metaTotals.messaging_started > 0 ? metaTotals.messaging_started.toLocaleString("pt-BR") : "0"}</p>
+                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">N/A</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 text-center">
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">Seguidores Qualif.</p>
+                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">{curr.qualified_followers > 0 ? curr.qualified_followers.toLocaleString("pt-BR") : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">% Seguidores</p>
+                        <p className="text-[12px] font-bold text-foreground mt-1 font-mono">—</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-semibold text-muted-foreground leading-none">Amostragem</p>
+                        <div className="mt-0.5">
+                          <p className="text-[11px] font-bold text-foreground leading-none font-mono">0</p>
+                          <p className="text-[8px] text-muted-foreground/60 leading-none mt-0.5">N/A</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </PanelCard>
+            </div>
+          )}
+
+          {/* Leads */}
+          {isVisible("leads") && (
+            <div className="lg:col-span-4 flex flex-col">
+              <PanelCard
+                title="Leads"
+                noPadding
+                actions={<EditSourceBtn />}
+                panelId="leads"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="p-5 pb-1 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-0.5">
+                      Leads Gerados
+                    </div>
+                    <div className="text-[24px] font-bold text-foreground font-mono">
+                      {leads.toLocaleString("pt-BR")}
+                    </div>
+                    {prev.leads > 0 && (
+                      <div className={`text-[10px] mt-0.5 font-semibold ${(pctDelta(leads, prev.leads || prev.mql) ?? 0) >= 0 ? "text-primary" : "text-destructive"}`}>
+                        {(pctDelta(leads, prev.leads || prev.mql) ?? 0) >= 0 ? "↑" : "↓"} {Math.abs(pctDelta(leads, prev.leads || prev.mql) || 0).toFixed(1)}% vs. anterior
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2">
+                    <LeadsChart data={leadsData} />
+                  </div>
+                </div>
+              </PanelCard>
+            </div>
+          )}
+        </div>
+
+        {/* Row 5: Melhores Anúncios + Demográficos */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-300">
+          {/* Melhores Anúncios */}
+          {isVisible("bestads") && (
+            <div className="lg:col-span-5 flex flex-col">
+              <PanelCard
+                title="Melhores Anúncios"
+                noPadding
+                actions={<EditSourceBtn />}
+                panelId="bestads"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="p-2 flex-1">
+                  <BestAdsList campaigns={campaigns} limit={3} currencySymbol={currencySymbol} />
+                </div>
+              </PanelCard>
+            </div>
+          )}
+
+          {/* Demográficos */}
+          {isVisible("demografico") && (
+            <div className="lg:col-span-7 flex flex-col">
+              <PanelCard
+                title="Demográficos (Meta)"
+                actions={<EditSourceBtn />}
+                panelId="demografico"
+                editMode={editMode}
+                onHide={hidePanel}
+              >
+                <div className="flex-1">
+                  <DemographicsBlock clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
+                </div>
+              </PanelCard>
+            </div>
+          )}
+        </div>
+
+        {/* Row 6: Fontes UTM */}
+        {isVisible("utms") && (
+          <div className="w-full animate-in fade-in duration-300">
+            <PanelCard
+              title="Fontes (UTMs)"
+              noPadding
+              actions={<EditSourceBtn />}
+              panelId="utms"
+              editMode={editMode}
+              onHide={hidePanel}
+            >
+              <div className="p-4">
+                {sheetUtmRows.length > 0
+                  ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
+                  : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
+              </div>
+            </PanelCard>
+          </div>
+        )}
+      </div>
 
       {clientId && (
         <MetricSourceEditor

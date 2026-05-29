@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { Campaign } from "@/data/mockMetaData";
-import { FunnelGroup } from "@/lib/funnelGrouping";
+import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
-import { Layers, Target, Eye, EyeOff } from "lucide-react";
+import { Layers, Target, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MetricsCustomizer } from "./MetricsCustomizer";
 import {
   AVAILABLE_METRICS,
@@ -13,6 +14,8 @@ import {
 } from "@/hooks/useDiagnosticMetricsConfig";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
+import { useFunnelLabels, useSaveFunnelLabel } from "@/hooks/useFunnelLabels";
+import { toast } from "sonner";
 
 interface Props {
   group: FunnelGroup;
@@ -70,6 +73,85 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
     group.key,
   );
 
+  const { data: labelMap } = useFunnelLabels(clientId);
+  const saveLabelMutation = useSaveFunnelLabel();
+
+  const sectionCode = useMemo(() => {
+    if (group.isFunnel) {
+      return extractFunnelCode(group.campaigns[0]?.name) || group.key;
+    } else {
+      return group.campaigns[0]?.id || group.key;
+    }
+  }, [group]);
+
+  const rawSectionTitle = useMemo(() => {
+    if (group.isFunnel) {
+      const code = extractFunnelCode(group.campaigns[0]?.name);
+      return (code && labelMap?.[code]) || group.key;
+    } else {
+      const campaignId = group.campaigns[0]?.id;
+      return (campaignId && labelMap?.[campaignId]) || group.key;
+    }
+  }, [group, labelMap]);
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+
+  const handleEditTitleClick = () => {
+    setTitleDraft(rawSectionTitle);
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveTitle = async () => {
+    if (!clientId) return;
+    const trimmed = titleDraft.trim();
+    if (!trimmed) {
+      toast.error("O nome não pode ser vazio");
+      return;
+    }
+    try {
+      await saveLabelMutation.mutateAsync({
+        clientId,
+        funnelCode: sectionCode,
+        label: trimmed,
+      });
+      setIsEditingTitle(false);
+      toast.success("Nome atualizado com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao salvar o nome");
+    }
+  };
+
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [campaignDraft, setCampaignDraft] = useState("");
+
+  const handleStartEditCampaign = (campaignId: string, currentName: string) => {
+    setCampaignDraft(currentName);
+    setEditingCampaignId(campaignId);
+  };
+
+  const handleSaveCampaign = async (campaignId: string) => {
+    if (!clientId) return;
+    const trimmed = campaignDraft.trim();
+    if (!trimmed) {
+      toast.error("O nome não pode ser vazio");
+      return;
+    }
+    try {
+      await saveLabelMutation.mutateAsync({
+        clientId,
+        funnelCode: campaignId,
+        label: trimmed,
+      });
+      setEditingCampaignId(null);
+      toast.success("Nome da campanha atualizado!");
+    } catch (err) {
+      toast.error("Erro ao salvar nome da campanha");
+    }
+  };
+
+  const displaySectionTitle = group.isFunnel ? `Funil: ${rawSectionTitle}` : rawSectionTitle;
+
   const renderMetricValue = (key: string): string => {
     const v = getMetricValue(totals, key);
     return formatMetricValue(key, v, currencySymbol);
@@ -93,9 +175,52 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             ) : (
               <Target className="h-5 w-5 text-primary" />
             )}
-            <h3 className="text-xl font-bold text-card-foreground">
-              {group.isFunnel ? `Funil: ${group.key}` : group.key}
-            </h3>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 max-w-md">
+                <Input
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveTitle();
+                    if (e.key === "Escape") setIsEditingTitle(false);
+                  }}
+                  className="h-8 text-sm font-bold text-card-foreground bg-background border-primary/50 focus:border-primary"
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-primary hover:bg-primary/10"
+                  onClick={handleSaveTitle}
+                  disabled={saveLabelMutation.isPending}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-muted-foreground hover:bg-muted"
+                  onClick={() => setIsEditingTitle(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group/title">
+                <h3 className="text-xl font-bold text-card-foreground">
+                  {displaySectionTitle}
+                </h3>
+                {clientId && (
+                  <button
+                    onClick={handleEditTitleClick}
+                    className="opacity-0 group-hover/title:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1"
+                    title="Editar nome"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.isFunnel
@@ -155,22 +280,72 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                 {group.campaigns
                   .slice()
                   .sort((a, b) => b.spend - a.spend)
-                  .map(c => (
-                    <tr key={c.id} className="border-t border-border">
-                      <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={c.name}>{c.name}</td>
-                      <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(c.spend, currencySymbol)}</td>
-                      <td className="px-3 py-2 text-right text-card-foreground font-semibold">{c.conversions}</td>
-                      <td className="px-3 py-2 text-right text-card-foreground">
-                        {c.conversions > 0 ? formatMoney(c.spend / c.conversions, currencySymbol) : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right text-card-foreground">{c.ctr.toFixed(2)}%</td>
-                      <td className="px-3 py-2 text-right">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                          c.status === "active" ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"
-                        }`}>{c.status}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  .map(c => {
+                    const customCampName = labelMap?.[c.id] || c.name;
+                    const isEditingCamp = editingCampaignId === c.id;
+
+                    return (
+                      <tr key={c.id} className="border-t border-border hover:bg-muted/10">
+                        <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={c.name}>
+                          {isEditingCamp ? (
+                            <div className="flex items-center gap-1.5 max-w-full">
+                              <Input
+                                value={campaignDraft}
+                                onChange={(e) => setCampaignDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveCampaign(c.id);
+                                  if (e.key === "Escape") setEditingCampaignId(null);
+                                }}
+                                className="h-7 text-xs py-1 px-2 flex-1 bg-background border-primary/50 focus:border-primary"
+                                autoFocus
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-primary hover:bg-primary/10"
+                                onClick={() => handleSaveCampaign(c.id)}
+                                disabled={saveLabelMutation.isPending}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:bg-muted"
+                                onClick={() => setEditingCampaignId(null)}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 group/camp">
+                              <span className="truncate max-w-[230px] block">{customCampName}</span>
+                              {clientId && (
+                                <button
+                                  onClick={() => handleStartEditCampaign(c.id, customCampName)}
+                                  className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
+                                  title="Editar nome"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(c.spend, currencySymbol)}</td>
+                        <td className="px-3 py-2 text-right text-card-foreground font-semibold">{c.conversions}</td>
+                        <td className="px-3 py-2 text-right text-card-foreground">
+                          {c.conversions > 0 ? formatMoney(c.spend / c.conversions, currencySymbol) : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right text-card-foreground">{c.ctr.toFixed(2)}%</td>
+                        <td className="px-3 py-2 text-right">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                            c.status === "active" ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"
+                          }`}>{c.status}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -225,7 +400,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
         {group.isFunnel ? (
           <AggregatedCreativeGrid
             campaigns={group.campaigns}
-            funnelLabel={group.key}
+            funnelLabel={rawSectionTitle}
             clientId={clientId}
             currencySymbol={currencySymbol}
           />

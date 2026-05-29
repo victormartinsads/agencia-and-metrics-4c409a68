@@ -1,7 +1,7 @@
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -29,7 +29,7 @@ export function LeadsChart({ data }: Props) {
   return (
     <div className="h-40 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
           <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
           <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
@@ -41,10 +41,10 @@ export function LeadsChart({ data }: Props) {
               fontSize: 12,
             }}
           />
-          <Bar dataKey="leads" name="Leads" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]}>
+          <Line dataKey="leads" name="Leads" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }}>
             <LabelList dataKey="leads" position="top" fontSize={9} fill="hsl(var(--primary))" />
-          </Bar>
-        </BarChart>
+          </Line>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

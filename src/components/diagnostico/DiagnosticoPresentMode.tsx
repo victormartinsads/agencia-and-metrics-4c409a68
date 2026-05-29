@@ -3,8 +3,9 @@ import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FunnelGroup } from "@/lib/funnelGrouping";
+import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
+import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 import { ManualFunnel } from "@/hooks/useManualFunnels";
 import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
 import {
@@ -36,6 +37,8 @@ interface Props {
   publicMode?: boolean;
   /** Override de configuração de métricas por groupKey (usado em snapshots salvos). */
   groupConfigs?: Record<string, MetricsConfig>;
+  /** Rótulos customizados de funis/campanhas vindos de snapshot salvo */
+  funnelLabels?: Record<string, string>;
 }
 
 type Slide =
@@ -55,8 +58,11 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs,
+  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels,
 }: Props) {
+  const { data: liveLabelMap } = useFunnelLabels(clientId);
+  const resolvedLabels = funnelLabels || liveLabelMap || {};
+
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
     { kind: "notes" },
@@ -157,6 +163,7 @@ export function DiagnosticoPresentMode({
                 clientId={clientId}
                 datePreset={datePresetKey || datePreset}
                 overrideConfig={groupConfigs?.[slide.group.key]}
+                resolvedLabels={resolvedLabels}
               />
             )}
 
@@ -219,12 +226,14 @@ function GroupSlide({
   clientId,
   datePreset,
   overrideConfig,
+  resolvedLabels = {},
 }: {
   group: FunnelGroup;
   currencySymbol: string;
   clientId?: string;
   datePreset: string;
   overrideConfig?: MetricsConfig;
+  resolvedLabels?: Record<string, string>;
 }) {
   const totals = aggregateCampaignMetrics(group.campaigns);
   const resultLabel =
@@ -241,9 +250,19 @@ function GroupSlide({
       : findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
   const isHighlight = (key: string) => key === "spend" || key === "conversions";
 
+  const displayTitle = useMemo(() => {
+    if (group.isFunnel) {
+      const code = extractFunnelCode(group.campaigns[0]?.name);
+      return (code && resolvedLabels[code]) || group.key;
+    } else {
+      const campaignId = group.campaigns[0]?.id;
+      return (campaignId && resolvedLabels[campaignId]) || group.key;
+    }
+  }, [group, resolvedLabels]);
+
   // Top 3 criativos do grupo
   const top = group.campaigns
-    .flatMap(c => c.creatives.map(cr => ({ ...cr, _camp: c.name })))
+    .flatMap(c => c.creatives.map(cr => ({ ...cr, _camp: resolvedLabels[c.id] || c.name })))
     .filter(cr => cr.spend > 0 || cr.impressions > 0)
     .sort((a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions))
     .slice(0, 3);
@@ -254,7 +273,7 @@ function GroupSlide({
         <p className="text-xs uppercase tracking-widest text-primary font-semibold">
           {group.isFunnel ? "Funil" : "Campanha"}
         </p>
-        <h2 className="text-4xl font-bold text-card-foreground mt-1">{group.key}</h2>
+        <h2 className="text-4xl font-bold text-card-foreground mt-1">{displayTitle}</h2>
         {group.isFunnel && (
           <p className="text-sm text-muted-foreground mt-1">
             {group.campaigns.length} campanhas agrupadas

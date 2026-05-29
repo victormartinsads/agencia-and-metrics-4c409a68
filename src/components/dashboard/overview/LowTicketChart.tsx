@@ -43,7 +43,7 @@ export function LowTicketChart({ data }: Props) {
           />
           <Legend wrapperStyle={{ fontSize: 10 }} iconType="rect" />
           <Bar dataKey="meta" stackId="a" name="Meta Ads" fill="hsl(217 91% 60%)" />
-          <Bar dataKey="google" stackId="a" name="Google Ads" fill="hsl(var(--primary))" />
+          <Bar dataKey="google" stackId="a" name="Google Ads" fill="hsl(25 95% 53%)" />
         </BarChart>
       </ResponsiveContainer>
     </div>
