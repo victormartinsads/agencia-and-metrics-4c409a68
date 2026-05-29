@@ -34,17 +34,18 @@ interface Props {
 }
 
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false }: Props) {
-  const showTab = (k: string) => !visibleTabs || visibleTabs.includes(k);
-  const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId);
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
     queryFn: async () => {
       if (!clientId) return null;
-      const { data } = await supabase.from("clients").select("name").eq("id", clientId).maybeSingle();
+      const { data } = await supabase.from("clients").select("name, slug").eq("id", clientId).maybeSingle();
       return data;
     },
     enabled: !!clientId,
   });
+
+  const showTab = (k: string) => !visibleTabs || visibleTabs.includes(k);
+  const { data: igData, isLoading: igLoading, error: igError } = useInstagramInsights(clientId, clientInfo?.slug);
 
   const overview = metaData?.overviewMetrics;
   const campaigns = metaData?.campaigns || [];
@@ -117,6 +118,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               datePreset={datePreset || "last_7d"}
               metaData={metaData}
               currencySymbol={currencySymbol}
+              publicSlug={clientInfo?.slug}
             />
           </TabsContent>}
 

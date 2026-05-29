@@ -30,12 +30,12 @@ export interface GoogleAdsData {
   message?: string;
 }
 
-export function useGoogleAds(clientId?: string, dateRange?: string, enabled = true) {
+export function useGoogleAds(clientId?: string, dateRange?: string, enabled = true, publicSlug?: string) {
   return useQuery({
-    queryKey: ["google-ads", clientId, dateRange],
+    queryKey: ["google-ads", clientId, dateRange, publicSlug || ""],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("google-ads", {
-        body: { clientId, dateRange },
+        body: { clientId, dateRange, publicSlug },
       });
       if (error) throw error;
       return data as GoogleAdsData;

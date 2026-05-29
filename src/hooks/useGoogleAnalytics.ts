@@ -78,9 +78,9 @@ export function useGoogleConnectionStatus(clientId?: string) {
   });
 }
 
-export function useGoogleAnalytics(clientId?: string, dateRange?: string, enabled = true) {
+export function useGoogleAnalytics(clientId?: string, dateRange?: string, enabled = true, publicSlug?: string) {
   return useQuery({
-    queryKey: ["google-analytics", clientId, dateRange],
+    queryKey: ["google-analytics", clientId, dateRange, publicSlug || ""],
     queryFn: async () => {
       const dateMap: Record<string, { startDate: string; endDate: string }> = {
         today: { startDate: "today", endDate: "today" },
@@ -103,6 +103,7 @@ export function useGoogleAnalytics(clientId?: string, dateRange?: string, enable
         body: {
           clientId,
           dateRange: resolvedRange,
+          publicSlug,
         },
       });
       if (error) throw error;

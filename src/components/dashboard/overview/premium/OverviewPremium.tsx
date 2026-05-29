@@ -42,6 +42,7 @@ interface Props {
   datePreset: string;
   metaData: MetaAdsData | undefined;
   currencySymbol: string;
+  publicSlug?: string;
 }
 
 function inRange(dateStr: string, start: Date, end: Date) {
@@ -51,13 +52,13 @@ function inRange(dateStr: string, start: Date, end: Date) {
   return d >= toKey(start) && d <= toKey(end);
 }
 
-export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol }: Props) {
+export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol, publicSlug }: Props) {
   const { data: sheetsConfig } = useDashboardSheet(clientId);
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
-  const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId);
-  const { data: gAds } = useGoogleAds(clientId, datePreset, !!clientId);
+  const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId, publicSlug);
+  const { data: gAds } = useGoogleAds(clientId, datePreset, !!clientId, publicSlug);
   const { data: metricSources } = useMetricSources(clientId);
-  const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId);
+  const { data: demographics } = useMetaDemographics(clientId, datePreset, !!clientId, publicSlug);
   const { data: savedFunnelStages } = useFunnelStages(clientId, null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [funnelEdit, setFunnelEdit] = useState(false);

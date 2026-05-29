@@ -32,12 +32,12 @@ export interface InstagramInsightsData {
   };
 }
 
-export function useInstagramInsights(clientId: string | undefined) {
+export function useInstagramInsights(clientId: string | undefined, publicSlug?: string) {
   return useQuery<InstagramInsightsData>({
-    queryKey: ["instagram-insights", clientId],
+    queryKey: ["instagram-insights", clientId, publicSlug || ""],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("instagram-insights", {
-        body: { clientId },
+        body: { clientId, publicSlug },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);

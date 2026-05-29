@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId, propertyId, dateRange } = await req.json();
+    const { clientId, propertyId, dateRange, publicSlug } = await req.json();
 
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
@@ -45,13 +45,27 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const claims = await getUserClaims(req);
-    if (!claims) return unauthorized(corsHeaders);
-    if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    let isPublic = false;
+    if (publicSlug) {
+      const { data: pc } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("slug", publicSlug)
+        .eq("id", clientId)
+        .maybeSingle();
+      if (pc?.id) isPublic = true;
+    }
+
+    if (!isPublic) {
+      const claims = await getUserClaims(req);
+      if (!claims) return unauthorized(corsHeaders);
+      if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
+    }
 
     // Get stored tokens
     const { data: tokenRow, error: tokenError } = await supabase

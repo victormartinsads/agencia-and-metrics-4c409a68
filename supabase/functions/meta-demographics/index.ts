@@ -46,17 +46,32 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { clientId, datePreset, forceRefresh } = await req.json();
+    const { clientId, datePreset, forceRefresh, publicSlug } = await req.json();
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const claims = await getUserClaims(req);
-    if (!claims) return unauthorized(corsHeaders);
-    if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    let isPublic = false;
+    if (publicSlug) {
+      const { data: pc } = await sb
+        .from("clients")
+        .select("id")
+        .eq("slug", publicSlug)
+        .eq("id", clientId)
+        .maybeSingle();
+      if (pc?.id) isPublic = true;
+    }
+
+    if (!isPublic) {
+      const claims = await getUserClaims(req);
+      if (!claims) return unauthorized(corsHeaders);
+      if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
+    }
+
     const preset = datePreset || "last_30d";
     const cacheKey = `demo:${preset}`;
 

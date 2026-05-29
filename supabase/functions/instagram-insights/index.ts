@@ -15,20 +15,34 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId } = await req.json();
+    const { clientId, publicSlug } = await req.json();
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const claims = await getUserClaims(req);
-    if (!claims) return unauthorized(corsHeaders);
-    if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    let isPublic = false;
+    if (publicSlug) {
+      const { data: pc } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("slug", publicSlug)
+        .eq("id", clientId)
+        .maybeSingle();
+      if (pc?.id) isPublic = true;
+    }
+
+    if (!isPublic) {
+      const claims = await getUserClaims(req);
+      if (!claims) return unauthorized(corsHeaders);
+      if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
+    }
 
     const { data: client, error: dbError } = await supabase
       .from("clients")
