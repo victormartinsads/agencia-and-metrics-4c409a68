@@ -347,6 +347,9 @@ serve(async (req) => {
       current.qualified_followers += idx.qualified_followers !== null ? parseCount(row[idx.qualified_followers], sep) : 0;
       current.raw_row.rows += 1;
       if (productCode) {
+        if (!current.product_code) {
+          current.product_code = productCode;
+        }
         current.raw_row.product_breakdown[productCode] = (current.raw_row.product_breakdown[productCode] || 0)
           + (idx.sales !== null ? parseCount(row[idx.sales], sep) : 1);
       }
@@ -373,9 +376,21 @@ serve(async (req) => {
     }
 
     const records = Array.from(aggregate.values()).map((record) => {
-      if (record.sales > 0) {
-        if (!record.avg_ticket && record.revenue > 0) record.avg_ticket = record.revenue / record.sales;
-        if (!record.ltv && record.revenue > 0) record.ltv = record.revenue / record.sales;
+      if (record.raw_row.rows > 1) {
+        if (record.sales > 0) {
+          record.avg_ticket = record.revenue / record.sales;
+          record.ltv = record.revenue / record.sales;
+        } else {
+          record.avg_ticket = record.avg_ticket / record.raw_row.rows;
+          record.ltv = record.ltv / record.raw_row.rows;
+        }
+      } else {
+        if (!record.avg_ticket && record.sales > 0 && record.revenue > 0) {
+          record.avg_ticket = record.revenue / record.sales;
+        }
+        if (!record.ltv && record.sales > 0 && record.revenue > 0) {
+          record.ltv = record.revenue / record.sales;
+        }
       }
       return record;
     });
