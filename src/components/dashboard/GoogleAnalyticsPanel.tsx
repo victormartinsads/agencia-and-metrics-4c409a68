@@ -115,6 +115,7 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
       if (error) throw error;
       toast.success("Propriedade GA4 vinculada!");
       setSelectingProperty(false);
+      qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["google-analytics", clientId] });
     } catch (e) {
       toast.error(friendlyError(e, "Erro ao vincular propriedade"));
