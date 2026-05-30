@@ -15,7 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
   DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, Eye, Loader2 } from "lucide-react";
+import { Pencil, Check, Eye, Loader2, Compass, Activity, FileText, Sparkles, ArrowRight } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, Cell, PieChart, Pie, Legend,
@@ -28,6 +28,7 @@ const COLORS = [
 
 const ALL_WIDGETS: { id: string; label: string; defaultLayout: { w: number; h: number } }[] = [
   { id: "kpis_main",        label: "KPIs principais",     defaultLayout: { w: 12, h: 3 } },
+  { id: "user_journey",     label: "Mapa da Jornada do Usuário", defaultLayout: { w: 12, h: 4 } },
   { id: "sessions_chart",   label: "Sessões por dia",     defaultLayout: { w: 8, h: 5 } },
   { id: "countries",        label: "Sessões por país",    defaultLayout: { w: 4, h: 5 } },
   { id: "campaigns",        label: "Sessões por campanha",defaultLayout: { w: 4, h: 5 } },
@@ -344,36 +345,161 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
           </ResponsiveContainer>
         );
         break;
-      case "utms_table":
+      case "user_journey": {
+        const fromLanding = landingPages.reduce((acc, p) => acc + (p.conversions || 0), 0);
+        const fromUtm = utms.reduce((acc, u) => acc + (u.conversions || 0), 0);
+        const purchaseEvents = events.filter(e => 
+          ["purchase", "generate_lead", "lead", "conversion", "whatsapp", "contato", "click"].some(word => e.name.toLowerCase().includes(word))
+        ).reduce((acc, e) => acc + e.count, 0);
+        const totalConversions = Math.max(fromLanding, fromUtm, purchaseEvents);
+
+        const engagedRate = ((overview.engagedSessions / (overview.sessions || 1)) * 100);
+        const pagesPerSession = (overview.pageViews / (overview.sessions || 1));
+        const conversionRate = ((totalConversions / (overview.sessions || 1)) * 100);
+
+        node = (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch h-full">
+            {/* Step 1: Discovery */}
+            <div className="relative flex flex-col p-4 bg-background/20 rounded-xl border border-border/40 hover:border-primary/40 transition-all duration-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Passo 1: Descoberta</span>
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Compass className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+              <h5 className="text-xs font-semibold text-muted-foreground">Sessões Totais</h5>
+              <div className="text-2xl font-bold tracking-tight mt-1 text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {overview.sessions.toLocaleString("pt-BR")}
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 mt-1">Visitantes iniciando navegação no site.</p>
+              <div className="mt-auto pt-3">
+                <div className="w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full rounded-full" style={{ width: "100%" }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Engagement */}
+            <div className="relative flex flex-col p-4 bg-background/20 rounded-xl border border-border/40 hover:border-emerald-500/40 transition-all duration-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Passo 2: Engajamento</span>
+                <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-emerald-500" />
+                </div>
+              </div>
+              <h5 className="text-xs font-semibold text-muted-foreground">Sessões Engajadas</h5>
+              <div className="text-2xl font-bold tracking-tight mt-1 text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {overview.engagedSessions.toLocaleString("pt-BR")}
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 mt-1">
+                Taxa de engajamento: <span className="font-semibold text-emerald-400">{engagedRate.toFixed(1)}%</span>
+              </p>
+              <div className="mt-auto pt-3">
+                <div className="w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, engagedRate)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Interaction */}
+            <div className="relative flex flex-col p-4 bg-background/20 rounded-xl border border-border/40 hover:border-amber-500/40 transition-all duration-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Passo 3: Interação</span>
+                <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-amber-500" />
+                </div>
+              </div>
+              <h5 className="text-xs font-semibold text-muted-foreground">Page Views</h5>
+              <div className="text-2xl font-bold tracking-tight mt-1 text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {overview.pageViews.toLocaleString("pt-BR")}
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 mt-1">
+                Média de <span className="font-semibold text-amber-400">{pagesPerSession.toFixed(1)}</span> pgs / sessão.
+              </p>
+              <div className="mt-auto pt-3">
+                <div className="w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(100, (pagesPerSession / 8) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Conversion */}
+            <div className="relative flex flex-col p-4 bg-background/20 rounded-xl border border-border/40 hover:border-violet-500/40 transition-all duration-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">Passo 4: Conversão</span>
+                <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-violet-500" />
+                </div>
+              </div>
+              <h5 className="text-xs font-semibold text-muted-foreground">Metas / Conversões</h5>
+              <div className="text-2xl font-bold tracking-tight mt-1 text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {totalConversions.toLocaleString("pt-BR")}
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 mt-1">
+                Taxa de conversão: <span className="font-semibold text-violet-400">{conversionRate.toFixed(2)}%</span>
+              </p>
+              <div className="mt-auto pt-3">
+                <div className="w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-violet-500 h-full rounded-full" style={{ width: `${Math.min(100, conversionRate * 10 || 2)}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        break;
+      }
+      case "utms_table": {
+        const maxSessions = Math.max(...utms.map(u => u.sessions), 1);
         node = (
           <div className="overflow-x-auto h-full">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/60">
-                  <th className="text-left py-2 px-2 font-medium">Source</th>
-                  <th className="text-left py-2 px-2 font-medium">Medium</th>
-                  <th className="text-left py-2 px-2 font-medium">Campaign</th>
-                  <th className="text-right py-2 px-2 font-medium">Sessões</th>
-                  <th className="text-right py-2 px-2 font-medium">Usuários</th>
-                  <th className="text-right py-2 px-2 font-medium">Conv.</th>
+                  <th className="text-left py-2.5 px-3 font-medium">Origem (Source)</th>
+                  <th className="text-left py-2.5 px-3 font-medium">Mídia (Medium)</th>
+                  <th className="text-left py-2.5 px-3 font-medium">Campanha (Campaign)</th>
+                  <th className="text-right py-2.5 px-3 font-medium">Sessões (%)</th>
+                  <th className="text-right py-2.5 px-3 font-medium">Usuários</th>
+                  <th className="text-right py-2.5 px-3 font-medium">Conversões</th>
                 </tr>
               </thead>
               <tbody>
-                {utms.map((u, i) => (
-                  <tr key={i} className="border-b border-border/30 hover:bg-muted/30">
-                    <td className="py-1.5 px-2 text-foreground">{u.source}</td>
-                    <td className="py-1.5 px-2 text-muted-foreground">{u.medium}</td>
-                    <td className="py-1.5 px-2 text-foreground">{u.campaign}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums">{u.sessions.toLocaleString("pt-BR")}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums">{u.users.toLocaleString("pt-BR")}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums">{(u.conversions || 0).toLocaleString("pt-BR")}</td>
-                  </tr>
-                ))}
+                {utms.map((u, i) => {
+                  const percent = (u.sessions / maxSessions) * 100;
+                  return (
+                    <tr key={i} className="border-b border-border/20 hover:bg-muted/35 transition-colors">
+                      <td className="py-2.5 px-3 font-medium text-foreground">
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-mono">
+                          {u.source || "(direto)"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-muted-foreground">
+                        <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
+                          {u.medium || "(none)"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-foreground font-medium truncate max-w-[200px]" title={u.campaign}>
+                        {u.campaign || "(organic / referral)"}
+                      </td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">
+                        <div className="flex items-center justify-end gap-2.5">
+                          <span className="font-semibold text-foreground">{u.sessions.toLocaleString("pt-BR")}</span>
+                          <div className="w-16 bg-muted-foreground/10 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                            <div className="bg-primary h-full rounded-full" style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">{u.users.toLocaleString("pt-BR")}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-primary">{(u.conversions || 0).toLocaleString("pt-BR")}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         );
         break;
+      }
     }
     return { id: w.id, defaultLayout: w.defaultLayout, node: card(w.id, w.label, node) };
   });

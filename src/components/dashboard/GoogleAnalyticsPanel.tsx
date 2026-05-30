@@ -11,11 +11,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGoogleOAuthRedirectUri } from "@/lib/googleOAuth";
 import {
   Users, Eye, Clock, TrendingUp, Loader2, Link2, Unlink,
-  BarChart3, Globe, ArrowUpRight, MousePointerClick,
+  BarChart3, Globe, ArrowUpRight, MousePointerClick, Check
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,30 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
   const disconnectGoogle = useDisconnectGoogle();
   const qc = useQueryClient();
   const [selectingProperty, setSelectingProperty] = useState(false);
+  const [selectedProps, setSelectedProps] = useState<string[]>([]);
+
+  const handleToggleProp = (id: string) => {
+    setSelectedProps((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx > -1) {
+        return prev.filter((item) => item !== id);
+      } else {
+        if (prev.length >= 4) {
+          toast.error("Você pode selecionar no máximo 4 propriedades.");
+          return prev;
+        }
+        return [...prev, id];
+      }
+    });
+  };
+
+  const handleSaveSelection = () => {
+    if (selectedProps.length === 0) {
+      toast.error("Selecione pelo menos uma propriedade.");
+      return;
+    }
+    handleSelectProperty(selectedProps.join(","));
+  };
 
   const handleConnect = async () => {
     if (!clientId) return;
@@ -153,14 +178,19 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Selecionar Propriedade GA4</h3>
-            <p className="text-sm text-muted-foreground">
-              Escolha a propriedade do Google Analytics que deseja monitorar.
+            <h3 className="text-lg font-semibold text-foreground">Selecionar Propriedades GA4</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Selecione até 4 propriedades do Google Analytics que deseja monitorar.
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleDisconnect} className="gap-1 text-destructive">
-            <Unlink className="h-3.5 w-3.5" /> Desconectar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant={selectedProps.length > 0 ? "secondary" : "outline"} className="text-xs font-mono">
+              {selectedProps.length} / 4 selecionadas
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={handleDisconnect} className="gap-1 text-destructive">
+              <Unlink className="h-3.5 w-3.5" /> Desconectar
+            </Button>
+          </div>
         </div>
         {gaData.properties.length === 0 ? (
           gaData.apiError?.error ? (
@@ -219,24 +249,51 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
           </Card>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {gaData.properties.map((prop) => (
-            <Card
-              key={prop.id}
-              className="p-4 cursor-pointer hover:border-primary transition-colors"
-              onClick={() => handleSelectProperty(prop.id)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4 text-accent-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium text-card-foreground">{prop.name}</p>
-                  <p className="text-xs text-muted-foreground">{prop.account} • ID: {prop.id}</p>
-                </div>
-              </div>
-            </Card>
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {gaData.properties.map((prop) => {
+                const isSelected = selectedProps.includes(prop.id);
+                return (
+                  <Card
+                    key={prop.id}
+                    className={`p-4 cursor-pointer transition-all border-2 relative ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-md scale-[1.01]"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                    onClick={() => handleToggleProp(prop.id)}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 h-5 w-5 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-sm">
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+                        isSelected ? "bg-primary/20" : "bg-accent"
+                      }`}>
+                        <BarChart3 className={`h-4 w-4 ${isSelected ? "text-primary" : "text-accent-foreground"}`} />
+                      </div>
+                      <div className="min-w-0 pr-4">
+                        <p className="font-medium text-card-foreground truncate">{prop.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{prop.account} • ID: {prop.id}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={handleSaveSelection}
+                disabled={selectedProps.length === 0}
+                className="gap-1.5"
+              >
+                <Check className="h-4 w-4" />
+                Vincular Propriedades Selecionadas
+              </Button>
+            </div>
           </div>
         )}
       </motion.div>
