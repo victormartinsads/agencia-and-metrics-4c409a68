@@ -88,7 +88,13 @@ export function useUpdateClient() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["account-status", vars.id] });
+      qc.invalidateQueries({ queryKey: ["gestor-overview", vars.id] });
+      qc.invalidateQueries({ queryKey: ["google-analytics", vars.id] });
+      qc.invalidateQueries({ queryKey: ["google-ads", vars.id] });
+    },
   });
 }
 
