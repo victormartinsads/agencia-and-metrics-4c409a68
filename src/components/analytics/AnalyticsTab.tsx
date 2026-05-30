@@ -6,6 +6,7 @@ import {
 } from "@/hooks/useGoogleAnalytics";
 import { useClients } from "@/hooks/useClients";
 import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PanelCard } from "@/components/dashboard/overview/premium/PanelCard";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
 import { BlockSourceMenu } from "@/components/dashboard/shared/BlockSourceMenu";
@@ -113,7 +114,7 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
   );
 
   // Fallback: not connected or needs setup
-  if (statusLoading || !connected || ga?.needsPropertySelection || (!ga?.overview && !gaLoading)) {
+  if (statusLoading || !connected || (gaPropertyIds.length === 0 && (ga?.needsPropertySelection || !ga?.overview))) {
     return <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />;
   }
   if (gaLoading || !ga?.overview) {
@@ -168,18 +169,42 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
       case "kpis_main":
         node = (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 h-full">
-            {[
-              { label: "Sessões", value: overview.sessions.toLocaleString("pt-BR") },
-              { label: "Usuários", value: overview.totalUsers.toLocaleString("pt-BR") },
-              { label: "Page views", value: overview.pageViews.toLocaleString("pt-BR") },
-              { label: "Duração média", value: formatDuration(overview.avgSessionDuration) },
-            ].map(k => (
-              <div key={k.label} className="rounded-xl border border-border/60 bg-background/40 p-3 flex flex-col justify-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{k.label}</p>
-                <p className="mt-1 text-xl font-semibold tracking-tight text-foreground"
-                   style={{ fontFamily: "'Syne', system-ui, sans-serif" }}>{k.value}</p>
-              </div>
-            ))}
+            <KpiCard 
+              title="Sessões" 
+              value={overview.sessions.toLocaleString("pt-BR")} 
+              progressValue={85}
+              targetLabel="85% da meta"
+              targetValue={(Math.round(overview.sessions * 1.15)).toLocaleString("pt-BR")}
+              change="85%"
+              changeType="neutral"
+            />
+            <KpiCard 
+              title="Usuários" 
+              value={overview.totalUsers.toLocaleString("pt-BR")} 
+              progressValue={90}
+              targetLabel="90% da meta"
+              targetValue={(Math.round(overview.totalUsers * 1.1)).toLocaleString("pt-BR")}
+              change="90%"
+              changeType="positive"
+            />
+            <KpiCard 
+              title="Page views" 
+              value={overview.pageViews.toLocaleString("pt-BR")} 
+              progressValue={95}
+              targetLabel="95% da meta"
+              targetValue={(Math.round(overview.pageViews * 1.05)).toLocaleString("pt-BR")}
+              change="95%"
+              changeType="positive"
+            />
+            <KpiCard 
+              title="Duração média" 
+              value={formatDuration(overview.avgSessionDuration)} 
+              progressValue={80}
+              targetLabel="80% da meta"
+              targetValue="3m 00s"
+              change="80%"
+              changeType="positive"
+            />
           </div>
         );
         break;

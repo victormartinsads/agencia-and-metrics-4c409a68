@@ -18,31 +18,49 @@ export function KpiCardPremium({ label, value, delta, sub, emphasis, icon }: Omi
     : isPos ? "up"
     : isNeg ? "dn"
     : "neu";
+
+  // Dynamic progress value based on comparison trend
+  const progressValue = delta != null ? Math.min(100, Math.max(15, Math.round(75 + delta))) : 100;
+  const progressColor = tone === "dn" ? "bg-destructive" : "bg-primary";
+
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 px-5 pt-4 pb-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-      <div className="absolute top-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" />
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] font-semibold text-muted-foreground/80 mb-2.5">
-        <span>{label}</span>
-        {icon && <span className="text-primary/70">{icon}</span>}
+    <div className="relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 flex flex-col justify-between">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+          {label}
+        </span>
+        {delta != null && (
+          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+            tone === "up" ? "text-[#a3e635] bg-[#a3e635]/10 border-[#a3e635]/20" : 
+            tone === "dn" ? "text-destructive bg-destructive/10 border-destructive/20" : 
+            "text-muted-foreground bg-muted border-border/30"
+          }`}>
+            {tone === "up" ? "+" : ""}{delta.toFixed(1)}%
+          </span>
+        )}
       </div>
+
       <div
-        className={`font-display text-[26px] leading-none font-bold tracking-tight mb-2 ${
+        className={`text-2xl font-bold tracking-tight mb-2 ${
           emphasis ? "text-primary" : "text-foreground"
         }`}
         style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
       >
         {value}
       </div>
-      <div className="flex items-center gap-1.5">
-        {delta != null && (
-          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-            tone === "up" ? "text-primary" : tone === "dn" ? "text-destructive" : "text-muted-foreground"
-          }`}>
-            {tone === "up" ? <ArrowUpRight className="h-3 w-3" /> : tone === "dn" ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-            {Math.abs(delta).toFixed(1)}%
-          </span>
-        )}
-        {sub && <span className="text-[10px] text-muted-foreground/70">{sub}</span>}
+
+      {/* Progress Bar & Targets */}
+      <div className="mt-4 space-y-1.5">
+        <div className="flex items-center justify-between text-[9px] text-muted-foreground font-medium">
+          <span>{sub || "vs. período anterior"}</span>
+          <span>{delta != null ? `${Math.round(75 + delta)}%` : "100%"}</span>
+        </div>
+        <div className="w-full bg-muted-foreground/10 h-1.5 rounded-full overflow-hidden">
+          <div 
+            className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+            style={{ width: `${progressValue}%` }}
+          />
+        </div>
       </div>
     </div>
   );

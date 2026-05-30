@@ -11,9 +11,7 @@ import {
   Percent,
   Play,
   Pause,
-  ChevronUp,
-  Search,
-  ShoppingCart
+  Search
 } from "lucide-react";
 import { useGoogleAds } from "@/hooks/useGoogleAds";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -21,7 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format";
 import { Link } from "react-router-dom";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from "recharts";
 
 interface Props {
   clientId?: string;
@@ -102,28 +100,35 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     );
   }
 
-  const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-  const cpa = totals.conversions > 0 ? totals.cost / totals.conversions : 0;
-  const roas = totals.cost > 0 ? totals.revenue / totals.cost : 0;
-  const revenueVal = totals.revenue || (totals.conversions * 150); // Fallback estimate
+  // Safe fallback metrics to prevent runtime crashes (TypeErrors)
+  const spend = totals.cost || 0;
+  const conversions = totals.conversions || 0;
+  const clicks = totals.clicks || 0;
+  const impressions = totals.impressions || 0;
+  const revenueVal = totals.revenue || (conversions * 150); // Fallback estimate
+
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  const cpa = conversions > 0 ? spend / conversions : 0;
+  const roas = spend > 0 ? revenueVal / spend : 0;
+  const avgCpc = clicks > 0 ? spend / clicks : 0;
 
   // Target Calculations based on totals to scale the visual progress bars properly
   const tRevenue = revenueVal > 0 ? Math.round(revenueVal * 1.25) : 5000;
-  const tConversions = totals.conversions > 0 ? Math.round(totals.conversions * 1.3) : 15;
-  const tCost = totals.cost > 0 ? Math.round(totals.cost * 1.15) : 275;
+  const tConversions = conversions > 0 ? Math.round(conversions * 1.3) : 15;
+  const tCost = spend > 0 ? Math.round(spend * 1.15) : 275;
   const tCpa = cpa > 0 ? Math.round(cpa * 0.85) : 280;
-  const tClicks = totals.clicks > 0 ? Math.round(totals.clicks * 1.1) : 38;
-  const tCtr = ctr > 0 ? ctr * 0.95 : 4.97;
-  const tImpressions = totals.impressions > 0 ? Math.round(totals.impressions * 1.1) : 762;
+  const tClicks = clicks > 0 ? Math.round(clicks * 1.1) : 38;
+  const tCtr = tCtr => 0 ? tCtr : 4.97;
+  const tImpressions = impressions > 0 ? Math.round(impressions * 1.1) : 762;
 
   // Growth percentages / Meta percentage
   const pRevenue = tRevenue > 0 ? Math.round((revenueVal / tRevenue) * 100) : 0;
-  const pConversions = tConversions > 0 ? Math.round((totals.conversions / tConversions) * 100) : 0;
-  const pCost = tCost > 0 ? Math.round((totals.cost / tCost) * 100) : 68;
+  const pConversions = tConversions > 0 ? Math.round((conversions / tConversions) * 100) : 0;
+  const pCost = tCost > 0 ? Math.round((spend / tCost) * 100) : 68;
   const pCpa = tCpa > 0 ? Math.round((cpa / tCpa) * 100) : 137;
-  const pClicks = tClicks > 0 ? Math.round((totals.clicks / tClicks) * 100) : 137;
+  const pClicks = tClicks > 0 ? Math.round((clicks / tClicks) * 100) : 137;
   const pCtr = tCtr > 0 ? Math.round((ctr / tCtr) * 100) : 117;
-  const pImpressions = tImpressions > 0 ? Math.round((totals.impressions / tImpressions) * 100) : 118;
+  const pImpressions = tImpressions > 0 ? Math.round((impressions / tImpressions) * 100) : 118;
 
   // Filter campaigns
   const filteredCampaigns = campaigns.filter(c =>
@@ -148,8 +153,8 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     const dataList = [];
     const today = new Date();
     const count = datePreset === "last_30d" ? 30 : 7;
-    const baseConvs = totals.conversions / count;
-    const baseClicks = totals.clicks / count;
+    const baseConvs = conversions / count;
+    const baseClicks = clicks / count;
     
     for (let i = count - 1; i >= 0; i--) {
       const d = new Date(today);
@@ -165,7 +170,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
       });
     }
     return dataList;
-  }, [totals, ctr, datePreset]);
+  }, [conversions, clicks, ctr, datePreset]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -182,7 +187,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
         />
         <KpiCard 
           title="Compras" 
-          value={totals.conversions.toLocaleString("pt-BR")} 
+          value={conversions.toLocaleString("pt-BR")} 
           change="0.0%" 
           changeType="neutral" 
           progressValue={pConversions} 
@@ -191,7 +196,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
         />
         <KpiCard 
           title="Investimento" 
-          value={formatCurrency(totals.cost, currencySymbol)} 
+          value={formatCurrency(spend, currencySymbol)} 
           change="+88.6%" 
           changeType="positive" 
           progressValue={pCost} 
@@ -210,7 +215,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
         />
         <KpiCard 
           title="Cliques" 
-          value={totals.clicks.toLocaleString("pt-BR")} 
+          value={clicks.toLocaleString("pt-BR")} 
           change="+136.8%" 
           changeType="positive" 
           progressValue={pClicks} 
@@ -224,11 +229,11 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
           changeType="positive" 
           progressValue={pCtr} 
           targetLabel={`${pCtr}%`}
-          targetValue={`${tCtr.toFixed(2)}%`}
+          targetValue={`${ctr > 0 ? ctr.toFixed(2) : "4.97"}%`}
         />
         <KpiCard 
           title="Impressões" 
-          value={totals.impressions.toLocaleString("pt-BR")} 
+          value={impressions.toLocaleString("pt-BR")} 
           change="+117.7%" 
           changeType="positive" 
           progressValue={pImpressions} 
@@ -311,7 +316,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
               <div className="bg-background/40 px-3 py-2.5 rounded-lg border border-border/40 flex items-center justify-between">
                 <div>
                   <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold block">Cliques</span>
-                  <span className="text-base font-bold text-foreground font-mono">{totals.clicks}</span>
+                  <span className="text-base font-bold text-foreground font-mono">{clicks}</span>
                 </div>
                 <Badge className="bg-emerald-500/10 text-[#a3e635] border-emerald-500/20 text-[10px] font-semibold py-0">
                   ▲ 36.8%
@@ -344,7 +349,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
               <div className="bg-background/40 px-3 py-2.5 rounded-lg border border-border/40 flex items-center justify-between">
                 <div>
                   <span className="text-[9px] text-[#a3e635] uppercase tracking-wider font-semibold block">Compras</span>
-                  <span className="text-base font-bold text-foreground font-mono">{totals.conversions.toFixed(0)}</span>
+                  <span className="text-base font-bold text-foreground font-mono">{conversions.toFixed(0)}</span>
                 </div>
                 <span className="text-[10px] text-muted-foreground font-semibold">
                   0.0%
