@@ -254,8 +254,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = client.meta_access_token;
-    const adAccountIds: string[] = client.ad_account_ids;
+    let token = client.meta_access_token;
+    if (!token) {
+      const { data: tokData } = await supabase
+        .from("meta_tokens")
+        .select("access_token")
+        .eq("client_id", clientId)
+        .maybeSingle();
+      if (tokData?.access_token) {
+        token = tokData.access_token;
+      } else {
+        const { data: globalTok } = await supabase
+          .from("meta_tokens")
+          .select("access_token")
+          .limit(1)
+          .maybeSingle();
+        token = globalTok?.access_token;
+      }
+    }
+
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Meta Ads not connected. Please connect Facebook in Settings or Client Settings." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const adAccountIds: string[] = client.ad_account_ids || [];
 
     const allCampaigns: any[] = [];
     const dailySpend: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};

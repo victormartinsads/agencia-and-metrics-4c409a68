@@ -38,6 +38,11 @@ import AppShell from "@/components/layout/AppShell";
 import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Facebook, Link2, Unlink } from "lucide-react";
+import { useMetaConnectionStatus, useConnectMeta, useDisconnectMeta } from "@/hooks/useMetaAds";
+import { getMetaOAuthRedirectUri } from "@/lib/metaOAuth";
+import { friendlyError } from "@/lib/friendlyError";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -326,6 +331,125 @@ function SheetsSection() {
   );
 }
 
+function MetaConnectionSection({ clientId }: { clientId: string }) {
+  const { data: status, isLoading: statusLoading } = useMetaConnectionStatus(clientId);
+  const connectMeta = useConnectMeta();
+  const disconnectMeta = useDisconnectMeta();
+  const [manualToken, setManualToken] = useState("");
+  const [savingManual, setSavingManual] = useState(false);
+  const qc = useQueryClient();
+
+  const handleConnect = async () => {
+    if (!clientId) return;
+    const redirectUri = getMetaOAuthRedirectUri();
+    try {
+      const result = await connectMeta.mutateAsync({ clientId, redirectUri });
+      window.location.href = result.authUrl;
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao iniciar conexão com Facebook"));
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!clientId) return;
+    try {
+      await disconnectMeta.mutateAsync(clientId);
+      toast.success("Conexão Meta Ads removida");
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao desconectar"));
+    }
+  };
+
+  const handleSaveManualToken = async () => {
+    if (!manualToken.trim()) return;
+    setSavingManual(true);
+    try {
+      const { error } = await supabase
+        .from("meta_tokens")
+        .upsert({
+          client_id: clientId,
+          access_token: manualToken.trim(),
+          expires_at: null, // Permanent token has no expiry
+        }, { onConflict: "client_id" });
+
+      if (error) throw error;
+      toast.success("Token permanente salvo com sucesso!");
+      setManualToken("");
+      qc.invalidateQueries({ queryKey: ["meta-status", clientId] });
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao salvar token"));
+    } finally {
+      setSavingManual(false);
+    }
+  };
+
+  if (statusLoading) {
+    return (
+      <div className="flex items-center gap-2 py-4">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">Verificando conexão...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="flex items-center gap-2">
+          <Facebook className="h-5 w-5 text-[#1877F2]" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Facebook (Meta Ads)</p>
+            <p className="text-xs text-muted-foreground">
+              {status?.connected 
+                ? `Conectado${status.token?.expires_at ? ` (Expira em: ${new Date(status.token.expires_at).toLocaleDateString("pt-BR")})` : " (Token Permanente)"}`
+                : "Não conectado"}
+            </p>
+          </div>
+        </div>
+        <div>
+          {status?.connected ? (
+            <Button variant="outline" size="sm" onClick={handleDisconnect} className="gap-1.5 text-destructive hover:bg-destructive/10">
+              <Unlink className="h-3.5 w-3.5" /> Desconectar
+            </Button>
+          ) : (
+            <Button onClick={handleConnect} disabled={connectMeta.isPending} size="sm" className="gap-1.5 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white">
+              {connectMeta.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+              Conectar Facebook
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Manual Permanent Token Input */}
+      <div className="border-t border-border pt-4 mt-2 space-y-3">
+        <div>
+          <Label className="text-xs font-semibold text-foreground">Token de Acesso Permanente (Usuário do Sistema / Meta Dev)</Label>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Insira o Token de Usuário do Sistema gerado no seu Business Manager para uma conexão global que nunca expira.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            type="password"
+            placeholder="Cole o token permanente (começa com EAAB...)"
+            value={manualToken}
+            onChange={(e) => setManualToken(e.target.value)}
+            className="h-9 text-xs"
+          />
+          <Button
+            size="sm"
+            onClick={handleSaveManualToken}
+            disabled={savingManual || !manualToken.trim()}
+            className="h-9 text-xs"
+          >
+            {savingManual ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar Token"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GoogleAnalyticsSection() {
   const { data: clients, isLoading } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -359,6 +483,31 @@ function GoogleAnalyticsSection() {
           <div className="border-t border-border pt-4">
             <GoogleAnalyticsPanel clientId={firstClient.id} datePreset="last_7d" />
           </div>
+        )}
+      </Card>
+
+      {/* Bloco de Conexão Meta Ads (Global) */}
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">
+            Conexão Meta Ads / Facebook (Global)
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Conecte a conta do Facebook da agência. Essa conexão será usada de forma compartilhada por todos os clientes.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Carregando clientes...</span>
+          </div>
+        ) : !firstClient ? (
+          <p className="text-sm text-amber-500 font-medium py-2">
+            Por favor, crie pelo menos um cliente na aba correspondente antes de conectar a conta do Facebook.
+          </p>
+        ) : (
+          <MetaConnectionSection clientId={firstClient.id} />
         )}
       </Card>
 

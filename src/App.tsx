@@ -17,6 +17,7 @@ import ComoEstamosPublic from "./pages/ComoEstamosPublic.tsx";
 import SavedDiagnosticPublic from "./pages/SavedDiagnosticPublic.tsx";
 import ClientView from "./pages/ClientView.tsx";
 import GoogleCallback from "./pages/GoogleCallback.tsx";
+import MetaCallback from "./pages/MetaCallback.tsx";
 import Login from "./pages/Login.tsx";
 import Settings from "./pages/Settings.tsx";
 import GestorView from "./pages/GestorView.tsx";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/saved-diagnostic/:id" element={<SavedDiagnosticPublic />} />
             <Route path="/visao-cliente/:slug" element={<ClientView />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
+            <Route path="/meta/callback" element={<MetaCallback />} />
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Navigate to="/clients" replace /></ClientPortalRouter></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />

@@ -1243,6 +1243,41 @@ export type Database = {
           },
         ]
       }
+      meta_tokens: {
+        Row: {
+          access_token: string
+          client_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          client_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           accepted: boolean

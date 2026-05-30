@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, X, FileSpreadsheet, Webhook, Settings as SettingsIcon, KanbanSquare, Power, PowerOff, ExternalLink, Loader2, Database } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, FileSpreadsheet, Webhook, Settings as SettingsIcon, KanbanSquare, Power, PowerOff, ExternalLink, Loader2, Database, Facebook, Link2, Unlink, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,17 @@ import { ClientLogoUploader } from "@/components/clients/ClientLogoUploader";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 import { DataSourcesPanel } from "@/components/settings/DataSourcesPanel";
 import { useGoogleConnectionStatus, useFetchGoogleProperties } from "@/hooks/useGoogleAnalytics";
+import { useMetaConnectionStatus, useListMetaAssets, useConnectMeta, useDisconnectMeta } from "@/hooks/useMetaAds";
+import { getMetaOAuthRedirectUri } from "@/lib/metaOAuth";
+import { friendlyError } from "@/lib/friendlyError";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ClientSettings() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -31,6 +41,58 @@ export default function ClientSettings() {
   const isGoogleConnected = googleStatus?.connected === true;
   const { data: propertiesData, isLoading: propertiesLoading } = useFetchGoogleProperties(clientId, isGoogleConnected);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: metaStatus, isLoading: metaStatusLoading } = useMetaConnectionStatus(clientId);
+  const isMetaConnected = metaStatus?.connected === true;
+  const { data: metaAssets, isLoading: metaAssetsLoading } = useListMetaAssets(clientId, isMetaConnected);
+  const connectMeta = useConnectMeta();
+  const disconnectMeta = useDisconnectMeta();
+
+  const [selectedBmId, setSelectedBmId] = useState<string>("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const selectedAdAccounts = useMemo(() => {
+    return form.ad_account_ids || [];
+  }, [form.ad_account_ids]);
+
+  const handleToggleAdAccount = (acctId: string) => {
+    const current = [...selectedAdAccounts];
+    const index = current.indexOf(acctId);
+    if (index > -1) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= 5) {
+        toast.error("Você pode selecionar no máximo 5 contas de anúncio.");
+        return;
+      }
+      current.push(acctId);
+    }
+    setForm({ ...form, ad_account_ids: current });
+  };
+
+  const handleConnectMeta = async () => {
+    if (!clientId) return;
+    const redirectUri = getMetaOAuthRedirectUri();
+    try {
+      const result = await connectMeta.mutateAsync({ clientId, redirectUri });
+      window.location.href = result.authUrl;
+    } catch (e) {
+      toast.error(friendlyError(e, "Erro ao iniciar conexão com Facebook"));
+    }
+  };
+
+  const filteredAdAccounts = useMemo(() => {
+    const list = metaAssets?.adAccounts || [];
+    if (selectedBmId === "all") return list;
+    if (selectedBmId === "personal") {
+      return list.filter(acc => !acc.business);
+    }
+    return list.filter(acc => acc.business?.id === selectedBmId);
+  }, [metaAssets?.adAccounts, selectedBmId]);
+
+  const businesses = useMemo(() => {
+    return metaAssets?.businesses || [];
+  }, [metaAssets?.businesses]);
 
   const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string; logo_url?: string | null }>({});
 
@@ -212,25 +274,138 @@ export default function ClientSettings() {
           </TabsContent>
 
           <TabsContent value="meta" className="mt-4">
-            <Card className="p-6 space-y-4">
+            <Card className="p-6 space-y-5">
               <div>
-                <Label>Token de acesso Meta</Label>
-                <Input type="password" value={form.meta_access_token || ""} onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })} />
+                <h3 className="text-base font-semibold text-card-foreground">Configuração de Meta Ads</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Selecione até 5 contas de anúncio para importar campanhas e criativos deste cliente.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Contas de anúncio (até 5)</Label>
-                {(form.ad_account_ids || []).map((id, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input placeholder="act_123..." value={id} onChange={(e) => updateAdAccount(idx, e.target.value)} />
-                    <Button variant="ghost" size="icon" onClick={() => removeAdAccount(idx)}>
-                      <X className="h-4 w-4" />
-                    </Button>
+
+              {metaStatusLoading ? (
+                <div className="flex items-center gap-2 py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Verificando conexão com Facebook...</span>
+                </div>
+              ) : !isMetaConnected ? (
+                <div className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/5 p-4 text-sm text-amber-500 space-y-3">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Nenhuma conta do Facebook conectada</span>
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addAdAccount} className="gap-1.5">
-                  <Plus className="h-3.5 w-3.5" /> Adicionar conta
-                </Button>
-              </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Para selecionar as contas de anúncio, você precisa primeiro conectar a conta do Facebook da agência (global) ou conectar uma conta especificamente para este cliente.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button onClick={handleConnectMeta} disabled={connectMeta.isPending} size="sm" className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-1.5">
+                      {connectMeta.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Facebook className="h-3.5 w-3.5" />}
+                      Conectar Facebook para este cliente
+                    </Button>
+                    <Link to="/settings">
+                      <Button variant="outline" size="sm">
+                        Ir para conexões globais
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ) : metaAssetsLoading ? (
+                <div className="flex items-center gap-2 py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Carregando gerenciadores e contas de anúncio...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-muted-foreground">
+                      Contas Selecionadas: {selectedAdAccounts.length} / 5
+                    </div>
+                    {metaAssets?.adAccounts && (
+                      <Badge variant={selectedAdAccounts.length > 0 ? "secondary" : "outline"} className="text-xs font-mono">
+                        {selectedAdAccounts.length} selecionadas
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Filtrar por Business Manager (BM)</Label>
+                      <Select value={selectedBmId} onValueChange={setSelectedBmId}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Selecione o BM..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os BMs</SelectItem>
+                          <SelectItem value="personal">Contas Pessoais (Sem BM)</SelectItem>
+                          {businesses.map((bm) => (
+                            <SelectItem key={bm.id} value={bm.id}>
+                              {bm.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="border border-border rounded-lg max-h-60 overflow-y-auto divide-y divide-border bg-background/50">
+                    {filteredAdAccounts.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-4 text-center">
+                        Nenhuma conta de anúncio encontrada sob esta seleção.
+                      </p>
+                    ) : (
+                      filteredAdAccounts.map((acc) => {
+                        const isChecked = selectedAdAccounts.includes(acc.id) || selectedAdAccounts.includes(acc.account_id);
+                        const isDisabled = !isChecked && selectedAdAccounts.length >= 5;
+                        return (
+                          <div
+                            key={acc.id}
+                            className={`flex items-start gap-3 p-3 transition-colors text-xs ${
+                              isChecked ? "bg-primary/5" : "hover:bg-muted/30"
+                            } ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                            onClick={() => !isDisabled && handleToggleAdAccount(acc.id)}
+                          >
+                            <Checkbox
+                              id={`acc-${acc.id}`}
+                              checked={isChecked}
+                              disabled={isDisabled}
+                              onCheckedChange={() => !isDisabled && handleToggleAdAccount(acc.id)}
+                              className="mt-0.5 shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="space-y-0.5 min-w-0 flex-1">
+                              <label
+                                htmlFor={`acc-${acc.id}`}
+                                className="font-medium text-foreground cursor-pointer block truncate"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {acc.name}
+                              </label>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span>ID: {acc.id}</span>
+                                {acc.business && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="truncate flex-1 max-w-[150px]">BM: {acc.business.name}</span>
+                                  </>
+                                )}
+                                {acc.account_status === 1 ? (
+                                  <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[8px] h-3.5 py-0 px-1">
+                                    Ativa
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-destructive/10 text-destructive border-none text-[8px] h-3.5 py-0 px-1">
+                                    Pendente / Inativa
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label>Tipos de ação contados como lead (separados por vírgula)</Label>
                 <Input
@@ -241,7 +416,67 @@ export default function ClientSettings() {
                       lead_action_types: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                     })
                   }
+                  placeholder="lead, purchase, messaging_conversation_started_7d..."
+                  className="mt-1"
                 />
+              </div>
+
+              {/* Advanced collapsable manual token input */}
+              <div className="border-t border-border pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAdvancedOpen(!advancedOpen)}
+                  className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto"
+                >
+                  {advancedOpen ? "Ocultar Configurações Avançadas" : "Mostrar Configurações Avançadas (Token Manual)"}
+                </Button>
+                
+                {advancedOpen && (
+                  <div className="mt-4 space-y-4 border border-border p-4 rounded-lg bg-background/30">
+                    <div>
+                      <Label>Token de acesso Meta Manual (Substitui o Login do Facebook se preenchido)</Label>
+                      <Input
+                        type="password"
+                        value={form.meta_access_token || ""}
+                        onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })}
+                        placeholder="EAA..."
+                        className="mt-1"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Útil se você preferir usar um token de aplicativo/sistema de longa duração em vez do login OAuth padrão.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs block">Contas de anúncio (IDs manuais)</Label>
+                      {(form.ad_account_ids || []).map((id, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Input
+                            placeholder="act_123..."
+                            value={id}
+                            onChange={(e) => updateAdAccount(idx, e.target.value)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeAdAccount(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addAdAccount}
+                        className="gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Adicionar conta manualmente
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           </TabsContent>

@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Campaign, DailyMetric } from "@/data/mockMetaData";
 
@@ -69,3 +69,110 @@ export function useRefreshMetaAds() {
     return data as MetaAdsData;
   };
 }
+
+export function useMetaConnectionStatus(clientId?: string) {
+  return useQuery({
+    queryKey: ["meta-status", clientId],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-oauth", {
+          body: { action: "check_status", clientId },
+        });
+        if (error) throw error;
+        return (data || { connected: false }) as { connected: boolean; token?: { expires_at: string } };
+      } catch (err) {
+        console.error("Error checking Meta status:", err);
+        return { connected: false };
+      }
+    },
+    enabled: !!clientId,
+  });
+}
+
+export function useConnectMeta() {
+  return useMutation({
+    mutationFn: async ({ clientId, redirectUri }: { clientId: string; redirectUri: string }) => {
+      const { data, error } = await supabase.functions.invoke("meta-oauth", {
+        body: { action: "get_auth_url", clientId, redirectUri },
+      });
+      if (error) throw error;
+      return data as { authUrl: string };
+    },
+  });
+}
+
+export function useExchangeMetaCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clientId, code, redirectUri }: { clientId: string; code: string; redirectUri: string }) => {
+      const { data, error } = await supabase.functions.invoke("meta-oauth", {
+        body: { action: "exchange_code", clientId, code, redirectUri },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["meta-status", vars.clientId] });
+      qc.invalidateQueries({ queryKey: ["meta-ads", vars.clientId] });
+      qc.invalidateQueries({ queryKey: ["meta-assets", vars.clientId] });
+    },
+  });
+}
+
+export function useDisconnectMeta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const { data, error } = await supabase.functions.invoke("meta-oauth", {
+        body: { action: "disconnect", clientId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, clientId) => {
+      qc.invalidateQueries({ queryKey: ["meta-status", clientId] });
+      qc.invalidateQueries({ queryKey: ["meta-ads", clientId] });
+      qc.invalidateQueries({ queryKey: ["meta-assets", clientId] });
+    },
+  });
+}
+
+export interface MetaAsset {
+  id: string;
+  name: string;
+}
+
+export interface MetaAdAccount {
+  id: string;
+  name: string;
+  account_id: string;
+  account_status: number;
+  business?: {
+    id: string;
+    name: string;
+  };
+}
+
+export function useListMetaAssets(clientId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["meta-assets", clientId],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-oauth", {
+          body: { action: "list_meta_assets", clientId },
+        });
+        if (error) throw error;
+        return (data || { businesses: [], adAccounts: [] }) as {
+          businesses: MetaAsset[];
+          adAccounts: MetaAdAccount[];
+        };
+      } catch (err) {
+        console.error("Error listing Meta assets:", err);
+        return { businesses: [], adAccounts: [] };
+      }
+    },
+    enabled: !!clientId && enabled,
+    retry: false,
+  });
+}
+

@@ -68,11 +68,16 @@ export function useGoogleConnectionStatus(clientId?: string) {
   return useQuery({
     queryKey: ["google-status", clientId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "check_status", clientId },
-      });
-      if (error) throw error;
-      return data as { connected: boolean };
+      try {
+        const { data, error } = await supabase.functions.invoke("google-oauth", {
+          body: { action: "check_status", clientId },
+        });
+        if (error) throw error;
+        return (data || { connected: false }) as { connected: boolean };
+      } catch (err) {
+        console.error("Error checking Google status:", err);
+        return { connected: false };
+      }
     },
     enabled: !!clientId,
   });
@@ -118,14 +123,19 @@ export function useFetchGoogleProperties(clientId?: string, enabled = true) {
   return useQuery({
     queryKey: ["google-properties", clientId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("google-analytics", {
-        body: {
-          clientId,
-          fetchPropertiesList: true,
-        },
-      });
-      if (error) throw error;
-      return data as { properties: GAProperty[]; notConnected?: boolean; needsPropertySelection?: boolean; apiError?: any };
+      try {
+        const { data, error } = await supabase.functions.invoke("google-analytics", {
+          body: {
+            clientId,
+            fetchPropertiesList: true,
+          },
+        });
+        if (error) throw error;
+        return (data || { properties: [] }) as { properties: GAProperty[]; notConnected?: boolean; needsPropertySelection?: boolean; apiError?: any };
+      } catch (err) {
+        console.error("Error fetching Google properties:", err);
+        return { properties: [], notConnected: true };
+      }
     },
     enabled: !!clientId && enabled,
   });
