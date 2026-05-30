@@ -78,9 +78,9 @@ export function useGoogleConnectionStatus(clientId?: string) {
   });
 }
 
-export function useGoogleAnalytics(clientId?: string, dateRange?: string, enabled = true, publicSlug?: string) {
+export function useGoogleAnalytics(clientId?: string, dateRange?: string, enabled = true, publicSlug?: string, propertyId?: string) {
   return useQuery({
-    queryKey: ["google-analytics", clientId, dateRange, publicSlug || ""],
+    queryKey: ["google-analytics", clientId, dateRange, publicSlug || "", propertyId || ""],
     queryFn: async () => {
       const dateMap: Record<string, { startDate: string; endDate: string }> = {
         today: { startDate: "today", endDate: "today" },
@@ -102,12 +102,30 @@ export function useGoogleAnalytics(clientId?: string, dateRange?: string, enable
       const { data, error } = await supabase.functions.invoke("google-analytics", {
         body: {
           clientId,
+          propertyId,
           dateRange: resolvedRange,
           publicSlug,
         },
       });
       if (error) throw error;
       return data as GAData;
+    },
+    enabled: !!clientId && enabled,
+  });
+}
+
+export function useFetchGoogleProperties(clientId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["google-properties", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("google-analytics", {
+        body: {
+          clientId,
+          fetchPropertiesList: true,
+        },
+      });
+      if (error) throw error;
+      return data as { properties: GAProperty[]; notConnected?: boolean; needsPropertySelection?: boolean; apiError?: any };
     },
     enabled: !!clientId && enabled,
   });

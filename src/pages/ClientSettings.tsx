@@ -14,6 +14,8 @@ import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
 import { ClientLogoUploader } from "@/components/clients/ClientLogoUploader";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 import { DataSourcesPanel } from "@/components/settings/DataSourcesPanel";
+import { useGoogleConnectionStatus, useFetchGoogleProperties } from "@/hooks/useGoogleAnalytics";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ClientSettings() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -25,7 +27,42 @@ export default function ClientSettings() {
   const disableCrm = useDisableClientCrm();
   const org = client ? clientOrgs?.[client.id] : null;
 
+  const { data: googleStatus, isLoading: googleStatusLoading } = useGoogleConnectionStatus(clientId);
+  const isGoogleConnected = googleStatus?.connected === true;
+  const { data: propertiesData, isLoading: propertiesLoading } = useFetchGoogleProperties(clientId, isGoogleConnected);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string; logo_url?: string | null }>({});
+
+  const selectedProperties = useMemo(() => {
+    return (form.ga_property_id || "").split(",").map(id => id.trim()).filter(Boolean);
+  }, [form.ga_property_id]);
+
+  const handleToggleProperty = (propId: string) => {
+    const current = [...selectedProperties];
+    const index = current.indexOf(propId);
+    if (index > -1) {
+      current.splice(index, 1);
+    } else {
+      if (current.length >= 4) {
+        toast.error("Você pode selecionar no máximo 4 propriedades.");
+        return;
+      }
+      current.push(propId);
+    }
+    setForm({ ...form, ga_property_id: current.join(",") });
+  };
+
+  const filteredProperties = useMemo(() => {
+    const list = propertiesData?.properties || [];
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(p => 
+      p.name.toLowerCase().includes(q) || 
+      p.account.toLowerCase().includes(q) || 
+      p.id.includes(q)
+    );
+  }, [propertiesData?.properties, searchQuery]);
 
   useEffect(() => {
     if (client) {
@@ -210,17 +247,100 @@ export default function ClientSettings() {
           </TabsContent>
 
           <TabsContent value="google" className="mt-4">
-            <Card className="p-6 space-y-4">
+            <Card className="p-6 space-y-5">
               <div>
                 <Label>Google Ads Customer ID</Label>
-                <Input value={form.google_ads_customer_id || ""} onChange={(e) => setForm({ ...form, google_ads_customer_id: e.target.value })} placeholder="123-456-7890" />
+                <Input value={form.google_ads_customer_id || ""} onChange={(e) => setForm({ ...form, google_ads_customer_id: e.target.value })} placeholder="123-456-7890" className="mt-1" />
               </div>
-              <div>
-                <Label>GA4 Property ID</Label>
-                <Input value={form.ga_property_id || ""} onChange={(e) => setForm({ ...form, ga_property_id: e.target.value })} placeholder="properties/123456789" />
+
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Propriedades do GA4</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Selecione até 4 propriedades do Google Analytics 4 para este cliente.
+                    </p>
+                  </div>
+                  <Badge variant={selectedProperties.length > 0 ? "secondary" : "outline"} className="text-xs font-mono">
+                    {selectedProperties.length} / 4 selecionadas
+                  </Badge>
+                </div>
+
+                {googleStatusLoading ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Verificando conexão com o Google...</span>
+                  </div>
+                ) : !isGoogleConnected ? (
+                  <div className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/5 p-4 text-sm text-amber-500 space-y-2">
+                    <p className="font-semibold">Nenhuma conta Google conectada</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Para selecionar as propriedades do GA4, a agência precisa primeiro conectar uma conta Google global.
+                      Vá em <strong>Configurações da Agência &rarr; Aba Conexões</strong> para realizar o login no Google.
+                    </p>
+                  </div>
+                ) : propertiesLoading ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Carregando propriedades disponíveis do Analytics...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Buscar propriedade por nome, conta ou ID..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-9"
+                    />
+
+                    <div className="border border-border rounded-lg max-h-60 overflow-y-auto divide-y divide-border bg-background/50">
+                      {filteredProperties.length === 0 ? (
+                        <p className="text-xs text-muted-foreground p-4 text-center">
+                          Nenhuma propriedade correspondente encontrada.
+                        </p>
+                      ) : (
+                        filteredProperties.map((prop) => {
+                          const isChecked = selectedProperties.includes(prop.id);
+                          const isDisabled = !isChecked && selectedProperties.length >= 4;
+                          return (
+                            <div
+                              key={prop.id}
+                              className={`flex items-start gap-3 p-3 transition-colors text-xs ${
+                                isChecked ? "bg-primary/5" : "hover:bg-muted/30"
+                              } ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                              onClick={() => !isDisabled && handleToggleProperty(prop.id)}
+                            >
+                              <Checkbox
+                                id={`prop-${prop.id}`}
+                                checked={isChecked}
+                                disabled={isDisabled}
+                                onCheckedChange={() => !isDisabled && handleToggleProperty(prop.id)}
+                                className="mt-0.5 shrink-0"
+                                onClick={(e) => e.stopPropagation()} // Prevent double trigger
+                              />
+                              <div className="space-y-0.5 min-w-0 flex-1">
+                                <label
+                                  htmlFor={`prop-${prop.id}`}
+                                  className="font-medium text-foreground cursor-pointer block truncate"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {prop.name}
+                                </label>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  Conta: {prop.account} • ID: {prop.id}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                A conexão OAuth do Google é feita uma única vez por agência e compartilhada por todos os clientes.
+
+              <p className="text-xs text-muted-foreground border-t border-border pt-4">
+                A conexão OAuth do Google é feita de forma global e compartilhada por todos os clientes. Aqui você seleciona quais contas deste Google pertencem a este cliente.
               </p>
             </Card>
           </TabsContent>

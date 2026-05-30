@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId, propertyId, dateRange, publicSlug } = await req.json();
+    const { clientId, propertyId, dateRange, publicSlug, fetchPropertiesList } = await req.json();
 
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
@@ -68,11 +68,23 @@ Deno.serve(async (req) => {
     }
 
     // Get stored tokens
-    const { data: tokenRow, error: tokenError } = await supabase
+    let { data: tokenRow, error: tokenError } = await supabase
       .from("google_tokens")
       .select("*")
       .eq("client_id", clientId)
-      .single();
+      .maybeSingle();
+
+    if (!tokenRow) {
+      const { data: fallbackToken } = await supabase
+        .from("google_tokens")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      if (fallbackToken) {
+        tokenRow = fallbackToken;
+        tokenError = null;
+      }
+    }
 
     if (tokenError || !tokenRow) {
       return new Response(JSON.stringify({ notConnected: true }), {
@@ -113,7 +125,7 @@ Deno.serve(async (req) => {
       gaPropertyId = client?.ga_property_id;
     }
 
-    if (!gaPropertyId) {
+    if (!gaPropertyId || fetchPropertiesList) {
       // List available GA4 properties so user can pick one
       const accountsRes = await fetch(
         "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",

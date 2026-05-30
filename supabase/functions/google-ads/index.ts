@@ -98,8 +98,22 @@ Deno.serve(async (req) => {
       if (!(await canAccessClient(claims.sub, clientId))) return forbidden(corsHeaders);
     }
 
-    const { data: tokenRow } = await supabase
-      .from("google_tokens").select("*").eq("client_id", clientId).single();
+    let { data: tokenRow } = await supabase
+      .from("google_tokens")
+      .select("*")
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (!tokenRow) {
+      const { data: fallbackToken } = await supabase
+        .from("google_tokens")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      if (fallbackToken) {
+        tokenRow = fallbackToken;
+      }
+    }
 
     if (!tokenRow) {
       return new Response(JSON.stringify({ notConnected: true }), {

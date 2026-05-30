@@ -103,11 +103,22 @@ Deno.serve(async (req) => {
     }
 
     if (action === "check_status") {
-      const { data } = await supabase
+      let { data } = await supabase
         .from("google_tokens")
         .select("id, expires_at, scopes")
         .eq("client_id", clientId)
-        .single();
+        .maybeSingle();
+
+      if (!data) {
+        const { data: fallback } = await supabase
+          .from("google_tokens")
+          .select("id, expires_at, scopes")
+          .limit(1)
+          .maybeSingle();
+        if (fallback) {
+          data = fallback;
+        }
+      }
 
       return new Response(JSON.stringify({ connected: !!data, token: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

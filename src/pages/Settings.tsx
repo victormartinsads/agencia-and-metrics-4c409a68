@@ -74,7 +74,7 @@ export default function SettingsPage() {
             {isAdmin && (
               <>
                 <TabsTrigger value="google" className="gap-1.5">
-                  <Globe className="h-3.5 w-3.5" /> Google Analytics
+                  <Globe className="h-3.5 w-3.5" /> Conexões
                 </TabsTrigger>
                 <TabsTrigger value="sheets" className="gap-1.5">
                   <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
@@ -330,44 +330,78 @@ function GoogleAnalyticsSection() {
   const { data: clients, isLoading } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
 
+  // Utilizar o primeiro cliente para a conexão global do Google
+  const firstClient = clients?.[0];
+
   return (
-    <Card className="p-6 space-y-5">
-      <div>
-        <h2 className="text-base font-semibold text-card-foreground">
-          Conexão Google Analytics por Cliente
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Selecione um cliente para conectar ou trocar a propriedade GA4
-          vinculada.
-        </p>
-      </div>
-
-      <div className="space-y-2 max-w-md">
-        <Label>Cliente</Label>
-        <Select
-          value={selectedClientId}
-          onValueChange={setSelectedClientId}
-          disabled={isLoading}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um cliente..." />
-          </SelectTrigger>
-          <SelectContent>
-            {(clients || []).map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name.toUpperCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {selectedClientId && (
-        <div className="border-t border-border pt-5">
-          <GoogleAnalyticsPanel clientId={selectedClientId} datePreset="last_7d" />
+    <div className="space-y-4">
+      {/* Bloco de Conexão Global */}
+      <Card className="p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-card-foreground">
+            Conexão Google Ads & GA4 (Global)
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Conecte a conta do Google da agência. Essa conexão será usada de forma compartilhada por todos os clientes.
+          </p>
         </div>
+
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Carregando clientes...</span>
+          </div>
+        ) : !firstClient ? (
+          <p className="text-sm text-amber-500 font-medium py-2">
+            Por favor, crie pelo menos um cliente na aba correspondente antes de conectar a conta do Google.
+          </p>
+        ) : (
+          <div className="border-t border-border pt-4">
+            <GoogleAnalyticsPanel clientId={firstClient.id} datePreset="last_7d" />
+          </div>
+        )}
+      </Card>
+
+      {/* Bloco de Visualização por Cliente */}
+      {clients && clients.length > 0 && (
+        <Card className="p-6 space-y-5">
+          <div>
+            <h2 className="text-base font-semibold text-card-foreground">
+              Visualizar Dados do Analytics por Cliente
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Selecione um cliente abaixo para visualizar o relatório e dados do GA4 dele.
+            </p>
+          </div>
+
+          <div className="space-y-2 max-w-md">
+            <Label>Cliente</Label>
+            <Select
+              value={selectedClientId}
+              onValueChange={setSelectedClientId}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedClientId && (
+            <div className="border-t border-border pt-5">
+              <GoogleAnalyticsPanel clientId={selectedClientId} datePreset="last_7d" />
+            </div>
+          )}
+        </Card>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   useGoogleConnectionStatus,
   useGoogleAnalytics,
+  useFetchGoogleProperties,
 } from "@/hooks/useGoogleAnalytics";
+import { useClients } from "@/hooks/useClients";
 import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPanel";
 import { PanelCard } from "@/components/dashboard/overview/premium/PanelCard";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
@@ -53,7 +55,38 @@ function formatDuration(secs: number) {
 export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol = "R$" }: Props) {
   const { data: status, isLoading: statusLoading } = useGoogleConnectionStatus(clientId);
   const connected = status?.connected === true;
-  const { data: ga, isLoading: gaLoading } = useGoogleAnalytics(clientId, datePreset, connected);
+  const { data: clients } = useClients();
+  const client = clients?.find(c => c.id === clientId);
+
+  const gaPropertyIds = useMemo(() => {
+    return ((client as any)?.ga_property_id || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+  }, [client]);
+
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+
+  useEffect(() => {
+    if (gaPropertyIds.length > 0 && (!selectedPropertyId || !gaPropertyIds.includes(selectedPropertyId))) {
+      setSelectedPropertyId(gaPropertyIds[0]);
+    }
+  }, [gaPropertyIds, selectedPropertyId]);
+
+  const { data: ga, isLoading: gaLoading } = useGoogleAnalytics(
+    clientId,
+    datePreset,
+    connected,
+    undefined,
+    selectedPropertyId || undefined
+  );
+
+  const { data: propertiesData } = useFetchGoogleProperties(clientId, connected);
+  const propertyNamesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (propertiesData?.properties || []).forEach(p => {
+      map.set(p.id, p.name);
+    });
+    return map;
+  }, [propertiesData]);
+
   const { data: blockSources } = useBlockSources(clientId, "analytics");
 
   const STORAGE_KEY = `analytics-hidden:${clientId || "default"}`;
@@ -382,6 +415,29 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
           </Button>
         </div>
       </div>
+
+      {gaPropertyIds.length > 1 && (
+        <div className="flex flex-wrap gap-1 p-1 bg-muted/40 rounded-lg border border-border/60 max-w-fit mb-2">
+          {gaPropertyIds.map((id, index) => {
+            const name = propertyNamesMap.get(id) || `Conta ${index + 1}`;
+            const active = selectedPropertyId === id;
+            return (
+              <Button
+                key={id}
+                variant={active ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedPropertyId(id)}
+                className={`h-7 text-xs gap-1.5 rounded-md px-2.5 py-1 font-semibold ${
+                  active ? "bg-background text-foreground shadow-sm hover:bg-background" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {name}
+                <span className="text-[9px] opacity-60 font-mono">({id})</span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       <GridDashboard
         clientId={clientId}
