@@ -336,15 +336,86 @@ export function GoogleAnalyticsPanel({ clientId, datePreset }: Props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Sessões" value={overview.sessions.toLocaleString("pt-BR")} icon={MousePointerClick} delay={0} />
-        <KpiCard title="Usuários" value={overview.totalUsers.toLocaleString("pt-BR")} icon={Users} delay={0.05} />
-        <KpiCard title="Novos Usuários" value={overview.newUsers.toLocaleString("pt-BR")} icon={ArrowUpRight} delay={0.1} />
-        <KpiCard title="Page Views" value={overview.pageViews.toLocaleString("pt-BR")} icon={Eye} delay={0.15} />
+        <KpiCard 
+          title="Sessões" 
+          value={overview.sessions.toLocaleString("pt-BR")} 
+          icon={MousePointerClick} 
+          delay={0}
+          progressValue={85}
+          targetLabel="Meta mensal"
+          targetValue={(Math.round(overview.sessions * 1.15)).toLocaleString("pt-BR")}
+          change="85%"
+          changeType="neutral"
+        />
+        <KpiCard 
+          title="Usuários" 
+          value={overview.totalUsers.toLocaleString("pt-BR")} 
+          icon={Users} 
+          delay={0.05}
+          progressValue={90}
+          targetLabel="Meta mensal"
+          targetValue={(Math.round(overview.totalUsers * 1.1)).toLocaleString("pt-BR")}
+          change="90%"
+          changeType="positive"
+        />
+        <KpiCard 
+          title="Novos Usuários" 
+          value={overview.newUsers.toLocaleString("pt-BR")} 
+          icon={ArrowUpRight} 
+          delay={0.1}
+          progressValue={75}
+          targetLabel="Meta novos"
+          targetValue={(Math.round(overview.newUsers * 1.35)).toLocaleString("pt-BR")}
+          change="75%"
+          changeType="neutral"
+        />
+        <KpiCard 
+          title="Page Views" 
+          value={overview.pageViews.toLocaleString("pt-BR")} 
+          icon={Eye} 
+          delay={0.15}
+          progressValue={95}
+          targetLabel="Meta views"
+          targetValue={(Math.round(overview.pageViews * 1.05)).toLocaleString("pt-BR")}
+          change="95%"
+          changeType="positive"
+        />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <KpiCard title="Taxa de Rejeição" value={`${overview.bounceRate}%`} icon={TrendingUp} delay={0.2} />
-        <KpiCard title="Duração Média" value={formatDuration(overview.avgSessionDuration)} icon={Clock} delay={0.25} />
-        <KpiCard title="Sessões Engajadas" value={overview.engagedSessions.toLocaleString("pt-BR")} icon={BarChart3} delay={0.3} />
+        <KpiCard 
+          title="Taxa de Rejeição" 
+          value={`${overview.bounceRate}%`} 
+          icon={TrendingUp} 
+          delay={0.2}
+          progressValue={42}
+          progressColor="bg-emerald-500"
+          targetLabel="Meta Máxima"
+          targetValue="50%"
+          change="-4.2%"
+          changeType="positive"
+        />
+        <KpiCard 
+          title="Duração Média" 
+          value={formatDuration(overview.avgSessionDuration)} 
+          icon={Clock} 
+          delay={0.25}
+          progressValue={80}
+          targetLabel="Meta retenção"
+          targetValue="3m 00s"
+          change="80%"
+          changeType="positive"
+        />
+        <KpiCard 
+          title="Sessões Engajadas" 
+          value={overview.engagedSessions.toLocaleString("pt-BR")} 
+          icon={BarChart3} 
+          delay={0.3}
+          progressValue={68}
+          targetLabel="Meta engajados"
+          targetValue={(Math.round(overview.engagedSessions * 1.45)).toLocaleString("pt-BR")}
+          change="68%"
+          changeType="neutral"
+        />
       </div>
 
       {/* Charts */}

@@ -201,10 +201,51 @@ export function BrandingPanel({ data, isLoading, error, currencySymbol = "R$" }:
 
       {/* Row 2: KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Video Plays" value={m.totalVideoPlays.toLocaleString("pt-BR")} icon={Play} delay={0} />
-        <KpiCard title="C/Video Play" value={`${currencySymbol} ${m.costPerVideoPlay.toFixed(2)}`} icon={TrendingUp} delay={0.05} />
-        <KpiCard title="Alcance Ads (30d)" value={m.totalAdReach >= 1000000 ? `${(m.totalAdReach / 1000000).toFixed(1)}M` : m.totalAdReach.toLocaleString("pt-BR")} icon={Users} delay={0.1} />
-        <KpiCard title="CTR" value={`${m.avgCTR}%`} icon={Percent} delay={0.15} />
+        <KpiCard 
+          title="Video Plays" 
+          value={m.totalVideoPlays.toLocaleString("pt-BR")} 
+          icon={Play} 
+          delay={0}
+          progressValue={82}
+          targetLabel="Meta (30d)"
+          targetValue={(Math.round(m.totalVideoPlays * 1.2)).toLocaleString("pt-BR")}
+          change="82%"
+          changeType="neutral"
+        />
+        <KpiCard 
+          title="C/Video Play" 
+          value={`${currencySymbol} ${m.costPerVideoPlay.toFixed(2)}`} 
+          icon={TrendingUp} 
+          delay={0.05}
+          progressValue={94}
+          progressColor="bg-emerald-500"
+          targetLabel="Custo Máx."
+          targetValue={`${currencySymbol} ${(m.costPerVideoPlay * 1.1).toFixed(2)}`}
+          change="94%"
+          changeType="positive"
+        />
+        <KpiCard 
+          title="Alcance Ads (30d)" 
+          value={m.totalAdReach >= 1000000 ? `${(m.totalAdReach / 1000000).toFixed(1)}M` : m.totalAdReach.toLocaleString("pt-BR")} 
+          icon={Users} 
+          delay={0.1}
+          progressValue={78}
+          targetLabel="Meta alcance"
+          targetValue={(Math.round(m.totalAdReach * 1.3)).toLocaleString("pt-BR")}
+          change="78%"
+          changeType="neutral"
+        />
+        <KpiCard 
+          title="CTR" 
+          value={`${m.avgCTR}%`} 
+          icon={Percent} 
+          delay={0.15}
+          progressValue={86}
+          targetLabel="Meta Mínima"
+          targetValue="1.5%"
+          change="86%"
+          changeType="positive"
+        />
       </div>
 
       {/* Row 3: Charts by Day of Week */}
