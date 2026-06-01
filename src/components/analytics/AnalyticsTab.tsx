@@ -113,8 +113,8 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
     [ga?.utms]
   );
 
-  // Fallback: not connected or needs setup
-  if (statusLoading || !connected || (gaPropertyIds.length === 0 && (ga?.needsPropertySelection || !ga?.overview))) {
+  // Fallback: not connected or needs setup / property selection
+  if (statusLoading || !connected || ga?.needsPropertySelection || ga?.notConnected || (gaPropertyIds.length === 0 && !ga?.overview)) {
     return <GoogleAnalyticsPanel clientId={clientId} datePreset={datePreset} />;
   }
   if (gaLoading || !ga?.overview) {

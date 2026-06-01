@@ -109,12 +109,6 @@ Deno.serve(async (req) => {
 
     // Get property ID from client or request
     let gaPropertyId = propertyId;
-    // GA4 Data API requires a numeric Property ID (e.g. "123456789"),
-    // not the Measurement ID (e.g. "G-XXXXXXX"). If invalid, force the picker.
-    if (gaPropertyId && !/^\d+$/.test(String(gaPropertyId))) {
-      console.warn(`Invalid GA property ID format: ${gaPropertyId} — forcing property selection`);
-      gaPropertyId = null;
-    }
 
     if (!gaPropertyId) {
       const { data: client } = await supabase
@@ -123,6 +117,22 @@ Deno.serve(async (req) => {
         .eq("id", clientId)
         .single();
       gaPropertyId = client?.ga_property_id;
+    }
+
+    // Parse and validate the final property ID
+    if (gaPropertyId) {
+      // If it contains commas (e.g. multiple selected properties), use the first one
+      if (String(gaPropertyId).includes(",")) {
+        const parts = String(gaPropertyId).split(",").map(p => p.trim()).filter(Boolean);
+        gaPropertyId = parts[0] || null;
+      }
+      
+      // GA4 Data API requires a numeric Property ID (e.g. "123456789"),
+      // not the Measurement ID (e.g. "G-XXXXXXX"). If invalid, force the picker.
+      if (gaPropertyId && !/^\d+$/.test(String(gaPropertyId))) {
+        console.warn(`Invalid GA property ID format: ${gaPropertyId} — forcing property selection`);
+        gaPropertyId = null;
+      }
     }
 
     if (!gaPropertyId || fetchPropertiesList) {

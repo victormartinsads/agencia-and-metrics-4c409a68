@@ -5,6 +5,7 @@ import { useWeeklyDiagnostic } from "@/hooks/useWeeklyDiagnostic";
 import { useWeeklyNotes } from "@/hooks/useWeeklyNotes";
 import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 import { DiagnosticoFunnelSection } from "./DiagnosticoFunnelSection";
+import { DiagnosticoGoogleFunnelSection } from "./DiagnosticoGoogleFunnelSection";
 import { DiagnosticoBloco } from "./DiagnosticoBloco";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { useSaveDiagnostic } from "@/hooks/useSavedDiagnostics";
+import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
 import { supabase } from "@/integrations/supabase/client";
 import { GoogleAdsSummaryCard } from "@/components/dashboard/GoogleAdsSummaryCard";
@@ -77,6 +79,9 @@ export function DiagnosticoSemanal({
   );
   const groups = useMemo(() => groupCampaignsByFunnel(activeCampaigns), [activeCampaigns]);
   const { data: labelMap } = useFunnelLabels(clientId);
+  const { data: googleStatus } = useGoogleConnectionStatus(clientId);
+  const isGoogleConnected = googleStatus?.connected === true;
+  const { data: gaData } = useGoogleAnalytics(clientId, datePreset, isGoogleConnected);
 
   const { whatWeDid, setWhatWeDid, nextActions, setNextActions, save: saveNotes, saving: savingNotes } =
     useWeeklyNotes(clientId, datePreset);
@@ -134,6 +139,7 @@ export function DiagnosticoSemanal({
           currencySymbol,
           metricsConfig,
           funnelLabels: labelMap || {},
+          googleAnalytics: isGoogleConnected ? gaData : null,
         },
       });
       toast.success("Diagnóstico salvo!");
@@ -397,6 +403,7 @@ export function DiagnosticoSemanal({
 
         {/* Funis / Campanhas */}
         <div className="space-y-6">
+          <DiagnosticoGoogleFunnelSection clientId={clientId} datePreset={datePreset} />
           {groups.map(g => (
             <DiagnosticoFunnelSection
               key={g.key + (g.isFunnel ? "" : "-c")}
@@ -467,6 +474,7 @@ export function DiagnosticoSemanal({
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
           clientId={clientId}
+          googleAnalyticsData={isGoogleConnected ? gaData : null}
         />
       )}
 

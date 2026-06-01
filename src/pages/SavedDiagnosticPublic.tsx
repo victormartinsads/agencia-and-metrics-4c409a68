@@ -11,6 +11,7 @@ import { DiagnosticoPresentMode } from "@/components/diagnostico/DiagnosticoPres
 import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
+import { DiagnosticoGoogleFunnelSection } from "@/components/diagnostico/DiagnosticoGoogleFunnelSection";
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
@@ -95,6 +96,12 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           </section>
         )}
 
+        {snap.googleAnalytics && (
+          <div className="space-y-4">
+            <DiagnosticoGoogleFunnelSection gaData={snap.googleAnalytics} />
+          </div>
+        )}
+
         {groups.length > 0 && (
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
@@ -170,6 +177,7 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           onClose={() => setPresenting(false)}
           groupConfigs={metricsConfig}
           funnelLabels={funnelLabels}
+          googleAnalyticsData={snap.googleAnalytics}
           publicMode
         />
       )}

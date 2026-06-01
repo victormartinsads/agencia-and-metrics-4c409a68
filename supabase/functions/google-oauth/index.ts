@@ -76,6 +76,13 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Check if a token already exists to preserve refresh_token if Google does not return a new one
+      const { data: existingToken } = await supabase
+        .from("google_tokens")
+        .select("refresh_token")
+        .eq("client_id", clientId)
+        .maybeSingle();
+
       const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
 
       // Upsert token for this client
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
         .upsert({
           client_id: clientId,
           access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token || "",
+          refresh_token: tokenData.refresh_token || existingToken?.refresh_token || "",
           expires_at: expiresAt,
           scopes: SCOPES.split(" "),
         }, { onConflict: "client_id" });

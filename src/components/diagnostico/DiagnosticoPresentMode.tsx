@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
 import { useFunnelLabels } from "@/hooks/useFunnelLabels";
@@ -39,6 +40,8 @@ interface Props {
   groupConfigs?: Record<string, MetricsConfig>;
   /** Rótulos customizados de funis/campanhas vindos de snapshot salvo */
   funnelLabels?: Record<string, string>;
+  /** Dados estáticos do Google Analytics para visualização pública offline */
+  googleAnalyticsData?: any;
 }
 
 type Slide =
@@ -46,6 +49,7 @@ type Slide =
   | { kind: "notes" }
   | { kind: "group"; group: FunnelGroup }
   | { kind: "manual"; manual: ManualFunnel }
+  | { kind: "google-funnel" }
   | { kind: "diagnostic"; key: keyof DiagnosticBlocks; title: string; emoji: string; accent: string };
 
 function fmtMoney(v: number, sym: string) {
@@ -58,21 +62,25 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels,
+  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels, googleAnalyticsData,
 }: Props) {
   const { data: liveLabelMap } = useFunnelLabels(clientId);
   const resolvedLabels = funnelLabels || liveLabelMap || {};
+
+  const { data: googleStatus } = useGoogleConnectionStatus(clientId && !googleAnalyticsData ? clientId : undefined);
+  const isGoogleConnected = googleAnalyticsData ? true : (googleStatus?.connected === true);
 
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
     { kind: "notes" },
     ...groups.map(g => ({ kind: "group" as const, group: g })),
     ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
+    ...(isGoogleConnected ? [{ kind: "google-funnel" as const }] : []),
     { kind: "diagnostic", key: "positives", title: "O que foi positivo", emoji: "✅", accent: "from-green-500/20" },
     { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
     { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
     { kind: "diagnostic", key: "client_requests", title: "Pedidos ao cliente", emoji: "🤝", accent: "from-amber-500/20" },
-  ], [groups, manualFunnels]);
+  ], [groups, manualFunnels, isGoogleConnected]);
 
   const [idx, setIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,6 +195,14 @@ export function DiagnosticoPresentMode({
                   onOpenDetail={() => {}}
                 />
               </div>
+            )}
+
+            {slide.kind === "google-funnel" && (clientId || googleAnalyticsData) && (
+              <GoogleFunnelSlide 
+                clientId={clientId} 
+                datePreset={datePresetKey || datePreset} 
+                gaData={googleAnalyticsData}
+              />
             )}
 
             {slide.kind === "diagnostic" && (
@@ -374,6 +390,149 @@ function BigKpi({
       <div className={`mt-1 text-2xl font-bold ${
         custom ? "text-amber-500" : highlight ? "text-primary" : "text-card-foreground"
       }`}>{value}</div>
+    </div>
+  );
+}
+
+function GoogleFunnelSlide({ clientId, datePreset, gaData }: { clientId?: string; datePreset?: string; gaData?: any }) {
+  const { data: ga, isLoading } = useGoogleAnalytics(
+    clientId && !gaData ? clientId : undefined, 
+    datePreset && !gaData ? datePreset : undefined, 
+    !gaData
+  );
+
+  const finalGa = gaData || ga;
+  const overview = finalGa?.overview;
+  const events = finalGa?.events || [];
+
+  if (!overview) {
+    return (
+      <div className="h-full flex items-center justify-center py-16">
+        <p className="text-lg text-muted-foreground italic">Nenhum dado do Google Analytics disponível para este período.</p>
+      </div>
+    );
+  }
+
+  const pageViews = overview.pageViews || 0;
+  const sessions = overview.sessions || 0;
+  const engaged = overview.engagedSessions || 0;
+
+  const viewToSession = pageViews > 0 ? (sessions / pageViews) * 100 : 0;
+  const sessionToEngaged = sessions > 0 ? (engaged / sessions) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold flex items-center gap-1.5">
+          <Globe className="h-4 w-4" /> Google Analytics (GA4)
+        </p>
+        <h2 className="text-4xl font-bold text-card-foreground mt-1">Funil de Acessos & Conversão</h2>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+        {/* Visualização de Funil */}
+        <div className="lg:col-span-7 space-y-6">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Jornada do Usuário</h3>
+          
+          {/* Step 1: Page Views */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm font-semibold">
+              <span className="text-card-foreground">1. Visualizações de Página (Pageviews)</span>
+              <span className="text-primary text-lg font-bold">{pageViews.toLocaleString("pt-BR")}</span>
+            </div>
+            <div className="h-9 w-full bg-muted/40 rounded-xl overflow-hidden border border-border relative flex items-center px-4">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/30 to-primary/10 rounded-l-xl transition-all" 
+                style={{ width: "100%" }}
+              />
+              <span className="relative text-xs text-muted-foreground font-semibold z-10">Base Total de Visualizações</span>
+            </div>
+          </div>
+
+          {/* Conversão Rate 1 */}
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground font-mono">
+            <span>Conversão em Sessão:</span>
+            <span className="text-primary font-bold text-sm">{viewToSession.toFixed(1)}%</span>
+            <ArrowRight className="h-3 w-3" />
+          </div>
+
+          {/* Step 2: Sessions */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm font-semibold">
+              <span className="text-card-foreground">2. Sessões Totais</span>
+              <span className="text-primary text-lg font-bold">{sessions.toLocaleString("pt-BR")}</span>
+            </div>
+            <div className="h-9 w-full bg-muted/40 rounded-xl overflow-hidden border border-border relative flex items-center px-4">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/30 to-primary/10 rounded-l-xl transition-all" 
+                style={{ width: `${Math.min(100, Math.max(5, viewToSession))}%` }}
+              />
+              <span className="relative text-xs text-muted-foreground font-semibold z-10">Visitas únicas ao site</span>
+            </div>
+          </div>
+
+          {/* Conversão Rate 2 */}
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground font-mono">
+            <span>Taxa de Engajamento:</span>
+            <span className="text-primary font-bold text-sm">{sessionToEngaged.toFixed(1)}%</span>
+            <ArrowRight className="h-3 w-3" />
+          </div>
+
+          {/* Step 3: Engaged Sessions */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm font-semibold">
+              <span className="text-card-foreground">3. Sessões Engajadas</span>
+              <span className="text-primary text-lg font-bold">{engaged.toLocaleString("pt-BR")}</span>
+            </div>
+            <div className="h-9 w-full bg-muted/40 rounded-xl overflow-hidden border border-border relative flex items-center px-4">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/30 to-primary/10 rounded-l-xl transition-all" 
+                style={{ width: `${Math.min(100, Math.max(5, (engaged / pageViews) * 100))}%` }}
+              />
+              <span className="relative text-xs text-muted-foreground font-semibold z-10">Sessões com interação real</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Conversões/Eventos do Google */}
+        <div className="lg:col-span-5 rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h3 className="text-sm font-bold text-card-foreground uppercase tracking-wider">Ações de Conversão (Eventos)</h3>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic py-6 text-center">Nenhum evento registrado no período.</p>
+          ) : (
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+              {events.slice(0, 8).map((evt) => {
+                const isConversion = ["generate_lead", "lead", "purchase", "contact", "whatsapp_click", "click"].includes(evt.name.toLowerCase());
+                
+                return (
+                  <div 
+                    key={evt.name} 
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-sm transition-colors ${
+                      isConversion 
+                        ? "bg-primary/10 border-primary/30" 
+                        : "bg-background border-border/80"
+                    }`}
+                  >
+                    <span className="font-semibold text-card-foreground flex items-center gap-2">
+                      {isConversion && <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />}
+                      {evt.name}
+                    </span>
+                    <span className="font-mono font-bold text-primary text-base">{evt.count.toLocaleString("pt-BR")}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          <p className="text-xs text-muted-foreground leading-normal">
+            Exibindo os principais eventos detectados nas páginas do cliente.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

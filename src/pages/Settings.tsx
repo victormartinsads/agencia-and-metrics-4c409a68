@@ -564,6 +564,22 @@ function MembersSection() {
   const [newRole, setNewRole] = useState<"admin" | "editor">("editor");
   const [pwdEditId, setPwdEditId] = useState<string | null>(null);
   const [pwdValue, setPwdValue] = useState("");
+  const [sendingResetEmail, setSendingResetEmail] = useState<string | null>(null);
+
+  const handleSendResetEmail = async (memberEmail: string) => {
+    setSendingResetEmail(memberEmail);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(memberEmail, {
+        redirectTo: `${window.location.origin}/settings`,
+      });
+      if (error) throw error;
+      toast.success(`E-mail de redefinição de senha enviado para ${memberEmail}`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao enviar e-mail de redefinição");
+    } finally {
+      setSendingResetEmail(null);
+    }
+  };
 
   const handleInvite = async () => {
     if (!email.trim()) {
@@ -770,18 +786,34 @@ function MembersSection() {
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setPwdEditId(m.id);
-                          setPwdValue("");
-                        }}
-                        className="h-8 w-8"
-                        title="Alterar senha"
-                      >
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setPwdEditId(m.id);
+                            setPwdValue("");
+                          }}
+                          className="h-8 w-8"
+                          title="Alterar senha manualmente"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSendResetEmail(m.email)}
+                          className="h-8 w-8 text-primary hover:text-primary/80"
+                          title="Enviar e-mail de redefinição de senha"
+                          disabled={sendingResetEmail === m.email}
+                        >
+                          {sendingResetEmail === m.email ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Mail className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </>
                     )}
                     <Button
                       variant="ghost"
