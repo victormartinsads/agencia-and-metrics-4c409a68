@@ -22,6 +22,12 @@ export interface GoogleAdsCreative {
   conversions: number;
 }
 
+export interface GoogleAdsConversionBreakdown {
+  name: string;
+  category: string;
+  count: number;
+}
+
 export interface GoogleAdsCampaign {
   id: string;
   name: string;
@@ -36,6 +42,7 @@ export interface GoogleAdsCampaign {
   avgCpc: number;
   keywords?: GoogleAdsKeyword[];
   creatives?: GoogleAdsCreative[];
+  conversionsBreakdown?: GoogleAdsConversionBreakdown[];
 }
 
 

@@ -360,6 +360,35 @@ Deno.serve(async (req) => {
       console.warn("Failed to fetch Google Ads ad_group_ad video fallbacks:", err);
     }
 
+    // Secondary fetch: Conversions breakdown per campaign
+    let conversionsData: any[] = [];
+    try {
+      const convQuery = `
+        SELECT campaign.id,
+          segments.conversion_action_name,
+          segments.conversion_action_category,
+          metrics.conversions
+        FROM campaign
+        WHERE segments.date BETWEEN '${since}' AND '${until}'
+          AND metrics.conversions > 0
+        LIMIT 300
+      `;
+      const convHeaders = { ...headers };
+      if (workingLoginId) convHeaders["login-customer-id"] = workingLoginId;
+      const convRes = await fetch(url, { method: "POST", headers: convHeaders, body: JSON.stringify({ query: convQuery }) });
+      if (convRes.ok) {
+        const convJson = await convRes.json();
+        conversionsData = (convJson.results || []).map((r: any) => ({
+          campaignId: r.campaign?.id,
+          name: r.segments?.conversionActionName,
+          category: r.segments?.conversionActionCategory,
+          count: Number(r.metrics?.conversions || 0),
+        }));
+      }
+    } catch (err) {
+      console.warn("Failed to fetch Google Ads conversions breakdown:", err);
+    }
+
     const campaigns = (data.results || []).map((r: any) => {
       const cId = r.campaign?.id;
       const cType = r.campaign?.advertisingChannelType || "UNKNOWN";
@@ -373,6 +402,10 @@ Deno.serve(async (req) => {
         .filter((cr: any) => cr.campaignId === cId)
         .sort((a: any, b: any) => b.cost - a.cost)
         .slice(0, 6);
+
+      const campaignConversions = conversionsData
+        .filter((c: any) => c.campaignId === cId)
+        .sort((a: any, b: any) => b.count - a.count);
 
       return {
         id: cId,
@@ -388,6 +421,7 @@ Deno.serve(async (req) => {
         avgCpc: Number(r.metrics?.averageCpc || 0) / 1_000_000,
         keywords: campaignKeywords,
         creatives: campaignCreatives,
+        conversionsBreakdown: campaignConversions,
       };
     });
 

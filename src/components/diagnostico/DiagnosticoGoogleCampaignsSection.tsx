@@ -380,6 +380,43 @@ function GoogleCampaignCard({
           ))}
       </div>
 
+      {/* Conversões Breakdown */}
+      {campaign.conversionsBreakdown && campaign.conversionsBreakdown.length > 0 && (() => {
+        const getConversionBadgeStyle = (category: string, name: string) => {
+          const cat = (category || "").toUpperCase();
+          const nm = (name || "").toLowerCase();
+          if (cat === "PURCHASE" || nm.includes("compra") || nm.includes("venda") || nm.includes("purchase")) {
+            return "bg-purple-500/10 border-purple-500/25 text-purple-400";
+          }
+          if (cat === "LEAD" || cat === "SUBMIT_LEAD_FORM" || nm.includes("lead") || nm.includes("cadastro") || nm.includes("form")) {
+            return "bg-sky-500/10 border-sky-500/25 text-sky-400";
+          }
+          if (cat === "CONTACT" || nm.includes("contato") || nm.includes("whatsapp") || nm.includes("click") || nm.includes("chamar")) {
+            return "bg-emerald-500/10 border-emerald-500/25 text-emerald-400";
+          }
+          return "bg-primary/5 border-primary/20 text-muted-foreground";
+        };
+
+        return (
+          <div className="mt-4 p-3 rounded-xl border border-border bg-muted/5 space-y-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 text-primary animate-pulse" /> Detalhamento de Ações de Conversão
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {campaign.conversionsBreakdown!.map((cb, idx) => (
+                <span
+                  key={idx}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold transition-all ${getConversionBadgeStyle(cb.category, cb.name)}`}
+                >
+                  <span>{cb.name}</span>
+                  <span className="font-bold border-l border-current/25 pl-1.5 ml-0.5">{cb.count.toLocaleString("pt-BR")}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Campaign Details (Keywords or Creatives) */}
       <div className="mt-6 pt-5 border-t border-border/50">
         {/* Case 1: Search Campaign (Top Keywords) */}
