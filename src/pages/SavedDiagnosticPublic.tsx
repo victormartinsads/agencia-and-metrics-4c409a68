@@ -12,6 +12,7 @@ import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hook
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { DiagnosticoGoogleFunnelSection } from "@/components/diagnostico/DiagnosticoGoogleFunnelSection";
+import { DiagnosticoGoogleCampaignsSection } from "@/components/diagnostico/DiagnosticoGoogleCampaignsSection";
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
@@ -102,6 +103,12 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           </div>
         )}
 
+        {snap.googleAdsCampaigns && snap.googleAdsCampaigns.length > 0 && (
+          <div className="space-y-4">
+            <DiagnosticoGoogleCampaignsSection campaigns={snap.googleAdsCampaigns} currencySymbol={currencySymbol} />
+          </div>
+        )}
+
         {groups.length > 0 && (
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
@@ -178,6 +185,7 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           groupConfigs={metricsConfig}
           funnelLabels={funnelLabels}
           googleAnalyticsData={snap.googleAnalytics}
+          googleAdsCampaigns={snap.googleAdsCampaigns}
           publicMode
         />
       )}

@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { useSaveDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
+import { useGoogleAds } from "@/hooks/useGoogleAds";
+import { DiagnosticoGoogleCampaignsSection } from "./DiagnosticoGoogleCampaignsSection";
 import { SavedDiagnosticsList } from "./SavedDiagnosticsList";
 import { supabase } from "@/integrations/supabase/client";
 import { GoogleAdsSummaryCard } from "@/components/dashboard/GoogleAdsSummaryCard";
@@ -82,6 +84,7 @@ export function DiagnosticoSemanal({
   const { data: googleStatus } = useGoogleConnectionStatus(clientId);
   const isGoogleConnected = googleStatus?.connected === true;
   const { data: gaData } = useGoogleAnalytics(clientId, datePreset, isGoogleConnected);
+  const { data: gaAdsData } = useGoogleAds(clientId, datePreset, isGoogleConnected);
 
   const { whatWeDid, setWhatWeDid, nextActions, setNextActions, save: saveNotes, saving: savingNotes } =
     useWeeklyNotes(clientId, datePreset);
@@ -140,6 +143,7 @@ export function DiagnosticoSemanal({
           metricsConfig,
           funnelLabels: labelMap || {},
           googleAnalytics: isGoogleConnected ? gaData : null,
+          googleAdsCampaigns: isGoogleConnected ? gaAdsData?.campaigns || [] : null,
         },
       });
       toast.success("Diagnóstico salvo!");
@@ -404,6 +408,7 @@ export function DiagnosticoSemanal({
         {/* Funis / Campanhas */}
         <div className="space-y-6">
           <DiagnosticoGoogleFunnelSection clientId={clientId} datePreset={datePreset} />
+          <DiagnosticoGoogleCampaignsSection clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           {groups.map(g => (
             <DiagnosticoFunnelSection
               key={g.key + (g.isFunnel ? "" : "-c")}
@@ -475,6 +480,7 @@ export function DiagnosticoSemanal({
           onClose={() => setPresenting(false)}
           clientId={clientId}
           googleAnalyticsData={isGoogleConnected ? gaData : null}
+          googleAdsCampaigns={isGoogleConnected ? gaAdsData?.campaigns || [] : null}
         />
       )}
 

@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
+import { useGoogleAds } from "@/hooks/useGoogleAds";
+import { formatCurrency } from "@/lib/format";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
 import { useFunnelLabels } from "@/hooks/useFunnelLabels";
@@ -42,6 +44,8 @@ interface Props {
   funnelLabels?: Record<string, string>;
   /** Dados estáticos do Google Analytics para visualização pública offline */
   googleAnalyticsData?: any;
+  /** Dados estáticos do Google Ads para visualização pública offline */
+  googleAdsCampaigns?: any[];
 }
 
 type Slide =
@@ -50,6 +54,7 @@ type Slide =
   | { kind: "group"; group: FunnelGroup }
   | { kind: "manual"; manual: ManualFunnel }
   | { kind: "google-funnel" }
+  | { kind: "google-ads" }
   | { kind: "diagnostic"; key: keyof DiagnosticBlocks; title: string; emoji: string; accent: string };
 
 function fmtMoney(v: number, sym: string) {
@@ -62,7 +67,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels, googleAnalyticsData,
+  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels, googleAnalyticsData, googleAdsCampaigns,
 }: Props) {
   const { data: liveLabelMap } = useFunnelLabels(clientId);
   const resolvedLabels = funnelLabels || liveLabelMap || {};
@@ -75,7 +80,10 @@ export function DiagnosticoPresentMode({
     { kind: "notes" },
     ...groups.map(g => ({ kind: "group" as const, group: g })),
     ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
-    ...(isGoogleConnected ? [{ kind: "google-funnel" as const }] : []),
+    ...(isGoogleConnected ? [
+      { kind: "google-funnel" as const },
+      { kind: "google-ads" as const }
+    ] : []),
     { kind: "diagnostic", key: "positives", title: "O que foi positivo", emoji: "✅", accent: "from-green-500/20" },
     { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
     { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
@@ -202,6 +210,15 @@ export function DiagnosticoPresentMode({
                 clientId={clientId} 
                 datePreset={datePresetKey || datePreset} 
                 gaData={googleAnalyticsData}
+              />
+            )}
+
+            {slide.kind === "google-ads" && (clientId || googleAdsCampaigns) && (
+              <GoogleAdsCampaignsSlide
+                clientId={clientId}
+                datePreset={datePresetKey || datePreset}
+                campaigns={googleAdsCampaigns}
+                currencySymbol={currencySymbol}
               />
             )}
 
@@ -531,6 +548,137 @@ function GoogleFunnelSlide({ clientId, datePreset, gaData }: { clientId?: string
           <p className="text-xs text-muted-foreground leading-normal">
             Exibindo os principais eventos detectados nas páginas do cliente.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GoogleAdsCampaignsSlide({
+  clientId,
+  datePreset,
+  campaigns,
+  currencySymbol = "R$",
+}: {
+  clientId?: string;
+  datePreset?: string;
+  campaigns?: any[];
+  currencySymbol?: string;
+}) {
+  const { data: status } = useGoogleConnectionStatus(
+    clientId && !campaigns ? clientId : undefined
+  );
+  const isConnected = campaigns ? true : status?.connected === true;
+
+  const { data: liveData, isLoading } = useGoogleAds(
+    clientId && !campaigns ? clientId : undefined,
+    datePreset,
+    isConnected && !campaigns
+  );
+
+  const rawCampaigns = campaigns || liveData?.campaigns || [];
+
+  const campaignsList = useMemo(() => {
+    return rawCampaigns
+      .filter((c) => c.cost > 0 || c.impressions > 0)
+      .sort((a, b) => b.cost - a.cost);
+  }, [rawCampaigns]);
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center py-16 gap-2.5">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground font-semibold">Carregando Campanhas do Google Ads...</span>
+      </div>
+    );
+  }
+
+  if (campaignsList.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center py-16">
+        <p className="text-lg text-muted-foreground italic">Nenhuma campanha do Google Ads disponível para este período.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold flex items-center gap-1.5">
+          <Target className="h-4 w-4" /> Google Ads
+        </p>
+        <h2 className="text-4xl font-bold text-card-foreground mt-1">Desempenho das Campanhas</h2>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-muted/20 p-6 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="text-left px-4 py-3 font-semibold">Campanha</th>
+                <th className="text-right px-4 py-3 font-semibold">Investimento</th>
+                <th className="text-right px-4 py-3 font-semibold">Cliques</th>
+                <th className="text-right px-4 py-3 font-semibold">CTR</th>
+                <th className="text-right px-4 py-3 font-semibold">Conversões</th>
+                <th className="text-right px-4 py-3 font-semibold">CPA</th>
+                <th className="text-right px-4 py-3 font-semibold">ROAS</th>
+                <th className="text-center px-4 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaignsList.map((c) => {
+                const cpa = c.conversions > 0 ? c.cost / c.conversions : 0;
+                const ctr = c.ctr || (c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0);
+                const roas = c.cost > 0 ? c.revenue / c.cost : 0;
+                const isStatusActive = c.status?.toLowerCase() === "enabled" || c.status?.toLowerCase() === "active";
+
+                return (
+                  <tr key={c.id} className="border-t border-border hover:bg-muted/10 transition-colors">
+                    <td className="px-4 py-4 text-card-foreground font-semibold truncate max-w-[280px]" title={c.name}>
+                      {c.name}
+                    </td>
+                    <td className="px-4 py-4 text-right text-card-foreground font-mono font-medium">
+                      {formatCurrency(c.cost, currencySymbol)}
+                    </td>
+                    <td className="px-4 py-4 text-right text-card-foreground font-mono font-medium">
+                      {c.clicks.toLocaleString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-4 text-right text-card-foreground font-mono font-medium">
+                      {ctr.toFixed(2)}%
+                    </td>
+                    <td className="px-4 py-4 text-right text-primary font-bold font-mono">
+                      {c.conversions.toFixed(0)}
+                    </td>
+                    <td className="px-4 py-4 text-right text-card-foreground font-mono font-medium">
+                      {cpa > 0 ? formatCurrency(cpa, currencySymbol) : "—"}
+                    </td>
+                    <td className="px-4 py-4 text-right text-card-foreground font-mono font-medium">
+                      {roas > 0 ? `${roas.toFixed(2)}x` : "—"}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
+                          isStatusActive
+                            ? "bg-green-500/15 text-green-500"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isStatusActive ? (
+                          <>
+                            <Play className="h-2 w-2 fill-green-500" /> Ativa
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="h-2 w-2 fill-muted-foreground" /> Pausada
+                          </>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
