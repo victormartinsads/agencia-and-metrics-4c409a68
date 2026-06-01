@@ -113,7 +113,24 @@ export function useWeeklyDiagnostic(clientId: string, datePreset: string) {
       await persist(next);
       toast.success("Diagnóstico gerado!");
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao gerar diagnóstico");
+      console.error("Erro ao gerar diagnóstico por IA:", e);
+      let errMsg = "Erro ao gerar diagnóstico. Tente novamente.";
+      if (e instanceof Error) {
+        errMsg = e.message;
+        if (e.name === "FunctionsHttpError") {
+          const status = (e as any).status;
+          if (status === 402) {
+            errMsg = "Erro 402: Créditos de IA esgotados na Lovable. Adicione créditos em Settings > Workspace > Usage.";
+          } else if (status === 429) {
+            errMsg = "Erro 429: Limite de requisições de IA excedido. Tente novamente em alguns instantes.";
+          } else if (status === 500) {
+            errMsg = "Erro 500: Falha no servidor do Supabase ou na Edge Function. Certifique-se de que a Edge Function 'weekly-diagnostic' está implantada e a chave 'LOVABLE_API_KEY' está configurada.";
+          } else {
+            errMsg = `Erro da Edge Function (Status ${status}): ${e.message}`;
+          }
+        }
+      }
+      toast.error(errMsg, { duration: 8000 });
     } finally {
       setGenerating(false);
     }

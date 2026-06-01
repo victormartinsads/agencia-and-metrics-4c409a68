@@ -32,15 +32,15 @@ Deno.serve(async (req: Request) => {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada nos secrets do Supabase. Acesse seu painel do Supabase e adicione esta chave." }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { summary } = await req.json();
     if (!summary || typeof summary !== "string") {
       return new Response(JSON.stringify({ error: "summary (string) is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -82,17 +82,17 @@ Deno.serve(async (req: Request) => {
       const text = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, text);
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns instantes." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ error: "Rate limit de IA excedido. Tente novamente em alguns instantes." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados na Lovable. Adicione créditos em Settings > Workspace > Usage." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "Falha ao gerar diagnóstico" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: `Falha ao gerar diagnóstico. Erro do Gateway de IA (Status ${aiResp.status}): ${text.slice(0, 150)}` }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -100,8 +100,8 @@ Deno.serve(async (req: Request) => {
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       console.error("No tool call returned:", JSON.stringify(data));
-      return new Response(JSON.stringify({ error: "Resposta inválida da IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -111,8 +111,8 @@ Deno.serve(async (req: Request) => {
     });
   } catch (e) {
     console.error("weekly-diagnostic error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido ao gerar o diagnóstico." }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
