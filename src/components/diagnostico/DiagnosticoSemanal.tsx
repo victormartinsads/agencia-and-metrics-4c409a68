@@ -86,6 +86,17 @@ export function DiagnosticoSemanal({
   const { data: gaData } = useGoogleAnalytics(clientId, datePreset, isGoogleConnected);
   const { data: gaAdsData } = useGoogleAds(clientId, datePreset, isGoogleConnected);
 
+  // Apenas campanhas Google Ads com gasto ou impressões
+  const googleCampaignsList = useMemo(() => {
+    return (gaAdsData?.campaigns || [])
+      .filter((c) => c.cost > 0 || c.impressions > 0);
+  }, [gaAdsData]);
+
+  // Se tem qualquer campanha (Meta ou Google Ads) ativa
+  const hasActiveCampaigns = useMemo(() => {
+    return activeCampaigns.length > 0 || googleCampaignsList.length > 0;
+  }, [activeCampaigns, googleCampaignsList]);
+
   const { whatWeDid, setWhatWeDid, nextActions, setNextActions, save: saveNotes, saving: savingNotes } =
     useWeeklyNotes(clientId, datePreset);
 
@@ -155,90 +166,149 @@ export function DiagnosticoSemanal({
 
   // Resumo enviado pra IA
   const summaryForAI = useMemo(() => {
-    const totals = activeCampaigns.reduce(
-      (acc, c) => {
-        acc.spend += c.spend;
-        acc.impressions += c.impressions;
-        acc.clicks += c.clicks;
-        acc.conversions += c.conversions;
-        acc.purchaseValue += c.purchaseValue || 0;
-        return acc;
-      },
-      { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchaseValue: 0 }
-    );
-    const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-    const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
-    const roas = totals.spend > 0 && totals.purchaseValue > 0 ? totals.purchaseValue / totals.spend : 0;
-
     const lines: string[] = [];
     lines.push(`# Cliente: ${clientName}`);
     lines.push(`Período: ${DATE_LABEL[datePreset] || datePreset}`);
     lines.push("");
-    lines.push("## Métricas globais");
-    lines.push(`- Investimento total: ${currencySymbol} ${totals.spend.toFixed(2)}`);
-    lines.push(`- Resultados totais: ${totals.conversions}`);
-    lines.push(`- CPA médio: ${currencySymbol} ${cpa.toFixed(2)}`);
-    lines.push(`- CTR médio: ${ctr.toFixed(2)}%`);
-    if (roas > 0) lines.push(`- ROAS: ${roas.toFixed(2)}x`);
-    lines.push("");
-    lines.push(`## Funis e campanhas ativas (${groups.length})`);
 
-    for (const g of groups) {
-      const gSpend = g.campaigns.reduce((s, c) => s + c.spend, 0);
-      const gConv = g.campaigns.reduce((s, c) => s + c.conversions, 0);
-      const gImp = g.campaigns.reduce((s, c) => s + c.impressions, 0);
-      const gClicks = g.campaigns.reduce((s, c) => s + c.clicks, 0);
-      const gCtr = gImp > 0 ? (gClicks / gImp) * 100 : 0;
-      const gCpa = gConv > 0 ? gSpend / gConv : 0;
+    // --- Meta Ads Section ---
+    if (activeCampaigns.length > 0) {
+      const totals = activeCampaigns.reduce(
+        (acc, c) => {
+          acc.spend += c.spend;
+          acc.impressions += c.impressions;
+          acc.clicks += c.clicks;
+          acc.conversions += c.conversions;
+          acc.purchaseValue += c.purchaseValue || 0;
+          return acc;
+        },
+        { spend: 0, impressions: 0, clicks: 0, conversions: 0, purchaseValue: 0 }
+      );
+      const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
+      const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
+      const roas = totals.spend > 0 && totals.purchaseValue > 0 ? totals.purchaseValue / totals.spend : 0;
 
-      const rawTitle = (() => {
-        if (g.isFunnel) {
-          const code = extractFunnelCode(g.campaigns[0]?.name);
-          return (code && labelMap?.[code]) || g.key;
-        } else {
-          const campaignId = g.campaigns[0]?.id;
-          return (campaignId && labelMap?.[campaignId]) || g.key;
-        }
-      })();
-
-      const label = g.isFunnel ? `Funil: ${rawTitle}` : `Campanha: ${rawTitle}`;
-
+      lines.push("## Meta Ads: Métricas Globais");
+      lines.push(`- Investimento total: ${currencySymbol} ${totals.spend.toFixed(2)}`);
+      lines.push(`- Resultados totais: ${totals.conversions}`);
+      lines.push(`- CPA médio: ${currencySymbol} ${cpa.toFixed(2)}`);
+      lines.push(`- CTR médio: ${ctr.toFixed(2)}%`);
+      if (roas > 0) lines.push(`- ROAS: ${roas.toFixed(2)}x`);
       lines.push("");
-      lines.push(`### ${label}`);
-      lines.push(`- Investimento: ${currencySymbol} ${gSpend.toFixed(2)}`);
-      lines.push(`- Resultados: ${gConv}`);
-      lines.push(`- CTR: ${gCtr.toFixed(2)}% | CPA: ${currencySymbol} ${gCpa.toFixed(2)}`);
+      lines.push(`### Funis e campanhas ativas Meta (${groups.length})`);
 
-      // Top 3 criativos do grupo
-      const allCreatives = g.campaigns.flatMap(c => {
-        const customCName = labelMap?.[c.id] || c.name;
-        return c.creatives.map(cr => ({ ...cr, _camp: customCName }));
-      });
-      const top = allCreatives
-        .filter(cr => cr.spend > 0 || cr.impressions > 0)
-        .sort((a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions) || b.ctr - a.ctr)
-        .slice(0, 3);
-      if (top.length > 0) {
-        lines.push("- Top criativos:");
-        for (const cr of top) {
-          const r = cr.primaryResult ?? cr.conversions;
-          const cCpa = r > 0 ? cr.spend / r : 0;
-          lines.push(`  • ${cr.name} (conjunto ${cr.adsetName || "—"}): ${r} resultados, CPA ${currencySymbol} ${cCpa.toFixed(2)}, CTR ${cr.ctr.toFixed(2)}%`);
+      for (const g of groups) {
+        const gSpend = g.campaigns.reduce((s, c) => s + c.spend, 0);
+        const gConv = g.campaigns.reduce((s, c) => s + c.conversions, 0);
+        const gImp = g.campaigns.reduce((s, c) => s + c.impressions, 0);
+        const gClicks = g.campaigns.reduce((s, c) => s + c.clicks, 0);
+        const gCtr = gImp > 0 ? (gClicks / gImp) * 100 : 0;
+        const gCpa = gConv > 0 ? gSpend / gConv : 0;
+
+        const rawTitle = (() => {
+          if (g.isFunnel) {
+            const code = extractFunnelCode(g.campaigns[0]?.name);
+            return (code && labelMap?.[code]) || g.key;
+          } else {
+            const campaignId = g.campaigns[0]?.id;
+            return (campaignId && labelMap?.[campaignId]) || g.key;
+          }
+        })();
+
+        const label = g.isFunnel ? `Funil: ${rawTitle}` : `Campanha: ${rawTitle}`;
+
+        lines.push("");
+        lines.push(`#### ${label}`);
+        lines.push(`- Investimento: ${currencySymbol} ${gSpend.toFixed(2)}`);
+        lines.push(`- Resultados: ${gConv}`);
+        lines.push(`- CTR: ${gCtr.toFixed(2)}% | CPA: ${currencySymbol} ${gCpa.toFixed(2)}`);
+
+        // Top 3 criativos do grupo
+        const allCreatives = g.campaigns.flatMap(c => {
+          const customCName = labelMap?.[c.id] || c.name;
+          return c.creatives.map(cr => ({ ...cr, _camp: customCName }));
+        });
+        const top = allCreatives
+          .filter(cr => cr.spend > 0 || cr.impressions > 0)
+          .sort((a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions) || b.ctr - a.ctr)
+          .slice(0, 3);
+        if (top.length > 0) {
+          lines.push("- Top criativos:");
+          for (const cr of top) {
+            const r = cr.primaryResult ?? cr.conversions;
+            const cCpa = r > 0 ? cr.spend / r : 0;
+            lines.push(`  • ${cr.name} (conjunto ${cr.adsetName || "—"}): ${r} resultados, CPA ${currencySymbol} ${cCpa.toFixed(2)}, CTR ${cr.ctr.toFixed(2)}%`);
+          }
         }
       }
+      lines.push("");
     }
 
-    lines.push("");
+    // --- Google Ads Section ---
+    if (googleCampaignsList.length > 0) {
+      const gTotals = googleCampaignsList.reduce(
+        (acc, c) => {
+          acc.cost += c.cost;
+          acc.impressions += c.impressions;
+          acc.clicks += c.clicks;
+          acc.conversions += c.conversions;
+          acc.revenue += c.revenue || 0;
+          return acc;
+        },
+        { cost: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+      );
+      const gCtr = gTotals.impressions > 0 ? (gTotals.clicks / gTotals.impressions) * 100 : 0;
+      const gCpa = gTotals.conversions > 0 ? gTotals.cost / gTotals.conversions : 0;
+      const gRoas = gTotals.cost > 0 && gTotals.revenue > 0 ? gTotals.revenue / gTotals.cost : 0;
+
+      lines.push("## Google Ads: Métricas Globais");
+      lines.push(`- Investimento total: ${currencySymbol} ${gTotals.cost.toFixed(2)}`);
+      lines.push(`- Resultados totais: ${gTotals.conversions}`);
+      lines.push(`- CPA médio: ${currencySymbol} ${gCpa.toFixed(2)}`);
+      lines.push(`- CTR médio: ${gCtr.toFixed(2)}%`);
+      if (gRoas > 0) lines.push(`- ROAS: ${gRoas.toFixed(2)}x`);
+      lines.push("");
+      lines.push(`### Campanhas ativas Google Ads (${googleCampaignsList.length})`);
+
+      for (const c of googleCampaignsList) {
+        const cTitle = labelMap?.[`google-ads-${c.id}`] || c.name;
+        const cCtr = c.ctr || (c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0);
+        const cCpa = c.conversions > 0 ? c.cost / c.conversions : 0;
+
+        lines.push("");
+        lines.push(`#### Campanha: ${cTitle} (${c.type})`);
+        lines.push(`- Investimento: ${currencySymbol} ${c.cost.toFixed(2)}`);
+        lines.push(`- Resultados: ${c.conversions}`);
+        lines.push(`- CTR: ${cCtr.toFixed(2)}% | CPA: ${currencySymbol} ${cCpa.toFixed(2)}`);
+
+        // Top keywords (Search)
+        if (c.type === "SEARCH" && c.keywords && c.keywords.length > 0) {
+          lines.push("- Top Palavras-Chave:");
+          for (const kw of c.keywords.slice(0, 5)) {
+            lines.push(`  • "${kw.text}" (${kw.matchType}): ${kw.conversions} conv, CPA ${currencySymbol} ${(kw.conversions > 0 ? kw.cost / kw.conversions : 0).toFixed(2)}, cost ${currencySymbol} ${kw.cost.toFixed(2)}`);
+          }
+        }
+        // Top creatives (Display/Video/PMax)
+        if (c.creatives && c.creatives.length > 0) {
+          lines.push("- Top Criativos:");
+          for (const cr of c.creatives.slice(0, 3)) {
+            lines.push(`  • ${cr.name} (${cr.youtubeVideoId ? 'Vídeo YouTube' : 'Imagem'}): ${cr.conversions} conv, clicks ${cr.clicks}, cost ${currencySymbol} ${cr.cost.toFixed(2)}`);
+          }
+        }
+      }
+      lines.push("");
+    }
+
     lines.push("## Anotações do gestor");
     lines.push(`### O que fizemos esta semana\n${whatWeDid || "(sem anotações)"}`);
     lines.push("");
     lines.push(`### Próximas ações planejadas\n${nextActions || "(sem anotações)"}`);
 
     return lines.join("\n");
-  }, [activeCampaigns, groups, whatWeDid, nextActions, clientName, datePreset, currencySymbol, labelMap]);
+  }, [activeCampaigns, googleCampaignsList, groups, whatWeDid, nextActions, clientName, datePreset, currencySymbol, labelMap]);
 
   const handleGenerateAI = () => {
-    if (activeCampaigns.length === 0) {
+    if (!hasActiveCampaigns) {
       toast.error("Sem campanhas com gasto no período para analisar.");
       return;
     }
@@ -279,7 +349,7 @@ export function DiagnosticoSemanal({
             <TabsTrigger value="atual">Como estamos agora</TabsTrigger>
             <TabsTrigger value="salvos" className="gap-1"><Archive className="h-3.5 w-3.5" /> Diagnósticos salvos</TabsTrigger>
           </TabsList>
-          {activeCampaigns.length > 0 && (
+          {hasActiveCampaigns && (
             <div className="flex flex-wrap items-center gap-1">
               <Button onClick={handleRefresh} disabled={refreshing} variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-xs text-muted-foreground hover:text-foreground">
                 {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
@@ -308,7 +378,7 @@ export function DiagnosticoSemanal({
 
         <TabsContent value="atual" className="space-y-6">
           <GoogleAdsSummaryCard clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
-          {activeCampaigns.length === 0 ? (
+          {!hasActiveCampaigns ? (
             <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
               Nenhuma campanha com gasto nos {DATE_LABEL[datePreset] || datePreset}.
             </div>

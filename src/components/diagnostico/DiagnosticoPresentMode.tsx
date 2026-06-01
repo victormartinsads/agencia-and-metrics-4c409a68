@@ -97,7 +97,6 @@ export function DiagnosticoPresentMode({
     ...groups.map(g => ({ kind: "group" as const, group: g })),
     ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
     ...(isGoogleConnected ? [
-      { kind: "google-funnel" as const },
       { kind: "google-ads" as const },
       ...campaignsList.map(c => ({ kind: "google-ads-campaign" as const, campaign: c }))
     ] : []),
