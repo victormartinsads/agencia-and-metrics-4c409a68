@@ -68,40 +68,20 @@ export function DiagnosticoGoogleCampaignsSection({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Section Header */}
-      <header className="flex items-center justify-between pb-2 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary animate-pulse" />
-            <h2 className="text-2xl font-bold text-card-foreground">Campanhas do Google Ads</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Métricas de performance, palavras-chave e criativos separados por campanha
-          </p>
-        </div>
-        <span className="text-[10px] font-semibold bg-primary/15 text-primary px-3 py-1 rounded-full border border-primary/20 flex items-center gap-1.5 shadow-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          Google Ads Ativo
-        </span>
-      </header>
-
-      {/* Campaigns Loop */}
-      <div className="space-y-6">
-        {campaignsList.map((campaign) => (
-          <GoogleCampaignCard
-            key={campaign.id}
-            campaign={campaign}
-            clientId={clientId}
-            datePreset={datePreset}
-            currencySymbol={currencySymbol}
-            resolvedLabels={resolvedLabels}
-            readOnly={!clientId || !!staticCampaigns}
-            overrideConfig={groupConfigs?.[`google-ads-${campaign.id}`]}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      {campaignsList.map((campaign) => (
+        <GoogleCampaignCard
+          key={campaign.id}
+          campaign={campaign}
+          clientId={clientId}
+          datePreset={datePreset}
+          currencySymbol={currencySymbol}
+          resolvedLabels={resolvedLabels}
+          readOnly={!clientId || !!staticCampaigns}
+          overrideConfig={groupConfigs?.[`google-ads-${campaign.id}`]}
+        />
+      ))}
+    </>
   );
 }
 

@@ -96,7 +96,7 @@ export function DiagnosticoPresentMode({
     { kind: "notes" },
     ...groups.map(g => ({ kind: "group" as const, group: g })),
     ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
-    ...(isGoogleConnected ? [
+    ...(campaignsList.length > 0 ? [
       { kind: "google-ads" as const },
       ...campaignsList.map(c => ({ kind: "google-ads-campaign" as const, campaign: c }))
     ] : []),
@@ -104,7 +104,7 @@ export function DiagnosticoPresentMode({
     { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
     { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
     { kind: "diagnostic", key: "client_requests", title: "Pedidos ao cliente", emoji: "🤝", accent: "from-amber-500/20" },
-  ], [groups, manualFunnels, isGoogleConnected, campaignsList]);
+  ], [groups, manualFunnels, campaignsList]);
 
   const [idx, setIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);

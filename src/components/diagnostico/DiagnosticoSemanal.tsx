@@ -549,8 +549,8 @@ export function DiagnosticoSemanal({
           currencySymbol={currencySymbol}
           onClose={() => setPresenting(false)}
           clientId={clientId}
-          googleAnalyticsData={isGoogleConnected ? gaData : null}
-          googleAdsCampaigns={isGoogleConnected ? gaAdsData?.campaigns || [] : null}
+          googleAnalyticsData={gaData || null}
+          googleAdsCampaigns={gaAdsData?.campaigns || []}
         />
       )}
 
