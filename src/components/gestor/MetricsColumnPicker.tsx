@@ -15,24 +15,47 @@ export interface MetricColumn {
 
 export const ALL_METRIC_COLUMNS: MetricColumn[] = [
   // Núcleo
-  { key: "spend", label: "Gasto", format: "currency", group: "Núcleo" },
+  { key: "status", label: "Veiculação (Status)", group: "Núcleo" },
+  { key: "spend", label: "Valor Usado (Gasto)", format: "currency", group: "Núcleo" },
+  { key: "dailyBudget", label: "Orçamento", format: "currency", group: "Núcleo" },
   { key: "impressions", label: "Impressões", format: "number", group: "Núcleo" },
   { key: "reach", label: "Alcance", format: "number", group: "Núcleo" },
   { key: "frequency", label: "Frequência", format: "number", group: "Núcleo" },
-  { key: "clicks", label: "Cliques", format: "number", group: "Núcleo" },
-  { key: "ctr", label: "CTR", format: "percent", group: "Núcleo" },
-  { key: "cpc", label: "CPC", format: "currency", group: "Núcleo" },
-  { key: "cpm", label: "CPM", format: "currency", group: "Núcleo" },
-  // Conversões
-  { key: "conversions", label: "Resultado primário", format: "number", group: "Conversões" },
-  { key: "costPerConversion", label: "CPA", format: "currency", group: "Conversões" },
+  { key: "clicks", label: "Cliques no Link", format: "number", group: "Núcleo" },
+  { key: "ctr", label: "CTR (taxa de cliques no link)", format: "percent", group: "Núcleo" },
+  { key: "cpc", label: "CPC (custo por clique)", format: "currency", group: "Núcleo" },
+  { key: "cpm", label: "CPM (custo por 1.000)", format: "currency", group: "Núcleo" },
+  // Mensagens
+  { key: "messaging_started", label: "Conversas por mensagem iniciadas", format: "number", group: "Mensagens" },
+  { key: "cost_per_message", label: "Custo por conversa iniciada", format: "currency", group: "Mensagens" },
+  // Conversões & Resultados
+  { key: "conversions", label: "Resultados (Leads)", format: "number", group: "Conversões" },
+  { key: "costPerConversion", label: "Custo por resultado (CPA)", format: "currency", group: "Conversões" },
   { key: "purchases", label: "Compras", format: "number", group: "Conversões" },
   { key: "purchaseValue", label: "Valor de compra", format: "currency", group: "Conversões" },
-  { key: "addToCart", label: "Add to Cart", format: "number", group: "Conversões" },
-  { key: "initiateCheckout", label: "Initiate Checkout", format: "number", group: "Conversões" },
-  { key: "landingPageViews", label: "LPV", format: "number", group: "Conversões" },
-  // Engajamento / outros
-  { key: "status", label: "Status", group: "Outros" },
+  { key: "profile_visits", label: "Visitas ao Perfil", format: "number", group: "Conversões" },
+  // Vídeo
+  { key: "videoPlays", label: "Reproduções 3s", format: "number", group: "Vídeo" },
+  { key: "videoP25", label: "Reproduções 25%", format: "number", group: "Vídeo" },
+  { key: "videoP50", label: "Reproduções 50%", format: "number", group: "Vídeo" },
+  { key: "videoP75", label: "Reproduções 75%", format: "number", group: "Vídeo" },
+  { key: "videoP95", label: "Reproduções 95%", format: "number", group: "Vídeo" },
+  { key: "videoP100", label: "Reproduções 100% (ThruPlays)", format: "number", group: "Vídeo" },
+  // Tráfego & LP Customizadas
+  { key: "trafficUtilisationLp", label: "Aproveitamento do Tráfego - LP", format: "percent", group: "Tráfego" },
+  { key: "trafficLossLp", label: "Perda do Tráfego - LP", format: "percent", group: "Tráfego" },
+  { key: "trafficUtilisationForm", label: "Aproveitamento Tráfego - Formulário", format: "percent", group: "Tráfego" },
+  { key: "trafficLossForm", label: "Perda de Tráfego - Formulário", format: "percent", group: "Tráfego" },
+  { key: "pageConversionRate", label: "Conversão da página", format: "percent", group: "Tráfego" },
+  // Formulário
+  { key: "initiateCheckout", label: "Iniciou o Formulário", format: "number", group: "Formulário" },
+  { key: "costPerInitiateCheckout", label: "Custo por iniciar o formulário", format: "currency", group: "Formulário" },
+  { key: "formSubmitRate", label: "Tx. de Envios do formulário", format: "percent", group: "Formulário" },
+  // Agendamento
+  { key: "schedule", label: "Agendou reunião", format: "number", group: "Agendamento" },
+  { key: "costPerSchedule", label: "Custo por agendar reunião", format: "currency", group: "Agendamento" },
+  { key: "scheduleRate", label: "Tx. de Agendamento", format: "percent", group: "Agendamento" },
+  // Outros
   { key: "objective", label: "Objetivo", group: "Outros" },
 ];
 

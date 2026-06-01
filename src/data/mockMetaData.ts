@@ -27,7 +27,34 @@ export interface Campaign {
   actionBreakdown?: Record<string, number>;
   costPerAction?: Record<string, number>;
   actionValues?: Record<string, number>;
+  // Raw Video & Click metrics from Meta Edge Function
+  dailyBudget?: number;
+  lifetimeBudget?: number;
+  videoPlays?: number;
+  thruplays?: number;
+  videoP25?: number;
+  videoP50?: number;
+  videoP75?: number;
+  videoP95?: number;
+  videoP100?: number;
+  avgVideoTime?: number;
+  linkClicks?: number;
+  linkCtr?: number;
+  cpcLink?: number;
+  uniqueClicks?: number;
+  uniqueCtr?: number;
+  outboundClicks?: number;
+  // Custom computed metrics for Traffic Manager
+  hookRate?: number;
+  holdRate?: number;
+  pageLeak?: number;
+  leadQuality?: number;
+  costPerThruplay?: number;
+  cpcUnique?: number;
+  schedule?: number;
+  messaging_started?: number;
 }
+
 
 export interface Creative {
   id: string;

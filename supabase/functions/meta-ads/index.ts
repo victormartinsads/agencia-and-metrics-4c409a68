@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
           "video_p75_watched_actions","video_p95_watched_actions",
           "video_p100_watched_actions","video_avg_time_watched_actions",
         ].join(",");
-        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,insights.${insightsModifier}{${insightFields}}&access_token=${token}&limit=100`;
+        const campaignsUrl = `${GRAPH_API}/${actId}/campaigns?fields=name,status,objective,daily_budget,lifetime_budget,insights.${insightsModifier}{${insightFields}}&access_token=${token}&limit=100`;
 
         try {
           const fetched = await fetchMeta<any>(campaignsUrl);
@@ -386,6 +386,8 @@ Deno.serve(async (req) => {
           name: camp.name,
           status: camp.status === "ACTIVE" ? "active" : camp.status === "PAUSED" ? "paused" : "completed",
           objective: camp.objective || "",
+          dailyBudget: Number(camp.daily_budget || 0),
+          lifetimeBudget: Number(camp.lifetime_budget || 0),
           spend,
           impressions: Number(insight?.impressions || 0),
           clicks: Number(insight?.clicks || 0),
