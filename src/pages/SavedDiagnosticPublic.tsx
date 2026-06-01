@@ -105,7 +105,12 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
 
         {snap.googleAdsCampaigns && snap.googleAdsCampaigns.length > 0 && (
           <div className="space-y-4">
-            <DiagnosticoGoogleCampaignsSection campaigns={snap.googleAdsCampaigns} currencySymbol={currencySymbol} />
+            <DiagnosticoGoogleCampaignsSection
+              campaigns={snap.googleAdsCampaigns}
+              currencySymbol={currencySymbol}
+              groupConfigs={metricsConfig}
+              funnelLabels={funnelLabels}
+            />
           </div>
         )}
 

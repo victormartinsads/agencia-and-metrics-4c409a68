@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
 
     const { since, until } = mapDateRange(dateRange);
     const query = `
-      SELECT campaign.id, campaign.name, campaign.status,
+      SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,
         metrics.cost_micros, metrics.impressions, metrics.clicks,
         metrics.conversions, metrics.conversions_value, metrics.ctr, metrics.average_cpc
       FROM campaign
@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
     try { data = JSON.parse(raw); } catch { /* not JSON */ }
 
     // Auto-discover login-customer-id (manager) by trying accessible customers
+    let workingLoginId = explicitLogin ? String(explicitLogin).replace(/-/g, "") : undefined;
     if (res.status === 403 && !explicitLogin) {
       try {
         const listRes = await fetch(`${GOOGLE_ADS_API}/customers:listAccessibleCustomers`, {
@@ -183,19 +184,18 @@ Deno.serve(async (req) => {
         let listJson: any = {};
         try { listJson = JSON.parse(listRaw); } catch { /* */ }
         const ids: string[] = (listJson?.resourceNames || []).map((r: string) => r.split("/")[1]);
-        console.log(`google-ads: listAccessibleCustomers status=${listRes.status} ids=${JSON.stringify(ids)} raw=${listRaw.slice(0,200)}`);
+        console.log(`google-ads: listAccessibleCustomers status=${listRes.status} ids=${JSON.stringify(ids)}`);
         for (const id of ids) {
           if (id === customerId) continue;
           const r2 = await doSearch(id);
           const raw2 = await r2.text();
-          console.log(`google-ads: try login-customer-id=${id} status=${r2.status}`);
           if (r2.ok) {
             res = r2; raw = raw2;
+            workingLoginId = id;
             try { data = JSON.parse(raw2); } catch { /* */ }
             console.log(`google-ads: succeeded with login-customer-id=${id}`);
             break;
           } else if (r2.status !== 403) {
-            // Surface non-403 error
             res = r2; raw = raw2;
             try { data = JSON.parse(raw2); } catch { /* */ }
             break;
@@ -223,18 +223,173 @@ Deno.serve(async (req) => {
       });
     }
 
-    const campaigns = (data.results || []).map((r: any) => ({
-      id: r.campaign?.id,
-      name: r.campaign?.name,
-      status: r.campaign?.status,
-      cost: Number(r.metrics?.costMicros || 0) / 1_000_000,
-      impressions: Number(r.metrics?.impressions || 0),
-      clicks: Number(r.metrics?.clicks || 0),
-      conversions: Number(r.metrics?.conversions || 0),
-      revenue: Number(r.metrics?.conversionsValue || 0),
-      ctr: Number(r.metrics?.ctr || 0),
-      avgCpc: Number(r.metrics?.averageCpc || 0) / 1_000_000,
-    }));
+    // Secondary fetch: Keywords for Search
+    let keywordsData: any[] = [];
+    try {
+      const kwQuery = `
+        SELECT campaign.id,
+          ad_group_criterion.keyword.text,
+          ad_group_criterion.keyword.match_type,
+          metrics.cost_micros,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.conversions
+        FROM keyword_view
+        WHERE segments.date BETWEEN '${since}' AND '${until}'
+          AND metrics.impressions > 0
+        LIMIT 200
+      `;
+      const kwHeaders = { ...headers };
+      if (workingLoginId) kwHeaders["login-customer-id"] = workingLoginId;
+      const kwRes = await fetch(url, { method: "POST", headers: kwHeaders, body: JSON.stringify({ query: kwQuery }) });
+      if (kwRes.ok) {
+        const kwJson = await kwRes.json();
+        keywordsData = (kwJson.results || []).map((r: any) => ({
+          campaignId: r.campaign?.id,
+          text: r.adGroupCriterion?.keyword?.text,
+          matchType: r.adGroupCriterion?.keyword?.matchType,
+          cost: Number(r.metrics?.costMicros || 0) / 1_000_000,
+          impressions: Number(r.metrics?.impressions || 0),
+          clicks: Number(r.metrics?.clicks || 0),
+          conversions: Number(r.metrics?.conversions || 0),
+        }));
+      }
+    } catch (err) {
+      console.warn("Failed to fetch Google Ads keywords:", err);
+    }
+
+    // Secondary fetch: Asset views (Display, Youtube, PMax)
+    let creativesData: any[] = [];
+    try {
+      const assetQuery = `
+        SELECT campaign.id,
+          asset.id,
+          asset.name,
+          asset.type,
+          asset.image_asset.full_size.image_url,
+          asset.youtube_video_asset.youtube_video_id,
+          metrics.cost_micros,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.conversions
+        FROM ad_group_ad_asset_view
+        WHERE segments.date BETWEEN '${since}' AND '${until}'
+          AND metrics.impressions > 0
+        LIMIT 200
+      `;
+      const assetHeaders = { ...headers };
+      if (workingLoginId) assetHeaders["login-customer-id"] = workingLoginId;
+      const assetRes = await fetch(url, { method: "POST", headers: assetHeaders, body: JSON.stringify({ query: assetQuery }) });
+      if (assetRes.ok) {
+        const assetJson = await assetRes.json();
+        creativesData = (assetJson.results || []).map((r: any) => ({
+          campaignId: r.campaign?.id,
+          id: r.asset?.id,
+          name: r.asset?.name || `Criativo ${r.asset?.id}`,
+          type: r.asset?.type,
+          imageUrl: r.asset?.imageAsset?.fullSize?.imageUrl,
+          youtubeVideoId: r.asset?.youtubeVideoAsset?.youtubeVideoId,
+          cost: Number(r.metrics?.costMicros || 0) / 1_000_000,
+          impressions: Number(r.metrics?.impressions || 0),
+          clicks: Number(r.metrics?.clicks || 0),
+          conversions: Number(r.metrics?.conversions || 0),
+        }));
+      }
+    } catch (err) {
+      console.warn("Failed to fetch Google Ads assets:", err);
+    }
+
+    // Fallback creative fetch from ad_group_ad (for video ads YouTube links)
+    try {
+      const adQuery = `
+        SELECT campaign.id,
+          ad_group_ad.ad.id,
+          ad_group_ad.ad.name,
+          ad_group_ad.ad.type,
+          ad_group_ad.ad.video_ad.video.media_asset,
+          ad_group_ad.ad.video_responsive_ad.videos,
+          metrics.cost_micros,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.conversions
+        FROM ad_group_ad
+        WHERE segments.date BETWEEN '${since}' AND '${until}'
+          AND metrics.impressions > 0
+        LIMIT 100
+      `;
+      const adHeaders = { ...headers };
+      if (workingLoginId) adHeaders["login-customer-id"] = workingLoginId;
+      const adRes = await fetch(url, { method: "POST", headers: adHeaders, body: JSON.stringify({ query: adQuery }) });
+      if (adRes.ok) {
+        const adJson = await adRes.json();
+        for (const r of (adJson.results || [])) {
+          const campId = r.campaign?.id;
+          const adId = r.adGroupAd?.ad?.id;
+          const adName = r.adGroupAd?.ad?.name;
+          const adType = r.adGroupAd?.ad?.type;
+          const cost = Number(r.metrics?.costMicros || 0) / 1_000_000;
+          const impressions = Number(r.metrics?.impressions || 0);
+          const clicks = Number(r.metrics?.clicks || 0);
+          const conversions = Number(r.metrics?.conversions || 0);
+
+          let youtubeVideoId = r.adGroupAd?.ad?.videoAd?.video?.mediaAsset;
+          if (!youtubeVideoId && r.adGroupAd?.ad?.videoResponsiveAd?.videos?.length > 0) {
+            youtubeVideoId = r.adGroupAd?.ad?.videoResponsiveAd?.videos[0]?.video?.mediaAsset;
+          }
+
+          if (youtubeVideoId) {
+            const rawId = youtubeVideoId.split("/").pop();
+            const exists = creativesData.some(c => c.youtubeVideoId === rawId && c.campaignId === campId);
+            if (!exists) {
+              creativesData.push({
+                campaignId: campId,
+                id: adId,
+                name: adName || `Vídeo ${adId}`,
+                type: adType || "VIDEO",
+                youtubeVideoId: rawId,
+                cost,
+                impressions,
+                clicks,
+                conversions,
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch Google Ads ad_group_ad video fallbacks:", err);
+    }
+
+    const campaigns = (data.results || []).map((r: any) => {
+      const cId = r.campaign?.id;
+      const cType = r.campaign?.advertisingChannelType || "UNKNOWN";
+      
+      const campaignKeywords = keywordsData
+        .filter((kw: any) => kw.campaignId === cId)
+        .sort((a: any, b: any) => b.cost - a.cost)
+        .slice(0, 10);
+
+      const campaignCreatives = creativesData
+        .filter((cr: any) => cr.campaignId === cId)
+        .sort((a: any, b: any) => b.cost - a.cost)
+        .slice(0, 6);
+
+      return {
+        id: cId,
+        name: r.campaign?.name,
+        status: r.campaign?.status,
+        type: cType,
+        cost: Number(r.metrics?.costMicros || 0) / 1_000_000,
+        impressions: Number(r.metrics?.impressions || 0),
+        clicks: Number(r.metrics?.clicks || 0),
+        conversions: Number(r.metrics?.conversions || 0),
+        revenue: Number(r.metrics?.conversionsValue || 0),
+        ctr: Number(r.metrics?.ctr || 0),
+        avgCpc: Number(r.metrics?.averageCpc || 0) / 1_000_000,
+        keywords: campaignKeywords,
+        creatives: campaignCreatives,
+      };
+    });
 
     const totals = campaigns.reduce((acc: any, c: any) => ({
       cost: acc.cost + c.cost,

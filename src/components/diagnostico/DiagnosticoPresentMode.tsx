@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause, Search, Image as ImageIcon, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
-import { useGoogleAds } from "@/hooks/useGoogleAds";
+import { useGoogleAds, type GoogleAdsKeyword, type GoogleAdsCreative } from "@/hooks/useGoogleAds";
 import { formatCurrency } from "@/lib/format";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticBlocks } from "@/hooks/useWeeklyDiagnostic";
@@ -55,6 +55,7 @@ type Slide =
   | { kind: "manual"; manual: ManualFunnel }
   | { kind: "google-funnel" }
   | { kind: "google-ads" }
+  | { kind: "google-ads-campaign"; campaign: any }
   | { kind: "diagnostic"; key: keyof DiagnosticBlocks; title: string; emoji: string; accent: string };
 
 function fmtMoney(v: number, sym: string) {
@@ -75,6 +76,21 @@ export function DiagnosticoPresentMode({
   const { data: googleStatus } = useGoogleConnectionStatus(clientId && !googleAnalyticsData ? clientId : undefined);
   const isGoogleConnected = googleAnalyticsData ? true : (googleStatus?.connected === true);
 
+  // Query Google Ads live data for Present Mode if live mode
+  const { data: liveGaAdsData } = useGoogleAds(
+    clientId && !googleAdsCampaigns ? clientId : undefined,
+    datePresetKey || datePreset,
+    isGoogleConnected && !googleAdsCampaigns
+  );
+
+  const rawGoogleAdsCampaigns = googleAdsCampaigns || liveGaAdsData?.campaigns || [];
+
+  const campaignsList = useMemo(() => {
+    return rawGoogleAdsCampaigns
+      .filter((c) => c.cost > 0 || c.impressions > 0)
+      .sort((a, b) => b.cost - a.cost);
+  }, [rawGoogleAdsCampaigns]);
+
   const slides = useMemo<Slide[]>(() => [
     { kind: "cover" },
     { kind: "notes" },
@@ -82,13 +98,14 @@ export function DiagnosticoPresentMode({
     ...(manualFunnels || []).map(m => ({ kind: "manual" as const, manual: m })),
     ...(isGoogleConnected ? [
       { kind: "google-funnel" as const },
-      { kind: "google-ads" as const }
+      { kind: "google-ads" as const },
+      ...campaignsList.map(c => ({ kind: "google-ads-campaign" as const, campaign: c }))
     ] : []),
     { kind: "diagnostic", key: "positives", title: "O que foi positivo", emoji: "✅", accent: "from-green-500/20" },
     { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
     { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
     { kind: "diagnostic", key: "client_requests", title: "Pedidos ao cliente", emoji: "🤝", accent: "from-amber-500/20" },
-  ], [groups, manualFunnels, isGoogleConnected]);
+  ], [groups, manualFunnels, isGoogleConnected, campaignsList]);
 
   const [idx, setIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -219,6 +236,17 @@ export function DiagnosticoPresentMode({
                 datePreset={datePresetKey || datePreset}
                 campaigns={googleAdsCampaigns}
                 currencySymbol={currencySymbol}
+              />
+            )}
+
+            {slide.kind === "google-ads-campaign" && (
+              <GoogleAdsIndividualCampaignSlide
+                campaign={slide.campaign}
+                currencySymbol={currencySymbol}
+                clientId={clientId}
+                datePreset={datePresetKey || datePreset}
+                overrideConfig={groupConfigs?.[`google-ads-${slide.campaign.id}`]}
+                resolvedLabels={resolvedLabels}
               />
             )}
 
@@ -680,6 +708,247 @@ function GoogleAdsCampaignsSlide({
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GoogleAdsIndividualCampaignSlide({
+  campaign,
+  currencySymbol,
+  clientId,
+  datePreset,
+  overrideConfig,
+  resolvedLabels = {},
+}: {
+  campaign: any;
+  currencySymbol: string;
+  clientId?: string;
+  datePreset: string;
+  overrideConfig?: MetricsConfig;
+  resolvedLabels?: Record<string, string>;
+}) {
+  const groupKey = `google-ads-${campaign.id}`;
+  
+  // Custom metrics config
+  const { config: liveConfig } = useDiagnosticMetricsConfig(
+    clientId || "",
+    datePreset,
+    groupKey
+  );
+  
+  const config = overrideConfig || liveConfig;
+  const customCampaignName = resolvedLabels[groupKey] || campaign.name;
+
+  const getMetricValueAndOverride = (key: string) => {
+    const override = config.custom_metrics.find((m) => m.id === key);
+    const isOverridden = !!override;
+
+    let originalRaw = 0;
+    if (key === "spend" || key === "cost") originalRaw = campaign.cost;
+    else if (key === "conversions") originalRaw = campaign.conversions;
+    else if (key === "clicks") originalRaw = campaign.clicks;
+    else if (key === "impressions") originalRaw = campaign.impressions;
+    else if (key === "ctr") originalRaw = campaign.ctr || (campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0);
+    else if (key === "avgCpc" || key === "cpc") originalRaw = campaign.avgCpc;
+    else if (key === "cpa") originalRaw = campaign.conversions > 0 ? campaign.cost / campaign.conversions : 0;
+    else if (key === "roas") originalRaw = campaign.cost > 0 ? campaign.revenue / campaign.cost : 0;
+    else if (key === "revenue" || key === "purchaseValue") originalRaw = campaign.revenue;
+
+    const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
+
+    const formatValue = (val: number) => {
+      if (["spend", "cost", "avgCpc", "cpc", "cpa", "revenue", "purchaseValue"].includes(key)) {
+        return `${currencySymbol} ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+      if (key === "ctr") return `${val.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+      if (key === "roas") return `${val.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}x`;
+      if (["impressions", "clicks"].includes(key)) return val.toLocaleString("pt-BR");
+      return val.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+    };
+
+    return {
+      value: isOverridden ? (override.format === "text" ? override.value : formatValue(rawValue)) : formatValue(originalRaw),
+      isOverridden,
+    };
+  };
+
+  const getMetricLabel = (key: string): string => {
+    if (key === "spend" || key === "cost") return "Investimento";
+    if (key === "conversions") return "Conversões";
+    if (key === "clicks") return "Cliques";
+    if (key === "impressions") return "Impressões";
+    if (key === "ctr") return "CTR";
+    if (key === "avgCpc" || key === "cpc") return "CPC Médio";
+    if (key === "cpa") return "CPA";
+    if (key === "roas") return "ROAS";
+    return key;
+  };
+
+  const isHighlight = (key: string) => key === "spend" || key === "conversions";
+
+  const getMatchTypeName = (type: string) => {
+    switch (type?.toUpperCase()) {
+      case "EXACT": return "[Exata]";
+      case "PHRASE": return '"Frase"';
+      default: return "Ampla";
+    }
+  };
+
+  const getMatchTypeClass = (type: string) => {
+    switch (type?.toUpperCase()) {
+      case "EXACT": return "border-blue-500/25 bg-blue-500/10 text-blue-500";
+      case "PHRASE": return "border-emerald-500/25 bg-emerald-500/10 text-emerald-500";
+      default: return "border-slate-500/25 bg-slate-500/10 text-slate-400";
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold flex items-center gap-1.5">
+          <Target className="h-4 w-4" /> Google Ads • {campaign.type}
+        </p>
+        <h2 className="text-4xl font-bold text-card-foreground mt-1">{customCampaignName}</h2>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {config.visible_metrics.map((key) => {
+          const { value, isOverridden } = getMetricValueAndOverride(key);
+          return (
+            <BigKpi
+              key={key}
+              label={getMetricLabel(key)}
+              value={value}
+              highlight={isHighlight(key)}
+              custom={isOverridden}
+            />
+          );
+        })}
+
+        {/* Custom manual metrics */}
+        {config.custom_metrics
+          .filter((m) => !["spend", "cost", "conversions", "clicks", "impressions", "ctr", "avgCpc", "cpc", "cpa", "roas", "revenue", "purchaseValue"].includes(m.id))
+          .map((m) => (
+            <BigKpi
+              key={m.id}
+              label={m.label}
+              value={formatCustomValue(m, currencySymbol)}
+              custom
+            />
+          ))}
+      </div>
+
+      {/* Keywords or creatives details */}
+      <div className="mt-8 pt-6 border-t border-border">
+        {campaign.type === "SEARCH" && campaign.keywords && campaign.keywords.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+              <Search className="h-4 w-4 text-primary" /> Top Palavras-Chave de Busca
+            </h3>
+            <div className="rounded-xl border border-border bg-muted/10 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-muted-foreground font-semibold">
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-2.5">Palavra-Chave</th>
+                    <th className="text-center px-4 py-2.5 w-28">Correspondência</th>
+                    <th className="text-right px-4 py-2.5">Investimento</th>
+                    <th className="text-right px-4 py-2.5">Cliques</th>
+                    <th className="text-right px-4 py-2.5">CTR</th>
+                    <th className="text-right px-4 py-2.5">Conversões</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaign.keywords.slice(0, 5).map((kw: any, idx: number) => {
+                    const kwCtr = kw.impressions > 0 ? (kw.clicks / kw.impressions) * 100 : 0;
+                    return (
+                      <tr key={idx} className="border-b border-border hover:bg-muted/5 transition-colors">
+                        <td className="px-4 py-2.5 text-card-foreground font-semibold font-mono">{kw.text}</td>
+                        <td className="px-4 py-2.5 text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-semibold tracking-wide ${getMatchTypeClass(kw.matchType)}`}>
+                            {getMatchTypeName(kw.matchType)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono">{fmtMoney(kw.cost, currencySymbol)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono">{kw.clicks.toLocaleString("pt-BR")}</td>
+                        <td className="px-4 py-2.5 text-right font-mono">{kwCtr.toFixed(2)}%</td>
+                        <td className="px-4 py-2.5 text-right text-primary font-bold font-mono">{kw.conversions.toFixed(0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {campaign.creatives && campaign.creatives.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-primary" /> Top Criativos
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {campaign.creatives.slice(0, 6).map((creative: any) => {
+                const isVideo = !!creative.youtubeVideoId;
+                const imageUrl = isVideo
+                  ? `https://img.youtube.com/vi/${creative.youtubeVideoId}/hqdefault.jpg`
+                  : creative.imageUrl;
+
+                return (
+                  <div key={creative.id} className="group relative rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-md">
+                    <div className="aspect-square bg-muted relative overflow-hidden flex items-center justify-center">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={creative.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://picsum.photos/seed/${creative.id}/300/300`;
+                          }}
+                        />
+                      ) : (
+                        <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                      )}
+
+                      <span className="absolute top-2 left-2 p-1 rounded-md bg-black/60 text-white backdrop-blur-sm border border-white/10 shrink-0">
+                        {isVideo ? <Video className="h-3.5 w-3.5 text-red-500 fill-red-500" /> : <ImageIcon className="h-3.5 w-3.5 text-primary" />}
+                      </span>
+
+                      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 text-[11px] text-white">
+                        <div className="font-semibold truncate mb-1 text-white">{creative.name}</div>
+                        <div className="flex justify-between border-b border-white/10 pb-0.5 mb-0.5">
+                          <span className="text-white/60">Custo</span>
+                          <span className="font-mono">{fmtMoney(creative.cost, currencySymbol)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-0.5 mb-0.5">
+                          <span className="text-white/60">Cliques</span>
+                          <span className="font-mono">{creative.clicks.toLocaleString("pt-BR")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Conversões</span>
+                          <span className="text-primary font-bold font-mono">{creative.conversions.toFixed(0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <div className="text-[11px] font-bold text-muted-foreground truncate" title={creative.name}>
+                        {creative.name}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground/80 flex items-center justify-between">
+                        <span>Conv: <span className="font-bold text-primary">{creative.conversions.toFixed(0)}</span></span>
+                        {isVideo && (
+                          <span className="text-red-500 font-semibold flex items-center gap-0.5">Vídeo</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

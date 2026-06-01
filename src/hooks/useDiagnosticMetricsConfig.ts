@@ -26,12 +26,20 @@ const DEFAULT: MetricsConfig = {
   custom_metrics: [],
 };
 
+const DEFAULT_GOOGLE: MetricsConfig = {
+  visible_metrics: ["spend", "conversions", "cpa", "ctr", "clicks", "impressions"],
+  custom_metrics: [],
+};
+
 export function useDiagnosticMetricsConfig(
   clientId: string,
   datePreset: string,
   groupKey: string,
 ) {
-  const [config, setConfig] = useState<MetricsConfig>(DEFAULT);
+  const isGoogle = groupKey.startsWith("google-ads-");
+  const defaultCfg = isGoogle ? DEFAULT_GOOGLE : DEFAULT;
+
+  const [config, setConfig] = useState<MetricsConfig>(defaultCfg);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
@@ -52,17 +60,17 @@ export function useDiagnosticMetricsConfig(
           setConfig({
             visible_metrics: Array.isArray(data.visible_metrics)
               ? (data.visible_metrics as string[])
-              : DEFAULT.visible_metrics,
+              : defaultCfg.visible_metrics,
             custom_metrics: Array.isArray(data.custom_metrics)
               ? (data.custom_metrics as unknown as CustomMetric[])
               : [],
           });
         } else {
-          setConfig(DEFAULT);
+          setConfig(defaultCfg);
         }
         setLoading(false);
       });
-  }, [clientId, datePreset, groupKey]);
+  }, [clientId, datePreset, groupKey, defaultCfg]);
 
   const persist = useCallback(
     async (next: MetricsConfig) => {
@@ -156,6 +164,7 @@ export function useDiagnosticMetricsConfig(
     config,
     loading,
     saving,
+    update,
     toggleMetric,
     reorderMetrics,
     addCustomMetric,

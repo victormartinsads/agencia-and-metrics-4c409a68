@@ -1,10 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+export interface GoogleAdsKeyword {
+  text: string;
+  matchType: string;
+  cost: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+}
+
+export interface GoogleAdsCreative {
+  id: string;
+  name: string;
+  type: string;
+  imageUrl?: string;
+  youtubeVideoId?: string;
+  cost: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+}
+
 export interface GoogleAdsCampaign {
   id: string;
   name: string;
   status: string;
+  type: string;
   cost: number;
   impressions: number;
   clicks: number;
@@ -12,7 +34,10 @@ export interface GoogleAdsCampaign {
   revenue: number;
   ctr: number;
   avgCpc: number;
+  keywords?: GoogleAdsKeyword[];
+  creatives?: GoogleAdsCreative[];
 }
+
 
 export interface GoogleAdsData {
   campaigns?: GoogleAdsCampaign[];
