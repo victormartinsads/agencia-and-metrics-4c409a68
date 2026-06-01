@@ -76,8 +76,8 @@ export function getPeriodPair(preset: string): PeriodPair {
     }
     case "last_7d":
     default:
-      start = addDays(today, -6);
-      end = endOfDay(today);
+      start = addDays(yesterday, -6);
+      end = endOfDay(yesterday);
   }
   }
 

@@ -118,7 +118,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
   const tCost = spend > 0 ? Math.round(spend * 1.15) : 275;
   const tCpa = cpa > 0 ? Math.round(cpa * 0.85) : 280;
   const tClicks = clicks > 0 ? Math.round(clicks * 1.1) : 38;
-  const tCtr = tCtr => 0 ? tCtr : 4.97;
+  const tCtr = ctr > 0 ? ctr * 1.15 : 4.97;
   const tImpressions = impressions > 0 ? Math.round(impressions * 1.1) : 762;
 
   // Growth percentages / Meta percentage

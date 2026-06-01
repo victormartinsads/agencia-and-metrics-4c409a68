@@ -91,7 +91,7 @@ export function useGoogleAnalytics(clientId?: string, dateRange?: string, enable
         today: { startDate: "today", endDate: "today" },
         yesterday: { startDate: "yesterday", endDate: "yesterday" },
         last_3d: { startDate: "3daysAgo", endDate: "today" },
-        last_7d: { startDate: "7daysAgo", endDate: "today" },
+        last_7d: { startDate: "7daysAgo", endDate: "yesterday" },
         last_14d: { startDate: "14daysAgo", endDate: "today" },
         last_30d: { startDate: "30daysAgo", endDate: "today" },
         this_month: { startDate: "30daysAgo", endDate: "today" },

@@ -48,6 +48,7 @@ export default function ClientSettings() {
   const connectMeta = useConnectMeta();
   const disconnectMeta = useDisconnectMeta();
 
+  const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string; logo_url?: string | null }>({});
   const [selectedBmId, setSelectedBmId] = useState<string>("all");
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -93,8 +94,6 @@ export default function ClientSettings() {
   const businesses = useMemo(() => {
     return metaAssets?.businesses || [];
   }, [metaAssets?.businesses]);
-
-  const [form, setForm] = useState<Partial<Client> & { google_ads_customer_id?: string; ga_property_id?: string; logo_url?: string | null }>({});
 
   const selectedProperties = useMemo(() => {
     return (form.ga_property_id || "").split(",").map(id => id.trim()).filter(Boolean);
