@@ -100,6 +100,23 @@ export function GridDashboard({
       const w = Math.min(def.w, cols);
       const h = def.h;
 
+      // Se o defaultLayout tem x e y explícitos, usa diretamente (layout fixo padrão).
+      if (def.x !== undefined && def.y !== undefined) {
+        const x = def.x;
+        const y = def.y;
+        occupyArea(x, y, w, h);
+        return {
+          i: b.id,
+          x,
+          y,
+          w,
+          h,
+          minW: def.minW || 2,
+          minH: def.minH || 2,
+        };
+      }
+
+      // Caso contrário, faz packing automático.
       let foundX = 0;
       let foundY = 0;
       let placed = false;
