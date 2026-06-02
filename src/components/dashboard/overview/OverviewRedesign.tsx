@@ -44,8 +44,6 @@ interface Props {
 }
 
 function inRange(dateStr: string, start: Date, end: Date) {
-  // Compare by YYYY-MM-DD in local time to avoid UTC/timezone shifts
-  // (reference_date is a date-only string from Postgres).
   const d = String(dateStr).slice(0, 10);
   const toKey = (x: Date) =>
     `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
@@ -80,13 +78,6 @@ const MQL_METRIC_OPTIONS: MetricOption[] = [
   { key: "qualified_messages", label: "Mensagens Qualif." },
   { key: "qualified_followers", label: "Seguidores Qualif." },
 ];
-
-
-
-
-
-
-
 
 export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbol }: Props) {
   const { data: sheetsConfig } = useDashboardSheet(clientId);
@@ -128,7 +119,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const sumKey = (rows: typeof inCurr, key: keyof (typeof inCurr)[number]) =>
     rows.reduce((acc, r) => acc + Number((r as any)[key] || 0), 0);
 
-  // Totais brutos por fonte
   const sheetsCurr = {
     revenue: sumKey(inCurr, "revenue"),
     sales: sumKey(inCurr, "sales"),
@@ -158,8 +148,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     spend: metaData?.overviewMetrics?.totalSpend || 0,
     impressions: metaData?.overviewMetrics?.totalImpressions || 0,
     clicks: metaData?.overviewMetrics?.totalClicks || 0,
-    // "lead_actions" sums the action types configured per client (clients.lead_action_types).
-    // Fallback to totalConversions (primary action priority) when not yet present in payload.
     lead_actions: (metaData?.overviewMetrics as any)?.totalLeadActions ?? 0,
     purchases: (metaData?.overviewMetrics as any)?.totalPurchases || 0,
     initiate_checkout: (metaData?.overviewMetrics as any)?.totalInitiateCheckout || 0,
@@ -195,7 +183,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const resolvePrev = (key: string, sheetsValue: number) =>
     resolveMetricValue(key, metricSources, { sheetsValue, metaTotals, webhookTotals: webhookTotalsPrev });
 
-  // curr aplicando metric sources (sobrescreve quando configurado)
   const curr = {
     ...sheetsCurr,
     revenue: resolve("revenue", sheetsCurr.revenue),
@@ -208,7 +195,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     low_ticket_google: resolve("low_ticket_google", sheetsCurr.low_ticket_google),
   };
 
-  // Aplica metric sources também ao período anterior (para comparativos corretos)
   prev.revenue = resolvePrev("revenue", prev.revenue);
   prev.sales = resolvePrev("sales", prev.sales);
 
@@ -266,8 +252,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       .slice(0, 10);
   }, [inCurr]);
 
-  // If low_ticket_meta source is Meta, build the daily series from Meta's daily insights
-  // (uses `conversions` which already prefers `purchase` action). Otherwise fall back to sheet data.
   const lowTicketMetaSource = metricSources?.low_ticket_meta?.source;
 
   const lowTicketData = useMemo(() => {
@@ -281,7 +265,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
       }));
 
     if (lowTicketMetaSource === "meta" && (metaData?.dailyMetrics?.length || 0) > 0) {
-      // Merge by date label from Meta daily series; google stays from sheets if present
       const sheetByLabel = new Map<string, { google: number }>();
       for (const r of inCurr) {
         const d = new Date(r.reference_date);
@@ -289,7 +272,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         sheetByLabel.set(label, { google: Number((r as any).low_ticket_google || 0) });
       }
       return (metaData!.dailyMetrics || []).map((d) => {
-        // Use purchases specifically (matches the period total which sums purchase actions).
         const meta = Number((d as any).purchases ?? d.conversions ?? 0);
         const google = sheetByLabel.get(d.date)?.google || 0;
         return { date: d.date, meta, google, total: meta + google };
@@ -300,7 +282,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
   const lowTicketTotals = useMemo(() => {
     const google = lowTicketData.reduce((a, b) => a + b.google, 0);
-    // For "meta" total, prefer the resolved value (curr.low_ticket_meta) so it matches the configured source.
     const meta = curr.low_ticket_meta || lowTicketData.reduce((a, b) => a + b.meta, 0);
     return { total: meta + google, meta, google };
   }, [lowTicketData, curr.low_ticket_meta]);
@@ -318,7 +299,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     [inCurr],
   );
 
-  // UTMs from the spreadsheet (aggregated in raw_row.utm_breakdown by sheets-sync-v2)
   const sheetUtmRows = useMemo<SheetUtmRow[]>(() => {
     const rows: SheetUtmRow[] = [];
     for (const r of inCurr) {
@@ -332,7 +312,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
   const hasData = (weekly?.length || 0) > 0;
   const campaigns = metaData?.campaigns || [];
 
-  // Top KPI strip — same look across Visão Geral, Como Estamos and Funis.
   const topKpis: KpiItem[] = [
     {
       label: "Investimento",
@@ -384,14 +363,13 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     };
   };
 
-  const renderBlock = (id: OverviewBlockId) => {
+  const renderBlockContent = (id: OverviewBlockId) => {
     const cfg = layout.blocks[id];
-    if (!cfg.visible) return null;
 
     switch (id) {
       case "resultados":
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id)}>
             <RevenueSalesChart data={combinedData} currencySymbol={currencySymbol} />
           </SectionCard>
         );
@@ -420,13 +398,12 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
 
       case "funil":
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id)}>
             {clientId ? (
               <EditableOverviewFunnel
                 clientId={clientId}
                 metrics={{
                   current: {
-                    // Meta totals
                     impressions: metaTotals.impressions,
                     reach: metaTotals.reach,
                     clicks: clicks,
@@ -436,7 +413,6 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
                     initiate_checkout: metaTotals.initiate_checkout,
                     purchases: metaTotals.purchases || sales,
                     conversions: metaTotals.lead_actions,
-                    // Mapped/resolved
                     pageviews: pageviews,
                     leads: leads,
                     meetings: meetings,
@@ -559,21 +535,20 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
               key={id}
               {...cardProps(id)}
               title="Fontes (UTMs da Planilha)"
-              className="xl:col-span-2"
             >
               <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
             </SectionCard>
           );
         }
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id)}>
             <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />
           </SectionCard>
         );
 
       case "demographics":
         return (
-          <SectionCard key={id} {...cardProps(id)} className="xl:col-span-2">
+          <SectionCard key={id} {...cardProps(id)}>
             <DemographicsBlock clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           </SectionCard>
         );
@@ -583,7 +558,22 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     }
   };
 
-  // metric options lookup for the settings dialog
+  // Determines CSS grid span class for each block id
+  const blockColSpan = (id: OverviewBlockId): string => {
+    switch (id) {
+      case "resultados":   return "col-span-1 lg:col-span-2";
+      case "custos":       return "col-span-1";
+      case "funil":        return "col-span-1 lg:col-span-2";
+      case "lowticket":    return "col-span-1";
+      case "leads":        return "col-span-1";
+      case "best-ads":     return "col-span-1";
+      case "mql":          return "col-span-1";
+      case "utm-traffic":  return "col-span-1 lg:col-span-2";
+      case "demographics": return "col-span-1 md:col-span-2 lg:col-span-3";
+      default:             return "col-span-1";
+    }
+  };
+
   const metricOptionsFor = (id: OverviewBlockId | undefined): MetricOption[] | undefined => {
     if (!id) return undefined;
     if (id === "custos") return COST_METRIC_OPTIONS;
@@ -592,6 +582,126 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
     return undefined;
   };
 
+  // In edit mode, show the drag-and-drop react-grid-layout
+  const renderEditGrid = () => (
+    <div className="mx-auto w-full">
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={{
+          lg: visibleOrder.map((id) => {
+            const b = layout.blocks[id];
+            return {
+              i: id,
+              x: b.x ?? 0,
+              y: b.y ?? 0,
+              w: b.w ?? 4,
+              h: b.h ?? 4,
+              minW: 2,
+              minH: 2,
+            };
+          }),
+        }}
+        breakpoints={{ lg: 1100, md: 768, sm: 0 }}
+        cols={{ lg: 12, md: 8, sm: 1 }}
+        rowHeight={56}
+        margin={[10, 10]}
+        containerPadding={[0, 0]}
+        isDraggable={true}
+        isResizable={true}
+        draggableHandle=".grid-drag-handle"
+        onLayoutChange={(curLayout: any[]) => {
+          updatePositions(curLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
+        }}
+      >
+        {visibleOrder.map((id) => (
+          <div key={id} className="overflow-hidden">
+            <div className="grid-drag-handle absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary cursor-move select-none border border-primary/30">
+              ⋮⋮ arrastar
+            </div>
+            <div className="h-full">{renderBlockContent(id)}</div>
+          </div>
+        ))}
+      </ResponsiveGridLayout>
+    </div>
+  );
+
+  // In normal mode, use CSS grid for perfect alignment — no gaps
+  const renderNormalGrid = () => {
+    // Group blocks into rows based on their layout positions
+    // Row 1: resultados (wide) + custos
+    // Row 2: funil (wide) + lowticket + best-ads
+    // Row 3: leads + mql + utm-traffic (wide)
+    // Row 4: demographics (full-width)
+    const row1 = (["resultados", "custos"] as OverviewBlockId[]).filter((id) => layout.blocks[id]?.visible);
+    const row2 = (["funil", "lowticket", "best-ads"] as OverviewBlockId[]).filter((id) => layout.blocks[id]?.visible);
+    const row3 = (["leads", "mql", "utm-traffic"] as OverviewBlockId[]).filter((id) => layout.blocks[id]?.visible);
+    const row4 = (["demographics"] as OverviewBlockId[]).filter((id) => layout.blocks[id]?.visible);
+
+    return (
+      <div className="flex flex-col gap-3 w-full">
+        {/* Row 1: Resultados (2/3) + Custos (1/3) */}
+        {row1.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {row1.includes("resultados") && (
+              <div className="md:col-span-2">
+                {renderBlockContent("resultados")}
+              </div>
+            )}
+            {row1.includes("custos") && (
+              <div className="md:col-span-1">
+                {renderBlockContent("custos")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Row 2: Funil (2/3 left) + Low Ticket + Best Ads (1/3 right as 2 stacked) */}
+        {row2.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {row2.includes("funil") && (
+              <div className="md:col-span-2">
+                {renderBlockContent("funil")}
+              </div>
+            )}
+            {(row2.includes("lowticket") || row2.includes("best-ads")) && (
+              <div className="md:col-span-1 flex flex-col gap-3">
+                {row2.includes("lowticket") && renderBlockContent("lowticket")}
+                {row2.includes("best-ads") && renderBlockContent("best-ads")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Row 3: Leads + MQL + UTM Traffic */}
+        {row3.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {row3.includes("leads") && (
+              <div className="col-span-1">
+                {renderBlockContent("leads")}
+              </div>
+            )}
+            {row3.includes("mql") && (
+              <div className="col-span-1">
+                {renderBlockContent("mql")}
+              </div>
+            )}
+            {row3.includes("utm-traffic") && (
+              <div className="col-span-1">
+                {renderBlockContent("utm-traffic")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Row 4: Demographics (full width) */}
+        {row4.length > 0 && (
+          <div className="w-full">
+            {renderBlockContent("demographics")}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -625,13 +735,14 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary neon-glow" />
           <h2 className="text-sm font-semibold tracking-tight">Visão Geral</h2>
-          <span className="text-[11px] text-muted-foreground">— layout personalizável por cliente</span>
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">— layout personalizável por cliente</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <TemplatePicker
             value={templateKey}
             onChange={(k: TemplateKey) => {
@@ -659,51 +770,11 @@ export function OverviewRedesign({ clientId, datePreset, metaData, currencySymbo
         </div>
       </div>
 
-      {/* Top KPI strip — same look across Visão Geral, Como Estamos e Funis */}
+      {/* Top KPI strip */}
       <KpiRow items={topKpis} />
 
-      {/* Container fluido: cards crescem o suficiente para mostrar todo o conteúdo, alinhados na grid. */}
-      <div className="mx-auto w-full">
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={{
-          lg: visibleOrder.map((id) => {
-            const b = layout.blocks[id];
-            return {
-              i: id,
-              x: b.x ?? 0,
-              y: b.y ?? 0,
-              w: b.w ?? 4,
-              h: b.h ?? 4,
-              minW: 2,
-              minH: 2,
-            };
-          }),
-        }}
-        breakpoints={{ lg: 1100, md: 768, sm: 0 }}
-        cols={{ lg: 12, md: 8, sm: 1 }}
-        rowHeight={56}
-        margin={[10, 10]}
-        containerPadding={[0, 0]}
-        isDraggable={editMode}
-        isResizable={editMode}
-        draggableHandle=".grid-drag-handle"
-        onLayoutChange={(curLayout: any[]) => {
-          if (editMode) updatePositions(curLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
-        }}
-      >
-        {visibleOrder.map((id) => (
-          <div key={id} className="overflow-hidden">
-            {editMode && (
-              <div className="grid-drag-handle absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary cursor-move select-none border border-primary/30">
-                ⋮⋮ arrastar
-              </div>
-            )}
-            <div className="h-full">{renderBlock(id)}</div>
-          </div>
-        ))}
-      </ResponsiveGridLayout>
-      </div>
+      {/* Main grid — CSS grid in normal mode, react-grid-layout in edit mode */}
+      {editMode ? renderEditGrid() : renderNormalGrid()}
 
       <BlockSettingsDialog
         open={!!settingsBlock}

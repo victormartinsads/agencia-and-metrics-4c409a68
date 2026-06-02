@@ -36,7 +36,7 @@ import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
-import { useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
+import { useDashboardLayout, useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
 
 import { MqlManualEditDialog } from "./MqlManualEditDialog";
 
@@ -68,23 +68,39 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const [funnelEdit, setFunnelEdit] = useState(false);
   const [mqlEditOpen, setMqlEditOpen] = useState(false);
 
-  // Edit / hide mode
-  const HIDE_KEY = `overview-premium-hidden:${clientId || "default"}`;
+  // Edit / hide mode — hidden panels são persistidos no Supabase para funcionar em links compartilhados
   const [editMode, setEditMode] = useState(false);
-  const [hidden, setHidden] = useState<Set<string>>(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem(HIDE_KEY) : null;
-      return new Set<string>(raw ? JSON.parse(raw) : []);
-    } catch { return new Set(); }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(HIDE_KEY, JSON.stringify(Array.from(hidden))); } catch {}
-  }, [hidden, HIDE_KEY]);
-  const hidePanel = useCallback((id: string) => setHidden((s) => new Set([...s, id])), []);
-  const showPanel = useCallback((id: string) => setHidden((s) => { const n = new Set(s); n.delete(id); return n; }), []);
-  const resetHidden = useCallback(() => setHidden(new Set()), []);
-
+  const [hidden, setHiddenLocal] = useState<Set<string>>(new Set());
   const saveLayout = useSaveDashboardLayout();
+  const { data: savedHiddenData } = useDashboardLayout(clientId, "overview-premium-hidden");
+
+  // Sincroniza o estado local com o que está salvo no Supabase
+  useEffect(() => {
+    if (savedHiddenData && Array.isArray(savedHiddenData) && savedHiddenData.length > 0) {
+      // O layout salvo para hidden é um array de { i: string } onde i é o painel oculto
+      const ids = (savedHiddenData as any[]).map((l: any) => l.i || l).filter(Boolean);
+      setHiddenLocal(new Set(ids));
+    } else if (savedHiddenData !== undefined) {
+      // Dado carregado mas vazio — sem painéis ocultos
+      setHiddenLocal(new Set());
+    }
+  }, [savedHiddenData]);
+
+  // Persiste hidden no Supabase e atualiza local
+  const persistHidden = useCallback((next: Set<string>) => {
+    setHiddenLocal(next);
+    if (clientId) {
+      const layout = Array.from(next).map((id) => ({ i: id, x: 0, y: 0, w: 1, h: 1 }));
+      saveLayout.mutate({ clientId, dashboardKey: "overview-premium-hidden", layout: layout as any });
+    }
+  }, [clientId, saveLayout]);
+
+  const hidePanel = useCallback((id: string) => persistHidden(new Set([...hidden, id])), [hidden, persistHidden]);
+  const showPanel = useCallback((id: string) => {
+    const n = new Set(hidden); n.delete(id); persistHidden(n);
+  }, [hidden, persistHidden]);
+  const resetHidden = useCallback(() => persistHidden(new Set()), [persistHidden]);
+
   const handleResetLayout = useCallback(() => {
     if (clientId) {
       saveLayout.mutate({
@@ -92,7 +108,6 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         dashboardKey: "overview-premium",
         layout: [],
       });
-      // We will import toast from sonner
       toast.success("Organização automática ativada!");
     }
   }, [clientId, saveLayout]);
