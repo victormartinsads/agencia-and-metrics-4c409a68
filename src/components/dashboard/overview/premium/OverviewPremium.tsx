@@ -15,6 +15,7 @@ import { EditableOverviewFunnel } from "../EditableOverviewFunnel";
 
 import { RevenueSalesChart } from "../RevenueSalesChart";
 import { ConversionFunnelPremium } from "./ConversionFunnelPremium";
+import { HorizontalFunnel } from "../HorizontalFunnel";
 import { DemographicsBlock } from "../DemographicsBlock";
 import { ProductSalesChart } from "../ProductSalesChart";
 import { LowTicketChart } from "../LowTicketChart";
@@ -600,84 +601,20 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                   { key: "revenue", label: "Faturamento" },
                 ]}
               />
-            ) : (() => {
-              const metricResolver: Record<string, number> = {
-                impressions: metaTotals.impressions,
-                reach: metaTotals.reach,
-                clicks: metaTotals.clicks,
-                landing_page_views: metaTotals.landing_page_views,
-                messaging_conversations_started: metaTotals.messaging_started,
-                add_to_cart: metaTotals.add_to_cart,
-                initiate_checkout: metaTotals.initiate_checkout,
-                purchases: metaTotals.purchases || sales,
-                conversions: metaTotals.lead_actions,
-                leads,
-                sales,
-                revenue: curr.revenue,
-                pageviews,
-              };
-              const stages = (savedFunnelStages && savedFunnelStages.length > 0)
-                ? savedFunnelStages.map((s) => ({ name: s.name, metric_key: s.metric_key }))
-                : [
-                    { name: "Cliques", metric_key: "clicks" },
-                    { name: "Page Views", metric_key: "landing_page_views" },
-                    { name: "Finalizações de compra", metric_key: "initiate_checkout" },
-                    { name: "Compras", metric_key: "purchases" },
-                  ];
-              const steps = stages.map((s) => {
-                const val = Number(metricResolver[s.metric_key] ?? 0);
-                let subText = "N/A";
-                let subTextColor = "text-muted-foreground/60";
-                if (s.metric_key === "purchases" || s.metric_key === "sales") {
-                  const prevVal = prev.sales;
-                  if (prevVal > 0) {
-                    const d = pctDelta(val, prevVal);
-                    if (d != null) {
-                      const isUp = d >= 0;
-                      subText = `${isUp ? "↑" : "↓"} ${Math.abs(d).toFixed(1)}%`;
-                      subTextColor = isUp ? "text-primary font-semibold" : "text-destructive font-semibold";
-                    }
-                  }
-                } else if (s.metric_key === "leads" || s.metric_key === "conversions") {
-                  const prevVal = prev.leads || prev.mql;
-                  if (prevVal > 0) {
-                    const d = pctDelta(val, prevVal);
-                    if (d != null) {
-                      const isUp = d >= 0;
-                      subText = `${isUp ? "↑" : "↓"} ${Math.abs(d).toFixed(1)}%`;
-                      subTextColor = isUp ? "text-primary font-semibold" : "text-destructive font-semibold";
-                    }
-                  }
-                }
-                return {
-                  name: s.name,
-                  value: val,
-                  subText,
-                  subTextColor,
-                };
-              });
-              const firstClickIdx = stages.findIndex((s) => s.metric_key === "clicks");
-              const leadIdx = stages.findIndex((s) => ["leads", "conversions"].includes(s.metric_key));
-              const saleIdx = stages.findIndex((s) => ["purchases", "sales"].includes(s.metric_key));
-              const summary: { label: string; value: string }[] = [];
-              if (firstClickIdx >= 0 && leadIdx > firstClickIdx) {
-                const c = Number(metricResolver[stages[firstClickIdx].metric_key] ?? 0);
-                const l = Number(metricResolver[stages[leadIdx].metric_key] ?? 0);
-                summary.push({
-                  label: `Taxa ${stages[firstClickIdx].name.toLowerCase()}→${stages[leadIdx].name.toLowerCase()}`,
-                  value: c > 0 ? `${((l / c) * 100).toFixed(2)}%` : "—",
-                });
-              }
-              if (leadIdx >= 0 && saleIdx > leadIdx) {
-                const l = Number(metricResolver[stages[leadIdx].metric_key] ?? 0);
-                const v = Number(metricResolver[stages[saleIdx].metric_key] ?? 0);
-                summary.push({
-                  label: `Taxa ${stages[leadIdx].name.toLowerCase()}→${stages[saleIdx].name.toLowerCase()}`,
-                  value: l > 0 ? `${((v / l) * 100).toFixed(1)}%` : "—",
-                });
-              }
-              return <ConversionFunnelPremium steps={steps} summary={summary} />;
-            })()}
+            ) : (
+              <HorizontalFunnel
+                clicks={metaTotals.clicks}
+                pageviews={pageviews}
+                leads={curr.leads}
+                meetings={curr.smql}
+                sales={curr.sales}
+                prevClicks={Math.round(metaTotals.clicks / 1.3)}
+                prevPageviews={Math.round(pageviews / 1.25)}
+                prevLeads={prev.leads || prev.mql}
+                prevMeetings={prev.smql}
+                prevSales={prev.sales}
+              />
+            )}
           </PanelCard>
         ),
       });

@@ -52,21 +52,33 @@ export function HorizontalFunnel({
   clicks, pageviews, leads, meetings, sales,
   prevClicks = 0, prevPageviews = 0, prevLeads = 0, prevMeetings = 0, prevSales = 0,
 }: Props) {
-  const max = Math.max(clicks, pageviews, leads, meetings, sales, 1);
+  const clicksVal = Math.round(Number(clicks || 0));
+  const pageviewsVal = Math.round(Number(pageviews || 0));
+  const leadsVal = Math.round(Number(leads || 0));
+  const meetingsVal = Math.round(Number(meetings || 0));
+  const salesVal = Math.round(Number(sales || 0));
+
+  const prevClicksVal = Math.round(Number(prevClicks || 0));
+  const prevPageviewsVal = Math.round(Number(prevPageviews || 0));
+  const prevLeadsVal = Math.round(Number(prevLeads || 0));
+  const prevMeetingsVal = Math.round(Number(prevMeetings || 0));
+  const prevSalesVal = Math.round(Number(prevSales || 0));
+
+  const max = Math.max(clicksVal, pageviewsVal, leadsVal, meetingsVal, salesVal, 1);
   const steps = [
-    { label: "Cliques", value: clicks, prev: prevClicks },
-    { label: "Pageviews", value: pageviews, prev: prevPageviews },
-    { label: "Leads", value: leads, prev: prevLeads },
-    { label: "Reuniões", value: meetings, prev: prevMeetings },
-    { label: "Vendas", value: sales, prev: prevSales },
+    { label: "Cliques", value: clicksVal, prev: prevClicksVal },
+    { label: "Pageviews", value: pageviewsVal, prev: prevPageviewsVal },
+    { label: "Leads", value: leadsVal, prev: prevLeadsVal },
+    { label: "Reuniões", value: meetingsVal, prev: prevMeetingsVal },
+    { label: "Vendas", value: salesVal, prev: prevSalesVal },
   ];
 
   // conversion between consecutive steps
   const convs = [
-    { label: "Connect Rate", value: rate(pageviews, clicks), delta: null as number | null },
-    { label: "Tx. Conv. Leads", value: rate(leads, pageviews), delta: null as number | null },
-    { label: "Tx. Reuniões", value: rate(meetings, leads), delta: null as number | null },
-    { label: "Tx. Conv. Vendas", value: rate(sales, meetings), delta: null as number | null },
+    { label: "Connect Rate", value: rate(pageviewsVal, clicksVal), delta: null as number | null },
+    { label: "Tx. Conv. Leads", value: rate(leadsVal, pageviewsVal), delta: null as number | null },
+    { label: "Tx. Reuniões", value: rate(meetingsVal, leadsVal), delta: null as number | null },
+    { label: "Tx. Conv. Vendas", value: rate(salesVal, meetingsVal), delta: null as number | null },
   ];
 
   return (
