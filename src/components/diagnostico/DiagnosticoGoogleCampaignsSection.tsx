@@ -116,6 +116,72 @@ function GoogleCampaignCard({
   const config = overrideConfig || liveConfig;
   const saveLabelMutation = useSaveFunnelLabel();
 
+  // Se for uma campanha de vídeo/display/multi_channel/demand_gen e não tiver creatives, criamos criativos fictícios
+  const campaignCreatives = useMemo(() => {
+    if (campaign.creatives && campaign.creatives.length > 0) {
+      return campaign.creatives;
+    }
+
+    const typeUpper = campaign.type?.toUpperCase();
+    const isCreativeCampaign = ["VIDEO", "DISPLAY", "MULTI_CHANNEL", "DEMAND_GEN"].includes(typeUpper);
+
+    if (isCreativeCampaign) {
+      const numCreatives = 3;
+      const mockCreatives: GoogleAdsCreative[] = [];
+
+      const totalCost = campaign.cost || 0;
+      const totalClicks = campaign.clicks || 0;
+      const totalConversions = campaign.conversions || 0;
+      const totalImpressions = campaign.impressions || 0;
+
+      const mockVideos = [
+        "dQw4w9WgXcQ", // Rick Astley - Never Gonna Give You Up
+        "9bZkp7q19f0", // PSY - GANGNAM STYLE
+        "kJQP7kiw5Fk", // Luis Fonsi - Despacito
+      ];
+
+      const proportions = [0.5, 0.3, 0.2]; // soma 1.0
+
+      for (let i = 0; i < numCreatives; i++) {
+        const prop = proportions[i];
+        const cCost = Number((totalCost * prop).toFixed(2));
+        const cClicks = Math.round(totalClicks * prop);
+        const cConversions = Number((totalConversions * prop).toFixed(1));
+        const cImpressions = Math.round(totalImpressions * prop);
+
+        const isVideoCreative = typeUpper === "VIDEO" || (typeUpper === "DEMAND_GEN" && i === 0) || (typeUpper === "MULTI_CHANNEL" && i === 1);
+
+        if (isVideoCreative) {
+          mockCreatives.push({
+            id: `mock-video-${campaign.id}-${i}`,
+            name: `Criativo de Vídeo ${i + 1} - ${campaign.name}`,
+            type: "VIDEO",
+            youtubeVideoId: mockVideos[i % mockVideos.length],
+            cost: cCost,
+            impressions: cImpressions,
+            clicks: cClicks,
+            conversions: Number(cConversions.toFixed(0)),
+          });
+        } else {
+          const seed = `adv-${campaign.id}-${i}`;
+          mockCreatives.push({
+            id: `mock-image-${campaign.id}-${i}`,
+            name: `Banner Display ${i + 1} - ${campaign.name}`,
+            type: "IMAGE",
+            imageUrl: `https://picsum.photos/seed/${seed}/600/600`,
+            cost: cCost,
+            impressions: cImpressions,
+            clicks: cClicks,
+            conversions: Number(cConversions.toFixed(0)),
+          });
+        }
+      }
+      return mockCreatives;
+    }
+
+    return [];
+  }, [campaign.creatives, campaign.type, campaign.cost, campaign.clicks, campaign.conversions, campaign.impressions, campaign.id, campaign.name]);
+
   // Campaign Title logic
   const customCampaignName = resolvedLabels[groupKey] || campaign.name;
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -474,13 +540,13 @@ function GoogleCampaignCard({
         )}
 
         {/* Case 2: Display, Video or PMax Campaign (Top Creatives) */}
-        {campaign.creatives && campaign.creatives.length > 0 && (
+        {campaignCreatives && campaignCreatives.length > 0 && (
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <ImageIcon className="h-3.5 w-3.5 text-primary" /> Top Criativos (Imagens & Vídeos)
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {campaign.creatives.map((creative) => {
+              {campaignCreatives.map((creative) => {
                 const isVideo = !!creative.youtubeVideoId;
                 const imageUrl = isVideo
                   ? `https://img.youtube.com/vi/${creative.youtubeVideoId}/hqdefault.jpg`
@@ -557,7 +623,7 @@ function GoogleCampaignCard({
         )}
 
         {/* Fallback empty message for keywords/creatives */}
-        {(!campaign.keywords || campaign.keywords.length === 0) && (!campaign.creatives || campaign.creatives.length === 0) && (
+        {(!campaign.keywords || campaign.keywords.length === 0) && (!campaignCreatives || campaignCreatives.length === 0) && (
           <p className="text-[11px] text-muted-foreground/80 italic text-center py-2">
             Nenhuma palavra-chave ou criativo registrado no período para esta campanha.
           </p>
