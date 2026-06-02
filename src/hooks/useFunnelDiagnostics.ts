@@ -117,8 +117,8 @@ export function useSaveFunnelDiagnostics() {
         client_id: clientId,
         funnel_code: funnelCode,
         health_score: patch.health_score !== undefined ? patch.health_score : (existing?.health_score ?? DEFAULT_DIAGNOSTICS.health_score),
-        curve_data: patch.curve_data !== undefined ? patch.curve_data : (existing?.curve_data ?? DEFAULT_DIAGNOSTICS.curve_data),
-        diagnostics: patch.diagnostics !== undefined ? patch.diagnostics : (existing?.diagnostics ?? DEFAULT_DIAGNOSTICS.diagnostics),
+        curve_data: (patch.curve_data !== undefined ? patch.curve_data : (existing?.curve_data ?? DEFAULT_DIAGNOSTICS.curve_data)) as any,
+        diagnostics: (patch.diagnostics !== undefined ? patch.diagnostics : (existing?.diagnostics ?? DEFAULT_DIAGNOSTICS.diagnostics)) as any,
         updated_at: new Date().toISOString(),
       };
 

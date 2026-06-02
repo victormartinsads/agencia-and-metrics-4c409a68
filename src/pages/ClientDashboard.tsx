@@ -19,7 +19,35 @@ export default function ClientDashboard() {
   const { data: userRole } = useUserRole();
   const isStaff = !!(userRole?.isAdmin || userRole?.isEditor);
   const [datePreset, setDatePreset] = useState("last_7d");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) {
+      if (tabParam === "como-estamos") return "diagnostico";
+      if (tabParam === "visao-geral") return "overview";
+      if (tabParam === "analise-de-funis") return "funnel";
+      if (tabParam === "criativos") return "creatives";
+      if (tabParam === "distribuicao") return "branding";
+      if (tabParam === "planilha") return "spreadsheet";
+      return tabParam;
+    }
+    return "overview";
+  });
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    let tabParam = tab;
+    if (tab === "diagnostico") tabParam = "como-estamos";
+    else if (tab === "overview") tabParam = "visao-geral";
+    else if (tab === "funnel") tabParam = "analise-de-funis";
+    else if (tab === "creatives") tabParam = "criativos";
+    else if (tab === "branding") tabParam = "distribuicao";
+    else if (tab === "spreadsheet") tabParam = "planilha";
+    url.searchParams.set("tab", tabParam);
+    window.history.replaceState({}, "", url.toString());
+  };
+
   const [compareEnabled, setCompareEnabled] = useState(false);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,7 +158,7 @@ export default function ClientDashboard() {
     <DashboardTopBar
       tabs={TABS}
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       datePreset={datePreset}
       onDatePresetChange={setDatePreset}
       compareEnabled={compareEnabled}
@@ -183,7 +211,7 @@ export default function ClientDashboard() {
         metaError={metaError as Error | null}
         currencySymbol={client.currency_symbol || "R$"}
         activeTab={activeTab}
-        onActiveTabChange={setActiveTab}
+        onActiveTabChange={handleTabChange}
         hideTabList
       />
     </AppShell>

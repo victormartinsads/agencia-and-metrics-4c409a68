@@ -548,9 +548,25 @@ export function FunnelCard({
           {selected.map((key) => {
             const meta = ALL_FUNNEL_METRICS.find((m) => m.key === key);
             if (!meta) return null;
-            const rawValue = (totals as any)[key] ?? 0;
-            const hasOverride = overrides[key] !== undefined;
-            const value = hasOverride ? overrides[key] : rawValue;
+
+            const getOverrideOrRaw = (k: string) => {
+              return overrides[k] !== undefined ? Number(overrides[k]) : ((totals as any)[k] ?? 0);
+            };
+
+            let value = (totals as any)[key] ?? 0;
+            let hasOverride = overrides[key] !== undefined;
+
+            if (key === "cpFollow") {
+              const currentSpend = getOverrideOrRaw("spend");
+              const currentFollows = getOverrideOrRaw("follows");
+              value = currentFollows > 0 ? currentSpend / currentFollows : 0;
+              hasOverride = overrides["spend"] !== undefined || overrides["follows"] !== undefined;
+            } else {
+              if (hasOverride) {
+                value = overrides[key];
+              }
+            }
+
             return (
               <div
                 key={key}
@@ -567,7 +583,7 @@ export function FunnelCard({
                 <p className="text-sm font-bold tabular-nums truncate">
                   {formatMetricValue(key, value, currencySymbol)}
                 </p>
-                {!readOnly && (<div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                {!readOnly && key !== "cpFollow" && (<div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
                   <button
                     className="p-0.5 rounded hover:bg-muted/60"
                     title="Editar valor manualmente"

@@ -35,6 +35,41 @@ interface Props {
 }
 
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false, isPublicView = false }: Props) {
+  const [localActiveTab, setLocalActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) {
+      if (tabParam === "como-estamos") return "diagnostico";
+      if (tabParam === "visao-geral") return "overview";
+      if (tabParam === "analise-de-funis") return "funnel";
+      if (tabParam === "criativos") return "creatives";
+      if (tabParam === "distribuicao") return "branding";
+      if (tabParam === "planilha") return "spreadsheet";
+      return tabParam;
+    }
+    return "overview";
+  });
+
+  const currentActiveTab = activeTab !== undefined ? activeTab : localActiveTab;
+
+  const handleTabChange = (val: string) => {
+    if (onActiveTabChange) {
+      onActiveTabChange(val);
+    } else {
+      setLocalActiveTab(val);
+      const url = new URL(window.location.href);
+      let tabParam = val;
+      if (val === "diagnostico") tabParam = "como-estamos";
+      else if (val === "overview") tabParam = "visao-geral";
+      else if (val === "funnel") tabParam = "analise-de-funis";
+      else if (val === "creatives") tabParam = "criativos";
+      else if (val === "branding") tabParam = "distribuicao";
+      else if (val === "spreadsheet") tabParam = "planilha";
+      url.searchParams.set("tab", tabParam);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
     queryFn: async () => {
@@ -97,9 +132,8 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
       {!metaLoading && !metaError && overview && (
         <Tabs
-          value={activeTab}
-          defaultValue={activeTab ? undefined : "overview"}
-          onValueChange={onActiveTabChange}
+          value={currentActiveTab}
+          onValueChange={handleTabChange}
           className="space-y-6"
         >
           {!hideTabList && <TabsList className="bg-card border border-border flex-wrap h-auto">

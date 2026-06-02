@@ -17,6 +17,29 @@ export default function ClientView() {
   const [datePreset, setDatePreset] = useState("last_7d");
   const [openDiag, setOpenDiag] = useState<any>(null);
 
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) {
+      if (tabParam === "como-estamos") return "diagnostics";
+      if (tabParam === "analise-de-funis") return "funnel";
+      if (tabParam === "criativos") return "creatives";
+      return tabParam;
+    }
+    return "funnel";
+  });
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    let tabParam = tab;
+    if (tab === "diagnostics") tabParam = "como-estamos";
+    else if (tab === "funnel") tabParam = "analise-de-funis";
+    else if (tab === "creatives") tabParam = "criativos";
+    url.searchParams.set("tab", tabParam);
+    window.history.replaceState({}, "", url.toString());
+  };
+
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: ["client-view-public", slug],
     queryFn: async () => {
@@ -95,7 +118,7 @@ export default function ClientView() {
             <span className="text-sm text-muted-foreground">Carregando dados...</span>
           </div>
         ) : (
-          <Tabs defaultValue="funnel" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="bg-card border border-border">
               <TabsTrigger value="funnel"><BarChart3 className="h-3.5 w-3.5 mr-1.5" />Análise de Funis</TabsTrigger>
               <TabsTrigger value="diagnostics"><FileText className="h-3.5 w-3.5 mr-1.5" />Como estamos</TabsTrigger>

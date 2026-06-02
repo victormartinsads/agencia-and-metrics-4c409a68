@@ -5,14 +5,15 @@ import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
 import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 import { useFunnelMetricOverrides, useSaveFunnelMetricOverride } from "@/hooks/useFunnelMetricOverrides";
-import { useFunnelDiagnostics, useSaveFunnelDiagnostics } from "@/hooks/useFunnelDiagnostics";
+import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS } from "@/hooks/useFunnelDiagnostics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Pencil, Search, RefreshCw, X, Check, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { formatMetricValue, resolveMetricKey, getMetricValue } from "@/lib/metaMetricCatalog";
+import { resolveMetricKey, getMetricValue } from "@/lib/metaMetricCatalog";
+import { formatMetricValue } from "@/lib/metaMetrics";
 
 interface Props {
   open: boolean;

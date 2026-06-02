@@ -176,11 +176,36 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
 
   const isHighlight = (key: string) => key === "spend" || key === "conversions";
 
+  const getCurrentRawValue = (key: string): number => {
+    const override = config.custom_metrics.find((m) => m.id === key);
+    if (override) {
+      return Number(String(override.value).replace(",", "."));
+    }
+    return getMetricValue(totals, key);
+  };
+
   const getMetricValueAndOverride = (key: string) => {
+    const originalRaw = getMetricValue(totals, key);
+    
+    if (key === "cpFollow") {
+      const currentSpend = getCurrentRawValue("spend");
+      const currentFollows = getCurrentRawValue("follows");
+      const rawValue = currentFollows > 0 ? currentSpend / currentFollows : 0;
+      
+      const isSpendOverridden = !!config.custom_metrics.find((m) => m.id === "spend");
+      const isFollowsOverridden = !!config.custom_metrics.find((m) => m.id === "follows");
+      const isOverridden = isSpendOverridden || isFollowsOverridden;
+
+      return {
+        value: formatMetricValue("cpFollow", rawValue, currencySymbol),
+        rawValue,
+        originalValue: formatMetricValue("cpFollow", originalRaw, currencySymbol),
+        isOverridden,
+      };
+    }
+
     const override = config.custom_metrics.find((m) => m.id === key);
     const isOverridden = !!override;
-
-    const originalRaw = getMetricValue(totals, key);
     const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
 
     return {
@@ -351,7 +376,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
               isOverridden={isOverridden}
               onSave={(val) => handleSaveOverride(key, val)}
               onReset={() => handleResetOverride(key)}
-              readOnly={!clientId}
+              readOnly={!clientId || key === "cpFollow"}
               highlight={isHighlight(key)}
             />
           );

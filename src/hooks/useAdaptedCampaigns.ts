@@ -6,11 +6,11 @@ import { PRIMARY_METRIC_OPTIONS } from "./useFunnelPrimaryMetric";
 
 export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
   if (!key || key === "conversions") {
-    return c.primaryResult ?? c.conversions;
+    return c.conversions;
   }
   if (key === "_profile_visit") {
     const isProfileVisit = c?.primaryResultKey === "_profile_visit" || c?.name?.toLowerCase()?.includes("seguidores") || c?.name?.toLowerCase()?.includes("perfil");
-    return isProfileVisit ? (c.conversions || c.linkClicks || c.link_clicks || 0) : (c.actionBreakdown?.["link_click"] || c.linkClicks || c.link_clicks || 0);
+    return isProfileVisit ? (c.conversions || c.linkClicks || 0) : (c.actionBreakdown?.["link_click"] || c.linkClicks || 0);
   }
 
   // Try raw breakdown first

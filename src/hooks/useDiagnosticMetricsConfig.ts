@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { META_METRIC_CATALOG } from "@/lib/metaMetricCatalog";
@@ -36,86 +37,90 @@ export function useDiagnosticMetricsConfig(
   datePreset: string,
   groupKey: string,
 ) {
+  const queryClient = useQueryClient();
   const isGoogle = groupKey.startsWith("google-ads-");
   const defaultCfg = isGoogle ? DEFAULT_GOOGLE : DEFAULT;
 
-  const [config, setConfig] = useState<MetricsConfig>(defaultCfg);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const saveTimerRef = useRef<number | null>(null);
+  const queryKey = ["diagnostic-metrics-config", clientId, datePreset, groupKey];
 
-  // Load
-  useEffect(() => {
-    if (!clientId || !groupKey) return;
-    setLoading(true);
-    supabase
-      .from("diagnostic_metrics_config")
-      .select("*")
-      .eq("client_id", clientId)
-      .eq("date_preset", datePreset)
-      .eq("group_key", groupKey)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setConfig({
-            visible_metrics: Array.isArray(data.visible_metrics)
-              ? (data.visible_metrics as string[])
-              : defaultCfg.visible_metrics,
-            custom_metrics: Array.isArray(data.custom_metrics)
-              ? (data.custom_metrics as unknown as CustomMetric[])
-              : [],
-          });
-        } else {
-          setConfig(defaultCfg);
-        }
-        setLoading(false);
-      });
-  }, [clientId, datePreset, groupKey, defaultCfg]);
+  const { data: config = defaultCfg, isLoading } = useQuery({
+    queryKey,
+    enabled: !!clientId && !!groupKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("diagnostic_metrics_config")
+        .select("*")
+        .eq("client_id", clientId)
+        .eq("date_preset", datePreset)
+        .eq("group_key", groupKey)
+        .maybeSingle();
 
-  const persist = useCallback(
-    async (next: MetricsConfig) => {
-      if (!clientId || !groupKey) return;
-      setSaving(true);
-      try {
-        const { data: existing } = await supabase
-          .from("diagnostic_metrics_config")
-          .select("id")
-          .eq("client_id", clientId)
-          .eq("date_preset", datePreset)
-          .eq("group_key", groupKey)
-          .maybeSingle();
-
-        const payload = {
-          visible_metrics: next.visible_metrics as any,
-          custom_metrics: next.custom_metrics as any,
+      if (error) throw error;
+      if (data) {
+        return {
+          visible_metrics: Array.isArray(data.visible_metrics)
+            ? (data.visible_metrics as string[])
+            : defaultCfg.visible_metrics,
+          custom_metrics: Array.isArray(data.custom_metrics)
+            ? (data.custom_metrics as unknown as CustomMetric[])
+            : [],
         };
+      }
+      return defaultCfg;
+    },
+  });
 
-        if (existing) {
-          await supabase.from("diagnostic_metrics_config").update(payload).eq("id", existing.id);
-        } else {
-          await supabase.from("diagnostic_metrics_config").insert({
-            client_id: clientId,
-            date_preset: datePreset,
-            group_key: groupKey,
-            ...payload,
-          });
-        }
-      } catch (e) {
-        toast.error("Erro ao salvar configuração de métricas");
-      } finally {
-        setSaving(false);
+  const mutation = useMutation({
+    mutationFn: async (next: MetricsConfig) => {
+      const { data: existing } = await supabase
+        .from("diagnostic_metrics_config")
+        .select("id")
+        .eq("client_id", clientId)
+        .eq("date_preset", datePreset)
+        .eq("group_key", groupKey)
+        .maybeSingle();
+
+      const payload = {
+        visible_metrics: next.visible_metrics as any,
+        custom_metrics: next.custom_metrics as any,
+      };
+
+      if (existing) {
+        const { error } = await supabase.from("diagnostic_metrics_config").update(payload).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("diagnostic_metrics_config").insert({
+          client_id: clientId,
+          date_preset: datePreset,
+          group_key: groupKey,
+          ...payload,
+        });
+        if (error) throw error;
       }
     },
-    [clientId, datePreset, groupKey],
-  );
+    onMutate: async (next) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, next);
+      return { previous };
+    },
+    onError: (err, next, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+      toast.error("Erro ao salvar configuração de métricas");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
 
   const update = useCallback(
     (next: MetricsConfig) => {
-      setConfig(next);
-      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(() => persist(next), 800);
+      mutation.mutate(next);
     },
-    [persist],
+    [mutation],
   );
 
   const toggleMetric = useCallback(
@@ -162,8 +167,8 @@ export function useDiagnosticMetricsConfig(
 
   return {
     config,
-    loading,
-    saving,
+    loading: isLoading,
+    saving: mutation.isPending,
     update,
     toggleMetric,
     reorderMetrics,
