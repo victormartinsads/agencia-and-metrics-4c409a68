@@ -29,21 +29,70 @@ interface Props {
 export function GridDashboard({
   clientId, dashboardKey, editMode, blocks, rowHeight = 60, cols = 12,
 }: Props) {
-  const { data: saved } = useDashboardLayout(clientId, dashboardKey);
+  const isDemoClient = clientId === "11111111-1111-1111-1111-111111111111";
+  const { data: saved } = useDashboardLayout(isDemoClient ? undefined : clientId, dashboardKey);
   const save = useSaveDashboardLayout();
 
   const layout: Layout[] = useMemo(() => {
     const byId = new Map<string, Layout>();
     ((saved as any) || []).forEach((l: Layout) => byId.set(l.i, l));
-    let cursorY = 0;
-    return blocks.map((b, idx) => {
+
+    const grid: boolean[][] = [];
+    const isAreaFree = (startX: number, startY: number, w: number, h: number): boolean => {
+      for (let y = startY; y < startY + h; y++) {
+        if (!grid[y]) grid[y] = Array(cols).fill(false);
+        for (let x = startX; x < startX + w; x++) {
+          if (x >= cols) return false;
+          if (grid[y][x]) return false;
+        }
+      }
+      return true;
+    };
+
+    const occupyArea = (startX: number, startY: number, w: number, h: number) => {
+      for (let y = startY; y < startY + h; y++) {
+        if (!grid[y]) grid[y] = Array(cols).fill(false);
+        for (let x = startX; x < startX + w; x++) {
+          grid[y][x] = true;
+        }
+      }
+    };
+
+    return blocks.map((b) => {
       const existing = byId.get(b.id);
-      if (existing) return existing;
+      if (existing) {
+        occupyArea(existing.x, existing.y, existing.w, existing.h);
+        return existing;
+      }
+
       const def = b.defaultLayout || { w: 12, h: 4 };
-      const x = def.x ?? ((idx * (def.w)) % cols);
-      const y = def.y ?? cursorY;
-      cursorY += def.h;
-      return { i: b.id, x, y, w: def.w, h: def.h, minW: def.minW || 2, minH: def.minH || 2 };
+      const w = Math.min(def.w, cols);
+      const h = def.h;
+
+      let foundX = 0;
+      let foundY = 0;
+      let placed = false;
+
+      for (let y = 0; !placed && y < 1000; y++) {
+        for (let x = 0; !placed && x <= cols - w; x++) {
+          if (isAreaFree(x, y, w, h)) {
+            foundX = x;
+            foundY = y;
+            placed = true;
+          }
+        }
+      }
+
+      occupyArea(foundX, foundY, w, h);
+      return {
+        i: b.id,
+        x: foundX,
+        y: foundY,
+        w,
+        h,
+        minW: def.minW || 2,
+        minH: def.minH || 2,
+      };
     });
   }, [saved, blocks, cols]);
 
