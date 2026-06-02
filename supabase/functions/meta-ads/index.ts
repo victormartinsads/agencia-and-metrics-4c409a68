@@ -95,9 +95,17 @@ function getActionTypePriority(objective: string, campaignName: string, customLe
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
-  const leadActions = ["lead"];
+  const leadActions = customLeadActions && customLeadActions.length > 0 ? customLeadActions : ["lead"];
 
-  if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores") || nameLower.includes("captacao_seguidores")) {
+  if (
+    nameLower.includes("captacao_de_seguidores") ||
+    nameLower.includes("captação de seguidores") ||
+    nameLower.includes("captacao_seguidores") ||
+    nameLower.includes("captação de seguidor") ||
+    nameLower.includes("seguidores") ||
+    nameLower.includes("follower") ||
+    nameLower.includes("perfil")
+  ) {
     return ["_profile_visit"];
   }
   if (nameLower.includes("corredor_japones") || nameLower.includes("corredor japonês") || nameLower.includes("corredor japones")) {
@@ -737,7 +745,9 @@ Deno.serve(async (req) => {
 
     // 1. Check cache first (skip if forceRefresh)
     const cached = await getCachedData(supabase, clientId, preset);
-    if (!forceRefresh && cached && new Date(cached.expires_at) > new Date()) {
+    // Invalidate cache created before our deploy time (2026-06-02T15:45:00Z) to apply fixes
+    const deployTime = new Date("2026-06-02T15:45:00Z");
+    if (!forceRefresh && cached && new Date(cached.expires_at) > new Date() && new Date(cached.created_at) > deployTime) {
       console.log(`Cache HIT for ${clientId}/${preset}`);
       return new Response(JSON.stringify(cached.response_data), {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
@@ -844,8 +854,10 @@ Deno.serve(async (req) => {
               dailyData[date].clicks += Number(day.clicks || 0);
               const purchaseVal = getActionValue(day.actions, "purchase")
                 || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
-              // Daily leads use standard Meta leads events (strictly standard leads)
-              const dailyLeadTypes = ["lead"];
+              // Daily leads use standard Meta leads events (strictly standard leads or client overrides)
+              const dailyLeadTypes = client.lead_action_types && client.lead_action_types.length > 0
+                ? client.lead_action_types
+                : ["lead"];
               let leadVal = 0;
               for (const t of dailyLeadTypes) leadVal += getActionValue(day.actions, t);
               dailyData[date].purchases += purchaseVal;
@@ -1125,7 +1137,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const leadActionTypes = ["lead"];
+    const leadActionTypes = client.lead_action_types && client.lead_action_types.length > 0
+      ? client.lead_action_types
+      : ["lead"];
 
     let totalLeadActions = 0;
     for (const result of accountResults) {

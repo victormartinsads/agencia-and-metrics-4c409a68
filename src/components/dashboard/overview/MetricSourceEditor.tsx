@@ -23,8 +23,6 @@ import { Webhook } from "lucide-react";
 
 const DEFAULT_LEAD_ACTIONS = [
   "lead",
-  "onsite_conversion.lead_grouped",
-  "onsite_conversion.messaging_conversation_started_7d",
 ];
 
 const LEAD_ACTION_OPTIONS: { key: string; label: string }[] = [
