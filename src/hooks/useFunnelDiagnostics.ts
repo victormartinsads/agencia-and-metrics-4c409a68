@@ -16,6 +16,7 @@ export interface FunnelDiagnosticData {
     hold_rate: number;
     ctr_link: number;
     cost_per_play: number;
+    avgVideoTime?: number;
   };
   diagnostics: {
     criativos: DiagnosticBlock;
@@ -34,6 +35,7 @@ export const DEFAULT_DIAGNOSTICS: FunnelDiagnosticData = {
     hold_rate: 17.5,
     ctr_link: 2.74,
     cost_per_play: 0.05,
+    avgVideoTime: 5.4,
   },
   diagnostics: {
     criativos: {

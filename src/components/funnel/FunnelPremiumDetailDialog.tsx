@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Campaign } from "@/data/mockMetaData";
 import { useFunnelLabels } from "@/hooks/useFunnelLabels";
@@ -10,10 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Pencil, Search, RefreshCw, X, Check, Eye } from "lucide-react";
+import { Pencil, Search, RefreshCw, X, Check, Eye, ArrowUp, ArrowDown, Plus, Trash2, RotateCcw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { resolveMetricKey, getMetricValue } from "@/lib/metaMetricCatalog";
 import { formatMetricValue } from "@/lib/metaMetrics";
+import { useDiagnosticMetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
+import { MetricsCustomizer } from "@/components/diagnostico/MetricsCustomizer";
+import { useFunnelStages, useSaveFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
+
 
 interface Props {
   open: boolean;
@@ -52,9 +57,31 @@ export function FunnelPremiumDetailDialog({
   const { data: funnelDiag } = useFunnelDiagnostics(clientId, funnelCode);
   const saveFunnelDiag = useSaveFunnelDiagnostics();
 
+  // Metrics customization configuration hook
+  const {
+    config: metricsConfig,
+    update: updateMetricsConfig,
+    availableMetrics,
+  } = useDiagnosticMetricsConfig(clientId, datePreset, funnelCode);
+
+  // Funnel stages config
+  const { data: savedStages } = useFunnelStages(clientId, funnelCode);
+  const saveStagesMutation = useSaveFunnelStages();
+
+  const [editingJourney, setEditingJourney] = useState(false);
+  const [journeyStages, setJourneyStages] = useState<{ name: string; metric_key: string; sort_order: number }[]>([]);
+
+  useEffect(() => {
+    if (savedStages && savedStages.length > 0) {
+      setJourneyStages(savedStages.map(s => ({ name: s.name, metric_key: s.metric_key, sort_order: s.sort_order })));
+    } else {
+      setJourneyStages(DEFAULT_STAGES.map(s => ({ ...s })));
+    }
+  }, [savedStages]);
+
   // Dialog edit states
   const [editingItem, setEditingItem] = useState<{
-    type: "primary" | "secondary" | "journey" | "curve" | "rate" | "diagnostic" | "health";
+    type: "primary" | "secondary" | "journey" | "curve" | "rate" | "diagnostic" | "health" | "custom";
     key: string;
     label: string;
     value: any;
@@ -112,6 +139,12 @@ export function FunnelPremiumDetailDialog({
           patch: { curve_data: currentCurve },
         });
         toast.success("Métrica de criativo atualizada!");
+      } else if (editingItem.type === "custom") {
+        const nextCustom = metricsConfig.custom_metrics.map(m =>
+          m.id === editingItem.key ? { ...m, value: editValue } : m
+        );
+        await updateMetricsConfig({ ...metricsConfig, custom_metrics: nextCustom });
+        toast.success("Métrica manual atualizada!");
       } else {
         // Save metric override
         await saveMetricOverride.mutateAsync({
@@ -128,51 +161,107 @@ export function FunnelPremiumDetailDialog({
     }
   };
 
-  // Base metrics aggregations
-  const metaTotals = useMemo(() => {
-    const sum = (k: string) => {
-      const canonical = resolveMetricKey(k);
-      return adaptedCampaigns.reduce((acc, c) => {
-        if (c.actionBreakdown && c.actionBreakdown[k] !== undefined) return acc + Number(c.actionBreakdown[k] || 0);
-        return acc + Number((c as any)[canonical] ?? (c as any)[k] ?? 0);
-      }, 0);
-    };
-
-    return {
-      impressions: sum("impressions"),
-      reach: sum("reach"),
-      clicks: sum("clicks"),
-      landingPageViews: sum("landingPageViews"),
-      addToCart: sum("addToCart"),
-      initiateCheckout: sum("initiateCheckout"),
-      purchases: sum("purchases"),
-      conversions: sum("conversions"),
-      leads: sum("conversions"),
-      revenue: sum("purchaseValue"),
-    };
-  }, [adaptedCampaigns]);
-
-  // Derived overrides mapping
-  const getMetric = (key: string, originalVal: number) => {
-    const ov = overrides?.[funnelCode]?.[key];
-    return ov !== undefined ? ov : originalVal;
+  // Base metrics aggregations helper
+  const sumMetric = (k: string) => {
+    const canonical = resolveMetricKey(k);
+    return adaptedCampaigns.reduce((acc, c) => {
+      if (c.actionBreakdown && c.actionBreakdown[k] !== undefined) return acc + Number(c.actionBreakdown[k] || 0);
+      return acc + Number((c as any)[canonical] ?? (c as any)[k] ?? 0);
+    }, 0);
   };
 
-  const spend = getMetric("spend", adaptedCampaigns.reduce((acc, c) => acc + c.spend, 0));
-  const conversions = getMetric("conversions", metaTotals.conversions);
-  const purchases = getMetric("purchases", metaTotals.purchases);
-  const clicks = getMetric("clicks", metaTotals.clicks);
-  const impressions = getMetric("impressions", metaTotals.impressions);
-  const revenue = getMetric("revenue", metaTotals.revenue);
-  const reach = getMetric("reach", metaTotals.reach);
+  // Derived overrides mapping
+  const getMetricValueAndOverride = (key: string): number => {
+    const ov = overrides?.[funnelCode]?.[key];
+    if (ov !== undefined) return ov;
+
+    switch (key) {
+      case "spend":
+        return adaptedCampaigns.reduce((acc, c) => acc + c.spend, 0);
+      case "conversions":
+        return sumMetric("conversions");
+      case "purchases":
+      case "sales":
+        return sumMetric("purchases");
+      case "clicks":
+        return sumMetric("clicks");
+      case "impressions":
+        return sumMetric("impressions");
+      case "revenue":
+      case "purchaseValue":
+        return sumMetric("purchaseValue");
+      case "reach":
+        return sumMetric("reach");
+      case "landingPageViews":
+      case "landing_page_views":
+        return sumMetric("landingPageViews") || getMetricValueAndOverride("clicks") * 0.85;
+      case "frequency": {
+        const imp = getMetricValueAndOverride("impressions");
+        const rch = getMetricValueAndOverride("reach");
+        return rch > 0 ? imp / rch : 1.4;
+      }
+      case "cpa": {
+        const sp = getMetricValueAndOverride("spend");
+        const pur = getMetricValueAndOverride("purchases");
+        return pur > 0 ? sp / pur : 0;
+      }
+      case "cpl":
+      case "cpLead":
+      case "costPerConversion": {
+        const sp = getMetricValueAndOverride("spend");
+        const conv = getMetricValueAndOverride("conversions");
+        return conv > 0 ? sp / conv : 0;
+      }
+      case "roas": {
+        const sp = getMetricValueAndOverride("spend");
+        const rev = getMetricValueAndOverride("revenue");
+        return sp > 0 ? rev / sp : 0;
+      }
+      case "profit": {
+        const sp = getMetricValueAndOverride("spend");
+        const rev = getMetricValueAndOverride("revenue");
+        return rev - sp;
+      }
+      case "ctr": {
+        const clk = getMetricValueAndOverride("clicks");
+        const imp = getMetricValueAndOverride("impressions");
+        return imp > 0 ? (clk / imp) * 100 : 0;
+      }
+      case "cpc": {
+        const sp = getMetricValueAndOverride("spend");
+        const clk = getMetricValueAndOverride("clicks");
+        return clk > 0 ? sp / clk : 0;
+      }
+      case "cpm": {
+        const sp = getMetricValueAndOverride("spend");
+        const imp = getMetricValueAndOverride("impressions");
+        return imp > 0 ? (sp / imp) * 1000 : 0;
+      }
+      case "oferta":
+        return 10.00;
+      default:
+        return sumMetric(key);
+    }
+  };
+
+  const spend = getMetricValueAndOverride("spend");
+  const conversions = getMetricValueAndOverride("conversions");
+  const purchases = getMetricValueAndOverride("purchases");
+  const clicks = getMetricValueAndOverride("clicks");
+  const impressions = getMetricValueAndOverride("impressions");
+  const revenue = getMetricValueAndOverride("revenue");
+  const reach = getMetricValueAndOverride("reach");
 
   // Recalculated primary metrics based on overrides
-  const cpa = getMetric("cpa", purchases > 0 ? spend / purchases : 0);
-  const cpl = getMetric("cpl", conversions > 0 ? spend / conversions : 0);
-  const roas = getMetric("roas", spend > 0 ? revenue / spend : 0);
-  const profit = getMetric("profit", revenue - spend);
-  const ctr = getMetric("ctr", impressions > 0 ? (clicks / impressions) * 100 : 0);
-  const oferta = getMetric("oferta", 10.00);
+  const cpa = getMetricValueAndOverride("cpa");
+  const cpl = getMetricValueAndOverride("cpl");
+  const roas = getMetricValueAndOverride("roas");
+  const profit = getMetricValueAndOverride("profit");
+  const ctr = getMetricValueAndOverride("ctr");
+  const oferta = getMetricValueAndOverride("oferta");
+
+  const primaryKeys = metricsConfig?.visible_metrics?.slice(0, 9) || [];
+  const secondaryKeys = metricsConfig?.visible_metrics?.slice(9) || [];
 
   // Setup diagnostic values
   const healthScore = funnelDiag?.health_score ?? 7.6;
@@ -181,6 +270,42 @@ export function FunnelPremiumDetailDialog({
 
   const diags = funnelDiag?.diagnostics || DEFAULT_DIAGNOSTICS.diagnostics;
   const curve = funnelDiag?.curve_data || DEFAULT_DIAGNOSTICS.curve_data;
+
+  // Video watch time and retention rates calculation
+  const videoPlays = getMetricValueAndOverride("videoPlays");
+  const videoP25 = getMetricValueAndOverride("videoP25");
+  const videoP50 = getMetricValueAndOverride("videoP50");
+  const videoP75 = getMetricValueAndOverride("videoP75");
+  const videoP100 = getMetricValueAndOverride("videoP100");
+
+  const p25Rate = videoPlays > 0 ? (videoP25 / videoPlays) * 100 : (curve.hook_rate || 60);
+  const p50Rate = videoPlays > 0 ? (videoP50 / videoPlays) * 100 : (curve.hold_rate || 40);
+  const p75Rate = videoPlays > 0 ? (videoP75 / videoPlays) * 100 : 25;
+  const p100Rate = videoPlays > 0 ? (videoP100 / videoPlays) * 100 : 12;
+
+  const avgVideoTime = funnelDiag?.curve_data?.avgVideoTime ?? getMetricValueAndOverride("avgVideoTime") ?? 5.4;
+
+  const xPos = Math.min(95, Math.max(5, (avgVideoTime / 15) * 100));
+  let yRate = 100;
+  if (xPos < 25) {
+    yRate = 100 - ((100 - p25Rate) * xPos) / 25;
+  } else if (xPos < 50) {
+    yRate = p25Rate - ((p25Rate - p50Rate) * (xPos - 25)) / 25;
+  } else if (xPos < 75) {
+    yRate = p50Rate - ((p50Rate - p75Rate) * (xPos - 50)) / 25;
+  } else {
+    yRate = p75Rate - ((p75Rate - p100Rate) * (xPos - 75)) / 25;
+  }
+  const yValAtAvgTime = 45 - (yRate / 100) * 40;
+
+  const y0 = 5;
+  const y1 = 45 - (p25Rate / 100) * 40;
+  const y2 = 45 - (p50Rate / 100) * 40;
+  const y3 = 45 - (p75Rate / 100) * 40;
+  const y4 = 45 - (p100Rate / 100) * 40;
+  
+  const dPath = `M 0 ${y0} L 25 ${y1} L 50 ${y2} L 75 ${y3} L 100 ${y4}`;
+  const dArea = `${dPath} L 100 50 L 0 50 Z`;
 
   // Search filter
   const [search, setSearch] = useState("");
@@ -196,11 +321,15 @@ export function FunnelPremiumDetailDialog({
             <span style={{ fontFamily: "'Syne', system-ui, sans-serif" }} className="text-xl font-bold uppercase tracking-[0.06em] text-card-foreground">
               {displayLabel}
             </span>
-            <span className="text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full select-none">Meta Ads</span>
-            <span className="text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full select-none">Google Ads</span>
+            {funnelCode.startsWith("GADS-") || funnelCode.startsWith("gads-") || funnelCode.startsWith("google-ads-") ? (
+              <span className="text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full select-none">Google Ads</span>
+            ) : (
+              <span className="text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full select-none">Meta Ads</span>
+            )}
           </div>
           
           <div className="flex items-center gap-3">
+            <MetricsCustomizer clientId={clientId} datePreset={datePreset} groupKey={funnelCode} />
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -223,160 +352,68 @@ export function FunnelPremiumDetailDialog({
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-[#0c0c0e]">
           
           {/* Métricas Principais */}
-          {matchesSearch("Métricas Principais") && (
+          {matchesSearch("Métricas Principais") && primaryKeys.length > 0 && (
             <div className="space-y-3">
               <div className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider">Métricas Principais</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
-                
-                {/* 1. Spend */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "spend", "Investido", spend)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Investido</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{currencySymbol} {spend.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[9px] text-green-400 font-medium mt-1">+7.4% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
+                {primaryKeys.map((key) => {
+                  const meta = availableMetrics.find(m => m.key === key);
+                  if (!meta) return null;
+                  const value = getMetricValueAndOverride(key);
+                  const formatted = formatMetricValue(key, value, currencySymbol);
 
-                {/* 2. Oferta */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "oferta", "Oferta", oferta)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Oferta</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{currencySymbol} {oferta.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[9px] text-muted-foreground font-medium mt-1">Estável</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 3. ROAS */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "roas", "ROAS", roas)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">ROAS</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{roas.toFixed(2)}x</span>
-                  <span className="text-[9px] text-red-400 font-medium mt-1">-2.0% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 4. Vendas */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "purchases", "Vendas (QTD)", purchases)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Vendas (Qtd)</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{Math.round(purchases)}</span>
-                  <span className="text-[9px] text-red-400 font-medium mt-1">-3.0% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 5. Leads */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "conversions", "Leads Mapeados", conversions)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Leads (Mapeado)</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{Math.round(conversions)}</span>
-                  <span className="text-[9px] text-green-400 font-medium mt-1">+0.8% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 6. CPL */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "cpl", "Custo por Lead (Mapeado)", cpl)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Custo por Lead</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{currencySymbol} {cpl.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[9px] text-green-400 font-medium mt-1">-1.1% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 7. CPA */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "cpa", "CPA", cpa)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">CPA</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{currencySymbol} {cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[9px] text-green-400 font-medium mt-1">-0.3% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 8. Lucro */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "profit", "Lucro Estimado", profit)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Lucro Estimado</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{currencySymbol} {profit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[9px] text-red-400 font-medium mt-1">-11.5% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
-                {/* 9. CTR */}
-                <div 
-                  className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
-                  onClick={() => handleStartEdit("primary", "ctr", "CTR", ctr)}
-                >
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">CTR</span>
-                  <span className="text-xl font-bold text-card-foreground mt-2">{ctr.toFixed(2)}%</span>
-                  <span className="text-[9px] text-green-400 font-medium mt-1">+1.8% vs anterior</span>
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
-                </div>
-
+                  return (
+                    <div 
+                      key={key}
+                      className="relative group border border-border/60 hover:border-primary/40 bg-card/65 p-4 rounded-xl flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.01]" 
+                      onClick={() => handleStartEdit("primary", key, meta.label, value)}
+                    >
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">{meta.label}</span>
+                      <span className="text-xl font-bold text-card-foreground mt-2">{formatted}</span>
+                      <span className="text-[9px] text-green-400 font-medium mt-1">Estável</span>
+                      <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-3 w-3" /></span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* Métricas Secundárias */}
-          {matchesSearch("Métricas Secundárias") && (
+          {matchesSearch("Métricas Secundárias") && (secondaryKeys.length > 0 || (metricsConfig?.custom_metrics && metricsConfig.custom_metrics.length > 0)) && (
             <div className="space-y-3">
               <div className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider">Métricas Secundárias</div>
               <div className="flex flex-wrap gap-3">
-                
-                {/* 1. Impressões */}
-                <div 
-                  className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
-                  onClick={() => handleStartEdit("secondary", "impressions", "Impressões", impressions)}
-                >
-                  <span className="text-[10px] text-muted-foreground">Impressões:</span>
-                  <span className="text-xs font-bold text-card-foreground">{impressions.toLocaleString("pt-BR")}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
-                </div>
+                {secondaryKeys.map((key) => {
+                  const meta = availableMetrics.find(m => m.key === key);
+                  if (!meta) return null;
+                  const value = getMetricValueAndOverride(key);
+                  const formatted = formatMetricValue(key, value, currencySymbol);
 
-                {/* 2. Cliques */}
-                <div 
-                  className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
-                  onClick={() => handleStartEdit("secondary", "clicks", "Cliques", clicks)}
-                >
-                  <span className="text-[10px] text-muted-foreground">Cliques (todos):</span>
-                  <span className="text-xs font-bold text-card-foreground">{clicks.toLocaleString("pt-BR")}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
-                </div>
+                  return (
+                    <div 
+                      key={key}
+                      className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
+                      onClick={() => handleStartEdit("secondary", key, meta.label, value)}
+                    >
+                      <span className="text-[10px] text-muted-foreground">{meta.label}:</span>
+                      <span className="text-xs font-bold text-card-foreground">{formatted}</span>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
+                    </div>
+                  );
+                })}
 
-                {/* 3. Frequência */}
-                <div 
-                  className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
-                  onClick={() => handleStartEdit("secondary", "frequency", "Frequência", getMetric("frequency", reach > 0 ? impressions / reach : 1.4))}
-                >
-                  <span className="text-[10px] text-muted-foreground">Frequência:</span>
-                  <span className="text-xs font-bold text-card-foreground">{getMetric("frequency", reach > 0 ? impressions / reach : 1.4).toFixed(2)}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
-                </div>
-
-                {/* 4. Landing Page Views */}
-                <div 
-                  className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
-                  onClick={() => handleStartEdit("secondary", "landing_page_views", "Landing Page Views", getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85))}
-                >
-                  <span className="text-[10px] text-muted-foreground">LP Views:</span>
-                  <span className="text-xs font-bold text-card-foreground">{getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85).toLocaleString("pt-BR")}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
-                </div>
-
+                {metricsConfig?.custom_metrics?.map((m) => (
+                  <div 
+                    key={m.id}
+                    className="relative group border border-border/40 hover:border-primary/30 bg-card/40 px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors"
+                    onClick={() => handleStartEdit("custom", m.id, m.label, m.value)}
+                  >
+                    <span className="text-[10px] text-muted-foreground">{m.label}:</span>
+                    <span className="text-xs font-bold text-card-foreground">{m.value}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-2.5 w-2.5 text-muted-foreground" /></span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -386,101 +423,195 @@ export function FunnelPremiumDetailDialog({
             
             {/* 1. Jornada de Conversão */}
             <div className="border border-border bg-[#0f0f12] rounded-2xl p-5 space-y-4 flex flex-col justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-card-foreground flex items-center gap-2 tracking-[0.03em]">
-                  🔻 Jornada de Conversão
-                </h3>
-                <p className="text-[10px] text-muted-foreground mt-1">Volume e queda entre etapas</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-card-foreground flex items-center gap-2 tracking-[0.03em]">
+                    🔻 Jornada de Conversão
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground mt-1">Volume e queda entre etapas</p>
+                </div>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    onClick={() => setEditingJourney(!editingJourney)}
+                    title="Editar etapas da jornada"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
 
-              <div className="space-y-2 flex-1 mt-4">
-                
-                {/* 1.1 Impressões */}
-                <div className="flex flex-col items-center">
-                  <div 
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors"
-                    onClick={() => handleStartEdit("secondary", "impressions", "Impressões", impressions)}
-                  >
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">Impressões</span>
-                      <p className="text-base font-extrabold text-card-foreground mt-0.5">{impressions.toLocaleString("pt-BR")}</p>
+              {editingJourney ? (
+                <div className="space-y-2 flex-1 mt-4">
+                  {journeyStages.map((stage, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-muted/20 rounded-lg p-2 border border-border/50">
+                      <Input
+                        value={stage.name}
+                        onChange={e => {
+                          const next = [...journeyStages];
+                          next[i].name = e.target.value;
+                          setJourneyStages(next);
+                        }}
+                        className="h-8 text-xs flex-1 bg-background/50 border-border"
+                        placeholder="Nome da etapa"
+                      />
+                      <Select
+                        value={stage.metric_key}
+                        onValueChange={v => {
+                          const next = [...journeyStages];
+                          next[i].metric_key = v;
+                          setJourneyStages(next);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[130px] bg-background/50 border-border">
+                          <SelectValue placeholder="Métrica" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border">
+                          {availableMetrics.map(m => (
+                            <SelectItem key={m.key} value={m.key} className="text-xs">{m.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-0.5">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          disabled={i === 0}
+                          onClick={() => {
+                            const next = [...journeyStages];
+                            [next[i], next[i - 1]] = [next[i - 1], next[i]];
+                            setJourneyStages(next.map((s, idx) => ({ ...s, sort_order: idx })));
+                          }}
+                        >
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          disabled={i === journeyStages.length - 1}
+                          onClick={() => {
+                            const next = [...journeyStages];
+                            [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                            setJourneyStages(next.map((s, idx) => ({ ...s, sort_order: idx })));
+                          }}
+                        >
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive hover:text-destructive/80"
+                          onClick={() => {
+                            setJourneyStages(journeyStages.filter((_, idx) => idx !== i));
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
+                  ))}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setJourneyStages([...journeyStages, { name: "Nova Etapa", metric_key: availableMetrics[0]?.key || "spend", sort_order: journeyStages.length }]);
+                      }}
+                      className="text-[11px] h-8 flex-1 gap-1 border-border/80"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Adicionar etapa
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setJourneyStages(DEFAULT_STAGES.map(s => ({ ...s })));
+                      }}
+                      className="text-[11px] h-8 gap-1 border-border/80 text-amber-500 hover:text-amber-500/90"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" /> Reset
+                    </Button>
                   </div>
-                  <div className="h-3 w-px bg-border/60" />
-                </div>
-
-                {/* 1.2 Cliques */}
-                <div className="flex flex-col items-center">
-                  <div 
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors"
-                    onClick={() => handleStartEdit("secondary", "clicks", "Cliques", clicks)}
-                  >
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">Cliques</span>
-                      <p className="text-base font-extrabold text-card-foreground mt-0.5">{clicks.toLocaleString("pt-BR")}</p>
-                    </div>
-                    <div className="text-right text-[10px]">
-                      <span className="text-red-400 font-bold uppercase tracking-wide">GARGALO (94.5% QUEDA)</span>
-                      <p className="text-muted-foreground mt-0.5">{ctr.toFixed(2)}% retidos</p>
-                    </div>
-                  </div>
-                  <div className="h-3 w-px bg-border/60" />
-                </div>
-
-                {/* 1.3 Page Views */}
-                <div className="flex flex-col items-center">
-                  <div 
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors"
-                    onClick={() => handleStartEdit("secondary", "landing_page_views", "Page Views", getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85))}
-                  >
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">Page Views</span>
-                      <p className="text-base font-extrabold text-card-foreground mt-0.5">{getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85).toLocaleString("pt-BR")}</p>
-                    </div>
-                    <div className="text-right text-[10px]">
-                      <span className="text-green-400 font-bold uppercase tracking-wide">89.0% OUTRA</span>
-                      <p className="text-muted-foreground mt-0.5">{clicks > 0 ? ((getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85) / clicks) * 100).toFixed(2) : 0}% retidos</p>
-                    </div>
-                  </div>
-                  <div className="h-3 w-px bg-border/60" />
-                </div>
-
-                {/* 1.4 Leads */}
-                <div className="flex flex-col items-center">
-                  <div 
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors"
-                    onClick={() => handleStartEdit("primary", "conversions", "Leads", conversions)}
-                  >
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">Leads / Cadastros</span>
-                      <p className="text-base font-extrabold text-card-foreground mt-0.5">{conversions.toLocaleString("pt-BR")}</p>
-                    </div>
-                    <div className="text-right text-[10px]">
-                      <span className="text-red-400 font-bold uppercase tracking-wide">GARGALO (94.8% QUEDA)</span>
-                      <p className="text-muted-foreground mt-0.5">{clicks > 0 ? ((conversions / clicks) * 100).toFixed(2) : 0}% retidos</p>
-                    </div>
-                  </div>
-                  <div className="h-3 w-px bg-border/60" />
-                </div>
-
-                {/* 1.5 Vendas */}
-                <div className="flex flex-col items-center">
-                  <div 
-                    className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors"
-                    onClick={() => handleStartEdit("primary", "purchases", "Vendas", purchases)}
-                  >
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">Vendas</span>
-                      <p className="text-base font-extrabold text-card-foreground mt-0.5">{purchases.toLocaleString("pt-BR")}</p>
-                    </div>
-                    <div className="text-right text-[10px]">
-                      <span className="text-green-400 font-bold uppercase tracking-wide">45.4% OUTRA</span>
-                      <p className="text-muted-foreground mt-0.5">{conversions > 0 ? ((purchases / conversions) * 100).toFixed(2) : 0}% retidos</p>
-                    </div>
+                  <div className="flex gap-2 pt-2 border-t border-border/60 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingJourney(false);
+                        if (savedStages && savedStages.length > 0) {
+                          setJourneyStages(savedStages.map(s => ({ name: s.name, metric_key: s.metric_key, sort_order: s.sort_order })));
+                        } else {
+                          setJourneyStages(DEFAULT_STAGES.map(s => ({ ...s })));
+                        }
+                      }}
+                      className="text-[11px] h-8 flex-1 border-border/80"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await saveStagesMutation.mutateAsync({
+                            clientId,
+                            campaignId: funnelCode,
+                            stages: journeyStages,
+                          });
+                          setEditingJourney(false);
+                          toast.success("Jornada de conversão salva!");
+                        } catch {
+                          toast.error("Erro ao salvar jornada de conversão");
+                        }
+                      }}
+                      disabled={saveStagesMutation.isPending}
+                      className="text-[11px] h-8 flex-1"
+                    >
+                      Salvar
+                    </Button>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-2 flex-1 mt-4">
+                  {journeyStages.map((stage, i) => {
+                    const value = getMetricValueAndOverride(stage.metric_key);
+                    const prevValue = i > 0 ? getMetricValueAndOverride(journeyStages[i - 1].metric_key) : 0;
+                    const rate = prevValue > 0 ? (value / prevValue) * 100 : undefined;
+                    const drop = rate !== undefined ? 100 - rate : 0;
+                    const isBottleneck = rate !== undefined && rate < 20 && value > 0;
 
-              </div>
+                    return (
+                      <div key={i} className="flex flex-col items-center">
+                        <div 
+                          className={`w-full flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:border-primary/30 cursor-pointer transition-colors ${
+                            isBottleneck ? "border-red-500/20 bg-red-500/5 hover:border-red-500/30" : ""
+                          }`}
+                          onClick={() => handleStartEdit("journey", stage.metric_key, stage.name, value)}
+                        >
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-muted-foreground/80 tracking-wide">{stage.name}</span>
+                            <p className="text-base font-extrabold text-card-foreground mt-0.5">{value.toLocaleString("pt-BR")}</p>
+                          </div>
+                          {rate !== undefined && (
+                            <div className="text-right text-[10px]">
+                              <span className={`font-bold uppercase tracking-wide ${isBottleneck ? "text-red-400" : "text-green-400"}`}>
+                                {isBottleneck ? `GARGALO (${drop.toFixed(1)}% QUEDA)` : `↓ ${rate.toFixed(1)}% retidos`}
+                              </span>
+                              <p className="text-muted-foreground mt-0.5">{rate.toFixed(1)}% retidos</p>
+                            </div>
+                          )}
+                        </div>
+                        {i < journeyStages.length - 1 && (
+                          <div className="h-3 w-px bg-border/60" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* 2. Qualidade de Criativo */}
@@ -501,11 +632,35 @@ export function FunnelPremiumDetailDialog({
                       <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <path d="M 0 5 Q 30 10, 50 35 T 100 45 L 100 50 L 0 50 Z" fill="url(#curve-grad)" />
-                  <path d="M 0 5 Q 30 10, 50 35 T 100 45" fill="none" stroke="#10b981" strokeWidth="2" />
+                  <path d={dArea} fill="url(#curve-grad)" />
+                  <path d={dPath} fill="none" stroke="#10b981" strokeWidth="2" />
+
+                  {/* Vertical line for avgVideoTime */}
+                  {avgVideoTime > 0 && (
+                    <g>
+                      <line
+                        x1={xPos}
+                        y1="0"
+                        x2={xPos}
+                        y2="50"
+                        stroke="#3b82f6"
+                        strokeWidth="1"
+                        strokeDasharray="2,2"
+                      />
+                      <circle cx={xPos} cy={yValAtAvgTime} r="3" fill="#3b82f6" className="animate-pulse" />
+                    </g>
+                  )}
                 </svg>
                 <span className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground/60 select-none">0s</span>
                 <span className="absolute bottom-2 right-2 text-[9px] font-mono text-muted-foreground/60 select-none">100%</span>
+                {avgVideoTime > 0 && (
+                  <div 
+                    className="absolute top-2 bg-blue-600/95 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow border border-blue-400/30 transition-all select-none"
+                    style={{ left: `calc(${xPos}% - 35px)` }}
+                  >
+                    Média: {avgVideoTime.toFixed(1)}s
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border/60">
@@ -535,6 +690,14 @@ export function FunnelPremiumDetailDialog({
 
                 <div 
                   className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20"
+                  onClick={() => handleStartEdit("curve", "avgVideoTime", "Tempo Médio", avgVideoTime)}
+                >
+                  <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Tempo Médio (s)</span>
+                  <span className="text-sm font-bold text-primary mt-1">{avgVideoTime.toFixed(1)}s</span>
+                </div>
+
+                <div 
+                  className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20 col-span-2"
                   onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", curve.cost_per_play)}
                 >
                   <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Custo por Play</span>
@@ -553,10 +716,9 @@ export function FunnelPremiumDetailDialog({
               </div>
 
               <div className="space-y-4 mt-4 flex-1">
-                
                 {/* LP view rate */}
                 {(() => {
-                  const lpRate = clicks > 0 ? (getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85) / clicks) * 100 : 0;
+                  const lpRate = clicks > 0 ? (getMetricValueAndOverride("landingPageViews") / clicks) * 100 : 0;
                   const isGood = lpRate >= 75;
                   return (
                     <div className="space-y-1">
@@ -576,7 +738,7 @@ export function FunnelPremiumDetailDialog({
 
                 {/* LP view to Lead */}
                 {(() => {
-                  const lpViews = getMetric("landing_page_views", metaTotals.landingPageViews || clicks * 0.85);
+                  const lpViews = getMetricValueAndOverride("landingPageViews");
                   const leadRate = lpViews > 0 ? (conversions / lpViews) * 100 : 0;
                   const isGood = leadRate >= 20;
                   return (

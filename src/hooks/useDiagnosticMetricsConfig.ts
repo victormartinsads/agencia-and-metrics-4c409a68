@@ -22,13 +22,27 @@ export interface MetricsConfig {
 export const AVAILABLE_METRICS: { key: string; label: string; group?: string }[] =
   META_METRIC_CATALOG.map((m) => ({ key: m.key, label: m.label, group: m.group }));
 
+// Catálogo específico Google Ads
+export const AVAILABLE_METRICS_GOOGLE: { key: string; label: string; group?: string }[] = [
+  { key: "spend", label: "Investimento", group: "performance" },
+  { key: "conversions", label: "Conversões", group: "performance" },
+  { key: "cpa", label: "CPA", group: "custos" },
+  { key: "revenue", label: "Faturamento", group: "performance" },
+  { key: "roas", label: "ROAS", group: "performance" },
+  { key: "profit", label: "Lucro", group: "performance" },
+  { key: "impressions", label: "Impressões", group: "alcance" },
+  { key: "clicks", label: "Cliques", group: "trafego" },
+  { key: "ctr", label: "CTR", group: "trafego" },
+  { key: "cpc", label: "CPC", group: "custos" },
+];
+
 const DEFAULT: MetricsConfig = {
   visible_metrics: ["spend", "conversions", "cpa", "ctr", "cpm", "reach"],
   custom_metrics: [],
 };
 
 const DEFAULT_GOOGLE: MetricsConfig = {
-  visible_metrics: ["spend", "conversions", "cpa", "ctr", "clicks", "impressions"],
+  visible_metrics: ["spend", "conversions", "cpa", "revenue", "roas", "profit", "impressions", "clicks", "ctr"],
   custom_metrics: [],
 };
 
@@ -38,7 +52,7 @@ export function useDiagnosticMetricsConfig(
   groupKey: string,
 ) {
   const queryClient = useQueryClient();
-  const isGoogle = groupKey.startsWith("google-ads-");
+  const isGoogle = groupKey.startsWith("google-ads-") || groupKey.startsWith("GADS-") || groupKey.startsWith("gads-");
   const defaultCfg = isGoogle ? DEFAULT_GOOGLE : DEFAULT;
 
   const queryKey = ["diagnostic-metrics-config", clientId, datePreset, groupKey];
@@ -175,6 +189,7 @@ export function useDiagnosticMetricsConfig(
     addCustomMetric,
     updateCustomMetric,
     removeCustomMetric,
+    availableMetrics: isGoogle ? AVAILABLE_METRICS_GOOGLE : AVAILABLE_METRICS,
   };
 }
 

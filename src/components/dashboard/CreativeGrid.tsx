@@ -206,6 +206,28 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                         <p className="font-semibold text-card-foreground">{ov.ctr}%</p>
                       </div>
                     </div>
+                    {/* Gráfico de proporção Impressões vs Cliques */}
+                    <div className="bg-muted/20 border border-border/40 rounded-md p-2 space-y-1 text-[10px]">
+                      <div className="flex justify-between text-muted-foreground font-medium">
+                        <span>Cliques ({ov.clicks.toLocaleString("pt-BR")})</span>
+                        <span>Impressões ({ov.impressions.toLocaleString("pt-BR")})</span>
+                      </div>
+                      <div className="h-2 w-full bg-muted rounded-full relative overflow-hidden">
+                        <div 
+                          className="h-full bg-primary/20 rounded-full" 
+                          style={{ width: "100%" }} 
+                        />
+                        <div 
+                          className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all" 
+                          style={{ width: `${Math.min(100, Math.max(2, (ov.clicks / (ov.impressions || 1)) * 100 * 20))}%` }} 
+                          title={`Proporção: ${((ov.clicks / (ov.impressions || 1)) * 100).toFixed(2)}%`}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground/80">
+                        <span>CTR: {ov.ctr}%</span>
+                        <span>Proporção Cliques/Imp. (x20)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>

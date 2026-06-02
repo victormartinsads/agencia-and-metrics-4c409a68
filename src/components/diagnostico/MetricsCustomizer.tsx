@@ -32,6 +32,7 @@ export function MetricsCustomizer({ clientId, datePreset, groupKey }: Props) {
     addCustomMetric,
     updateCustomMetric,
     removeCustomMetric,
+    availableMetrics,
   } = useDiagnosticMetricsConfig(clientId, datePreset, groupKey);
 
   const [newLabel, setNewLabel] = useState("");
@@ -73,7 +74,7 @@ export function MetricsCustomizer({ clientId, datePreset, groupKey }: Props) {
             </p>
             <div className="space-y-1.5 mb-3">
               {config.visible_metrics.map((key, idx) => {
-                const meta = AVAILABLE_METRICS.find(m => m.key === key);
+                const meta = availableMetrics.find(m => m.key === key);
                 if (!meta) return null;
                 return (
                   <div
@@ -97,7 +98,7 @@ export function MetricsCustomizer({ clientId, datePreset, groupKey }: Props) {
 
             <div className="border-t border-border pt-2 space-y-1">
               <p className="text-[11px] text-muted-foreground mb-1">Adicionar métrica padrão:</p>
-              {AVAILABLE_METRICS.filter(m => !config.visible_metrics.includes(m.key)).map(m => (
+              {availableMetrics.filter(m => !config.visible_metrics.includes(m.key)).map(m => (
                 <button
                   key={m.key}
                   onClick={() => toggleMetric(m.key)}
@@ -106,7 +107,7 @@ export function MetricsCustomizer({ clientId, datePreset, groupKey }: Props) {
                   <Plus className="h-3 w-3 text-primary" /> {m.label}
                 </button>
               ))}
-              {AVAILABLE_METRICS.every(m => config.visible_metrics.includes(m.key)) && (
+              {availableMetrics.every(m => config.visible_metrics.includes(m.key)) && (
                 <p className="text-[11px] text-muted-foreground italic">Todas adicionadas.</p>
               )}
             </div>
