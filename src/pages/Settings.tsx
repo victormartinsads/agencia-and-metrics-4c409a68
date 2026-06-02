@@ -24,6 +24,7 @@ import {
   useRemoveMember,
   useSetMemberPassword,
 } from "@/hooks/useMembers";
+import { useStaffRoles, useSetStaffRole } from "@/hooks/useGestorDiary";
 import { toast } from "sonner";
 import { Trash2, UserPlus, Mail } from "lucide-react";
 import {
@@ -560,6 +561,9 @@ function MembersSection() {
   const setRole = useSetMemberRole();
   const remove = useRemoveMember();
   const setPassword = useSetMemberPassword();
+  const { data: role } = useUserRole();
+  const { data: staffRoles = [] } = useStaffRoles();
+  const setStaffRoleMutation = useSetStaffRole();
   const [email, setEmail] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "editor">("editor");
   const [pwdEditId, setPwdEditId] = useState<string | null>(null);
@@ -732,6 +736,27 @@ function MembersSection() {
                           Sem função
                         </Badge>
                       )}
+                      {(() => {
+                        const sRole = staffRoles.find((sr) => sr.user_id === m.id)?.role;
+                        if (!sRole) return null;
+                        const colors: Record<string, string> = {
+                          admin: "bg-red-500/10 border-red-500/20 text-red-400",
+                          ceo: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+                          gerente: "bg-blue-500/10 border-blue-500/20 text-blue-400",
+                          gestor: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+                        };
+                        const labels: Record<string, string> = {
+                          admin: "Staff Admin",
+                          ceo: "CEO",
+                          gerente: "Gerente",
+                          gestor: "Gestor",
+                        };
+                        return (
+                          <Badge variant="outline" className={`text-[10px] ${colors[sRole] || ""}`}>
+                            {labels[sRole] || sRole}
+                          </Badge>
+                        );
+                      })()}
                       {m.last_sign_in_at && (
                         <span className="text-[10px] text-muted-foreground">
                           Último acesso:{" "}
@@ -740,21 +765,48 @@ function MembersSection() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Select
-                      value={currentRole || ""}
-                      onValueChange={(v) =>
-                        handleRoleChange(m.id, v as "admin" | "editor")
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-32 text-xs">
-                        <SelectValue placeholder="Atribuir..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="editor">Editor</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground">Sistema</span>
+                      <Select
+                        value={currentRole || ""}
+                        onValueChange={(v) =>
+                          handleRoleChange(m.id, v as "admin" | "editor")
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-28 text-xs">
+                          <SelectValue placeholder="Atribuir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="editor">Editor</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground">Função Equipe</span>
+                      <Select
+                        value={staffRoles.find((sr) => sr.user_id === m.id)?.role || ""}
+                        onValueChange={(v) => {
+                          setStaffRoleMutation.mutate({ userId: m.id, role: v as any }, {
+                            onSuccess: () => toast.success("Função de equipe atualizada!"),
+                            onError: (err: any) => toast.error(err.message || "Erro ao atualizar função"),
+                          });
+                        }}
+                        disabled={!role?.isAdmin}
+                      >
+                        <SelectTrigger className="h-8 w-28 text-xs bg-background">
+                          <SelectValue placeholder="Atribuir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gestor">Gestor</SelectItem>
+                          <SelectItem value="gerente">Gerente</SelectItem>
+                          <SelectItem value="ceo">CEO</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     {pwdEditId === m.id ? (
                       <div className="flex items-center gap-1">
                         <Input

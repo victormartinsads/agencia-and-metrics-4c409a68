@@ -27,6 +27,7 @@ import CrmAppPage from "./pages/CrmApp.tsx";
 import Portal from "./pages/Portal.tsx";
 import ClientPortalRouter from "./components/ClientPortalRouter.tsx";
 import FunnelPlayground from "./pages/FunnelPlayground.tsx";
+import DiarioDoGestor from "./pages/DiarioDoGestor.tsx";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/gestor" element={<ProtectedRoute><GestorOverview /></ProtectedRoute>} />
             <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
+            <Route path="/diario-do-gestor" element={<ProtectedRoute><DiarioDoGestor /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
             <Route path="/portal/dashboard" element={<ProtectedRoute><ClientPortalDashboardRedirect /></ProtectedRoute>} />
             <Route path="/crm-app" element={<ProtectedRoute><CrmAppPage /></ProtectedRoute>} />

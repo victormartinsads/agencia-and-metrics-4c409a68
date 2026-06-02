@@ -13,6 +13,7 @@ import {
   Sparkles,
   Search,
   Command,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useProfile, displayName } from "@/hooks/useProfile";
+import { useStaffMemberRole } from "@/hooks/useGestorDiary";
 import { cn } from "@/lib/utils";
 import andLogo from "@/assets/and-logo.png";
 import { useNavigate } from "react-router-dom";
@@ -63,6 +65,7 @@ const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   "crm-app": "CRM",
   gestor: "Gestor",
+  "diario-do-gestor": "Diário do Gestor",
   settings: "Configurações",
   sheets: "Planilhas",
   webhooks: "Webhooks",
@@ -79,6 +82,7 @@ export default function AppShell({
   const { signOut, user } = useAuth();
   const { data: role } = useUserRole();
   const { data: profile } = useProfile();
+  const { role: staffRole, isAdmin: isStaffAdmin, isCeo: isStaffCeo, isGerente: isStaffGerente, isGestor: isStaffGestor } = useStaffMemberRole(user?.id);
   const { data: clientsList = [] } = useClients();
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,6 +130,9 @@ export default function AppShell({
         ...((role?.isAdmin || role?.isEditor)
           ? [{ id: "manager", label: "Gestor", icon: Brain, href: "/gestor" }]
           : []),
+        ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffGerente || isStaffGestor)
+          ? [{ id: "diario-gestor", label: "Diário do Gestor", icon: BookOpen, href: "/diario-do-gestor" }]
+          : []),
       ],
     },
     ...((role?.isAdmin || role?.isEditor)
@@ -138,7 +145,7 @@ export default function AppShell({
           },
         ]
       : []),
-  ] as const;
+  ];
 
   const isActive = (item: { id: string; href: string }) => {
     if (currentPage && item.id === currentPage) return true;
