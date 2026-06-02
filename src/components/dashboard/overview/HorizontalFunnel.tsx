@@ -178,10 +178,10 @@ export function HorizontalFunnel({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full grid grid-cols-[1.3fr_1fr] gap-4 p-4 bg-zinc-950/20 select-none overflow-hidden"
+      className="w-full h-full grid grid-cols-[1.3fr_1fr] gap-4 p-4 bg-zinc-950/20 select-none"
     >
       {/* Steps list */}
-      <div className="flex flex-col justify-between h-full py-0.5">
+      <div className="flex flex-col gap-3 py-0.5">
         {steps.map((s, i) => {
           const delta = pct(s.value, s.prev);
           return (
@@ -203,7 +203,7 @@ export function HorizontalFunnel({
       </div>
 
       {/* Conversion Boxes */}
-      <div className="flex flex-col justify-between h-full py-0.5 pl-4 border-l border-white/[0.06]">
+      <div className="flex flex-col gap-3 py-0.5 pl-4 border-l border-white/[0.06]">
         {convs.map((c, i) => {
           const delta = pct(c.val ?? 0, c.prevVal ?? 0);
           return (

@@ -529,7 +529,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("performance")) {
       list.push({
         id: "performance",
-        defaultLayout: { x: 0, y: 0, w: 8, h: 6, minW: 4, minH: 4 },
+        defaultLayout: { x: 0, y: 0, w: 8, h: 9, minW: 4, minH: 6 },
         node: (
           <PanelCard
             title="Resultados Gerais"
@@ -550,7 +550,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("custos")) {
       list.push({
         id: "custos",
-        defaultLayout: { x: 0, y: 6, w: 4, h: 6, minW: 2, minH: 4 },
+        defaultLayout: { x: 0, y: 9, w: 4, h: 6, minW: 2, minH: 4 },
         node: (
           <PanelCard
             title="Custos"
@@ -591,7 +591,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("funil")) {
       list.push({
         id: "funil",
-        defaultLayout: { x: 8, y: 0, w: 4, h: 6, minW: 4, minH: 4 },
+        defaultLayout: { x: 8, y: 0, w: 4, h: 9, minW: 4, minH: 6 },
         node: (
           <PanelCard
             title="Jornada de Compra"
@@ -668,7 +668,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("lowticket")) {
       list.push({
         id: "lowticket",
-        defaultLayout: { x: 0, y: 12, w: 7, h: 6, minW: 3, minH: 4 },
+        defaultLayout: { x: 0, y: 15, w: 7, h: 6, minW: 3, minH: 4 },
         node: (
           <PanelCard
             title="Vendas"
@@ -710,7 +710,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("mql")) {
       list.push({
         id: "mql",
-        defaultLayout: { x: 4, y: 6, w: 4, h: 6, minW: 2, minH: 4 },
+        defaultLayout: { x: 4, y: 9, w: 4, h: 6, minW: 2, minH: 4 },
         node: (
           <PanelCard
             title="MQL & sMQL"
@@ -828,7 +828,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("leads")) {
       list.push({
         id: "leads",
-        defaultLayout: { x: 8, y: 6, w: 4, h: 6, minW: 3, minH: 4 },
+        defaultLayout: { x: 8, y: 9, w: 4, h: 6, minW: 3, minH: 4 },
         node: (
           <PanelCard
             title="Leads"
@@ -864,7 +864,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("bestads")) {
       list.push({
         id: "bestads",
-        defaultLayout: { x: 7, y: 12, w: 5, h: 6, minW: 3, minH: 4 },
+        defaultLayout: { x: 7, y: 15, w: 5, h: 6, minW: 3, minH: 4 },
         node: (
           <PanelCard
             title="Melhores Anúncios"
@@ -885,7 +885,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("demografico")) {
       list.push({
         id: "demografico",
-        defaultLayout: { x: 0, y: 18, w: 7, h: 6, minW: 4, minH: 4 },
+        defaultLayout: { x: 0, y: 21, w: 7, h: 6, minW: 4, minH: 4 },
         node: (
           <PanelCard
             title="Demográficos (Meta)"
@@ -905,7 +905,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("utms")) {
       list.push({
         id: "utms",
-        defaultLayout: { x: 7, y: 18, w: 5, h: 6, minW: 5, minH: 4 },
+        defaultLayout: { x: 7, y: 21, w: 5, h: 6, minW: 5, minH: 4 },
         node: (
           <PanelCard
             title="Fontes (UTMs)"
