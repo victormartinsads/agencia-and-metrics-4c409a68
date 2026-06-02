@@ -34,8 +34,7 @@ export function GridDashboard({
   const save = useSaveDashboardLayout();
 
   const layout: Layout[] = useMemo(() => {
-    const byId = new Map<string, Layout>();
-    ((saved as any) || []).forEach((l: Layout) => byId.set(l.i, l));
+    const savedLayouts = ((saved as any) || []).slice().sort((a: any, b: any) => a.y - b.y);
 
     const grid: boolean[][] = [];
     const isAreaFree = (startX: number, startY: number, w: number, h: number): boolean => {
@@ -58,10 +57,42 @@ export function GridDashboard({
       }
     };
 
+    const compactedSaved = new Map<string, Layout>();
+
+    savedLayouts.forEach((l: Layout) => {
+      const w = Math.min(l.w, cols);
+      const h = l.h;
+      let foundY = 0;
+      let placed = false;
+
+      for (let y = 0; y <= l.y; y++) {
+        if (isAreaFree(l.x, y, w, h)) {
+          foundY = y;
+          placed = true;
+          break;
+        }
+      }
+
+      if (!placed) {
+        for (let y = 0; y < 1000; y++) {
+          if (isAreaFree(l.x, y, w, h)) {
+            foundY = y;
+            break;
+          }
+        }
+      }
+
+      occupyArea(l.x, foundY, w, h);
+      compactedSaved.set(l.i, {
+        ...l,
+        y: foundY,
+        w,
+      });
+    });
+
     return blocks.map((b) => {
-      const existing = byId.get(b.id);
+      const existing = compactedSaved.get(b.id);
       if (existing) {
-        occupyArea(existing.x, existing.y, existing.w, existing.h);
         return existing;
       }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { AlertCircle, FileSpreadsheet, DollarSign, TrendingUp, Target, ShoppingCart, Users, Pencil, Eye, LayoutGrid, Plus, RotateCcw, Settings, Lightbulb, Trophy, BarChart3, TrendingDown } from "lucide-react";
 import {
@@ -35,6 +36,7 @@ import { getPeriodPair, pctDelta } from "@/lib/period";
 import { formatCurrency } from "@/lib/format";
 import { useFunnelStages, DEFAULT_STAGES } from "@/hooks/useFunnelStages";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
+import { useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
 
 import { MqlManualEditDialog } from "./MqlManualEditDialog";
 
@@ -81,6 +83,19 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   const hidePanel = useCallback((id: string) => setHidden((s) => new Set([...s, id])), []);
   const showPanel = useCallback((id: string) => setHidden((s) => { const n = new Set(s); n.delete(id); return n; }), []);
   const resetHidden = useCallback(() => setHidden(new Set()), []);
+
+  const saveLayout = useSaveDashboardLayout();
+  const handleResetLayout = useCallback(() => {
+    if (clientId) {
+      saveLayout.mutate({
+        clientId,
+        dashboardKey: "overview-premium",
+        layout: [],
+      });
+      // We will import toast from sonner
+      toast.success("Organização automática ativada!");
+    }
+  }, [clientId, saveLayout]);
   const isVisible = (id: string) => !hidden.has(id);
 
   const PANEL_LABELS: Record<string, string> = {
@@ -954,10 +969,17 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          {editMode && hidden.size > 0 && (
-            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
-              <RotateCcw className="h-3.5 w-3.5" /> Restaurar
-            </Button>
+          {editMode && (
+            <>
+              {hidden.size > 0 && (
+                <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
+                  <RotateCcw className="h-3.5 w-3.5" /> Restaurar Ocultos
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={handleResetLayout}>
+                <RotateCcw className="h-3.5 w-3.5" /> Organização Automática
+              </Button>
+            </>
           )}
           {clientId && (
             <Button

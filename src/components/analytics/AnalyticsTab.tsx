@@ -9,6 +9,8 @@ import { GoogleAnalyticsPanel } from "@/components/dashboard/GoogleAnalyticsPane
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PanelCard } from "@/components/dashboard/overview/premium/PanelCard";
 import { GridDashboard, DashboardBlock } from "@/components/dashboard/shared/GridDashboard";
+import { useSaveDashboardLayout } from "@/hooks/useDashboardLayout";
+import { toast } from "sonner";
 import { BlockSourceMenu } from "@/components/dashboard/shared/BlockSourceMenu";
 import { useBlockSources } from "@/hooks/useBlockSources";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
   DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, Eye, Loader2, Compass, Activity, FileText, Sparkles, ArrowRight } from "lucide-react";
+import { Pencil, Check, Eye, Loader2, Compass, Activity, FileText, Sparkles, ArrowRight, RotateCcw } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, Cell, PieChart, Pie, Legend,
@@ -96,6 +98,17 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")); } catch { return new Set(); }
   });
   const [editMode, setEditMode] = useState(false);
+  const saveLayout = useSaveDashboardLayout();
+  const handleResetLayout = () => {
+    if (clientId) {
+      saveLayout.mutate({
+        clientId,
+        dashboardKey: "analytics",
+        layout: [],
+      });
+      toast.success("Organização automática ativada!");
+    }
+  };
   const [sourceMenu, setSourceMenu] = useState<{ blockId: string; title: string } | null>(null);
 
   useEffect(() => {
@@ -559,6 +572,11 @@ export function AnalyticsTab({ clientId, datePreset = "last_7d", currencySymbol 
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {editMode && (
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={handleResetLayout}>
+              <RotateCcw className="h-3.5 w-3.5" /> Organização Automática
+            </Button>
+          )}
           <Button size="sm" variant={editMode ? "default" : "outline"}
             onClick={() => setEditMode(v => !v)} className="h-8 gap-1.5">
             {editMode ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
