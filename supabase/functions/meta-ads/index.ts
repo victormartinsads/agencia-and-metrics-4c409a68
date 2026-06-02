@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId, datePreset, forceRefresh, publicSlug } = await req.json();
+    const { clientId, datePreset, forceRefresh, publicSlug, action } = await req.json();
     if (!clientId) {
       return new Response(JSON.stringify({ error: "clientId required" }), {
         status: 400,
@@ -199,6 +199,497 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Presentation mockup client bypass
+    if (clientId === "11111111-1111-1111-1111-111111111111" || publicSlug === "apresentacao" || clientId === "apresentacao" || action === "seed") {
+      // 1. Ensure the client exists
+      const { data: clientExists } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("id", "11111111-1111-1111-1111-111111111111")
+        .maybeSingle();
+
+      if (!clientExists) {
+        console.log("Seeding client 'apresentacao'...");
+        await supabase.from("clients").insert({
+          id: "11111111-1111-1111-1111-111111111111",
+          name: "Cliente Demonstrativo (AND)",
+          slug: "apresentacao",
+          meta_access_token: "mock_token",
+          ad_account_ids: ["act_mock_account"],
+          currency_symbol: "R$",
+          visible_tabs: ["overview", "funnel", "spreadsheet", "creatives", "branding"]
+        });
+
+        await supabase.from("dashboard_sheet_config").insert({
+          client_id: "11111111-1111-1111-1111-111111111111",
+          spreadsheet_id: "mock_sheet",
+          spreadsheet_name: "Planilha Demonstrativa",
+          sheet_name: "Página1",
+          field_mapping: {
+            date: "Data",
+            revenue: "Faturamento",
+            sales: "Vendas",
+            leads: "Leads",
+            mql: "MQL",
+            smql: "sMQL",
+            investment: "Investimento",
+            avg_ticket: "Ticket Médio",
+            ltv: "LTV"
+          },
+          monthly_revenue_goal: 250000,
+          monthly_investment_budget: 80000
+        });
+      }
+
+      // Always update metrics rows for the past 60 days to keep dates relative to today
+      const metricsRows = [];
+      const today = new Date();
+      for (let i = 0; i < 60; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        
+        // Generate nice daily values with some variation
+        const baseValue = 5000 + Math.sin(i / 3) * 2000 + Math.random() * 1000;
+        const revenue = Math.round(baseValue);
+        const sales = Math.round(revenue / 500); 
+        const investment = Math.round(1500 + Math.cos(i / 2) * 500 + Math.random() * 200);
+        const leads = Math.round(investment / 6.5);
+        const mql = Math.round(leads * 0.4);
+        const smql = Math.round(mql * 0.5);
+        
+        metricsRows.push({
+          client_id: "11111111-1111-1111-1111-111111111111",
+          reference_date: dateStr,
+          revenue,
+          sales,
+          leads,
+          mql,
+          smql,
+          investment,
+          avg_ticket: 500,
+          ltv: 2500,
+          source: "google_sheets"
+        });
+      }
+      const { error: err3 } = await supabase.from("weekly_metrics").upsert(metricsRows, { onConflict: "client_id,reference_date" });
+      if (err3) console.error("Error upserting metrics during bypass:", err3);
+
+      // Generate Meta Ads daily metrics dynamically for 45 days
+      const dailyMetrics = [];
+      for (let i = 45; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dayStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        
+        const spend = Math.round(1500 + Math.cos(i / 2) * 500 + Math.random() * 200);
+        const impressions = spend * 22;
+        const clicks = Math.round(impressions * 0.035);
+        const leads = Math.round(spend / 6.5);
+        const purchases = Math.round(spend / 150); 
+        const conversions = leads + purchases;
+
+        dailyMetrics.push({
+          date: dayStr,
+          spend,
+          impressions,
+          clicks,
+          conversions,
+          purchases,
+          leads
+        });
+      }
+
+      // High quality pre-baked mockup campaigns matching Meta Ads structure
+      const campaigns = [
+        {
+          id: "camp_follower_1",
+          name: "[F1] Captação de Seguidores - Instagram",
+          status: "active",
+          objective: "OUTCOME_TRAFFIC",
+          dailyBudget: 150,
+          lifetimeBudget: 0,
+          spend: 5420,
+          impressions: 215400,
+          clicks: 8616,
+          ctr: 4.00,
+          cpc: 0.63,
+          cpm: 25.16,
+          conversions: 4308,
+          costPerConversion: 1.25,
+          roas: 0,
+          reach: 180000,
+          frequency: 1.20,
+          primaryResultLabel: "Cliques no Link",
+          primaryResultKey: "link_click",
+          landingPageViews: 4308,
+          addToCart: 0,
+          initiateCheckout: 0,
+          purchases: 0,
+          purchaseValue: 0,
+          linkClicks: 8616,
+          linkCtr: 4.00,
+          cpcLink: 0.63,
+          uniqueClicks: 7200,
+          uniqueCtr: 3.33,
+          outboundClicks: 5200,
+          videoPlays: 0,
+          thruplays: 0,
+          videoP25: 0, videoP50: 0, videoP75: 0, videoP95: 0, videoP100: 0, avgVideoTime: 0,
+          creatives: [
+            {
+              id: "ad_fol_1",
+              name: "Ad 01 - Quem é a AND Metrics",
+              adsetName: "Interesses Marketing",
+              creativeId: "cr_fol_1",
+              permalinkUrl: "https://instagram.com",
+              type: "video",
+              thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+              impressions: 120000,
+              clicks: 4800,
+              ctr: 4.00,
+              spend: 3000,
+              conversions: 2400,
+              primaryResult: 2400,
+              roas: 0
+            },
+            {
+              id: "ad_fol_2",
+              name: "Ad 02 - Carrossel Funcionalidades",
+              adsetName: "Interesses Marketing",
+              creativeId: "cr_fol_2",
+              permalinkUrl: "https://instagram.com",
+              type: "carousel",
+              thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80",
+              impressions: 95400,
+              clicks: 3816,
+              ctr: 4.00,
+              spend: 2420,
+              conversions: 1908,
+              primaryResult: 1908,
+              roas: 0
+            }
+          ]
+        },
+        {
+          id: "camp_branding_1",
+          name: "[F2] Distribuição de Conteúdo - Reels",
+          status: "active",
+          objective: "OUTCOME_ENGAGEMENT",
+          dailyBudget: 100,
+          lifetimeBudget: 0,
+          spend: 3150,
+          impressions: 350000,
+          clicks: 14000,
+          ctr: 4.00,
+          cpc: 0.22,
+          cpm: 9.00,
+          conversions: 7000,
+          costPerConversion: 0.45,
+          roas: 0,
+          reach: 290000,
+          frequency: 1.21,
+          primaryResultLabel: "Visualizações do Vídeo",
+          primaryResultKey: "video_view",
+          landingPageViews: 0,
+          addToCart: 0,
+          initiateCheckout: 0,
+          purchases: 0,
+          purchaseValue: 0,
+          linkClicks: 2100,
+          linkCtr: 0.60,
+          cpcLink: 1.50,
+          uniqueClicks: 1800,
+          uniqueCtr: 0.51,
+          outboundClicks: 1500,
+          videoPlays: 150000,
+          thruplays: 7000,
+          videoP25: 60000, videoP50: 30000, videoP75: 15000, videoP95: 8000, videoP100: 7000, avgVideoTime: 9.5,
+          creatives: [
+            {
+              id: "ad_brand_1",
+              name: "Reels 01 - Como analisar campanhas",
+              adsetName: "Público Quente",
+              creativeId: "cr_brand_1",
+              permalinkUrl: "https://instagram.com",
+              type: "video",
+              thumbnail: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?w=600&auto=format&fit=crop&q=80",
+              impressions: 350000,
+              clicks: 14000,
+              ctr: 4.00,
+              spend: 3150,
+              conversions: 7000,
+              primaryResult: 7000,
+              roas: 0
+            }
+          ]
+        },
+        {
+          id: "camp_lead_1",
+          name: "[F4] Captação de Leads - Ebook Alta Conversão",
+          status: "active",
+          objective: "OUTCOME_LEADS",
+          dailyBudget: 400,
+          lifetimeBudget: 0,
+          spend: 12800,
+          impressions: 412000,
+          clicks: 12360,
+          ctr: 3.00,
+          cpc: 1.04,
+          cpm: 31.07,
+          conversions: 1977,
+          costPerConversion: 6.47,
+          roas: 0,
+          reach: 310000,
+          frequency: 1.33,
+          primaryResultLabel: "Leads",
+          primaryResultKey: "lead",
+          landingPageViews: 9888,
+          addToCart: 0,
+          initiateCheckout: 0,
+          purchases: 0,
+          purchaseValue: 0,
+          linkClicks: 12360,
+          linkCtr: 3.00,
+          cpcLink: 1.04,
+          uniqueClicks: 10500,
+          uniqueCtr: 2.55,
+          outboundClicks: 9888,
+          videoPlays: 0,
+          thruplays: 0,
+          videoP25: 0, videoP50: 0, videoP75: 0, videoP95: 0, videoP100: 0, avgVideoTime: 0,
+          creatives: [
+            {
+              id: "ad_lead_1",
+              name: "Ad 01 - Ebook gratuito mockup",
+              adsetName: "Lookalike 1%",
+              creativeId: "cr_lead_1",
+              permalinkUrl: "https://instagram.com",
+              type: "image",
+              thumbnail: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=600&auto=format&fit=crop&q=80",
+              impressions: 250000,
+              clicks: 7500,
+              ctr: 3.00,
+              spend: 7800,
+              conversions: 1200,
+              primaryResult: 1200,
+              roas: 0
+            },
+            {
+              id: "ad_lead_2",
+              name: "Ad 02 - Depoimento sobre o ebook",
+              adsetName: "Lookalike 1%",
+              creativeId: "cr_lead_2",
+              permalinkUrl: "https://instagram.com",
+              type: "video",
+              thumbnail: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80",
+              impressions: 162000,
+              clicks: 4860,
+              ctr: 3.00,
+              spend: 5000,
+              conversions: 777,
+              primaryResult: 777,
+              roas: 0
+            }
+          ]
+        },
+        {
+          id: "camp_sales_1",
+          name: "[F9] Conversão - Curso Vendas Avançadas",
+          status: "active",
+          objective: "OUTCOME_SALES",
+          dailyBudget: 1500,
+          lifetimeBudget: 0,
+          spend: 42500,
+          impressions: 850000,
+          clicks: 25500,
+          ctr: 3.00,
+          cpc: 1.67,
+          cpm: 50.00,
+          conversions: 306,
+          costPerConversion: 138.89,
+          roas: 3.59,
+          reach: 520000,
+          frequency: 1.63,
+          primaryResultLabel: "Compras",
+          primaryResultKey: "purchase",
+          landingPageViews: 20400,
+          addToCart: 3060,
+          initiateCheckout: 1530,
+          purchases: 306,
+          purchaseValue: 152694,
+          linkClicks: 25500,
+          linkCtr: 3.00,
+          cpcLink: 1.67,
+          uniqueClicks: 21000,
+          uniqueCtr: 2.47,
+          outboundClicks: 20400,
+          videoPlays: 300000,
+          thruplays: 12000,
+          videoP25: 80000, videoP50: 40000, videoP75: 20000, videoP95: 14000, videoP100: 12000, avgVideoTime: 11.2,
+          creatives: [
+            {
+              id: "ad_sales_1",
+              name: "Ad 01 - Oferta Especial R$499",
+              adsetName: "Remarketing 30D",
+              creativeId: "cr_sales_1",
+              permalinkUrl: "https://instagram.com",
+              type: "video",
+              thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80",
+              impressions: 450000,
+              clicks: 13500,
+              ctr: 3.00,
+              spend: 22500,
+              conversions: 165,
+              primaryResult: 165,
+              roas: 3.65
+            },
+            {
+              id: "ad_sales_2",
+              name: "Ad 02 - Garantia de 7 dias",
+              adsetName: "Remarketing 30D",
+              creativeId: "cr_sales_2",
+              permalinkUrl: "https://instagram.com",
+              type: "image",
+              thumbnail: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&auto=format&fit=crop&q=80",
+              impressions: 400000,
+              clicks: 12000,
+              ctr: 3.00,
+              spend: 20000,
+              conversions: 141,
+              primaryResult: 141,
+              roas: 3.52
+            }
+          ]
+        },
+        {
+          id: "camp_sales_2",
+          name: "[F13] Conversão - Mentoria Negócios High Ticket",
+          status: "active",
+          objective: "OUTCOME_SALES",
+          dailyBudget: 500,
+          lifetimeBudget: 0,
+          spend: 18200,
+          impressions: 121000,
+          clicks: 2420,
+          ctr: 2.00,
+          cpc: 7.52,
+          cpm: 150.41,
+          conversions: 10,
+          costPerConversion: 1820.00,
+          roas: 2.74,
+          reach: 950000,
+          frequency: 1.27,
+          primaryResultLabel: "Compras",
+          primaryResultKey: "purchase",
+          landingPageViews: 1936,
+          addToCart: 0,
+          initiateCheckout: 97,
+          purchases: 10,
+          purchaseValue: 49900,
+          linkClicks: 2420,
+          linkCtr: 2.00,
+          cpcLink: 7.52,
+          uniqueClicks: 2100,
+          uniqueCtr: 1.73,
+          outboundClicks: 1936,
+          videoPlays: 0,
+          thruplays: 0,
+          videoP25: 0, videoP50: 0, videoP75: 0, videoP95: 0, videoP100: 0, avgVideoTime: 0,
+          creatives: [
+            {
+              id: "ad_ht_1",
+              name: "Ad 01 - Aplicação mentoria",
+              adsetName: "Público Frio Executivos",
+              creativeId: "cr_ht_1",
+              permalinkUrl: "https://instagram.com",
+              type: "image",
+              thumbnail: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80",
+              impressions: 121000,
+              clicks: 2420,
+              ctr: 2.00,
+              spend: 18200,
+              conversions: 10,
+              primaryResult: 10,
+              roas: 2.74
+            }
+          ]
+        }
+      ];
+
+      const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
+      const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
+      const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
+      const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0);
+      const totalReach = campaigns.reduce((s, c) => s + c.reach, 0);
+      const totalLinkClicks = campaigns.reduce((s, c) => s + c.linkClicks, 0);
+      const totalOutboundClicks = campaigns.reduce((s, c) => s + c.outboundClicks, 0);
+      const totalUniqueClicks = campaigns.reduce((s, c) => s + c.uniqueClicks, 0);
+      const totalPurchases = campaigns.reduce((s, c) => s + c.purchases, 0);
+      const totalLandingPageViews = campaigns.reduce((s, c) => s + c.landingPageViews, 0);
+      const totalAddToCart = campaigns.reduce((s, c) => s + c.addToCart, 0);
+      const totalInitiateCheckout = campaigns.reduce((s, c) => s + c.initiateCheckout, 0);
+
+      const activeCampaigns = campaigns.filter(c => c.spend > 0);
+      const count = activeCampaigns.length || 1;
+      const avgCTR = totalImpressions > 0 ? Number(((totalLinkClicks / totalImpressions) * 100).toFixed(2)) : 0;
+      const avgCPC = totalLinkClicks > 0 ? Number((totalSpend / totalLinkClicks).toFixed(2)) : 0;
+      const avgCTRAll = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0;
+      const avgCPCAll = totalClicks > 0 ? Number((totalSpend / totalClicks).toFixed(2)) : 0;
+      const avgROAS = Number((activeCampaigns.reduce((s, c) => s + c.roas, 0) / count).toFixed(2));
+
+      const overviewMetrics = {
+        totalSpend,
+        totalImpressions,
+        totalClicks,
+        totalConversions,
+        avgCTR,
+        avgCPC,
+        avgROAS,
+        totalReach,
+        totalLinkClicks,
+        totalOutboundClicks,
+        totalUniqueClicks,
+        avgCTRAll,
+        avgCPCAll,
+        totalLeadActions: campaigns.reduce((s, c) => s + (c.objective === "OUTCOME_LEADS" ? c.conversions : 0), 0),
+        totalPurchases,
+        totalLandingPageViews,
+        totalAddToCart,
+        totalInitiateCheckout,
+        link_clicks: totalLinkClicks,
+        post_engagement: 0,
+        page_engagement: 0,
+        video_view: campaigns.reduce((s, c) => s + c.thruplays, 0),
+        messaging_started: 0,
+        complete_registration: 0,
+        subscribe: 0,
+        schedule: 0,
+        contact: 0,
+        submit_application: 0,
+        view_content: 0,
+        actionBreakdown: {
+          lead: campaigns.reduce((s, c) => s + (c.objective === "OUTCOME_LEADS" ? c.conversions : 0), 0),
+          purchase: totalPurchases,
+          link_click: totalLinkClicks,
+          landing_page_view: totalLandingPageViews,
+          initiate_checkout: totalInitiateCheckout,
+          add_to_cart: totalAddToCart
+        }
+      };
+
+      const result = {
+        campaigns,
+        dailyMetrics,
+        overviewMetrics,
+        accountErrors: []
+      };
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" }
+      });
+    }
 
     // Allow public read-only views (e.g. /visao-cliente/:slug, /share/:clientId)
     // when the request includes a valid public slug matching the client.

@@ -76,6 +76,70 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (clientId === "11111111-1111-1111-1111-111111111111" || publicSlug === "apresentacao" || clientId === "apresentacao") {
+      const campaigns = [
+        {
+          id: "g_camp_1",
+          name: "[Google] Pesquisa - Marca AND Metrics",
+          status: "ENABLED",
+          type: "SEARCH",
+          cost: 1420.50,
+          impressions: 12500,
+          clicks: 1875,
+          conversions: 245,
+          revenue: 12250,
+          ctr: 0.15,
+          avgCpc: 0.76,
+          keywords: [
+            { name: "and metrics", cost: 850, impressions: 8000, clicks: 1200, conversions: 180 },
+            { name: "agência and", cost: 350, impressions: 3000, clicks: 450, conversions: 45 },
+            { name: "central and", cost: 220.50, impressions: 1500, clicks: 225, conversions: 20 }
+          ],
+          creatives: [
+            { id: "g_cr_1", type: "TEXT", cost: 900, impressions: 8000, clicks: 1200, conversions: 160 },
+            { id: "g_cr_2", type: "TEXT", cost: 520.50, impressions: 4500, clicks: 675, conversions: 85 }
+          ],
+          conversionsBreakdown: [
+            { name: "Lead Form", category: "LEAD", count: 200 },
+            { name: "Contact Page", category: "CONTACT", count: 45 }
+          ]
+        },
+        {
+          id: "g_camp_2",
+          name: "[Google] PMax - Produtos & Conversão",
+          status: "ENABLED",
+          type: "PERFORMANCE_MAX",
+          cost: 4850.00,
+          impressions: 98000,
+          clicks: 3430,
+          conversions: 68,
+          revenue: 34000,
+          ctr: 0.035,
+          avgCpc: 1.41,
+          keywords: [],
+          creatives: [
+            { id: "g_cr_3", type: "RESPONSIVE_SEARCH", cost: 2500, impressions: 50000, clicks: 1800, conversions: 35 },
+            { id: "g_cr_4", type: "RESPONSIVE_DISPLAY", cost: 2350, impressions: 48000, clicks: 1630, conversions: 33 }
+          ],
+          conversionsBreakdown: [
+            { name: "Purchase", category: "PURCHASE", count: 68 }
+          ]
+        }
+      ];
+
+      const totals = {
+        cost: 6270.50,
+        impressions: 110500,
+        clicks: 5305,
+        conversions: 313,
+        revenue: 46250
+      };
+
+      return new Response(JSON.stringify({ campaigns, totals, dateRange: { since: "2026-05-01", until: "2026-06-01" } }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,

@@ -46,6 +46,120 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (clientId === "11111111-1111-1111-1111-111111111111" || publicSlug === "apresentacao" || clientId === "apresentacao") {
+      const overview = {
+        sessions: 35400,
+        totalUsers: 28200,
+        newUsers: 24500,
+        pageViews: 85200,
+        bounceRate: 42.50,
+        avgSessionDuration: 145.2,
+        engagedSessions: 22100
+      };
+
+      const daily = [];
+      const today = new Date();
+      for (let i = 30; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dayStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+        daily.push({
+          date: dayStr,
+          sessions: Math.round(1000 + Math.sin(i / 2) * 300 + Math.random() * 150),
+          users: Math.round(800 + Math.sin(i / 2) * 200 + Math.random() * 120),
+          pageViews: Math.round(2500 + Math.sin(i / 2) * 800 + Math.random() * 400)
+        });
+      }
+
+      const sources = [
+        { channel: "Organic Search", sessions: 12500, users: 9800 },
+        { channel: "Paid Social", sessions: 10400, users: 8500 },
+        { channel: "Direct", sessions: 6200, users: 5100 },
+        { channel: "Paid Search", sessions: 4200, users: 3400 },
+        { channel: "Referral", sessions: 1500, users: 1100 },
+        { channel: "Organic Social", sessions: 600, users: 500 }
+      ];
+
+      const utms = [
+        { source: "instagram", medium: "cpc", campaign: "camp_sales_1", sessions: 8500, users: 7000, engagedSessions: 5500, conversions: 165, revenue: 82335 },
+        { source: "google", medium: "cpc", campaign: "g_camp_2", sessions: 3400, users: 2800, engagedSessions: 2100, conversions: 68, revenue: 34000 },
+        { source: "instagram", medium: "cpc", campaign: "camp_lead_1", sessions: 1900, users: 1500, engagedSessions: 1100, conversions: 0, revenue: 0 }
+      ];
+
+      const ageDemographics = [
+        { age: "18-24", gender: "female", sessions: 3200, users: 2500 },
+        { age: "18-24", gender: "male", sessions: 2800, users: 2200 },
+        { age: "25-34", gender: "female", sessions: 8500, users: 6800 },
+        { age: "25-34", gender: "male", sessions: 7600, users: 6100 },
+        { age: "35-44", gender: "female", sessions: 4500, users: 3600 },
+        { age: "35-44", gender: "male", sessions: 3800, users: 3000 },
+        { age: "45-54", gender: "female", sessions: 2100, users: 1700 },
+        { age: "45-54", gender: "male", sessions: 1900, users: 1500 }
+      ];
+
+      const countries = [
+        { country: "Brazil", sessions: 34200, users: 27200 },
+        { country: "Portugal", sessions: 800, users: 650 },
+        { country: "United States", sessions: 250, users: 200 },
+        { country: "Angola", sessions: 150, users: 120 }
+      ];
+
+      const devices = [
+        { device: "mobile", sessions: 29500, users: 23600 },
+        { device: "desktop", sessions: 5600, users: 4400 },
+        { device: "tablet", sessions: 300, users: 200 }
+      ];
+
+      const landingPages = [
+        { page: "/", sessions: 18500, bounceRate: 38.50, conversions: 1200, avgDuration: 152.0 },
+        { page: "/ebook-alta-conversao", sessions: 9888, bounceRate: 45.00, conversions: 1977, avgDuration: 85.5 },
+        { page: "/curso-vendas-avancadas", sessions: 5400, bounceRate: 40.00, conversions: 306, avgDuration: 180.2 },
+        { page: "/mentoria-high-ticket", sessions: 1612, bounceRate: 50.00, conversions: 10, avgDuration: 210.0 }
+      ];
+
+      const events = [
+        { name: "page_view", count: 85200 },
+        { name: "session_start", count: 35400 },
+        { name: "user_engagement", count: 31200 },
+        { name: "lead", count: 1977 },
+        { name: "purchase", count: 374 }
+      ];
+
+      const browsers = [
+        { browser: "Chrome", sessions: 24500 },
+        { browser: "Safari", sessions: 8200 },
+        { browser: "Firefox", sessions: 1500 },
+        { browser: "Edge", sessions: 1200 }
+      ];
+
+      const newVsReturning = [
+        { type: "new", users: 24500 },
+        { type: "returning", users: 3700 }
+      ];
+
+      const campaigns = [
+        { campaign: "Curso Vendas Avançadas", sessions: 8500 },
+        { campaign: "Mentoria High Ticket", sessions: 1900 },
+        { campaign: "Ebook Alta Conversão", sessions: 4200 }
+      ];
+
+      const engagementBuckets = [
+        { bucket: "0-10s", sessions: 5000 },
+        { bucket: "11-30s", sessions: 8000 },
+        { bucket: "31-60s", sessions: 12000 },
+        { bucket: "61-120s", sessions: 6400 },
+        { bucket: "120s+", sessions: 4000 }
+      ];
+
+      return new Response(JSON.stringify({
+        overview, daily, sources, utms, ageDemographics,
+        countries, devices, landingPages, events, browsers, newVsReturning, campaigns,
+        engagementBuckets,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);

@@ -53,6 +53,48 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (clientId === "11111111-1111-1111-1111-111111111111" || publicSlug === "apresentacao" || clientId === "apresentacao") {
+      const ageGender = [
+        { label: "25-34 • female", spend: 32500, impressions: 550000, reach: 350000, clicks: 16500, results: 185 },
+        { label: "25-34 • male", spend: 28400, impressions: 480000, reach: 310000, clicks: 14400, results: 152 },
+        { label: "35-44 • female", spend: 12500, impressions: 210000, reach: 140000, clicks: 6300, results: 82 },
+        { label: "35-44 • male", spend: 10200, impressions: 180000, reach: 120000, clicks: 5100, results: 65 },
+        { label: "18-24 • female", spend: 6400, impressions: 120000, reach: 90000, clicks: 4200, results: 32 },
+        { label: "18-24 • male", spend: 5200, impressions: 100000, reach: 75000, clicks: 3500, results: 24 }
+      ];
+
+      const region = [
+        { label: "São Paulo", spend: 35000, impressions: 600000, reach: 410000, clicks: 18000, results: 210 },
+        { label: "Rio de Janeiro", spend: 18000, impressions: 310000, reach: 210000, clicks: 9300, results: 105 },
+        { label: "Minas Gerais", spend: 14000, impressions: 240000, reach: 160000, clicks: 7200, results: 80 },
+        { label: "Paraná", spend: 11000, impressions: 190000, reach: 130000, clicks: 5500, results: 65 },
+        { label: "Rio Grande do Sul", spend: 9200, impressions: 160000, reach: 110000, clicks: 4600, results: 50 }
+      ];
+
+      const country = [
+        { label: "Brazil", spend: 95200, impressions: 1640000, reach: 1120000, clicks: 50000, results: 540 }
+      ];
+
+      const platform = [
+        { label: "instagram", spend: 68500, impressions: 1100000, reach: 800000, clicks: 35000, results: 380 },
+        { label: "facebook", spend: 21500, impressions: 450000, reach: 280000, clicks: 13000, results: 140 },
+        { label: "messenger", spend: 2000, impressions: 50000, reach: 30000, clicks: 1200, results: 12 },
+        { label: "audience_network", spend: 3200, impressions: 40000, reach: 10000, clicks: 800, results: 8 }
+      ];
+
+      const result = {
+        ageGender,
+        region,
+        country,
+        platform,
+        fetched_at: new Date().toISOString(),
+      };
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+      });
+    }
+
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     let isPublic = false;
