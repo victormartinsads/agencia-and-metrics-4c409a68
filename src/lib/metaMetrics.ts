@@ -122,6 +122,7 @@ export function aggregateCampaignMetrics(
   const DEFAULT_LEAD_TYPES = [
     "lead",
     "offsite_conversion.fb_pixel_lead",
+    "onsite_conversion.lead_grouped",
   ];
   const leadActions =
     sum("lead_actions") ||
@@ -197,7 +198,7 @@ export function aggregateCampaignMetrics(
         const isProfileVisit =
           c?.primaryResultKey === "_profile_visit" ||
           c?.primaryActionType === "_profile_visit";
-        return s + (isProfileVisit ? num(c?.conversions) : 0);
+        return s + (isProfileVisit ? num(c?.conversions || c?.linkClicks || c?.link_clicks) : 0);
       }, 0),
 
     videoPlays,

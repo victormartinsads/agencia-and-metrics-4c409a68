@@ -171,9 +171,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     initiate_checkout: (metaData?.overviewMetrics as any)?.totalInitiateCheckout || 0,
     add_to_cart: (metaData?.overviewMetrics as any)?.totalAddToCart || 0,
     landing_page_views: (metaData?.overviewMetrics as any)?.totalLandingPageViews || 0,
-    lead_actions:
-      (metaData?.overviewMetrics as any)?.totalLeadActions ??
-      (metaData?.overviewMetrics as any)?.totalConversions ?? 0,
+    lead_actions: (metaData?.overviewMetrics as any)?.totalLeadActions ?? 0,
     messaging_started: (metaData?.overviewMetrics as any)?.messaging_started || 0,
   };
   const webhookTotals: Record<string, number> = {

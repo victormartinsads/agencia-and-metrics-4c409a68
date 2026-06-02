@@ -211,7 +211,7 @@ export default function GestorView() {
         costPerSchedule,
         cost_per_message,
         messaging_started,
-        profile_visits: c.actionBreakdown?.["link_click"] || 0
+        profile_visits: c.primaryResultKey === "_profile_visit" ? (c.conversions || c.linkClicks || 0) : (c.actionBreakdown?.["link_click"] || c.linkClicks || 0)
       };
     }).sort((a, b) => b.spend - a.spend);
   }, [campaigns]);

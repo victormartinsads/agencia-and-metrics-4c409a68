@@ -91,9 +91,11 @@ const ACTION_LABELS: Record<string, string> = {
   "offsite_conversion.fb_pixel_custom": "Evento Personalizado",
 };
 
-function getActionTypePriority(objective: string, campaignName: string): string[] {
+function getActionTypePriority(objective: string, campaignName: string, customLeadActions?: string[]): string[] {
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
+
+  const leadActions = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
 
   if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores") || nameLower.includes("captacao_seguidores")) {
     return ["_profile_visit"];
@@ -102,11 +104,11 @@ function getActionTypePriority(objective: string, campaignName: string): string[
     return ["_reach"];
   }
   if (nameLower.includes("forms_nativo") || nameLower.includes("formulario_nativo") || nameLower.includes("formulário_nativo")) {
-    return ["lead", "link_click"];
+    return leadActions;
   }
   // Check lead captures first so they don't get matched by "whatsapp" lower down
   if (objLower.includes("lead") || objLower.includes("outcome_leads") || nameLower.includes("lead") || nameLower.includes("cadastro")) {
-    return ["lead", "offsite_conversion.fb_pixel_lead", "link_click"];
+    return leadActions;
   }
   if (nameLower.includes("call_vendas") || nameLower.includes("call_de_vendas")) {
     return ["offsite_conversion.fb_pixel_custom", "onsite_conversion.messaging_conversation_started_7d", "purchase", "initiate_checkout", "link_click"];
@@ -142,7 +144,8 @@ function getPrimaryResult(
       return { value: Number(insight?.reach || 0), label: ACTION_LABELS["_reach"] || "Alcance", actionType: "_reach" };
     }
     if (type === "_profile_visit") {
-      return { value: getActionValue(actions, "link_click"), label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
+      const val = getActionValue(actions, "link_click") || Number(insight?.inline_link_clicks || 0);
+      return { value: val, label: ACTION_LABELS["_profile_visit"] || "Visitas ao Perfil", actionType: "_profile_visit" };
     }
     if (!actions) continue;
     const val = getActionValue(actions, type);
@@ -150,7 +153,7 @@ function getPrimaryResult(
       return { value: val, label: ACTION_LABELS[type] || type, actionType: type };
     }
   }
-  if (!actions) return { value: 0, label: "Cliques no Link", actionType: "" };
+  if (!actions) return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
   return { value: 0, label: ACTION_LABELS[actionTypes[0]] || "Resultados", actionType: "" };
 }
 
@@ -841,8 +844,8 @@ Deno.serve(async (req) => {
               dailyData[date].clicks += Number(day.clicks || 0);
               const purchaseVal = getActionValue(day.actions, "purchase")
                 || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
-              // Daily leads use the client's configured lead action types (strictly standard leads)
-              const dailyLeadTypes = ["lead", "offsite_conversion.fb_pixel_lead"];
+              // Daily leads use standard Meta leads events (strictly standard leads)
+              const dailyLeadTypes = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
               let leadVal = 0;
               for (const t of dailyLeadTypes) leadVal += getActionValue(day.actions, t);
               dailyData[date].purchases += purchaseVal;
@@ -867,7 +870,7 @@ Deno.serve(async (req) => {
 
       for (const camp of campaigns) {
         const insight: MetaInsight | undefined = camp.insights?.data?.[0];
-        const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "");
+        const actionPriority = getActionTypePriority(camp.objective || "", camp.name || "", client.lead_action_types);
         const primary = getPrimaryResult(insight?.actions, actionPriority, insight);
         const resolvedPrimaryActionType = primary.actionType || actionPriority[0] || "link_click";
 
@@ -1122,9 +1125,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const leadActionTypes: string[] = (client.lead_action_types && client.lead_action_types.length > 0)
-      ? client.lead_action_types
-      : ["lead", "offsite_conversion.fb_pixel_lead"];
+    const leadActionTypes = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
 
     let totalLeadActions = 0;
     for (const result of accountResults) {
