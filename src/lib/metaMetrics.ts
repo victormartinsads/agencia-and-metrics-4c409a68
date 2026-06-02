@@ -121,8 +121,6 @@ export function aggregateCampaignMetrics(
   // numbers match what the Meta gerenciador shows as "Leads".
   const DEFAULT_LEAD_TYPES = [
     "lead",
-    "offsite_conversion.fb_pixel_lead",
-    "onsite_conversion.lead_grouped",
   ];
   const leadActions =
     sum("lead_actions") ||

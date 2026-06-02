@@ -95,7 +95,7 @@ function getActionTypePriority(objective: string, campaignName: string, customLe
   const nameLower = campaignName.toLowerCase();
   const objLower = objective.toLowerCase();
 
-  const leadActions = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
+  const leadActions = ["lead"];
 
   if (nameLower.includes("captacao_de_seguidores") || nameLower.includes("captação de seguidores") || nameLower.includes("captacao_seguidores")) {
     return ["_profile_visit"];
@@ -845,7 +845,7 @@ Deno.serve(async (req) => {
               const purchaseVal = getActionValue(day.actions, "purchase")
                 || getActionValue(day.actions, "offsite_conversion.fb_pixel_purchase");
               // Daily leads use standard Meta leads events (strictly standard leads)
-              const dailyLeadTypes = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
+              const dailyLeadTypes = ["lead"];
               let leadVal = 0;
               for (const t of dailyLeadTypes) leadVal += getActionValue(day.actions, t);
               dailyData[date].purchases += purchaseVal;
@@ -1125,7 +1125,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const leadActionTypes = ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"];
+    const leadActionTypes = ["lead"];
 
     let totalLeadActions = 0;
     for (const result of accountResults) {
