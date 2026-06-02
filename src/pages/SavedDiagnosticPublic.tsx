@@ -119,11 +119,20 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
             {groups.map(g => {
               const totals = aggregateCampaignMetrics(g.campaigns);
-              const cpa = totals.cpa;
               const resultLabel = g.campaigns.find((c: any) => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
               const cfg = metricsConfig[g.key];
-              const renderVal = (key: string): string =>
-                formatMetricValue(key, getMetricValue(totals, key), currencySymbol);
+              
+              const getMetricValueAndOverride = (key: string) => {
+                const override = cfg?.custom_metrics?.find((m) => m.id === key);
+                const isOverridden = !!override;
+                const originalRaw = getMetricValue(totals, key);
+                const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
+                const value = isOverridden
+                  ? (override.format === "text" ? override.value : formatMetricValue(key, rawValue, currencySymbol))
+                  : formatMetricValue(key, originalRaw, currencySymbol);
+                return { value, isOverridden };
+              };
+
               const labelOf = (key: string) =>
                 key === "conversions"
                   ? resultLabel
@@ -146,18 +155,20 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
                   {cfg ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                       {cfg.visible_metrics.map(k => (
-                        <Mini key={k} label={labelOf(k)} value={renderVal(k)} />
+                        <Mini key={k} label={labelOf(k)} value={getMetricValueAndOverride(k).value} />
                       ))}
-                      {cfg.custom_metrics.map(m => (
-                        <Mini key={m.id} label={`✦ ${m.label}`} value={formatCustomValue(m, currencySymbol)} />
-                      ))}
+                      {cfg.custom_metrics
+                        .filter(m => !AVAILABLE_METRICS.some(am => am.key === m.id))
+                        .map(m => (
+                          <Mini key={m.id} label={`✦ ${m.label}`} value={formatCustomValue(m, currencySymbol)} />
+                        ))}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                      <Mini label="Investimento" value={fmtMoney(totals.spend)} />
-                      <Mini label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} />
-                      <Mini label="CPA" value={cpa > 0 ? fmtMoney(cpa) : "—"} />
-                      <Mini label="CTR" value={`${totals.ctr.toFixed(2)}%`} />
+                      <Mini label="Investimento" value={getMetricValueAndOverride("spend").value} />
+                      <Mini label={resultLabel} value={getMetricValueAndOverride("conversions").value} />
+                      <Mini label="CPA" value={getMetricValueAndOverride("cpa").value} />
+                      <Mini label="CTR" value={getMetricValueAndOverride("ctr").value} />
                     </div>
                   )}
                 </div>
@@ -168,10 +179,7 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
 
         <section className="space-y-4">
           <h3 className="text-xl font-bold text-card-foreground">🎯 Diagnóstico Final</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Block title="O que foi positivo" emoji="✅" accent="border-green-500/30 bg-green-500/5" value={blocks.positives} />
-            <Block title="O que foi negativo" emoji="⚠️" accent="border-red-500/30 bg-red-500/5" value={blocks.negatives} />
-            <Block title="Ações do gestor" emoji="🛠️" accent="border-blue-500/30 bg-blue-500/5" value={blocks.manager_actions} />
+          <div className="max-w-3xl">
             <Block title="Pedidos ao cliente" emoji="🤝" accent="border-amber-500/30 bg-amber-500/5" value={blocks.client_requests} />
           </div>
         </section>

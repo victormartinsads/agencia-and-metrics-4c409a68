@@ -28,6 +28,8 @@ import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
 import { FunnelPremiumDetailDialog } from "@/components/funnel/FunnelPremiumDetailDialog";
 import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnels";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
+import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -81,9 +83,13 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
     enabled: !!clientId,
   });
 
+  const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
+  const adaptedCampaigns = useAdaptedCampaigns(campaigns, primaryMetrics);
+  const adaptedPreviousCampaigns = useAdaptedCampaigns(previousCampaigns || [], primaryMetrics);
+
   // Filter campaigns
   const filteredCampaigns = useMemo(() => {
-    let result = campaigns;
+    let result = adaptedCampaigns;
     if (showActiveOnly) {
       result = result.filter(c => c.status === "active");
     }
@@ -91,14 +97,14 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
       result = result.filter(c => c.id === selectedCampaignId);
     }
     return result;
-  }, [campaigns, showActiveOnly, selectedCampaignId]);
+  }, [adaptedCampaigns, showActiveOnly, selectedCampaignId]);
 
-  const analysis = useComoEstamos(filteredCampaigns, previousCampaigns);
+  const analysis = useComoEstamos(filteredCampaigns, adaptedPreviousCampaigns);
 
   // Filter podium creatives by campaign
   const podiumCreatives = useMemo(() => {
     if (podiumCampaignId === "all") return analysis;
-    const camp = campaigns.find(c => c.id === podiumCampaignId);
+    const camp = adaptedCampaigns.find(c => c.id === podiumCampaignId);
     if (!camp) return analysis;
     const funnelLabel = getFunnelLabelOrNull(camp.name) || camp.name;
     const creatives = camp.creatives.map(cr => ({ ...cr, campaignName: funnelLabel }));
@@ -108,7 +114,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
       topCreativesByCTR: [...creatives].filter(c => c.impressions > 500).sort((a, b) => b.ctr - a.ctr).slice(0, 3),
       topCreativesByConv: [...creatives].sort((a, b) => b.conversions - a.conversions).slice(0, 3),
     };
-  }, [podiumCampaignId, campaigns, analysis]);
+  }, [podiumCampaignId, adaptedCampaigns, analysis]);
 
   return (
     <div className="space-y-5">
@@ -121,7 +127,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as campanhas</SelectItem>
-              {campaigns.map(c => (
+              {adaptedCampaigns.map(c => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name} {c.status !== "active" && `(${c.status})`}
                 </SelectItem>
@@ -202,7 +208,7 @@ export function ComoEstamosTab({ clientId, campaigns, dailyMetrics, datePreset, 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as campanhas</SelectItem>
-                {campaigns.filter(c => c.creatives.length > 0).map(c => (
+                {adaptedCampaigns.filter(c => c.creatives.length > 0).map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>

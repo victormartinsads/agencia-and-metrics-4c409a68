@@ -113,9 +113,6 @@ export function EditSavedDiagnosticDialog({ item, open, onOpenChange }: Props) {
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <BlockEditor label="✅ O que foi positivo" value={blocks.positives || ""} onChange={v => setBlock("positives", v)} />
-            <BlockEditor label="⚠️ O que foi negativo" value={blocks.negatives || ""} onChange={v => setBlock("negatives", v)} />
-            <BlockEditor label="🛠️ Ações do gestor" value={blocks.manager_actions || ""} onChange={v => setBlock("manager_actions", v)} />
             <BlockEditor label="🤝 Pedidos ao cliente" value={blocks.client_requests || ""} onChange={v => setBlock("client_requests", v)} />
           </div>
 

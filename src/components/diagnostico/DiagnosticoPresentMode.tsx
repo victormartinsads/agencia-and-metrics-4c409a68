@@ -100,9 +100,6 @@ export function DiagnosticoPresentMode({
       { kind: "google-ads" as const },
       ...campaignsList.map(c => ({ kind: "google-ads-campaign" as const, campaign: c }))
     ] : []),
-    { kind: "diagnostic", key: "positives", title: "O que foi positivo", emoji: "✅", accent: "from-green-500/20" },
-    { kind: "diagnostic", key: "negatives", title: "O que foi negativo", emoji: "⚠️", accent: "from-red-500/20" },
-    { kind: "diagnostic", key: "manager_actions", title: "Ações do gestor", emoji: "🛠️", accent: "from-blue-500/20" },
     { kind: "diagnostic", key: "client_requests", title: "Pedidos ao cliente", emoji: "🤝", accent: "from-amber-500/20" },
   ], [groups, manualFunnels, campaignsList]);
 
@@ -302,8 +299,17 @@ function GroupSlide({
   const { config: liveConfig } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
   const config = overrideConfig || liveConfig;
 
-  const renderMetricValue = (key: string): string =>
-    formatMetricValue(key, getMetricValue(totals, key), currencySymbol);
+  const getMetricValueAndOverride = (key: string) => {
+    const override = config.custom_metrics.find((m) => m.id === key);
+    const isOverridden = !!override;
+    const originalRaw = getMetricValue(totals, key);
+    const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
+    const value = isOverridden
+      ? (override.format === "text" ? override.value : formatMetricValue(key, rawValue, currencySymbol))
+      : formatMetricValue(key, originalRaw, currencySymbol);
+    return { value, isOverridden };
+  };
+
   const metricLabel = (key: string) =>
     key === "conversions"
       ? resultLabel
@@ -342,22 +348,28 @@ function GroupSlide({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {config.visible_metrics.map(key => (
-          <BigKpi
-            key={key}
-            label={metricLabel(key)}
-            value={renderMetricValue(key)}
-            highlight={isHighlight(key)}
-          />
-        ))}
-        {config.custom_metrics.map(m => (
-          <BigKpi
-            key={m.id}
-            label={m.label}
-            value={formatCustomValue(m, currencySymbol)}
-            custom
-          />
-        ))}
+        {config.visible_metrics.map(key => {
+          const { value, isOverridden } = getMetricValueAndOverride(key);
+          return (
+            <BigKpi
+              key={key}
+              label={metricLabel(key)}
+              value={value}
+              highlight={isHighlight(key)}
+              custom={isOverridden}
+            />
+          );
+        })}
+        {config.custom_metrics
+          .filter(m => !AVAILABLE_METRICS.some(am => am.key === m.id))
+          .map(m => (
+            <BigKpi
+              key={m.id}
+              label={m.label}
+              value={formatCustomValue(m, currencySymbol)}
+              custom
+            />
+          ))}
       </div>
 
       {top.length > 0 && (

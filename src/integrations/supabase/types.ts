@@ -830,6 +830,82 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_diagnostics: {
+        Row: {
+          client_id: string
+          created_at: string
+          curve_data: Json
+          diagnostics: Json
+          funnel_code: string
+          health_score: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          curve_data?: Json
+          diagnostics?: Json
+          funnel_code: string
+          health_score?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          curve_data?: Json
+          diagnostics?: Json
+          funnel_code?: string
+          health_score?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_diagnostics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      funnel_primary_metrics: {
+        Row: {
+          client_id: string
+          created_at: string
+          funnel_code: string
+          id: string
+          primary_metric: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          funnel_code: string
+          id?: string
+          primary_metric: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          funnel_code?: string
+          id?: string
+          primary_metric?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_primary_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       funnel_custom_labels: {
         Row: {
           client_id: string

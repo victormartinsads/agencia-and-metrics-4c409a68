@@ -15,6 +15,8 @@ import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnel
 import { useGoogleAds } from "@/hooks/useGoogleAds";
 import { googleAdsToCampaign } from "@/lib/googleAdsAdapter";
 import { toast } from "sonner";
+import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
+import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 
 interface Props {
   clientId: string;
@@ -41,6 +43,9 @@ export function FunnelAnalysisTab({
   const [newLabel, setNewLabel] = useState("");
   const [viewMode, setViewMode] = useState<"funnel" | "campaign">("funnel");
   const [source, setSource] = useState<"meta" | "google" | "all">("meta");
+  const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
+  const adaptedCampaigns = useAdaptedCampaigns(campaigns, primaryMetrics);
+
   const { data: manualFunnels } = useManualFunnels(clientId);
   const createManual = useCreateManualFunnel();
   const { data: googleData } = useGoogleAds(clientId, datePreset, source !== "meta");
@@ -76,7 +81,7 @@ export function FunnelAnalysisTab({
     return [...ordered, ...fallback];
   }
 
-  const metaFunnelGroups = useMemo(() => buildFunnelGroups(campaigns), [campaigns]);
+  const metaFunnelGroups = useMemo(() => buildFunnelGroups(adaptedCampaigns), [adaptedCampaigns]);
   const googleFunnelGroups = useMemo(() => buildFunnelGroups(googleCampaigns, "GADS-"), [googleCampaigns]);
 
   function buildCampaignCards(items: Campaign[], codePrefix = ""): { code: string; label: string; campaigns: Campaign[] }[] {
@@ -86,7 +91,7 @@ export function FunnelAnalysisTab({
       .map((c) => ({ code: `${codePrefix}CAMP-${c.id}`, label: c.name, campaigns: [c] }));
   }
 
-  const metaCampaignCards = useMemo(() => buildCampaignCards(campaigns), [campaigns]);
+  const metaCampaignCards = useMemo(() => buildCampaignCards(adaptedCampaigns), [adaptedCampaigns]);
   const googleCampaignCards = useMemo(() => buildCampaignCards(googleCampaigns, "GADS-"), [googleCampaigns]);
 
   const metaActive = useMemo(
@@ -261,7 +266,7 @@ export function FunnelAnalysisTab({
       {!readOnly && (<FunnelChatWidget
         clientId={clientId}
         clientName={clientName}
-        campaigns={campaigns}
+        campaigns={adaptedCampaigns}
         datePreset={datePreset}
         currencySymbol={currencySymbol}
       />)}

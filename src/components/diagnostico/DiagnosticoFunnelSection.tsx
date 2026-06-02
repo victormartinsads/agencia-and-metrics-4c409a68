@@ -7,15 +7,27 @@ import { Layers, Target, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MetricsCustomizer } from "./MetricsCustomizer";
+import { EditableKpi } from "./EditableKpi";
 import {
   AVAILABLE_METRICS,
   formatCustomValue,
   useDiagnosticMetricsConfig,
+  type MetricFormat,
 } from "@/hooks/useDiagnosticMetricsConfig";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { useFunnelLabels, useSaveFunnelLabel } from "@/hooks/useFunnelLabels";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useFunnelPrimaryMetrics, useSaveFunnelPrimaryMetric, PRIMARY_METRIC_OPTIONS } from "@/hooks/useFunnelPrimaryMetric";
+import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
+
 
 interface Props {
   group: FunnelGroup;
@@ -61,20 +73,8 @@ function aggregateAdsets(campaigns: Campaign[]) {
 }
 
 export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
-  const totals = useMemo(() => aggregateCampaignMetrics(group.campaigns), [group.campaigns]);
-  const adsets = useMemo(() => aggregateAdsets(group.campaigns), [group.campaigns]);
-  const [showAdsets, setShowAdsets] = useState(true);
-  const resultLabel =
-    group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
-
-  const { config } = useDiagnosticMetricsConfig(
-    clientId || "",
-    datePreset,
-    group.key,
-  );
-
-  const { data: labelMap } = useFunnelLabels(clientId);
-  const saveLabelMutation = useSaveFunnelLabel();
+  const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
+  const savePrimaryMetric = useSaveFunnelPrimaryMetric();
 
   const sectionCode = useMemo(() => {
     if (group.isFunnel) {
@@ -83,6 +83,23 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
       return group.campaigns[0]?.id || group.key;
     }
   }, [group]);
+
+  const adaptedCampaigns = useAdaptedCampaigns(group.campaigns, primaryMetrics);
+
+  const totals = useMemo(() => aggregateCampaignMetrics(adaptedCampaigns), [adaptedCampaigns]);
+  const adsets = useMemo(() => aggregateAdsets(adaptedCampaigns), [adaptedCampaigns]);
+  const [showAdsets, setShowAdsets] = useState(false);
+  const resultLabel =
+    adaptedCampaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
+
+  const { config, update } = useDiagnosticMetricsConfig(
+    clientId || "",
+    datePreset,
+    group.key,
+  );
+
+  const { data: labelMap } = useFunnelLabels(clientId);
+  const saveLabelMutation = useSaveFunnelLabel();
 
   const rawSectionTitle = useMemo(() => {
     if (group.isFunnel) {
@@ -152,17 +169,71 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
 
   const displaySectionTitle = group.isFunnel ? `Funil: ${rawSectionTitle}` : rawSectionTitle;
 
-  const renderMetricValue = (key: string): string => {
-    const v = getMetricValue(totals, key);
-    return formatMetricValue(key, v, currencySymbol);
-  };
-
   const getMetricLabel = (key: string): string => {
     if (key === "conversions") return resultLabel;
     return findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
   };
 
   const isHighlight = (key: string) => key === "spend" || key === "conversions";
+
+  const getMetricValueAndOverride = (key: string) => {
+    const override = config.custom_metrics.find((m) => m.id === key);
+    const isOverridden = !!override;
+
+    const originalRaw = getMetricValue(totals, key);
+    const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
+
+    return {
+      value: isOverridden 
+        ? (override.format === "text" ? override.value : formatMetricValue(key, rawValue, currencySymbol)) 
+        : formatMetricValue(key, originalRaw, currencySymbol),
+      rawValue,
+      originalValue: formatMetricValue(key, originalRaw, currencySymbol),
+      isOverridden,
+    };
+  };
+
+  const handleSaveOverride = (key: string, rawVal: string) => {
+    const existingIndex = config.custom_metrics.findIndex((m) => m.id === key);
+    let nextCustom: any[];
+
+    if (rawVal.trim() === "") {
+      nextCustom = config.custom_metrics.filter((m) => m.id !== key);
+    } else {
+      let format: MetricFormat = "number";
+      if (["spend", "purchaseValue", "profit", "cpc", "cpm", "cpcLink", "cpa", "cpl", "cpLead", "cpFollow", "cpThruplay", "cpLpv", "cpAddToCart", "cpInitiateCheckout", "cpMessage"].includes(key)) {
+        format = "currency";
+      } else if (["ctr", "linkCtr", "uniqueCtr", "lpvRate", "hookRate", "holdRate", "checkoutRate"].includes(key)) {
+        format = "percent";
+      } else if (["roas", "frequency", "avgVideoTime"].includes(key)) {
+        format = "number";
+      }
+
+      const label = getMetricLabel(key);
+
+      const updatedMetric = {
+        id: key,
+        label,
+        value: rawVal,
+        format,
+      };
+
+      if (existingIndex > -1) {
+        nextCustom = config.custom_metrics.map((m, idx) => (idx === existingIndex ? updatedMetric : m));
+      } else {
+        nextCustom = [...config.custom_metrics, updatedMetric];
+      }
+    }
+
+    update({ ...config, custom_metrics: nextCustom });
+    toast.success("Métrica salva localmente!");
+  };
+
+  const handleResetOverride = (key: string) => {
+    const nextCustom = config.custom_metrics.filter((m) => m.id !== key);
+    update({ ...config, custom_metrics: nextCustom });
+    toast.success("Valor original restaurado!");
+  };
 
   return (
     <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
@@ -224,42 +295,90 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {group.isFunnel
-              ? `${group.campaigns.length} campanha(s) agrupadas • dados consolidados`
+              ? `${adaptedCampaigns.length} campanha(s) agrupadas • dados consolidados`
               : "Campanha individual"}
           </p>
-        </div>
-        <div className="flex items-center gap-2 self-start">
-          <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-1 rounded-full">
-            Métrica primária: {resultLabel}
-          </span>
+         </div>
+         <div className="flex items-center gap-2 self-start">
+          {clientId ? (
+            <Select
+              value={primaryMetrics?.[sectionCode] || "conversions"}
+              onValueChange={async (val) => {
+                try {
+                  await savePrimaryMetric.mutateAsync({
+                    clientId,
+                    funnelCode: sectionCode,
+                    metricKey: val,
+                  });
+                  toast.success("Métrica primária atualizada!");
+                } catch (err) {
+                  toast.error("Erro ao salvar métrica primária");
+                }
+              }}
+            >
+              <SelectTrigger className="h-7 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-1 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer">
+                <SelectValue placeholder="Métrica primária" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border">
+                {PRIMARY_METRIC_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.key} value={opt.key} className="text-xs">
+                    Métrica primária: {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-1 rounded-full">
+              Métrica primária: {resultLabel}
+            </span>
+          )}
           {clientId && (
             <MetricsCustomizer clientId={clientId} datePreset={datePreset} groupKey={group.key} />
           )}
-        </div>
+         </div>
       </header>
 
       {/* KPIs consolidados — personalizáveis */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {config.visible_metrics.map(key => (
-          <Kpi
-            key={key}
-            label={getMetricLabel(key)}
-            value={renderMetricValue(key)}
-            highlight={isHighlight(key)}
-          />
-        ))}
-        {config.custom_metrics.map(m => (
-          <Kpi
-            key={m.id}
-            label={m.label}
-            value={formatCustomValue(m, currencySymbol)}
-            custom
-          />
-        ))}
+        {config.visible_metrics.map(key => {
+          const { value, originalValue, isOverridden } = getMetricValueAndOverride(key);
+          return (
+            <EditableKpi
+              key={key}
+              label={getMetricLabel(key)}
+              value={value}
+              originalValue={originalValue}
+              isOverridden={isOverridden}
+              onSave={(val) => handleSaveOverride(key, val)}
+              onReset={() => handleResetOverride(key)}
+              readOnly={!clientId}
+              highlight={isHighlight(key)}
+            />
+          );
+        })}
+        {config.custom_metrics
+          .filter(m => !AVAILABLE_METRICS.some(am => am.key === m.id))
+          .map(m => (
+            <EditableKpi
+              key={m.id}
+              label={m.label}
+              value={formatCustomValue(m, currencySymbol)}
+              isOverridden={true}
+              onSave={(val) => {
+                const nextCustom = config.custom_metrics.map((item) => (item.id === m.id ? { ...item, value: val } : item));
+                update({ ...config, custom_metrics: nextCustom });
+              }}
+              onReset={() => {
+                const nextCustom = config.custom_metrics.filter((item) => item.id !== m.id);
+                update({ ...config, custom_metrics: nextCustom });
+              }}
+              readOnly={!clientId}
+            />
+          ))}
       </div>
 
       {/* Quando é funil agrupando várias campanhas, lista as campanhas */}
-      {group.isFunnel && group.campaigns.length > 1 && (
+      {group.isFunnel && adaptedCampaigns.length > 1 && (
         <div className="rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground">
             Campanhas deste funil
@@ -277,7 +396,7 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                 </tr>
               </thead>
               <tbody>
-                {group.campaigns
+                {adaptedCampaigns
                   .slice()
                   .sort((a, b) => b.spend - a.spend)
                   .map(c => {
@@ -399,13 +518,13 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
       <div>
         {group.isFunnel ? (
           <AggregatedCreativeGrid
-            campaigns={group.campaigns}
+            campaigns={adaptedCampaigns}
             funnelLabel={rawSectionTitle}
             clientId={clientId}
             currencySymbol={currencySymbol}
           />
         ) : (
-          <CreativeGrid campaign={group.campaigns[0]} clientId={clientId} currencySymbol={currencySymbol} />
+          <CreativeGrid campaign={adaptedCampaigns[0]} clientId={clientId} currencySymbol={currencySymbol} />
         )}
       </div>
     </section>

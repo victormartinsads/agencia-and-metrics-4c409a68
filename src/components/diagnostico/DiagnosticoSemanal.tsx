@@ -495,31 +495,7 @@ export function DiagnosticoSemanal({
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-card-foreground">🎯 Diagnóstico Final</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DiagnosticoBloco
-              title="O que foi positivo"
-              emoji="✅"
-              accentClass="border-green-500/30 bg-green-500/5"
-              value={blocks.positives}
-              onChange={v => updateBlock("positives", v)}
-              placeholder="Resultados que melhoraram, criativos vencedores, funis saudáveis..."
-            />
-            <DiagnosticoBloco
-              title="O que foi negativo"
-              emoji="⚠️"
-              accentClass="border-red-500/30 bg-red-500/5"
-              value={blocks.negatives}
-              onChange={v => updateBlock("negatives", v)}
-              placeholder="Quedas de CTR, CPA alto, criativos com fadiga..."
-            />
-            <DiagnosticoBloco
-              title="Ações do gestor"
-              emoji="🛠️"
-              accentClass="border-blue-500/30 bg-blue-500/5"
-              value={blocks.manager_actions}
-              onChange={v => updateBlock("manager_actions", v)}
-              placeholder="O que vou executar nos próximos dias para destravar resultados..."
-            />
+          <div className="max-w-3xl">
             <DiagnosticoBloco
               title="Pedidos ao cliente"
               emoji="🤝"

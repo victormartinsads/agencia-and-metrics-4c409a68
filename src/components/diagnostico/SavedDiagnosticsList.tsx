@@ -11,6 +11,10 @@ import { exportDiagnosticoPDF } from "./exportDiagnosticoPDF";
 import { AVAILABLE_METRICS, formatCustomValue, type MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 import { SendDiagnosticWhatsAppDialog } from "./SendDiagnosticWhatsAppDialog";
 import { EditSavedDiagnosticDialog } from "./EditSavedDiagnosticDialog";
+import { DiagnosticoGoogleFunnelSection } from "./DiagnosticoGoogleFunnelSection";
+import { DiagnosticoGoogleCampaignsSection } from "./DiagnosticoGoogleCampaignsSection";
+import { formatMetricValue } from "@/lib/metaMetrics";
+import { getMetricValue } from "@/lib/metaMetricCatalog";
 
 interface Props {
   clientId: string;
@@ -196,6 +200,23 @@ function SavedDiagnosticViewer({
           </section>
         )}
 
+        {snap.googleAnalytics && (
+          <div className="space-y-4">
+            <DiagnosticoGoogleFunnelSection gaData={snap.googleAnalytics} />
+          </div>
+        )}
+
+        {snap.googleAdsCampaigns && snap.googleAdsCampaigns.length > 0 && (
+          <div className="space-y-4">
+            <DiagnosticoGoogleCampaignsSection
+              campaigns={snap.googleAdsCampaigns}
+              currencySymbol={currencySymbol}
+              groupConfigs={metricsConfig}
+              funnelLabels={funnelLabels}
+            />
+          </div>
+        )}
+
         {groups.length > 0 && (
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
@@ -207,28 +228,21 @@ function SavedDiagnosticViewer({
                 acc.purchaseValue += (c as any).purchaseValue || 0;
                 return acc;
               }, { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchaseValue: 0 });
-              const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-              const cpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
-              const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
-              const cpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0;
-              const roas = totals.spend > 0 && totals.purchaseValue > 0 ? totals.purchaseValue / totals.spend : 0;
+              
               const resultLabel = g.campaigns.find(c => (c as any).primaryResultLabel)?.primaryResultLabel || "Resultados";
               const cfg = metricsConfig[g.key];
-              const renderVal = (key: string): string => {
-                switch (key) {
-                  case "spend": return fmtMoney(totals.spend);
-                  case "conversions": return totals.conversions.toLocaleString("pt-BR");
-                  case "cpa": return cpa > 0 ? fmtMoney(cpa) : "—";
-                  case "ctr": return `${ctr.toFixed(2)}%`;
-                  case "cpc": return cpc > 0 ? fmtMoney(cpc) : "—";
-                  case "cpm": return fmtMoney(cpm);
-                  case "reach": return totals.reach.toLocaleString("pt-BR");
-                  case "impressions": return totals.impressions.toLocaleString("pt-BR");
-                  case "clicks": return totals.clicks.toLocaleString("pt-BR");
-                  case "roas": return roas > 0 ? `${roas.toFixed(2)}x` : "—";
-                  default: return "—";
-                }
+              
+              const getMetricValueAndOverride = (key: string) => {
+                const override = cfg?.custom_metrics?.find((m) => m.id === key);
+                const isOverridden = !!override;
+                const originalRaw = getMetricValue(totals, key);
+                const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
+                const value = isOverridden
+                  ? (override.format === "text" ? override.value : formatMetricValue(key, rawValue, currencySymbol))
+                  : formatMetricValue(key, originalRaw, currencySymbol);
+                return { value, isOverridden };
               };
+
               const labelOf = (key: string) => key === "conversions" ? resultLabel : (AVAILABLE_METRICS.find(m => m.key === key)?.label || key);
               const customGroupTitle = (() => {
                 if (g.isFunnel) {
@@ -248,18 +262,20 @@ function SavedDiagnosticViewer({
                   {cfg ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
                       {cfg.visible_metrics.map(k => (
-                        <Mini key={k} label={labelOf(k)} value={renderVal(k)} />
+                        <Mini key={k} label={labelOf(k)} value={getMetricValueAndOverride(k).value} />
                       ))}
-                      {cfg.custom_metrics.map(m => (
-                        <Mini key={m.id} label={`✦ ${m.label}`} value={formatCustomValue(m, currencySymbol)} />
-                      ))}
+                      {cfg.custom_metrics
+                        .filter(m => !AVAILABLE_METRICS.some(am => am.key === m.id))
+                        .map(m => (
+                          <Mini key={m.id} label={`✦ ${m.label}`} value={formatCustomValue(m, currencySymbol)} />
+                        ))}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                      <Mini label="Investimento" value={fmtMoney(totals.spend)} />
-                      <Mini label={resultLabel} value={totals.conversions.toLocaleString("pt-BR")} />
-                      <Mini label="CPA" value={cpa > 0 ? fmtMoney(cpa) : "—"} />
-                      <Mini label="CTR" value={`${ctr.toFixed(2)}%`} />
+                      <Mini label="Investimento" value={getMetricValueAndOverride("spend").value} />
+                      <Mini label={resultLabel} value={getMetricValueAndOverride("conversions").value} />
+                      <Mini label="CPA" value={getMetricValueAndOverride("cpa").value} />
+                      <Mini label="CTR" value={getMetricValueAndOverride("ctr").value} />
                     </div>
                   )}
                 </div>
@@ -270,10 +286,7 @@ function SavedDiagnosticViewer({
 
         <section className="space-y-4">
           <h3 className="text-xl font-bold text-card-foreground">🎯 Diagnóstico Final</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Block title="O que foi positivo" emoji="✅" accent="border-green-500/30 bg-green-500/5" value={blocks.positives} />
-            <Block title="O que foi negativo" emoji="⚠️" accent="border-red-500/30 bg-red-500/5" value={blocks.negatives} />
-            <Block title="Ações do gestor" emoji="🛠️" accent="border-blue-500/30 bg-blue-500/5" value={blocks.manager_actions} />
+          <div className="max-w-3xl">
             <Block title="Pedidos ao cliente" emoji="🤝" accent="border-amber-500/30 bg-amber-500/5" value={blocks.client_requests} />
           </div>
         </section>
@@ -292,6 +305,8 @@ function SavedDiagnosticViewer({
           onClose={() => setPresenting(false)}
           groupConfigs={metricsConfig}
           funnelLabels={funnelLabels}
+          googleAnalyticsData={snap.googleAnalytics}
+          googleAdsCampaigns={snap.googleAdsCampaigns}
         />
       )}
     </div>
