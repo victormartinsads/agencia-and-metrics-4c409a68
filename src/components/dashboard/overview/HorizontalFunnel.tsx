@@ -178,50 +178,26 @@ export function HorizontalFunnel({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full grid grid-cols-[1.3fr_1fr] gap-4 p-4 bg-zinc-950/20 select-none"
+      className="w-full h-full flex flex-col gap-3 p-4 bg-zinc-950/20 select-none"
     >
-      {/* Steps list */}
-      <div className="flex flex-col gap-3 py-0.5">
-        {steps.map((s, i) => {
-          const delta = pct(s.value, s.prev);
-          return (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="border border-white/[0.06] bg-white/[0.02] hover:border-white/15 px-3 py-2 flex items-center justify-between rounded-xl transition-all duration-200"
-            >
-              <div className="flex flex-col">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{s.label}</span>
-                <span className="text-sm font-bold text-white font-mono mt-0.5">{fmt(s.value)}</span>
-              </div>
-              <DeltaPill value={delta} />
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Conversion Boxes */}
-      <div className="flex flex-col gap-3 py-0.5 pl-4 border-l border-white/[0.06]">
-        {convs.map((c, i) => {
-          const delta = pct(c.val ?? 0, c.prevVal ?? 0);
-          return (
-            <motion.div
-              key={c.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.04 + 0.1 }}
-            >
-              <ConvBox
-                label={c.label}
-                value={c.val != null ? `${c.val.toFixed(2)}%` : "—"}
-                delta={delta}
-              />
-            </motion.div>
-          );
-        })}
-      </div>
+      {steps.map((s, i) => {
+        const delta = pct(s.value, s.prev);
+        return (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="border border-white/[0.06] bg-white/[0.02] hover:border-white/15 px-3 py-2 flex items-center justify-between rounded-xl transition-all duration-200"
+          >
+            <div className="flex flex-col">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{s.label}</span>
+              <span className="text-sm font-bold text-white font-mono mt-0.5">{fmt(s.value)}</span>
+            </div>
+            <DeltaPill value={delta} />
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
