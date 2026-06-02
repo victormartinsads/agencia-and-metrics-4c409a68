@@ -45,6 +45,13 @@ import {
 } from "@/components/ui/command";
 import { useClients } from "@/hooks/useClients";
 import { useEffect as useEffectReact } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AppShellProps {
   children: ReactNode;
@@ -82,8 +89,33 @@ export default function AppShell({
   const { signOut, user } = useAuth();
   const { data: role } = useUserRole();
   const { data: profile } = useProfile();
-  const { role: staffRole, isAdmin: isStaffAdmin, isCeo: isStaffCeo, isGerente: isStaffGerente, isGestor: isStaffGestor } = useStaffMemberRole(user?.id);
+  const {
+    role: staffRole,
+    isAdmin: isStaffAdmin,
+    isCeo: isStaffCeo,
+    isGerente: isStaffGerente,
+    isGestor: isStaffGestor,
+    realRole,
+  } = useStaffMemberRole(user?.id);
   const { data: clientsList = [] } = useClients();
+
+  const isRealAdmin = role?.isAdmin || realRole === "admin";
+  const [simulatedRole, setSimulatedRole] = useState<string>(() => {
+    return localStorage.getItem("simulated-staff-role") || "admin";
+  });
+
+  const handleSimulateRole = (val: string) => {
+    setSimulatedRole(val);
+    if (val === "admin") {
+      localStorage.removeItem("simulated-staff-role");
+    } else {
+      localStorage.setItem("simulated-staff-role", val);
+    }
+    toast.success(`Simulando perfil de ${val.toUpperCase()}`);
+    setTimeout(() => {
+      window.location.reload();
+    }, 800);
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -232,9 +264,37 @@ export default function AppShell({
 
         {/* Footer / user */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
-          {role?.isAdmin && open && (
-            <div className="flex items-center gap-2 mx-1 mb-1 px-2 py-1.5 rounded-md bg-sidebar-accent/30 text-[11px] text-sidebar-accent-foreground">
-              <Shield className="h-3 w-3 text-primary" /> Admin
+          {isRealAdmin && open && (
+            <div className="space-y-1.5 mx-1 mb-2">
+              <div className="flex items-center justify-between px-2 py-1.5 rounded-md bg-sidebar-accent/30 text-[11px] text-sidebar-accent-foreground">
+                <span className="flex items-center gap-2 font-medium">
+                  <Shield className="h-3 w-3 text-primary" /> Admin
+                </span>
+                {simulatedRole !== "admin" && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold uppercase tracking-wide">
+                    Simulando
+                  </span>
+                )}
+              </div>
+              <div className="p-1.5 rounded-md bg-sidebar-accent/10 border border-sidebar-border space-y-1">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                  Função Visualizada:
+                </div>
+                <Select
+                  value={simulatedRole}
+                  onValueChange={handleSimulateRole}
+                >
+                  <SelectTrigger className="h-6 text-[10px] bg-background border-sidebar-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-sidebar border-sidebar-border">
+                    <SelectItem value="admin">Admin (Completo)</SelectItem>
+                    <SelectItem value="ceo">CEO</SelectItem>
+                    <SelectItem value="gerente">Gerente</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           <div className={cn("flex items-center gap-2 px-1 py-1.5", !open && "justify-center")}>

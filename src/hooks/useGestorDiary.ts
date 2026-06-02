@@ -41,6 +41,7 @@ export interface GestorDiaryClient {
   client_name: string;
   status: "Pendente" | "Configurando" | "Em andamento";
   created_at: string;
+  client_id?: string;
 }
 
 export interface GestorDiaryCalendarEvent {
@@ -72,7 +73,18 @@ const setLocal = <T>(key: string, value: T) => {
 
 // Check if error is related to missing relation (table doesn't exist yet)
 const isMissingTableError = (error: any) => {
-  return error?.code === "42P01" || error?.message?.includes("relation") || error?.message?.includes("does not exist");
+  const msg = (error?.message || "").toLowerCase();
+  const hint = (error?.hint || "").toLowerCase();
+  const details = (error?.details || "").toLowerCase();
+  return (
+    error?.code === "42P01" ||
+    msg.includes("relation") ||
+    msg.includes("does not exist") ||
+    msg.includes("could not find") ||
+    msg.includes("schema cache") ||
+    hint.includes("table") ||
+    details.includes("table")
+  );
 };
 
 /**
@@ -137,19 +149,27 @@ export function useSetStaffRole() {
   });
 }
 
-/**
- * Hook to retrieve user profile & staff role combined
- */
 export function useStaffMemberRole(userId?: string) {
   const { data: roles = [] } = useStaffRoles();
   const userRole = roles.find((r) => r.user_id === userId);
+  const realRole = userRole?.role || null;
+  let roleValue = realRole;
+
+  // Role impersonation/simulation (only if real role is admin)
+  if (realRole === "admin") {
+    const simulated = localStorage.getItem("simulated-staff-role");
+    if (simulated && ["gestor", "gerente", "ceo", "admin"].includes(simulated)) {
+      roleValue = simulated as any;
+    }
+  }
 
   return {
-    role: userRole?.role || null,
-    isAdmin: userRole?.role === "admin",
-    isCeo: userRole?.role === "ceo",
-    isGerente: userRole?.role === "gerente",
-    isGestor: userRole?.role === "gestor",
+    role: roleValue,
+    isAdmin: roleValue === "admin",
+    isCeo: roleValue === "ceo",
+    isGerente: roleValue === "gerente",
+    isGestor: roleValue === "gestor",
+    realRole,
   };
 }
 
@@ -479,6 +499,7 @@ export function useManageGestorClient() {
               gestor_id: gestorId,
               client_name: item.client_name,
               status: item.status || "Pendente",
+              client_id: item.client_id,
             })
             .select()
             .single();
@@ -488,7 +509,7 @@ export function useManageGestorClient() {
           if (!item.id) throw new Error("ID is required for updates");
           const { data, error } = await (supabase as any)
             .from("gestor_diary_clients")
-            .update({ status: item.status, client_name: item.client_name })
+            .update({ status: item.status, client_name: item.client_name, client_id: item.client_id })
             .eq("id", item.id)
             .select()
             .single();
@@ -510,6 +531,7 @@ export function useManageGestorClient() {
               client_name: item.client_name || "",
               status: item.status || "Pendente",
               created_at: new Date().toISOString(),
+              client_id: item.client_id,
             };
             list.push(inserted);
             setLocal(`clients:${gestorId}`, list);

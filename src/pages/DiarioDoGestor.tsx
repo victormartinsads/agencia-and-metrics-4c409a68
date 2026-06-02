@@ -23,6 +23,7 @@ import {
   type GestorDiaryCalendarEvent,
 } from "@/hooks/useGestorDiary";
 import { useMembers } from "@/hooks/useMembers";
+import { useClients } from "@/hooks/useClients";
 import {
   Card,
   CardContent,
@@ -79,6 +80,9 @@ export default function DiarioDoGestor() {
 
   // Active members
   const { data: members = [] } = useMembers();
+
+  // Load global active clients list
+  const { data: globalClients = [] } = useClients();
 
   // Load all user profiles to map names/avatars/jobs
   const { data: profiles = [] } = useQuery({
@@ -266,15 +270,26 @@ export default function DiarioDoGestor() {
   };
 
   // Clients
-  const [newClientName, setNewClientName] = useState("");
+  const [selectedClientToLink, setSelectedClientToLink] = useState("");
   const [newClientStatus, setNewClientStatus] = useState<"Pendente" | "Configurando" | "Em andamento">("Pendente");
   const handleAddClient = () => {
-    if (!newClientName.trim()) return;
+    if (!selectedClientToLink) {
+      toast.error("Selecione um cliente para vincular!");
+      return;
+    }
+    const clientObj = globalClients.find((c) => c.id === selectedClientToLink);
+    if (!clientObj) return;
+
     manageClient.mutate({
       action: "insert",
-      item: { gestor_id: activeGestorId, client_name: newClientName.trim(), status: newClientStatus },
+      item: {
+        gestor_id: activeGestorId,
+        client_name: clientObj.name,
+        status: newClientStatus,
+        client_id: clientObj.id,
+      },
     });
-    setNewClientName("");
+    setSelectedClientToLink("");
   };
 
   const handleUpdateClientStatus = (clientId: string, status: "Pendente" | "Configurando" | "Em andamento") => {
@@ -775,7 +790,18 @@ export default function DiarioDoGestor() {
                         className="group flex flex-col p-2.5 rounded-xl border border-border/40 bg-background/40 gap-2 hover:bg-background/80 transition-colors"
                       >
                         <div className="flex justify-between items-start gap-2">
-                          <span className="text-xs font-bold text-card-foreground truncate uppercase">{c.client_name}</span>
+                          {c.client_id ? (
+                            <a
+                              href={`/dashboard/${c.client_id}`}
+                              className="text-xs font-bold text-primary hover:underline truncate uppercase flex items-center gap-1"
+                              title="Ir para o Dashboard"
+                            >
+                              {c.client_name}
+                              <ArrowRight className="h-2.5 w-2.5" />
+                            </a>
+                          ) : (
+                            <span className="text-xs font-bold text-card-foreground truncate uppercase">{c.client_name}</span>
+                          )}
                           {canManageOthers && (
                             <button
                               onClick={() => handleDeleteClient(c.id)}
@@ -817,12 +843,21 @@ export default function DiarioDoGestor() {
               {canManageOthers && (
                 <div className="space-y-2 pt-2 border-t border-border/40">
                   <div className="flex flex-col gap-2">
-                    <Input
-                      placeholder="Nome da conta/cliente..."
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      className="h-8 text-xs bg-background"
-                    />
+                    <Select
+                      value={selectedClientToLink}
+                      onValueChange={(val) => setSelectedClientToLink(val)}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue placeholder="Selecione um cliente para vincular..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {globalClients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name.toUpperCase()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div className="flex gap-1.5">
                       <Select
                         value={newClientStatus}
