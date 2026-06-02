@@ -44,6 +44,7 @@ interface Props {
   metaData: MetaAdsData | undefined;
   currencySymbol: string;
   publicSlug?: string;
+  isPublicView?: boolean;
 }
 
 function inRange(dateStr: string, start: Date, end: Date) {
@@ -53,7 +54,7 @@ function inRange(dateStr: string, start: Date, end: Date) {
   return d >= toKey(start) && d <= toKey(end);
 }
 
-export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol, publicSlug }: Props) {
+export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol, publicSlug, isPublicView = false }: Props) {
   const { data: sheetsConfig } = useDashboardSheet(clientId);
   const { data: weekly } = useWeeklyMetrics(clientId, 365);
   const { data: ga } = useGoogleAnalytics(clientId, datePreset, !!clientId, publicSlug);
@@ -94,15 +95,18 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     utms: "Fontes de tráfego (UTM)",
   };
 
-  const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => (
-    <button
-      onClick={() => setSourcesOpen(true)}
-      className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-      title={title}
-    >
-      <Pencil className="h-3.5 w-3.5" />
-    </button>
-  );
+  const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => {
+    if (isPublicView) return null;
+    return (
+      <button
+        onClick={() => setSourcesOpen(true)}
+        className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+        title={title}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+    );
+  };
 
   useEffect(() => {
     const openSrc = () => setSourcesOpen(true);
@@ -258,6 +262,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   }, [periods, inCurr]);
 
   const productData = useMemo(() => {
+    const isDemo = clientId === "11111111-1111-1111-1111-111111111111" || publicSlug === "apresentacao";
     const map = new Map<string, number>();
     for (const r of inCurr) {
       const breakdown = (r as any).raw_row?.product_breakdown as Record<string, number> | undefined;
@@ -269,11 +274,20 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       if (!code) continue;
       map.set(code, (map.get(code) || 0) + Number(r.sales || 0));
     }
-    return Array.from(map.entries())
+    let list = Array.from(map.entries())
       .map(([product, sales]) => ({ product, sales }))
       .sort((a, b) => b.sales - a.sales)
       .slice(0, 10);
-  }, [inCurr]);
+
+    if (isDemo && list.length === 0) {
+      list = [
+        { product: "Curso Vendas Avançadas", sales: 153 },
+        { product: "Mentoria High Ticket", sales: 92 },
+        { product: "Comunidade AND Metrics", sales: 61 }
+      ];
+    }
+    return list;
+  }, [inCurr, clientId, publicSlug]);
 
   const lowTicketMetaDisplay = sheetsCurr.low_ticket_meta > 0
     ? sheetsCurr.low_ticket_meta
@@ -549,22 +563,25 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     if (isVisible("funil")) {
       list.push({
         id: "funil",
-        defaultLayout: { w: 3, h: 6, minW: 2, minH: 4 },
+        defaultLayout: { w: 6, h: 6, minW: 4, minH: 4 },
         node: (
           <PanelCard
             title="Jornada de Compra"
             panelId="funil"
             editMode={editMode}
             onHide={hidePanel}
+            noPadding
             actions={
               <>
-                <button
-                  onClick={() => setFunnelEdit((v) => !v)}
-                  className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                  title={funnelEdit ? "Ver funil" : "Editar funil"}
-                >
-                  {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-                </button>
+                {!isPublicView && (
+                  <button
+                    onClick={() => setFunnelEdit((v) => !v)}
+                    className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title={funnelEdit ? "Ver funil" : "Editar funil"}
+                  >
+                    {funnelEdit ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                  </button>
+                )}
                 <EditSourceBtn title="Editar fontes do funil" />
               </>
             }
@@ -670,13 +687,15 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
           <PanelCard
             title="MQL & sMQL"
             actions={
-              <button
-                onClick={() => setMqlEditOpen(true)}
-                className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                title="Editar Planilha de Qualificação"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              !isPublicView ? (
+                <button
+                  onClick={() => setMqlEditOpen(true)}
+                  className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="Editar Planilha de Qualificação"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              ) : undefined
             }
             panelId="mql"
             editMode={editMode}
@@ -917,51 +936,53 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
   return (
     <div className="space-y-4 max-w-[1500px]">
       {/* Edit toolbar */}
-      <div className="flex items-center justify-end gap-2">
-        {editMode && hidden.size > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-                <Plus className="h-3.5 w-3.5" /> Mostrar bloco ({hidden.size})
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Blocos ocultos</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {Array.from(hidden).map((id) => (
-                <DropdownMenuItem key={id} onClick={() => showPanel(id)}>
-                  {PANEL_LABELS[id] || id}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {editMode && hidden.size > 0 && (
-          <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
-            <RotateCcw className="h-3.5 w-3.5" /> Restaurar
-          </Button>
-        )}
-        {clientId && (
+      {!isPublicView && (
+        <div className="flex items-center justify-end gap-2">
+          {editMode && hidden.size > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                  <Plus className="h-3.5 w-3.5" /> Mostrar bloco ({hidden.size})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Blocos ocultos</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Array.from(hidden).map((id) => (
+                  <DropdownMenuItem key={id} onClick={() => showPanel(id)}>
+                    {PANEL_LABELS[id] || id}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {editMode && hidden.size > 0 && (
+            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={resetHidden}>
+              <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+            </Button>
+          )}
+          {clientId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setSourcesOpen(true)}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Configurar Planilhas
+            </Button>
+          )}
           <Button
-            variant="outline"
+            variant={editMode ? "default" : "outline"}
             size="sm"
-            className="gap-1.5 h-8 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setSourcesOpen(true)}
+            className="gap-1.5 h-8 text-xs"
+            onClick={() => setEditMode((v) => !v)}
           >
-            <Settings className="h-3.5 w-3.5" />
-            Configurar Planilhas
+            {editMode ? <Eye className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+            {editMode ? "Concluir" : "Editar layout"}
           </Button>
-        )}
-        <Button
-          variant={editMode ? "default" : "outline"}
-          size="sm"
-          className="gap-1.5 h-8 text-xs"
-          onClick={() => setEditMode((v) => !v)}
-        >
-          {editMode ? <Eye className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
-          {editMode ? "Concluir" : "Editar layout"}
-        </Button>
-      </div>
+        </div>
+      )}
 
       {!hasSheets && (
         <div className="rounded-2xl border border-primary/20 bg-card p-4 flex items-start gap-3">

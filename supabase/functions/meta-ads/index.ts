@@ -259,6 +259,10 @@ Deno.serve(async (req) => {
         const mql = Math.round(leads * 0.4);
         const smql = Math.round(mql * 0.5);
         
+        const prod1 = Math.round(sales * 0.5);
+        const prod2 = Math.round(sales * 0.3);
+        const prod3 = Math.max(0, sales - prod1 - prod2);
+
         metricsRows.push({
           client_id: "11111111-1111-1111-1111-111111111111",
           reference_date: dateStr,
@@ -270,7 +274,14 @@ Deno.serve(async (req) => {
           investment,
           avg_ticket: 500,
           ltv: 2500,
-          source: "google_sheets"
+          source: "google_sheets",
+          raw_row: {
+            product_breakdown: {
+              "Curso Vendas Avançadas": prod1,
+              "Mentoria High Ticket": prod2,
+              "Comunidade AND Metrics": prod3
+            }
+          }
         });
       }
       const { error: err3 } = await supabase.from("weekly_metrics").upsert(metricsRows, { onConflict: "client_id,reference_date" });

@@ -73,6 +73,7 @@ export default function SharedDashboard() {
           currencySymbol={client.currency_symbol || "R$"}
           hideDiagnostico
           visibleTabs={(client as any).visible_tabs || ["overview","funnel","spreadsheet","creatives","branding"]}
+          isPublicView
         />
       </main>
 

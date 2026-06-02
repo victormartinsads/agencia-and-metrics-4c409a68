@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound.tsx";
 import CrmAppPage from "./pages/CrmApp.tsx";
 import Portal from "./pages/Portal.tsx";
 import ClientPortalRouter from "./components/ClientPortalRouter.tsx";
+import FunnelPlayground from "./pages/FunnelPlayground.tsx";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/diagnostico/:id" element={<SavedDiagnosticPublic />} />
             <Route path="/saved-diagnostic/:id" element={<SavedDiagnosticPublic />} />
             <Route path="/visao-cliente/:slug" element={<ClientView />} />
+            <Route path="/funnel-playground" element={<FunnelPlayground />} />
             <Route path="/google/callback" element={<GoogleCallback />} />
             <Route path="/meta/callback" element={<MetaCallback />} />
             {/* Protected routes */}

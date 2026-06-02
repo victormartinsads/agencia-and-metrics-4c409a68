@@ -31,9 +31,10 @@ interface Props {
   activeTab?: string;
   onActiveTabChange?: (id: string) => void;
   hideTabList?: boolean;
+  isPublicView?: boolean;
 }
 
-export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false }: Props) {
+export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false, isPublicView = false }: Props) {
   const { data: clientInfo } = useQuery({
     queryKey: ["client-name", clientId],
     queryFn: async () => {
@@ -119,6 +120,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               metaData={metaData}
               currencySymbol={currencySymbol}
               publicSlug={clientInfo?.slug}
+              isPublicView={isPublicView}
             />
           </TabsContent>}
 
@@ -140,6 +142,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               dailyMetrics={dailyMetrics}
               datePreset={datePreset || "last_7d"}
               currencySymbol={currencySymbol}
+              readOnly={isPublicView}
             />
           </TabsContent>}
 
@@ -164,10 +167,11 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                       funnelLabel="Captação de Seguidores"
                       clientId={clientId}
                       currencySymbol={currencySymbol}
+                      readOnly={isPublicView}
                     />
                   )}
                   {others.map(c => (
-                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} />
+                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} />
                   ))}
                 </>
               );
