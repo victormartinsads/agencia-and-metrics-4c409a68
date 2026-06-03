@@ -22,6 +22,7 @@ import {
   type GestorDiaryClient,
   type GestorDiaryCalendarEvent,
 } from "@/hooks/useGestorDiary";
+import { useGestorAssignments } from "@/hooks/useGestorAssignments";
 import { useMembers } from "@/hooks/useMembers";
 import { useClients } from "@/hooks/useClients";
 import {
@@ -153,7 +154,8 @@ export default function DiarioDoGestor() {
   const { data: logs = [] } = useGestorLogs(activeGestorId);
   const manageLog = useManageGestorLog();
 
-  const { data: gestorClients = [] } = useGestorClients(activeGestorId);
+  const { data: gestorClients = [] } = useGestorAssignments(activeGestorId);
+  // manageClient is kept if needed elsewhere, otherwise we can ignore it
   const manageClient = useManageGestorClient();
 
   const { data: calendarEvents = [] } = useGestorCalendar(activeGestorId);
@@ -223,6 +225,9 @@ export default function DiarioDoGestor() {
     manageTask.mutate({
       action: "insert",
       task: { gestor_id: activeGestorId, title: newTaskTitle.trim(), tag: newTaskTag },
+    }, {
+      onSuccess: () => toast.success("Tarefa adicionada!"),
+      onError: (err: any) => toast.error("Erro ao adicionar tarefa: " + (err.message || "Erro desconhecido"))
     });
     setNewTaskTitle("");
   };
@@ -770,7 +775,7 @@ export default function DiarioDoGestor() {
                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
                   🤝 Clientes Gerenciados
                 </CardTitle>
-                <CardDescription className="text-[10px] mt-0.5">Status de contas e setups</CardDescription>
+                <CardDescription className="text-[10px] mt-0.5">Clientes atribuídos a este gestor</CardDescription>
               </div>
 
               {/* Clients list */}
@@ -778,107 +783,25 @@ export default function DiarioDoGestor() {
                 {gestorClients.length === 0 ? (
                   <p className="text-[11px] text-muted-foreground italic text-center py-4">Nenhum cliente vinculado.</p>
                 ) : (
-                  gestorClients.map((c) => {
-                    const statusColors = {
-                      Pendente: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                      Configurando: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                      "Em andamento": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                    };
-                    return (
-                      <div
-                        key={c.id}
-                        className="group flex flex-col p-2.5 rounded-xl border border-border/40 bg-background/40 gap-2 hover:bg-background/80 transition-colors"
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          {c.client_id ? (
-                            <a
-                              href={`/dashboard/${c.client_id}`}
-                              className="text-xs font-bold text-primary hover:underline truncate uppercase flex items-center gap-1"
-                              title="Ir para o Dashboard"
-                            >
-                              {c.client_name}
-                              <ArrowRight className="h-2.5 w-2.5" />
-                            </a>
-                          ) : (
-                            <span className="text-xs font-bold text-card-foreground truncate uppercase">{c.client_name}</span>
-                          )}
-                          {canManageOthers && (
-                            <button
-                              onClick={() => handleDeleteClient(c.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-red-400 p-0.5"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between gap-2">
-                          {canManageOthers ? (
-                            <Select
-                              value={c.status}
-                              onValueChange={(val: any) => handleUpdateClientStatus(c.id, val)}
-                            >
-                              <SelectTrigger className="h-6 text-[9px] bg-background px-1.5 py-0">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Pendente">Pendente</SelectItem>
-                                <SelectItem value="Configurando">Configurando</SelectItem>
-                                <SelectItem value="Em andamento">Em andamento</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge className={`text-[9px] ${statusColors[c.status] || ""}`}>
-                              {c.status}
-                            </Badge>
-                          )}
-                        </div>
+                  gestorClients.map((c: any) => (
+                    <div
+                      key={c.client_id}
+                      className="group flex flex-col p-2.5 rounded-xl border border-border/40 bg-background/40 gap-2 hover:bg-background/80 transition-colors"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <a
+                          href={`/dashboard/${c.client_id}`}
+                          className="text-xs font-bold text-primary hover:underline truncate uppercase flex items-center gap-1"
+                          title="Ir para o Dashboard"
+                        >
+                          {c.client_name}
+                          <ArrowRight className="h-2.5 w-2.5" />
+                        </a>
                       </div>
-                    );
-                  })
+                    </div>
+                  ))
                 )}
               </div>
-
-              {/* Add Client (Admins/CEOs/Gerentes only) */}
-              {canManageOthers && (
-                <div className="space-y-2 pt-2 border-t border-border/40">
-                  <div className="flex flex-col gap-2">
-                    <Select
-                      value={selectedClientToLink}
-                      onValueChange={(val) => setSelectedClientToLink(val)}
-                    >
-                      <SelectTrigger className="h-8 text-xs bg-background">
-                        <SelectValue placeholder="Selecione um cliente para vincular..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {globalClients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-1.5">
-                      <Select
-                        value={newClientStatus}
-                        onValueChange={(val: any) => setNewClientStatus(val)}
-                      >
-                        <SelectTrigger className="h-8 text-[10px] bg-background flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Pendente">Pendente</SelectItem>
-                          <SelectItem value="Configurando">Configurando</SelectItem>
-                          <SelectItem value="Em andamento">Em andamento</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button size="icon" className="h-8 w-8 shrink-0 font-bold" onClick={handleAddClient}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </Card>
 
             {/* 2. Interactive Calendar */}

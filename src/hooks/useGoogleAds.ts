@@ -20,6 +20,8 @@ export interface GoogleAdsCreative {
   impressions: number;
   clicks: number;
   conversions: number;
+  videoViews?: number;
+  videoP100Rate?: number;
 }
 
 export interface GoogleAdsConversionBreakdown {

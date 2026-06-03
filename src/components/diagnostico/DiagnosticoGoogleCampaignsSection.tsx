@@ -43,11 +43,83 @@ export function DiagnosticoGoogleCampaignsSection({
 
   const rawCampaigns = staticCampaigns || liveData?.campaigns || [];
 
-  // Filter campaigns with cost > 0 or impressions > 0, and sort by cost descending
+  // Group campaigns by type (channel)
   const campaignsList = useMemo(() => {
-    return rawCampaigns
-      .filter((c) => c.cost > 0 || c.impressions > 0)
-      .sort((a, b) => b.cost - a.cost);
+    const validCampaigns = rawCampaigns.filter((c) => c.cost > 0 || c.impressions > 0);
+    const channelMap = new Map<string, GoogleAdsCampaign>();
+
+    for (const c of validCampaigns) {
+      const type = c.type || "OUTROS";
+      if (!channelMap.has(type)) {
+        channelMap.set(type, {
+          id: `channel-${type}`,
+          name: `Campanhas de ${type}`,
+          status: "mixed",
+          type: type,
+          cost: 0,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          revenue: 0,
+          ctr: 0,
+          avgCpc: 0,
+          keywords: [],
+          creatives: [],
+          conversionsBreakdown: [],
+        });
+      }
+      
+      const agg = channelMap.get(type)!;
+      agg.cost += c.cost;
+      agg.impressions += c.impressions;
+      agg.clicks += c.clicks;
+      agg.conversions += c.conversions;
+      agg.revenue += c.revenue;
+      
+      if (c.keywords) agg.keywords!.push(...c.keywords);
+      if (c.creatives) agg.creatives!.push(...c.creatives);
+      if (c.conversionsBreakdown) {
+        for (const cb of c.conversionsBreakdown) {
+          const existingCb = agg.conversionsBreakdown!.find((x) => x.name === cb.name);
+          if (existingCb) existingCb.count += cb.count;
+          else agg.conversionsBreakdown!.push({ ...cb });
+        }
+      }
+    }
+
+    // Recalculate rates and sort child lists
+    for (const agg of channelMap.values()) {
+      agg.ctr = agg.impressions > 0 ? (agg.clicks / agg.impressions) * 100 : 0;
+      agg.avgCpc = agg.clicks > 0 ? agg.cost / agg.clicks : 0;
+      
+      agg.keywords = agg.keywords!.sort((a, b) => b.conversions - a.conversions || b.cost - a.cost).slice(0, 15);
+      
+      // Filter out duplicate creatives based on youtubeVideoId or imageUrl
+      const uniqueCreatives = new Map<string, GoogleAdsCreative>();
+      for (const cr of agg.creatives!) {
+        const key = cr.youtubeVideoId || cr.imageUrl || cr.id;
+        if (!uniqueCreatives.has(key)) {
+          uniqueCreatives.set(key, { ...cr });
+        } else {
+          const existing = uniqueCreatives.get(key)!;
+          existing.cost += cr.cost;
+          existing.clicks += cr.clicks;
+          existing.conversions += cr.conversions;
+          if (cr.videoViews) existing.videoViews = (existing.videoViews || 0) + cr.videoViews;
+          if (cr.videoP100Rate && cr.videoViews) {
+            // weighted average could be done, but keeping highest or sum is complex, just max for now
+            existing.videoP100Rate = Math.max(existing.videoP100Rate || 0, cr.videoP100Rate);
+          }
+        }
+      }
+      agg.creatives = Array.from(uniqueCreatives.values())
+        .sort((a, b) => b.conversions - a.conversions || b.cost - a.cost)
+        .slice(0, 12);
+        
+      agg.conversionsBreakdown!.sort((a, b) => b.count - a.count);
+    }
+
+    return Array.from(channelMap.values()).sort((a, b) => b.cost - a.cost);
   }, [rawCampaigns]);
 
   // Load custom funnel labels if not static
@@ -116,71 +188,9 @@ function GoogleCampaignCard({
   const config = overrideConfig || liveConfig;
   const saveLabelMutation = useSaveFunnelLabel();
 
-  // Se for uma campanha de vídeo/display/multi_channel/demand_gen e não tiver creatives, criamos criativos fictícios
   const campaignCreatives = useMemo(() => {
-    if (campaign.creatives && campaign.creatives.length > 0) {
-      return campaign.creatives;
-    }
-
-    const typeUpper = campaign.type?.toUpperCase();
-    const isCreativeCampaign = ["VIDEO", "DISPLAY", "MULTI_CHANNEL", "DEMAND_GEN"].includes(typeUpper);
-
-    if (isCreativeCampaign) {
-      const numCreatives = 3;
-      const mockCreatives: GoogleAdsCreative[] = [];
-
-      const totalCost = campaign.cost || 0;
-      const totalClicks = campaign.clicks || 0;
-      const totalConversions = campaign.conversions || 0;
-      const totalImpressions = campaign.impressions || 0;
-
-      const mockVideos = [
-        "dQw4w9WgXcQ", // Rick Astley - Never Gonna Give You Up
-        "9bZkp7q19f0", // PSY - GANGNAM STYLE
-        "kJQP7kiw5Fk", // Luis Fonsi - Despacito
-      ];
-
-      const proportions = [0.5, 0.3, 0.2]; // soma 1.0
-
-      for (let i = 0; i < numCreatives; i++) {
-        const prop = proportions[i];
-        const cCost = Number((totalCost * prop).toFixed(2));
-        const cClicks = Math.round(totalClicks * prop);
-        const cConversions = Number((totalConversions * prop).toFixed(1));
-        const cImpressions = Math.round(totalImpressions * prop);
-
-        const isVideoCreative = typeUpper === "VIDEO" || (typeUpper === "DEMAND_GEN" && i === 0) || (typeUpper === "MULTI_CHANNEL" && i === 1);
-
-        if (isVideoCreative) {
-          mockCreatives.push({
-            id: `mock-video-${campaign.id}-${i}`,
-            name: `Criativo de Vídeo ${i + 1} - ${campaign.name}`,
-            type: "VIDEO",
-            youtubeVideoId: mockVideos[i % mockVideos.length],
-            cost: cCost,
-            impressions: cImpressions,
-            clicks: cClicks,
-            conversions: Number(cConversions.toFixed(0)),
-          });
-        } else {
-          const seed = `adv-${campaign.id}-${i}`;
-          mockCreatives.push({
-            id: `mock-image-${campaign.id}-${i}`,
-            name: `Banner Display ${i + 1} - ${campaign.name}`,
-            type: "IMAGE",
-            imageUrl: `https://picsum.photos/seed/${seed}/600/600`,
-            cost: cCost,
-            impressions: cImpressions,
-            clicks: cClicks,
-            conversions: Number(cConversions.toFixed(0)),
-          });
-        }
-      }
-      return mockCreatives;
-    }
-
-    return [];
-  }, [campaign.creatives, campaign.type, campaign.cost, campaign.clicks, campaign.conversions, campaign.impressions, campaign.id, campaign.name]);
+    return campaign.creatives || [];
+  }, [campaign.creatives]);
 
   // Campaign Title logic
   const customCampaignName = resolvedLabels[groupKey] || campaign.name;
@@ -383,14 +393,10 @@ function GoogleCampaignCard({
               </div>
             )}
             <span
-              className={`inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border ${
-                isStatusActive
-                  ? "bg-green-500/10 text-green-500 border-green-500/20"
-                  : "bg-muted text-muted-foreground border-border"
-              }`}
+              className={`inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20`}
             >
-              {isStatusActive ? <Play className="h-2 w-2 fill-green-500 text-green-500" /> : <Pause className="h-2 w-2 fill-muted-foreground text-muted-foreground" />}
-              {isStatusActive ? "Ativa" : "Pausada"}
+              <Sparkles className="h-2.5 w-2.5 text-primary" />
+              Consolidado
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
@@ -539,8 +545,8 @@ function GoogleCampaignCard({
           </div>
         )}
 
-        {/* Case 2: Display, Video or PMax Campaign (Top Creatives) */}
-        {campaignCreatives && campaignCreatives.length > 0 && (
+        {/* Case 2: Display or PMax Campaign (Top Creatives - Excluding Video/Demand Gen) */}
+        {campaign.type !== "DEMAND_GEN" && campaign.type !== "VIDEO" && campaignCreatives && campaignCreatives.length > 0 && (
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <ImageIcon className="h-3.5 w-3.5 text-primary" /> Top Criativos (Imagens & Vídeos)
@@ -566,7 +572,8 @@ function GoogleCampaignCard({
                           className="w-full h-full object-cover group-hover/creative:scale-105 transition-transform duration-300"
                           referrerPolicy="no-referrer"
                           onError={(e) => {
-                            e.currentTarget.src = `https://picsum.photos/seed/${creative.id}/300/300`;
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.parentElement?.classList.add("fallback-bg");
                           }}
                         />
                       ) : (
@@ -593,6 +600,18 @@ function GoogleCampaignCard({
                           <span className="text-white/60 font-medium">Conversões</span>
                           <span className="text-primary font-bold font-mono">{creative.conversions.toFixed(0)}</span>
                         </div>
+                        {isVideo && (creative.videoViews ? creative.videoViews > 0 : false) && (
+                           <>
+                             <div className="flex justify-between border-t border-white/15 py-0.5 mt-0.5">
+                               <span className="text-white/60">Visualizações</span>
+                               <span className="font-mono">{creative.videoViews!.toLocaleString("pt-BR")}</span>
+                             </div>
+                             <div className="flex justify-between py-0.5">
+                               <span className="text-white/60">Retenção (100%)</span>
+                               <span className="font-mono">{(creative.videoP100Rate! * 100).toFixed(1)}%</span>
+                             </div>
+                           </>
+                        )}
                       </div>
                     </div>
 

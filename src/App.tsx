@@ -19,6 +19,7 @@ import ClientView from "./pages/ClientView.tsx";
 import GoogleCallback from "./pages/GoogleCallback.tsx";
 import MetaCallback from "./pages/MetaCallback.tsx";
 import Login from "./pages/Login.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Settings from "./pages/Settings.tsx";
 import GestorView from "./pages/GestorView.tsx";
 import GestorOverview from "./pages/GestorOverview.tsx";
@@ -40,6 +41,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* Public share routes */}
             <Route path="/share/:clientId" element={<SharedDashboard />} />
             <Route path="/shared/:clientId" element={<SharedDashboard />} />

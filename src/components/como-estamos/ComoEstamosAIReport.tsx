@@ -61,14 +61,40 @@ Estruture o relatório com:
 
 Formato: linguagem clara e profissional, com emojis e bullet points.`;
 
-      const { data, error } = await supabase.functions.invoke("funnel-insights", {
-        body: { prompt, clientId },
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        setReport("Chave da API do Gemini (VITE_GEMINI_API_KEY) não encontrada. Configure no arquivo .env.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+          }
+        })
       });
 
-      if (error) throw error;
-      setReport(data?.insights || data?.text || "Não foi possível gerar o relatório.");
-    } catch (e) {
-      setReport("Erro ao gerar relatório. Tente novamente.");
+      if (!response.ok) {
+        throw new Error("Falha na API do Gemini");
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      setReport(text || "Não foi possível gerar o relatório.");
+    } catch (e: any) {
+      console.error(e);
+      setReport(`Erro ao gerar relatório: ${e.message}`);
     } finally {
       setLoading(false);
     }

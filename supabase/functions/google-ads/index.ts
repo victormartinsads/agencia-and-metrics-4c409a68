@@ -335,7 +335,9 @@ Deno.serve(async (req) => {
           metrics.cost_micros,
           metrics.impressions,
           metrics.clicks,
-          metrics.conversions
+          metrics.conversions,
+          metrics.video_views,
+          metrics.video_quartile_p100_rate
         FROM ad_group_ad_asset_view
         WHERE segments.date BETWEEN '${since}' AND '${until}'
           AND metrics.impressions > 0
@@ -357,6 +359,8 @@ Deno.serve(async (req) => {
           impressions: Number(r.metrics?.impressions || 0),
           clicks: Number(r.metrics?.clicks || 0),
           conversions: Number(r.metrics?.conversions || 0),
+          videoViews: Number(r.metrics?.videoViews || 0),
+          videoP100Rate: Number(r.metrics?.videoQuartileP100Rate || 0),
         }));
       }
     } catch (err) {
@@ -375,7 +379,9 @@ Deno.serve(async (req) => {
           metrics.cost_micros,
           metrics.impressions,
           metrics.clicks,
-          metrics.conversions
+          metrics.conversions,
+          metrics.video_views,
+          metrics.video_quartile_p100_rate
         FROM ad_group_ad
         WHERE segments.date BETWEEN '${since}' AND '${until}'
           AND metrics.impressions > 0
@@ -415,6 +421,8 @@ Deno.serve(async (req) => {
                 impressions,
                 clicks,
                 conversions,
+                videoViews: Number(r.metrics?.videoViews || 0),
+                videoP100Rate: Number(r.metrics?.videoQuartileP100Rate || 0),
               });
             }
           }

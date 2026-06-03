@@ -849,9 +849,27 @@ export default function GestorView() {
         {/* VIEWPORT DA ABA ATIVA */}
         <main className="flex-1 overflow-y-auto p-6 bg-background/95">
           {!clientId ? (
-            <Card className="p-12 text-center text-muted-foreground text-sm rounded-2xl border-dashed">
-              Selecione um cliente na barra superior para carregar a plataforma.
-            </Card>
+            <div className="space-y-6">
+              <div className="flex flex-col space-y-1.5 border-b border-border/40 pb-4">
+                <h2 className="text-2xl font-bold tracking-tight">Meus Clientes</h2>
+                <p className="text-sm text-muted-foreground">Selecione um cliente para acessar o dashboard ou gerenciar o tráfego.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {clients?.map((client) => (
+                  <Link key={client.id} to={`/dashboard/${client.id}`}>
+                    <Card className="p-6 flex flex-col items-center text-center space-y-4 hover:border-primary/50 hover:shadow-md transition-all duration-300 group cursor-pointer bg-card/40 hover:bg-card/80">
+                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <span className="text-xl font-bold text-primary">{client.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-card-foreground group-hover:text-primary transition-colors">{client.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Acessar Dashboard</p>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ) : isLoading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
