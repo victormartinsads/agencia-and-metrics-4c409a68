@@ -271,19 +271,10 @@ Deno.serve(async (req) => {
     const cfg = webhookCfgResult.data;
     const tkCfg = trackingCfgResult.data;
 
-    // Token pode vir de sales_webhook_config OU de tracking_config
-    const validTokens = [cfg?.webhook_token, tkCfg?.webhook_token].filter(Boolean);
-    if (!validTokens.includes(token)) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const rawText = await req.text();
     const body = rawText ? JSON.parse(rawText) : {};
 
-    // ── Salvar RAW JSON imediatamente ──────────────────────────────────────
+    // ── Salvar RAW JSON imediatamente ANTES da validação do token ──────
     fetch(`${SUPABASE_URL}/rest/v1/inbound_webhooks_log`, {
       method: "POST",
       headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
@@ -291,6 +282,21 @@ Deno.serve(async (req) => {
         client_id: clientId, platform, raw_payload: body, status: "received"
       })
     }).catch(console.error);
+
+    // Token pode vir de sales_webhook_config OU de tracking_config
+    const validTokens = [cfg?.webhook_token, tkCfg?.webhook_token].filter(Boolean);
+    if (!validTokens.includes(token)) {
+      // Registrar que falhou no token
+      fetch(`${SUPABASE_URL}/rest/v1/inbound_webhooks_log?client_id=eq.${clientId}&order=created_at.desc&limit=1`, {
+        method: "PATCH", headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "error", error_details: "unauthorized token" })
+      }).catch(console.error);
+
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const events = normalize(platform, body);
 

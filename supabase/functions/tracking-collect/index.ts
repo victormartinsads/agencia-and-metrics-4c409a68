@@ -184,18 +184,21 @@ Deno.serve(async (req) => {
       });
       const capiText = await capiRes.text();
       const capiJson = capiText ? JSON.parse(capiText) : { status: capiRes.status, events_received: 0 };
-      capiResult = { success: capiRes.ok, response: capiJson };
-
-      await dbInsert("capi_events_log", {
-        client_id: clientId, event_name, event_id: finalEventId, platform: "meta_capi",
-        pixel_id: cfg.pixel_id, status: capiRes.ok ? "sent" : "error",
-        meta_response: capiJson, error_message: capiRes.ok ? null : JSON.stringify(capiJson),
-        buyer_email_masked: emailNorm ? maskEmail(emailNorm) : null,
-        utm_source: utm_source || null, utm_campaign: utm_campaign || null,
-        had_fbclid: !!fbclid, had_fbp: !!fbp,
-        country, city, os, browser, user_id: user_id || null,
-      });
+      capiResult = { success: capiRes.ok, response: capiJson, status: capiRes.ok ? "sent" : "error" };
+    } else {
+      capiResult = { success: false, status: "skipped", response: { error: "Missing Pixel ID or Token" } };
     }
+
+    // Registrar no Log CAPI (Sempre registra para aparecer no Ao Vivo, mesmo sem Token)
+    await dbInsert("capi_events_log", {
+      client_id: clientId, event_name, event_id: finalEventId, platform: "meta_capi",
+      pixel_id: cfg.pixel_id || null, status: capiResult.status,
+      meta_response: capiResult.response, error_message: capiResult.success ? null : JSON.stringify(capiResult.response),
+      buyer_email_masked: emailNorm ? maskEmail(emailNorm) : null,
+      utm_source: utm_source || null, utm_campaign: utm_campaign || null,
+      had_fbclid: !!fbclid, had_fbp: !!fbp,
+      country, city, os, browser, user_id: user_id || null,
+    });
 
     // GA4
     let ga4Result: any = null;
