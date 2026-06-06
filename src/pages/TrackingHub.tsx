@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft, Settings, Code, Webhook, BarChart3, Activity,
-  Zap, BookOpen, ListChecks, AlertTriangle, Copy, Check, RefreshCw,
+  Zap, BookOpen, ListChecks, AlertTriangle, Copy, Check, RefreshCw, Users, Radio
 } from "lucide-react";
 import TrackingConfig from "@/components/tracking/TrackingConfig";
 import TrackingScript from "@/components/tracking/TrackingScript";
@@ -14,6 +14,9 @@ import TrackingDashboard from "@/components/tracking/TrackingDashboard";
 import CapiLog from "@/components/tracking/CapiLog";
 import TrackingGuide from "@/components/tracking/TrackingGuide";
 import TrackingEvents from "@/components/tracking/TrackingEvents";
+import LiveEvents from "@/components/tracking/LiveEvents";
+import InboundWebhooksTab from "@/components/tracking/InboundWebhooks";
+import UserJourney from "@/components/tracking/UserJourney";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -304,11 +307,23 @@ export default function TrackingHub() {
             </TabsTrigger>
             <TabsTrigger value="webhooks" className="gap-2">
               <Webhook className="h-3.5 w-3.5" />
-              Webhooks
+              Webhook Config
+            </TabsTrigger>
+            <TabsTrigger value="inbound_webhooks" className="gap-2">
+              <Webhook className="h-3.5 w-3.5" />
+              Webhooks Recebidos
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 className="h-3.5 w-3.5" />
               Vendas
+            </TabsTrigger>
+            <TabsTrigger value="journey" className="gap-2">
+              <Users className="h-3.5 w-3.5" />
+              Jornada CRM
+            </TabsTrigger>
+            <TabsTrigger value="live" className="gap-2 bg-blue-50/50 text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 border-blue-200">
+              <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" />
+              Ao Vivo
             </TabsTrigger>
             <TabsTrigger value="log" className="gap-2">
               <Activity className="h-3.5 w-3.5" />
@@ -344,6 +359,18 @@ export default function TrackingHub() {
             {config && (
               <TrackingWebhooks clientId={clientId!} config={config} />
             )}
+          </TabsContent>
+
+          <TabsContent value="inbound_webhooks">
+            <InboundWebhooksTab clientId={clientId!} />
+          </TabsContent>
+
+          <TabsContent value="journey">
+            <UserJourney clientId={clientId!} />
+          </TabsContent>
+
+          <TabsContent value="live">
+            <LiveEvents clientId={clientId!} />
           </TabsContent>
 
           <TabsContent value="dashboard">

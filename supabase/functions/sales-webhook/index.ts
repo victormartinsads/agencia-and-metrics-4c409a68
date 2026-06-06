@@ -88,7 +88,7 @@ function normalizeKiwify(body: any) {
   const customer = order?.Customer || {};
 
   const mainEvent = {
-    transaction_id: String(order?.order_id || order?.id || body?.webhook_event_id || ""),
+    transaction_id: String(order?.order_id || order?.id || body?.webhook_event_id || crypto.randomUUID()),
     product_id: String(order?.Product?.product_id || order?.product_id || ""),
     product_name: order?.Product?.product_name || order?.product_name || "",
     buyer_email: (customer?.email || "").trim().toLowerCase(),
@@ -280,10 +280,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const rawText = await req.text();
+    const body = rawText ? JSON.parse(rawText) : {};
+
+    // ── Salvar RAW JSON imediatamente ──────────────────────────────────────
+    fetch(`${SUPABASE_URL}/rest/v1/inbound_webhooks_log`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId, platform, raw_payload: body, status: "received"
+      })
+    }).catch(console.error);
+
     const events = normalize(platform, body);
 
     if (!events || events.length === 0 || !events[0].transaction_id) {
+      // Atualizar log como erro
+      fetch(`${SUPABASE_URL}/rest/v1/inbound_webhooks_log?client_id=eq.${clientId}&order=created_at.desc&limit=1`, {
+        method: "PATCH", headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "error", error_details: "could not parse event" })
+      }).catch(console.error);
+
       return new Response(JSON.stringify({ error: "could not parse event", body }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
