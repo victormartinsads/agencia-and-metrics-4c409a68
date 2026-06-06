@@ -10,6 +10,7 @@ interface LogEntry {
   platform: string;
   status: string;
   buyer_email_masked: string | null;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -22,6 +23,7 @@ const statusIcon: Record<string, React.ReactNode> = {
 
 export default function LiveEvents({ clientId }: { clientId: string }) {
   const [events, setEvents] = useState<LogEntry[]>([]);
+  const [filterUid, setFilterUid] = useState<string | null>(null);
 
   useEffect(() => {
     // Buscar os últimos 20 iniciais
@@ -29,7 +31,7 @@ export default function LiveEvents({ clientId }: { clientId: string }) {
       const db = supabase as any;
       const { data } = await db
         .from("capi_events_log")
-        .select("id, event_name, platform, status, buyer_email_masked, created_at")
+        .select("id, event_name, platform, status, buyer_email_masked, user_id, created_at")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(20);
@@ -62,7 +64,14 @@ export default function LiveEvents({ clientId }: { clientId: string }) {
           <Radio className="h-5 w-5 text-red-500 animate-pulse" />
           Eventos ao Vivo
         </CardTitle>
-        <Badge variant="outline" className="bg-white">Aguardando eventos...</Badge>
+        <div className="flex gap-2 items-center">
+          {filterUid && (
+            <Badge variant="secondary" className="cursor-pointer hover:bg-gray-200" onClick={() => setFilterUid(null)}>
+              Filtrando: {filterUid.substring(0, 8)} ✖
+            </Badge>
+          )}
+          <Badge variant="outline" className="bg-white">Aguardando eventos...</Badge>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="max-h-[600px] overflow-y-auto">
@@ -74,7 +83,7 @@ export default function LiveEvents({ clientId }: { clientId: string }) {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {events.map((e) => (
+              {events.filter(e => !filterUid || e.user_id === filterUid).map((e) => (
                 <div key={e.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center gap-4">
                     <div className="bg-background rounded-full p-2 border shadow-sm shrink-0">
@@ -86,6 +95,16 @@ export default function LiveEvents({ clientId }: { clientId: string }) {
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {e.platform === "meta_capi" ? "Meta CAPI" : e.platform}
                         </Badge>
+                        {e.user_id && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] px-1.5 py-0 cursor-pointer ${filterUid === e.user_id ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+                            onClick={() => setFilterUid(e.user_id)}
+                            title="Filtrar eventos desse visitante"
+                          >
+                            UID: {e.user_id.substring(0, 8)}
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground font-mono">
                         {e.buyer_email_masked || "Visitante Anônimo"}
