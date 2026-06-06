@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  ArrowLeft, Settings, Loader2, Share2, Check, RefreshCw,
+  ArrowLeft, Settings, Loader2, Share2, Check, RefreshCw, Zap,
 } from "lucide-react";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
@@ -191,6 +191,13 @@ export default function ClientDashboard() {
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
           </Button>
+          {isStaff && (
+            <Link to={`/tracking/${clientId}`} title="TrackingHub — CAPI + GA4">
+              <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-muted-foreground" title="TrackingHub">
+                <Zap className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
           <Link to={`/clients/${clientId}/settings`}>
             <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-muted-foreground" title="Configurações">
               <Settings className="h-3.5 w-3.5" />

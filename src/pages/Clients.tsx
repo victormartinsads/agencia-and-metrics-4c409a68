@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, Star, Copy, ExternalLink, MoreHorizontal,
   LayoutGrid, Rows3, Trash2, Pencil, Power, PowerOff, KanbanSquare, Archive, ArchiveRestore,
-  Users, X, Save, Key, Hash, DollarSign,
+  Users, X, Save, Key, Hash, DollarSign, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
@@ -386,6 +386,9 @@ export default function ClientsPage() {
                       <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
                         <span>{c.ad_account_ids.length} conta{c.ad_account_ids.length !== 1 ? "s" : ""}</span>
                         <div className="flex items-center gap-0.5">
+                          <Link to={`/tracking/${c.id}`} aria-label="TrackingHub" className="rounded p-1.5 hover:bg-background hover:text-foreground" title="TrackingHub CAPI">
+                            <Zap className="h-3.5 w-3.5" />
+                          </Link>
                           <button onClick={() => copyLink(c)} aria-label="Copiar link público" className="rounded p-1.5 hover:bg-background hover:text-foreground">
                             <Copy className="h-3.5 w-3.5" />
                           </button>
@@ -488,6 +491,11 @@ export default function ClientsPage() {
                           <DropdownMenuContent align="end" className="bg-popover">
                             <DropdownMenuItem onClick={() => openEdit(c)}>
                               <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/tracking/${c.id}`} className="flex items-center">
+                                <Zap className="mr-2 h-3.5 w-3.5" /> TrackingHub (CAPI)
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => copyLink(c)}>
                               <Copy className="mr-2 h-3.5 w-3.5" /> Copiar link público
