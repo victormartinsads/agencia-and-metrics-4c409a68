@@ -1,0 +1,18 @@
+name               = "trackinghub-global"
+main               = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# ── Para uso via workers.dev (Lovable, qualquer plataforma sem DNS próprio) ──
+workers_dev = true
+
+# ── Para usar no seu domínio (WordPress, Webflow com Cloudflare proxy ativo) ──
+# Descomente as linhas abaixo e comente workers_dev = true
+# workers_dev = false
+# routes = [
+#   { pattern = "seudominio.com.br/collect/*", zone_name = "seudominio.com.br" },
+#   { pattern = "seudominio.com.br/webhook/*", zone_name = "seudominio.com.br" }
+# ]
+
+# Secrets (não colocar aqui — usar wrangler secret put):
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_KEY

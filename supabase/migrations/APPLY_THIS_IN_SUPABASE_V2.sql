@@ -1,0 +1,20 @@
+-- APPLY_THIS_IN_SUPABASE_V2.sql
+-- Rode isso no SQL Editor do Supabase para adicionar as novas colunas
+
+ALTER TABLE public.tracking_leads
+  ADD COLUMN IF NOT EXISTS first_name TEXT,
+  ADD COLUMN IF NOT EXISTS last_name  TEXT,
+  ADD COLUMN IF NOT EXISTS first_name_hash TEXT,
+  ADD COLUMN IF NOT EXISTS last_name_hash  TEXT,
+  ADD COLUMN IF NOT EXISTS country TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS os TEXT,
+  ADD COLUMN IF NOT EXISTS browser TEXT,
+  ADD COLUMN IF NOT EXISTS user_id TEXT;
+
+ALTER TABLE public.capi_events_log
+  ADD COLUMN IF NOT EXISTS country TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS os TEXT,
+  ADD COLUMN IF NOT EXISTS browser TEXT,
+  ADD COLUMN IF NOT EXISTS user_id TEXT;

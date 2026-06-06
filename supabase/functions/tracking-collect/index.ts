@@ -1,168 +1,113 @@
-// tracking-collect/index.ts
-// Endpoint público — recebe dados do script JS da LP
-// Salva/atualiza tracking_leads + dispara PageView via Meta CAPI e GA4
-
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+// tracking-collect/index.ts — v2 com PII completo (email + phone + fn + ln)
+// Padrão da skill tracking-audit: .text() + JSON.parse() com fallback
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-client-info, apikey",
+  "Access-Control-Allow-Headers": "content-type, x-client-info, apikey, authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// SHA-256 normalizado para dados PII
-async function sha256(value: string): Promise<string> {
-  const normalized = value.trim().toLowerCase();
-  const encoder = new TextEncoder();
-  const data = encoder.encode(normalized);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+// CRÍTICO: sha256 sempre após lowercase + trim (padrão Meta)
+async function sha256(value: string): Promise<string | null> {
+  if (!value) return null;
+  const norm = value.trim().toLowerCase();
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(norm));
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Máscara de email para exibição no dashboard
+// Phone → E.164 sem + (Meta exige dígitos, sem +)
+function normalizePhone(phone: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
+  return digits;
+}
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
-  if (!domain) return email;
-  return local[0] + "***@" + domain;
+  return local ? local[0] + "***@" + (domain ?? "") : email;
 }
 
-// Disparo Meta CAPI via Measurement Protocol HTTP
-async function dispatchMetaCAPI(payload: {
-  pixelId: string;
-  capiToken: string;
-  testEventCode?: string;
-  eventName: string;
-  eventId: string;
-  eventTime: number;
-  userData: Record<string, string>;
-  pageUrl: string;
-  clientId: string;
-}): Promise<{ success: boolean; score?: number; response?: any; error?: string }> {
-  try {
-    const body: any = {
-      data: [
-        {
-          event_name: payload.eventName,
-          event_time: payload.eventTime,
-          event_id: payload.eventId,
-          event_source_url: payload.pageUrl,
-          action_source: "website",
-          user_data: payload.userData,
-        },
-      ],
-      access_token: payload.capiToken,
-    };
-
-    if (payload.testEventCode) {
-      body.test_event_code = payload.testEventCode;
-    }
-
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${payload.pixelId}/events`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
-
-    const json = await res.json();
-    const score = json?.events_received === 1
-      ? (json?.messages?.[0]?.match_quality_score ?? null)
-      : null;
-
-    return { success: res.ok, score, response: json };
-  } catch (e: any) {
-    return { success: false, error: e.message };
-  }
+async function dbGet(table: string, filters: Record<string, string>) {
+  const params = new URLSearchParams({ ...filters, limit: "1" });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Accept: "application/vnd.pgrst.object+json" },
+  });
+  if (!res.ok) return null;
+  return await res.json().catch(() => null);
 }
 
-// Disparo GA4 Measurement Protocol
-async function dispatchGA4(payload: {
-  measurementId: string;
-  apiSecret: string;
-  clientId: string;
-  eventName: string;
-  eventId: string;
-  pageUrl: string;
-  pageTitle?: string;
-  userId?: string;
-}): Promise<{ success: boolean; error?: string }> {
-  try {
-    const body = {
-      client_id: payload.clientId || "anonymous",
-      events: [
-        {
-          name: payload.eventName === "PageView" ? "page_view" : payload.eventName.toLowerCase(),
-          params: {
-            page_location: payload.pageUrl,
-            page_title: payload.pageTitle || "",
-            engagement_time_msec: 100,
-            event_id: payload.eventId,
-          },
-        },
-      ],
-    };
+async function dbUpsert(table: string, data: Record<string, unknown>, onConflict: string) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(data),
+  });
+}
 
-    const res = await fetch(
-      `https://www.google-analytics.com/mp/collect?measurement_id=${payload.measurementId}&api_secret=${payload.apiSecret}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
-
-    return { success: res.ok || res.status === 204 };
-  } catch (e: any) {
-    return { success: false, error: e.message };
-  }
+async function dbInsert(table: string, data: Record<string, unknown>) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify(data),
+  });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const url = new URL(req.url);
     const parts = url.pathname.split("/").filter(Boolean);
-    const idx = parts.indexOf("tracking-collect");
-    const clientId = parts[idx + 1];
+    const clientId = parts[parts.length - 1];
 
-    if (!clientId) {
+    if (!clientId || clientId === "tracking-collect") {
       return new Response(JSON.stringify({ error: "missing clientId" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const body = await req.json().catch(() => ({}));
+    // CRÍTICO: .text() + JSON.parse() — evita crash se Meta retornar body vazio
+    const rawText = await req.text();
+    const body = rawText ? JSON.parse(rawText) : {};
+
     const {
-      email, phone,
+      email, phone, first_name, last_name,
       fbclid, fbp, fbc,
       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-      page_url, referrer,
-      event_name = "PageView",
-      event_id,
-      ga4_client_id, // _ga cookie ou gerado no cliente
+      page_url, referrer, event_name = "PageView", event_id, ga4_client_id, user_id,
     } = body;
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || req.headers.get("x-real-ip")
-      || "";
-    const userAgent = req.headers.get("user-agent") || "";
+      ?? req.headers.get("cf-connecting-ip") ?? "";
+    const userAgent = req.headers.get("user-agent") ?? "";
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+    // Parse Geo and OS
+    const country = req.headers.get("cf-ipcountry") || req.headers.get("x-vercel-ip-country") || null;
+    const city = req.headers.get("cf-ipcity") || req.headers.get("x-vercel-ip-city") || null;
 
-    // Buscar configuração do cliente
-    const { data: cfg } = await supabase
-      .from("tracking_config")
-      .select("pixel_id, capi_token, test_event_code, ga4_measurement_id, ga4_api_secret, active")
-      .eq("client_id", clientId)
-      .maybeSingle();
+    let os = null, browser = null;
+    if (userAgent) {
+      if (userAgent.includes("Windows")) os = "Windows";
+      else if (userAgent.includes("Mac OS")) os = "MacOS";
+      else if (userAgent.includes("Android")) os = "Android";
+      else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) os = "iOS";
+      else if (userAgent.includes("Linux")) os = "Linux";
+
+      if (userAgent.includes("Edge") || userAgent.includes("Edg/")) browser = "Edge";
+      else if (userAgent.includes("Chrome")) browser = "Chrome";
+      else if (userAgent.includes("Firefox")) browser = "Firefox";
+      else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browser = "Safari";
+    }
+
+    // Buscar config
+    const cfg = await dbGet("tracking_config", {
+      "client_id": `eq.${clientId}`,
+      "select": "pixel_id,capi_token,test_event_code,ga4_measurement_id,ga4_api_secret,active",
+    });
 
     if (!cfg?.active) {
       return new Response(JSON.stringify({ ok: true, skipped: "inactive" }), {
@@ -170,153 +115,115 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Preparar hashes de email e phone
-    const emailNorm = email?.trim().toLowerCase();
-    const emailHash = emailNorm ? await sha256(emailNorm) : null;
-    const phoneNorm = phone?.replace(/\D/g, "").replace(/^0/, "55");
-    const phoneHash = phoneNorm ? await sha256(phoneNorm) : null;
+    // Normalização PII — sempre antes do hash
+    const emailNorm = email?.trim().toLowerCase() || null;
+    const phoneNorm = normalizePhone(phone);
+    const fnNorm    = first_name?.trim().toLowerCase() || null;
+    const lnNorm    = last_name?.trim().toLowerCase() || null;
 
-    // Gerar fbc se temos fbclid mas não temos fbc
+    // SHA-256
+    const [emailHash, phoneHash, fnHash, lnHash, uidHash] = await Promise.all([
+      sha256(emailNorm ?? ""),
+      sha256(phoneNorm ?? ""),
+      sha256(fnNorm ?? ""),
+      sha256(lnNorm ?? ""),
+      sha256(user_id ?? ""),
+    ]);
+
     const fbcValue = fbc || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : null);
+    const finalEventId = event_id || crypto.randomUUID();
+    const eventTime = Math.floor(Date.now() / 1000);
 
-    // Salvar/atualizar tracking_lead (upsert por client_id + email se tiver email)
+    // Upsert lead (com first_name, last_name)
     if (emailNorm) {
-      await supabase.from("tracking_leads").upsert(
-        {
-          client_id: clientId,
-          email: emailNorm,
-          email_hash: emailHash,
-          phone: phoneNorm || null,
-          phone_hash: phoneHash || null,
-          fbclid: fbclid || null,
-          fbp: fbp || null,
-          fbc: fbcValue || null,
-          ip_address: ip,
-          user_agent: userAgent,
-          utm_source: utm_source || null,
-          utm_medium: utm_medium || null,
-          utm_campaign: utm_campaign || null,
-          utm_content: utm_content || null,
-          utm_term: utm_term || null,
-          page_url: page_url || null,
-          referrer: referrer || null,
-          last_seen_at: new Date().toISOString(),
-        },
-        { onConflict: "client_id,email", ignoreDuplicates: false }
-      );
-    } else {
-      // Sem email: salvar com id único (visitante anônimo, pode ser enriquecido depois pelo fbclid)
-      if (fbclid) {
-        await supabase.from("tracking_leads").upsert(
-          {
-            client_id: clientId,
-            fbclid,
-            fbp: fbp || null,
-            fbc: fbcValue || null,
-            ip_address: ip,
-            user_agent: userAgent,
-            utm_source: utm_source || null,
-            utm_medium: utm_medium || null,
-            utm_campaign: utm_campaign || null,
-            utm_content: utm_content || null,
-            utm_term: utm_term || null,
-            page_url: page_url || null,
-            referrer: referrer || null,
-            last_seen_at: new Date().toISOString(),
-          },
-          { onConflict: "client_id,email" }
-        );
-      }
+      await dbUpsert("tracking_leads", {
+        client_id: clientId,
+        email: emailNorm, email_hash: emailHash,
+        phone: phoneNorm, phone_hash: phoneHash,
+        first_name: fnNorm, first_name_hash: fnHash,
+        last_name: lnNorm, last_name_hash: lnHash,
+        fbclid: fbclid || null, fbp: fbp || null, fbc: fbcValue || null,
+        ip_address: ip, user_agent: userAgent,
+        utm_source: utm_source || null, utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null, utm_content: utm_content || null,
+        utm_term: utm_term || null, page_url: page_url || null, referrer: referrer || null,
+        country, city, os, browser, user_id: user_id || null,
+        last_seen_at: new Date().toISOString(),
+      }, "client_id,email");
     }
 
-    const eventTime = Math.floor(Date.now() / 1000);
-    const finalEventId = event_id || crypto.randomUUID();
-
-    // --- Disparo Meta CAPI ---
+    // Meta CAPI
     let capiResult: any = null;
     if (cfg.pixel_id && cfg.capi_token) {
-      const userData: Record<string, string> = {
+      const userData: Record<string, string | string[]> = {
         client_ip_address: ip,
         client_user_agent: userAgent,
       };
-      if (emailHash) userData.em = emailHash;
-      if (phoneHash) userData.ph = phoneHash;
-      if (fbp) userData.fbp = fbp;
-      if (fbcValue) userData.fbc = fbcValue;
+      if (emailHash) userData.em = [emailHash];
+      if (phoneHash) userData.ph = [phoneHash];
+      if (fnHash)    userData.fn = [fnHash];
+      if (lnHash)    userData.ln = [lnHash];
+      if (uidHash)   userData.external_id = [uidHash];
+      if (fbp)       userData.fbp = fbp;
+      if (fbcValue)  userData.fbc = fbcValue;
 
-      capiResult = await dispatchMetaCAPI({
-        pixelId: cfg.pixel_id,
-        capiToken: cfg.capi_token,
-        testEventCode: cfg.test_event_code || undefined,
-        eventName: event_name,
-        eventId: finalEventId,
-        eventTime,
-        userData,
-        pageUrl: page_url || "",
-        clientId,
+      const capiPayload: any = {
+        data: [{
+          event_name, event_time: eventTime, event_id: finalEventId,
+          event_source_url: page_url || "https://unknown",
+          action_source: "website",
+          user_data: userData,
+        }],
+        access_token: cfg.capi_token,
+      };
+      if (cfg.test_event_code) capiPayload.test_event_code = cfg.test_event_code;
+
+      // CRÍTICO: .text() com fallback — Meta pode retornar body vazio em erros
+      const capiRes  = await fetch(`https://graph.facebook.com/v21.0/${cfg.pixel_id}/events`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(capiPayload),
       });
+      const capiText = await capiRes.text();
+      const capiJson = capiText ? JSON.parse(capiText) : { status: capiRes.status, events_received: 0 };
+      capiResult = { success: capiRes.ok, response: capiJson };
 
-      // Logar disparo CAPI
-      await supabase.from("capi_events_log").insert({
-        client_id: clientId,
-        event_name,
-        event_id: finalEventId,
-        platform: "meta_capi",
-        pixel_id: cfg.pixel_id,
-        status: capiResult.success ? "sent" : "error",
-        match_quality_score: capiResult.score ?? null,
-        meta_response: capiResult.response || null,
-        error_message: capiResult.error || null,
+      await dbInsert("capi_events_log", {
+        client_id: clientId, event_name, event_id: finalEventId, platform: "meta_capi",
+        pixel_id: cfg.pixel_id, status: capiRes.ok ? "sent" : "error",
+        meta_response: capiJson, error_message: capiRes.ok ? null : JSON.stringify(capiJson),
         buyer_email_masked: emailNorm ? maskEmail(emailNorm) : null,
-        utm_source: utm_source || null,
-        utm_campaign: utm_campaign || null,
-        had_fbclid: !!fbclid,
-        had_fbp: !!fbp,
+        utm_source: utm_source || null, utm_campaign: utm_campaign || null,
+        had_fbclid: !!fbclid, had_fbp: !!fbp,
+        country, city, os, browser, user_id: user_id || null,
       });
     }
 
-    // --- Disparo GA4 ---
+    // GA4
     let ga4Result: any = null;
     if (cfg.ga4_measurement_id && cfg.ga4_api_secret) {
-      ga4Result = await dispatchGA4({
-        measurementId: cfg.ga4_measurement_id,
-        apiSecret: cfg.ga4_api_secret,
-        clientId: ga4_client_id || "anonymous." + Date.now(),
-        eventName: event_name,
-        eventId: finalEventId,
-        pageUrl: page_url || "",
-      });
-
-      await supabase.from("capi_events_log").insert({
-        client_id: clientId,
-        event_name,
-        event_id: finalEventId,
-        platform: "ga4",
-        ga4_measurement_id: cfg.ga4_measurement_id,
-        status: ga4Result.success ? "sent" : "error",
-        error_message: ga4Result.error || null,
-        buyer_email_masked: emailNorm ? maskEmail(emailNorm) : null,
-        utm_source: utm_source || null,
-        utm_campaign: utm_campaign || null,
-        had_fbclid: !!fbclid,
-        had_fbp: !!fbp,
-      });
+      const ga4Name: Record<string, string> = {
+        PageView: "page_view", ViewContent: "view_item",
+        InitiateCheckout: "begin_checkout", Lead: "generate_lead", Contact: "contact",
+      };
+      const ga4Res = await fetch(
+        `https://www.google-analytics.com/mp/collect?measurement_id=${cfg.ga4_measurement_id}&api_secret=${cfg.ga4_api_secret}`,
+        {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: ga4_client_id || `${ip}.${eventTime}`,
+            events: [{ name: ga4Name[event_name] || event_name.toLowerCase(), params: { page_location: page_url, event_id: finalEventId, engagement_time_msec: "100" } }],
+          }),
+        }
+      );
+      ga4Result = { success: ga4Res.ok || ga4Res.status === 204 };
     }
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        event_id: finalEventId,
-        capi: capiResult ? { success: capiResult.success, score: capiResult.score } : null,
-        ga4: ga4Result ? { success: ga4Result.success } : null,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (e: any) {
-    console.error("tracking-collect error", e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ ok: true, event_id: finalEventId, capi: capiResult, ga4: ga4Result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e: any) {
+    console.error("tracking-collect error:", e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

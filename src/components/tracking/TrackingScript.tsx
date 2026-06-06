@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Copy, Check, ExternalLink, Code, AlertCircle } from "lucide-react";
+import { Copy, Check, ExternalLink, Code, AlertCircle, Activity } from "lucide-react";
 
 interface Props {
   clientId: string;
@@ -123,6 +123,29 @@ add_action('wp_enqueue_scripts', 'tracking_hub_script');`;
               <ExternalLink className="h-4 w-4" />
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Testador de Eventos (Debug Mode) */}
+      <Card className="border-blue-200 bg-blue-50/50">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2 text-blue-900">
+            <Activity className="h-4 w-4" />
+            Testador de Eventos (Log na Página)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-blue-800 mb-3">
+            Para testar se os eventos estão sendo disparados corretamente na sua Landing Page, adicione <code className="bg-blue-100 px-1 rounded font-bold">?th_debug=true</code> ao final da URL da sua página.
+          </p>
+          <div className="flex items-center gap-2 mb-3">
+            <code className="text-xs bg-blue-100/50 text-blue-900 rounded px-2 py-1.5 break-all">
+              https://seu-dominio.com.br/?th_debug=true
+            </code>
+          </div>
+          <p className="text-sm text-blue-800">
+            Isso ativará um <strong>painel visual flutuante</strong> na sua página que mostrará em tempo real todos os eventos capturados (Cliques, Scroll, Forms, etc.) e os dados enviados para o servidor.
+          </p>
         </CardContent>
       </Card>
 

@@ -25,6 +25,9 @@ interface LogEntry {
   had_fbp: boolean;
   error_message: string | null;
   created_at: string;
+  country: string | null;
+  os: string | null;
+  browser: string | null;
 }
 
 interface Props {
@@ -69,7 +72,8 @@ export default function CapiLog({ clientId }: Props) {
         .select(
           `id, event_name, event_id, platform, pixel_id, ga4_measurement_id,
            status, match_quality_score, buyer_email_masked, utm_source, utm_campaign,
-           had_fbclid, had_fbp, error_message, created_at`,
+           had_fbclid, had_fbp, error_message, created_at,
+           country, os, browser`,
           { count: "exact" }
         )
         .eq("client_id", clientId)
@@ -162,6 +166,7 @@ export default function CapiLog({ clientId }: Props) {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">Email</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">UTM</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">Dados</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">Acessos</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">Score EMQ</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs">Status</th>
                 </tr>
@@ -169,14 +174,14 @@ export default function CapiLog({ clientId }: Props) {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={10} className="text-center py-12 text-muted-foreground">
                       <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
                       Carregando logs...
                     </td>
                   </tr>
                 ) : entries.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <td colSpan={10} className="text-center py-12 text-muted-foreground">
                       Nenhum disparo registrado ainda
                     </td>
                   </tr>
@@ -228,6 +233,13 @@ export default function CapiLog({ clientId }: Props) {
                       <div className="flex items-center gap-1">
                         <DataPoint label="fbclid" active={e.had_fbclid} />
                         <DataPoint label="fbp" active={e.had_fbp} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
+                        {e.country && <span>📍 {e.country}</span>}
+                        {(e.os || e.browser) && <span>💻 {e.os} {e.browser}</span>}
+                        {!e.country && !e.os && !e.browser && <span>—</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3">

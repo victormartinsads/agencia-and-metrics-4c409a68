@@ -1,66 +1,60 @@
-// tracking-script/index.ts
-// Serve o script de rastreamento JS customizado por cliente
-// Lê os eventos configurados na tabela tracking_events e gera o script dinamicamente
-
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
+// tracking-script/index.ts — zero external dependencies
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-client-info, apikey",
+  "Access-Control-Allow-Headers": "content-type, x-client-info, apikey, authorization",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+async function dbGet(table: string, filters: Record<string, string>) {
+  const params = new URLSearchParams({ ...filters, limit: "1" });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Accept: "application/vnd.pgrst.object+json" },
+  });
+  if (!res.ok) return null;
+  return await res.json().catch(() => null);
+}
+
+async function dbList(table: string, filters: Record<string, string>) {
+  const params = new URLSearchParams(filters);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  if (!res.ok) return [];
+  return await res.json().catch(() => []);
+}
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
   const parts = url.pathname.split("/").filter(Boolean);
-  const idx = parts.indexOf("tracking-script");
-  const clientId = parts[idx + 1];
+  const clientId = parts[parts.length - 1];
 
-  if (!clientId) {
+  if (!clientId || clientId === "tracking-script") {
     return new Response("// Error: clientId required", {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/javascript" },
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/javascript" },
     });
   }
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-
-  // Buscar config e eventos em paralelo
-  const [cfgResult, eventsResult] = await Promise.all([
-    supabase.from("tracking_config" as any)
-      .select("pixel_id, active")
-      .eq("client_id", clientId)
-      .maybeSingle(),
-    supabase.from("tracking_events" as any)
-      .select("event_name, enabled, trigger_type, trigger_selector, trigger_value, custom_params")
-      .eq("client_id", clientId)
-      .eq("enabled", true)
-      .order("sort_order"),
+  const [cfg, events] = await Promise.all([
+    dbGet("tracking_config", { "client_id": `eq.${clientId}`, "select": "pixel_id,active" }),
+    dbList("tracking_events", { "client_id": `eq.${clientId}`, "enabled": "eq.true", "select": "event_name,trigger_type,trigger_selector,trigger_value,custom_params", "order": "sort_order" }),
   ]);
 
-  const cfg = cfgResult.data as any;
   if (!cfg?.active) {
     return new Response("// TrackingHub: inactive config", {
       headers: { ...corsHeaders, "Content-Type": "application/javascript" },
     });
   }
 
-  const events = (eventsResult.data as any[]) || [];
   const pixelId = cfg.pixel_id || "";
   const collectEndpoint = `${SUPABASE_URL}/functions/v1/tracking-collect/${clientId}`;
-
-  const script = generateTrackingScript(clientId, pixelId, collectEndpoint, events);
+  const script = generateTrackingScript(clientId, pixelId, collectEndpoint, events || []);
 
   return new Response(script, {
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "public, max-age=60", // cache 1 min para refletir mudanças de eventos
-    },
+    headers: { ...corsHeaders, "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "public, max-age=60" },
   });
 });
 
@@ -70,16 +64,6 @@ function generateTrackingScript(
   collectEndpoint: string,
   events: any[]
 ): string {
-  // Separar eventos por tipo de gatilho
-  const pageLoadEvents = events.filter(e => e.trigger_type === "page_load");
-  const checkoutEvents = events.filter(e => e.trigger_type === "checkout_click");
-  const formEvents = events.filter(e => e.trigger_type === "form_submit");
-  const visibleEvents = events.filter(e => e.trigger_type === "element_visible");
-  const clickEvents = events.filter(e => e.trigger_type === "element_click");
-  const scrollEvents = events.filter(e => e.trigger_type === "scroll_depth");
-  const timeEvents = events.filter(e => e.trigger_type === "time_on_page");
-
-  // Gerar JSON dos eventos para injetar no script
   const eventsJson = JSON.stringify(events.map(e => ({
     n: e.event_name,
     t: e.trigger_type,
@@ -88,66 +72,87 @@ function generateTrackingScript(
     p: e.custom_params || {},
   })));
 
+  const hasViewContent      = events.some(e => e.event_name === "ViewContent" && e.enabled);
+  const hasInitCheckout     = events.some(e => e.event_name === "InitiateCheckout" && e.enabled);
+  const hasLead             = events.some(e => e.event_name === "Lead" && e.enabled);
+  const hasContact          = events.some(e => e.event_name === "Contact" && e.enabled);
+
   return `
 /**
- * TrackingHub — Script de Rastreamento Server-Side
+ * TrackingHub — Script de Rastreamento Server-Side v2
  * Cliente: ${clientId}
- * Eventos ativos: ${events.map(e => e.event_name).join(", ")}
+ * Eventos: ${events.map(e => e.event_name).join(", ")}
+ * Padrão: Meta CAPI + GA4 Measurement Protocol (deduplicação via event_id)
  */
 (function(w, d) {
   'use strict';
 
   var TH = w.__TrackingHub = w.__TrackingHub || {};
-  TH.clientId = '${clientId}';
-  TH.pixelId = '${pixelId}';
-  TH.endpoint = '${collectEndpoint}';
-  TH.events = ${eventsJson};
-  TH.firedEvents = {};
-  TH.initialized = false;
+  TH.clientId  = '${clientId}';
+  TH.pixelId   = '${pixelId}';
+  TH.endpoint  = '${collectEndpoint}';
+  TH.firedEvts = {};
+  TH.ready     = false;
 
-  // ── Utilitários ──────────────────────────────────────────────────────────
+  /* ── Utilitários ────────────────────────────────────────────────── */
+
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
 
   function getCookie(name) {
-    var v = d.cookie.match('(^|;)\\\\s*' + name + '\\\\s*=\\\\s*([^;]+)');
-    return v ? decodeURIComponent(v.pop()) : null;
+    var m = d.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? decodeURIComponent(m.pop()) : null;
   }
 
   function setCookie(name, value, days) {
-    var expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-    d.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Lax';
+    var e = new Date();
+    e.setTime(e.getTime() + days * 864e5);
+    d.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + e.toUTCString() + ';path=/;SameSite=Lax';
   }
 
   function getParam(key) {
     return new URLSearchParams(w.location.search).get(key) || null;
   }
 
-  function generateFbp() {
-    return 'fb.1.' + Date.now() + '.' + Math.floor(Math.random() * 1e10);
+  function normalizePhone(p) {
+    if (!p) return null;
+    var digits = p.replace(/\\D/g, '');
+    if (digits.length === 10 || digits.length === 11) return '55' + digits;
+    return digits;
+  }
+
+  function getGa4Cid() {
+    var ga = getCookie('_ga');
+    if (!ga) return null;
+    var p = ga.split('.');
+    return p.length >= 4 ? p[2] + '.' + p[3] : ga;
   }
 
   function getStoredData() {
     try { return JSON.parse(localStorage.getItem('_th_data') || '{}'); } catch(e) { return {}; }
   }
 
-  function generateEventId(prefix) {
-    return (prefix || 'ev') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  function saveStoredData(data) {
+    try { localStorage.setItem('_th_data', JSON.stringify(data)); } catch(e) {}
   }
 
-  // ── Captura de parâmetros ─────────────────────────────────────────────────
+  /* ── Captura de parâmetros ──────────────────────────────────────── */
 
   function captureParams() {
     var fbclid = getParam('fbclid');
-    var utmSource = getParam('utm_source');
-    var utmMedium = getParam('utm_medium');
-    var utmCampaign = getParam('utm_campaign');
-    var utmContent = getParam('utm_content');
-    var utmTerm = getParam('utm_term');
-    var src = getParam('src');
+    var utms   = {};
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k) {
+      var v = getParam(k) || getCookie('_th_' + k);
+      if (v) { utms[k] = v; setCookie('_th_' + k, v, 30); }
+    });
 
     var fbp = getCookie('_fbp');
     if (!fbp) {
-      fbp = generateFbp();
+      fbp = 'fb.1.' + Date.now() + '.' + Math.floor(Math.random() * 1e10);
       setCookie('_fbp', fbp, 90);
     }
 
@@ -157,62 +162,69 @@ function generateTrackingScript(
       setCookie('_fbc', fbc, 90);
     }
 
-    var ga4Cid = getCookie('_ga');
-    if (ga4Cid) {
-      var parts = ga4Cid.split('.');
-      if (parts.length >= 4) ga4Cid = parts[2] + '.' + parts[3];
-    }
-    if (!ga4Cid) {
-      ga4Cid = Math.floor(Math.random() * 1e9) + '.' + Math.floor(Date.now() / 1000);
-      setCookie('_ga_th', ga4Cid, 365);
+    var ga4_client_id = getGa4Cid() || getCookie('_th_ga4');
+    if (!ga4_client_id) {
+      ga4_client_id = Math.floor(Math.random() * 1e9) + '.' + Math.floor(Date.now() / 1000);
+      setCookie('_th_ga4', ga4_client_id, 365);
     }
 
-    var data = {
-      fbclid: fbclid,
-      fbp: fbp,
-      fbc: fbc,
-      utm_source: utmSource || getCookie('th_utm_source'),
-      utm_medium: utmMedium || getCookie('th_utm_medium'),
-      utm_campaign: utmCampaign || getCookie('th_utm_campaign'),
-      utm_content: utmContent || getCookie('th_utm_content'),
-      utm_term: utmTerm || getCookie('th_utm_term'),
-      src: src,
-      ga4_client_id: ga4Cid,
-      page_url: w.location.href,
-      referrer: d.referrer,
-    };
+    var th_uid = getCookie('_th_uid');
+    if (!th_uid) {
+      th_uid = uuid();
+      setCookie('_th_uid', th_uid, 365);
+    }
 
-    if (utmSource) setCookie('th_utm_source', utmSource, 30);
-    if (utmMedium) setCookie('th_utm_medium', utmMedium, 30);
-    if (utmCampaign) setCookie('th_utm_campaign', utmCampaign, 30);
-    if (utmContent) setCookie('th_utm_content', utmContent, 30);
-    if (utmTerm) setCookie('th_utm_term', utmTerm, 30);
-
-    try { localStorage.setItem('_th_data', JSON.stringify(data)); } catch(e) {}
+    var data = Object.assign({ fbclid: fbclid, fbp: fbp, fbc: fbc,
+      ga4_client_id: ga4_client_id, user_id: th_uid, page_url: w.location.href, referrer: d.referrer }, utms);
+    saveStoredData(data);
     return data;
   }
 
-  // ── Envio ao servidor ──────────────────────────────────────────────────────
+  /* ── Debug Mode ─────────────────────────────────────────────────── */
 
-  function send(eventName, extraParams, eventId) {
-    var stored = getStoredData();
-    var payload = Object.assign({}, stored, {
-      event_name: eventName,
-      event_id: eventId || generateEventId(eventName),
-    }, extraParams || {});
+  var isDebug = w.location.search.indexOf('th_debug=true') !== -1;
+  var debugPanel = null;
+  if (isDebug) {
+    debugPanel = d.createElement('div');
+    debugPanel.style.cssText = 'position:fixed;bottom:10px;right:10px;width:320px;max-height:400px;overflow-y:auto;background:#1a1a1a;color:#0f0;font-family:monospace;font-size:11px;padding:10px;border-radius:8px;z-index:999999;box-shadow:0 10px 25px rgba(0,0,0,0.5);border:1px solid #333;';
+    debugPanel.innerHTML = '<div style="font-weight:bold;margin-bottom:8px;border-bottom:1px solid #333;padding-bottom:5px;display:flex;justify-content:space-between;"><span>🟢 TrackingHub Debug</span><span onclick="this.parentNode.parentNode.remove()" style="cursor:pointer;color:#888;">✕</span></div><div id="th_debug_log"></div>';
+    if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function(){ d.body.appendChild(debugPanel); });
+    else d.body.appendChild(debugPanel);
+  }
 
-    var json = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(TH.endpoint, new Blob([json], { type: 'application/json' }));
-    } else {
-      fetch(TH.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true }).catch(function(){});
+  function logDebug(title, data) {
+    if (!isDebug) return;
+    console.log('[TrackingHub] ' + title, data);
+    var logDiv = d.getElementById('th_debug_log');
+    if (logDiv) {
+      var entry = d.createElement('div');
+      entry.style.cssText = 'margin-bottom:8px;padding:6px;background:#2a2a2a;border-radius:4px;word-break:break-all;border-left:2px solid #0f0;';
+      var time = new Date().toLocaleTimeString();
+      entry.innerHTML = '<strong style="color:#fff;">[' + time + '] ' + title + '</strong><br/><span style="color:#aaa;">' + JSON.stringify(data).substring(0, 150) + '...</span>';
+      logDiv.prepend(entry);
     }
   }
 
-  // ── Meta Pixel ─────────────────────────────────────────────────────────────
+  /* ── Envio ao servidor ──────────────────────────────────────────── */
+
+  function send(eventName, extra, eventId) {
+    var stored  = getStoredData();
+    var payload = Object.assign({}, stored, { event_name: eventName, event_id: eventId || uuid() }, extra || {});
+    var json    = JSON.stringify(payload);
+    
+    logDebug('Sending: ' + eventName, payload);
+    
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(TH.endpoint, new Blob([json], { type: 'application/json' }));
+    } else {
+      fetch(TH.endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:json, keepalive:true }).catch(function(){});
+    }
+  }
+
+  /* ── Meta Pixel ─────────────────────────────────────────────────── */
 
   function pixelTrack(eventName, params, eventId) {
-    if (!TH.pixelId || !w.fbq) return;
+    if (!TH.pixelId || typeof w.fbq !== 'function') return;
     w.fbq('track', eventName, params || {}, { eventID: eventId });
   }
 
@@ -227,260 +239,234 @@ function generateTrackingScript(
     w.fbq('init', pixelId);
   }
 
-  // ── Disparo de evento (Pixel + CAPI) ──────────────────────────────────────
+  /* ── Disparo de evento ──────────────────────────────────────────── */
 
   function fireEvent(eventName, params, once) {
-    var key = eventName + JSON.stringify(params || {});
-    if (once && TH.firedEvents[key]) return;
-    TH.firedEvents[key] = true;
-
-    var eventId = generateEventId(eventName);
-    pixelTrack(eventName, params, eventId);
-    send(eventName, params, eventId);
+    var key = eventName + (once ? '_once' : '_' + Date.now());
+    if (once && TH.firedEvts[eventName]) return;
+    if (once) TH.firedEvts[eventName] = true;
+    var eid = uuid();
+    pixelTrack(eventName, params, eid);
+    send(eventName, params, eid);
   }
 
-  // ── Injeção nos links de checkout ─────────────────────────────────────────
+  /* ── Injeção nos links de checkout ─────────────────────────────── */
 
   function processLink(a) {
     try {
-      var href = a.href;
-      if (!href) return;
-      var u = new URL(href);
+      var u    = new URL(a.href);
       var host = u.hostname;
-      var stored = getStoredData();
-
+      var s    = getStoredData();
       if (host.indexOf('hotmart') !== -1) {
-        if (stored.src) u.searchParams.set('src', stored.src);
-        if (stored.utm_source) u.searchParams.set('sck', stored.utm_source + (stored.utm_campaign ? '|' + stored.utm_campaign : ''));
-        if (stored.fbclid) u.searchParams.set('off', stored.fbclid);
-        a.href = u.toString();
-      } else if (host.indexOf('kiwify') !== -1) {
+        if (s.utm_source)    u.searchParams.set('sck', s.utm_source + (s.utm_campaign ? '|' + s.utm_campaign : ''));
+        if (s.fbclid)        u.searchParams.set('off', s.fbclid);
+        if (s.utm_source)    u.searchParams.set('src', s.utm_source);
+      } else if (host.indexOf('kiwify') !== -1 || host.indexOf('eduzz') !== -1) {
         ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid'].forEach(function(k) {
-          if (stored[k]) u.searchParams.set(k, stored[k]);
+          if (s[k]) u.searchParams.set(k, s[k]);
         });
-        a.href = u.toString();
-      } else if (host.indexOf('eduzz') !== -1) {
-        ['utm_source','utm_medium','utm_campaign','fbclid'].forEach(function(k) {
-          if (stored[k]) u.searchParams.set(k, stored[k]);
-        });
-        a.href = u.toString();
       }
+      a.href = u.toString();
     } catch(e) {}
   }
 
-  function injectCheckoutLinks() {
+  function injectLinks() {
     d.querySelectorAll('a[href]').forEach(processLink);
     if (w.MutationObserver) {
-      new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
+      new MutationObserver(function(muts) {
+        muts.forEach(function(m) {
           m.addedNodes.forEach(function(node) {
             if (node.nodeType !== 1) return;
             if (node.tagName === 'A') processLink(node);
-            (node.querySelectorAll ? node.querySelectorAll('a[href]') : []).forEach(processLink);
+            if (node.querySelectorAll) node.querySelectorAll('a[href]').forEach(processLink);
           });
         });
       }).observe(d.body, { childList: true, subtree: true });
     }
   }
 
-  // ── Gatilhos configuráveis ────────────────────────────────────────────────
-
-  // Gatilho: elemento visível (Intersection Observer)
-  function setupElementVisible(eventName, selector, params) {
-    if (!selector || !w.IntersectionObserver) return;
-    var targets = d.querySelectorAll(selector);
-    if (!targets.length) {
-      // Tentar após DOM estar completo
-      d.addEventListener('DOMContentLoaded', function() {
-        d.querySelectorAll(selector).forEach(function(el) {
-          observeElement(el, eventName, params);
-        });
-      });
-      return;
+  /* ── Gatilho: Scroll 50% → ViewContent ─────────────────────────── */
+${hasViewContent ? `
+  var _vcFired = false;
+  w.addEventListener('scroll', function() {
+    if (_vcFired) return;
+    var pct = (w.scrollY + w.innerHeight) / d.documentElement.scrollHeight;
+    if (pct >= 0.5) {
+      _vcFired = true;
+      fireEvent('ViewContent', {}, true);
     }
-    targets.forEach(function(el) { observeElement(el, eventName, params); });
-  }
+  }, { passive: true });
+` : ''}
+  /* ── Gatilho: Form submit → Lead + InitiateCheckout ────────────── */
 
-  function observeElement(el, eventName, params) {
-    var obs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          fireEvent(eventName, params, true);
-          obs.disconnect();
+  var _leadFired = false;
+  function setupFormTracking() {
+    d.querySelectorAll('form').forEach(function(form) {
+      if (form._th_form) return;
+      form._th_form = true;
+      form.addEventListener('submit', function() {
+        // Seletores amplos — cobre Lovable, WordPress, Elementor, RD Station
+        function val(sels) {
+          for (var i = 0; i < sels.length; i++) {
+            var el = form.querySelector(sels[i]);
+            if (el && el.value && el.value.trim()) return el.value.trim();
+          }
+          return '';
+        }
+        var email = val([
+          'input[type="email"]','input[autocomplete="email"]',
+          'input[id*="email" i]','input[name*="email" i]','input[placeholder*="email" i]'
+        ]);
+        var phone = val([
+          'input[type="tel"]','input[autocomplete="tel"]',
+          'input[id*="phone" i]','input[id*="fone" i]',
+          'input[name*="phone" i]','input[name*="tel" i]','input[name*="fone" i]',
+          'input[placeholder*="telefone" i]','input[placeholder*="celular" i]','input[placeholder*="phone" i]'
+        ]);
+        var fullName = val([
+          'input[autocomplete="name"]','input[id*="name" i]','input[id*="nome" i]',
+          'input[name*="name" i]','input[name*="nome" i]',
+          'input[placeholder*="nome" i]','input[placeholder*="name" i]'
+        ]);
+
+        if (!email && !phone) return;
+
+        var parts     = fullName.trim().split(/\\s+/);
+        var firstName = parts[0] || '';
+        var lastName  = parts.slice(1).join(' ') || '';
+        var phoneNorm = normalizePhone(phone);
+
+        // Salvar PII no localStorage para cruzamento posterior
+        var stored = getStoredData();
+        if (email)     stored.email      = email.trim().toLowerCase();
+        if (phoneNorm) stored.phone      = phoneNorm;
+        if (firstName) stored.first_name = firstName.trim().toLowerCase();
+        if (lastName)  stored.last_name  = lastName.trim().toLowerCase();
+        saveStoredData(stored);
+
+        var extra = {};
+        if (email)     extra.email      = email.trim().toLowerCase();
+        if (phoneNorm) extra.phone      = phoneNorm;
+        if (firstName) extra.first_name = firstName;
+        if (lastName)  extra.last_name  = lastName;
+
+        if (!_leadFired) {
+          _leadFired = true;
+          setTimeout(function(){ _leadFired = false; }, 5000);
+${hasLead ? "          fireEvent('Lead', extra, false);" : ''}
+${hasInitCheckout ? "          fireEvent('InitiateCheckout', extra, false);" : ''}
         }
       });
-    }, { threshold: 0.5 });
-    obs.observe(el);
-  }
-
-  // Gatilho: clique em elemento
-  function setupElementClick(eventName, selector, params) {
-    if (!selector) return;
-    function attach() {
-      d.querySelectorAll(selector).forEach(function(el) {
-        el.addEventListener('click', function() {
-          fireEvent(eventName, params, false);
-        });
-      });
-    }
-    if (d.readyState === 'loading') {
-      d.addEventListener('DOMContentLoaded', attach);
-    } else {
-      attach();
-    }
-    // MutationObserver para elementos dinâmicos
-    if (w.MutationObserver) {
-      new MutationObserver(function() {
-        d.querySelectorAll(selector).forEach(function(el) {
-          if (!el._th_click) {
-            el._th_click = true;
-            el.addEventListener('click', function() { fireEvent(eventName, params, false); });
-          }
-        });
-      }).observe(d.body, { childList: true, subtree: true });
-    }
-  }
-
-  // Gatilho: scroll depth
-  function setupScrollDepth(eventName, pct, params) {
-    var threshold = parseInt(pct || '50', 10);
-    var fired = false;
-    w.addEventListener('scroll', function() {
-      if (fired) return;
-      var scrolled = (w.scrollY + w.innerHeight) / d.documentElement.scrollHeight * 100;
-      if (scrolled >= threshold) {
-        fired = true;
-        fireEvent(eventName, params, true);
-      }
-    }, { passive: true });
-  }
-
-  // Gatilho: tempo na página
-  function setupTimeOnPage(eventName, seconds, params) {
-    var secs = parseInt(seconds || '30', 10);
-    setTimeout(function() {
-      fireEvent(eventName, params, true);
-    }, secs * 1000);
-  }
-
-  // Gatilho: form submit
-  function setupFormSubmit(eventName, params) {
-    function attachForms() {
-      d.querySelectorAll('form').forEach(function(form) {
-        if (form._th_form) return;
-        form._th_form = true;
-        form.addEventListener('submit', function() {
-          // Tentar capturar email do form
-          var emailInput = form.querySelector('input[type=email], input[name*=email], input[name*=Email]');
-          var emailVal = emailInput ? emailInput.value : null;
-          var extra = Object.assign({}, params);
-          if (emailVal) extra.email = emailVal;
-          fireEvent(eventName, extra, false);
-        });
-      });
-    }
-    if (d.readyState === 'loading') {
-      d.addEventListener('DOMContentLoaded', attachForms);
-    } else {
-      attachForms();
-    }
-  }
-
-  // ── Inicialização ─────────────────────────────────────────────────────────
-
-  function init() {
-    if (TH.initialized) return;
-    TH.initialized = true;
-
-    captureParams();
-
-    // Inicializar Pixel
-    if (TH.pixelId) initPixel(TH.pixelId);
-
-    // Configurar gatilhos de cada evento habilitado
-    TH.events.forEach(function(ev) {
-      var params = ev.p || {};
-
-      switch (ev.t) {
-        case 'page_load':
-          fireEvent(ev.n, params, true);
-          break;
-
-        case 'checkout_click':
-          // Detectado via click listener nos links de checkout
-          d.addEventListener('click', function(e) {
-            var a = e.target.closest ? e.target.closest('a[href]') : null;
-            if (!a) return;
-            try {
-              var u = new URL(a.href);
-              var h = u.hostname;
-              if (h.indexOf('hotmart') !== -1 || h.indexOf('kiwify') !== -1 || h.indexOf('eduzz') !== -1) {
-                fireEvent(ev.n, params, false);
-              }
-            } catch(err) {}
-          }, { capture: true });
-          break;
-
-        case 'form_submit':
-          setupFormSubmit(ev.n, params);
-          break;
-
-        case 'element_visible':
-          setupElementVisible(ev.n, ev.s, params);
-          break;
-
-        case 'element_click':
-          setupElementClick(ev.n, ev.s, params);
-          break;
-
-        case 'scroll_depth':
-          setupScrollDepth(ev.n, ev.v, params);
-          break;
-
-        case 'time_on_page':
-          setupTimeOnPage(ev.n, ev.v, params);
-          break;
-
-        case 'webhook_only':
-          // Evento server-side puro — nada a fazer no client
-          break;
-      }
     });
-
-    // Injetar parâmetros nos links de checkout
-    if (d.readyState === 'loading') {
-      d.addEventListener('DOMContentLoaded', injectCheckoutLinks);
-    } else {
-      injectCheckoutLinks();
-    }
   }
 
-  // ── API pública ───────────────────────────────────────────────────────────
+  if (d.readyState === 'loading') {
+    d.addEventListener('DOMContentLoaded', setupFormTracking);
+  } else {
+    setupFormTracking();
+  }
 
-  TH.identify = function(email, phone) {
+  /* ── Gatilho: Checkout click → InitiateCheckout ────────────────── */
+
+  d.addEventListener('click', function(e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
     try {
-      var stored = getStoredData();
-      if (email) stored.email = email.trim().toLowerCase();
-      if (phone) stored.phone = phone;
-      localStorage.setItem('_th_data', JSON.stringify(stored));
-      send('Lead', { email: stored.email, phone: stored.phone });
-    } catch(e) {}
+      var h = new URL(a.href).hostname;
+      if (h.indexOf('hotmart') !== -1 || h.indexOf('kiwify') !== -1 || h.indexOf('eduzz') !== -1) {
+${hasInitCheckout ? "        fireEvent('InitiateCheckout', {}, false);" : ''}
+      }
+    } catch(err) {}
+  }, { capture: true });
+
+  /* ── Gatilho: WhatsApp click → Contact ─────────────────────────── */
+${hasContact ? `
+  var _contactFired = false;
+  d.addEventListener('click', function(e) {
+    if (_contactFired) return;
+    var target = e.target;
+    var el = target && target.closest ? target.closest('a[href*="wa.me"], a[href*="whatsapp.com/send"], [data-track="whatsapp"], [class*="whatsapp" i]') : null;
+    if (!el) return;
+    _contactFired = true;
+    setTimeout(function(){ _contactFired = false; }, 5000);
+    fireEvent('Contact', { method: 'whatsapp' }, false);
+  });
+` : ''}
+  /* ── Eventos configurados ───────────────────────────────────────── */
+
+  TH.events = ${eventsJson};
+  TH.events.forEach(function(ev) {
+    var params = ev.p || {};
+    switch(ev.t) {
+      case 'page_load':       fireEvent(ev.n, params, true); break;
+      case 'element_visible':
+        if (!ev.s || !w.IntersectionObserver) break;
+        (function(sel, name, p) {
+          var obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+              if (entry.isIntersecting) { fireEvent(name, p, true); obs.disconnect(); }
+            });
+          }, { threshold: 0.5 });
+          d.querySelectorAll(sel).forEach(function(el) { obs.observe(el); });
+        })(ev.s, ev.n, params);
+        break;
+      case 'element_click':
+        if (!ev.s) break;
+        (function(sel, name, p) {
+          function attach() {
+            d.querySelectorAll(sel).forEach(function(el) {
+              if (!el._th_c) { el._th_c = true; el.addEventListener('click', function() { fireEvent(name, p, false); }); }
+            });
+          }
+          d.readyState === 'loading' ? d.addEventListener('DOMContentLoaded', attach) : attach();
+        })(ev.s, ev.n, params);
+        break;
+      case 'scroll_depth':
+        (function(pct, name, p) {
+          var fired = false;
+          w.addEventListener('scroll', function() {
+            if (fired) return;
+            if ((w.scrollY + w.innerHeight) / d.documentElement.scrollHeight * 100 >= parseInt(pct || '50')) {
+              fired = true; fireEvent(name, p, true);
+            }
+          }, { passive: true });
+        })(ev.v, ev.n, params);
+        break;
+      case 'time_on_page':
+        setTimeout(function() { fireEvent(ev.n, params, true); }, parseInt(ev.v || '30') * 1000);
+        break;
+    }
+  });
+
+  /* ── API pública ────────────────────────────────────────────────── */
+
+  TH.identify = function(email, phone, firstName, lastName) {
+    var stored = getStoredData();
+    if (email)     stored.email      = email.trim().toLowerCase();
+    if (phone)     stored.phone      = normalizePhone(phone);
+    if (firstName) stored.first_name = firstName.trim().toLowerCase();
+    if (lastName)  stored.last_name  = lastName.trim().toLowerCase();
+    saveStoredData(stored);
+    send('Lead', stored);
   };
 
-  TH.track = function(eventName, params) {
-    fireEvent(eventName, params, false);
-  };
+  TH.track = function(eventName, params) { fireEvent(eventName, params, false); };
 
   TH.viewContent = function(contentName, contentId, value, currency) {
     fireEvent('ViewContent', {
-      content_name: contentName,
-      content_ids: contentId ? [contentId] : [],
-      value: value,
-      currency: currency || 'BRL'
+      content_name: contentName, content_ids: contentId ? [contentId] : [],
+      value: value, currency: currency || 'BRL'
     }, true);
   };
 
-  init();
+  /* ── Inicialização ──────────────────────────────────────────────── */
+
+  captureParams();
+  if (TH.pixelId) initPixel(TH.pixelId);
+  if (d.readyState === 'loading') { d.addEventListener('DOMContentLoaded', injectLinks); }
+  else { injectLinks(); }
+
+  TH.ready = true;
 
 })(window, document);
 `;
