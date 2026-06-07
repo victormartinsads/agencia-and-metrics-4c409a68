@@ -27,7 +27,6 @@ const DATE_PRESETS = [
 export default function PodioCreatives() {
   const { slug } = useParams<{ slug: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
-  const [selectedMetric, setSelectedMetric] = useState<CreativeMetricKey | "auto">("auto");
   const [refreshing, setRefreshing] = useState(false);
   const refreshMetaAds = useRefreshMetaAds();
 
@@ -104,19 +103,6 @@ export default function PodioCreatives() {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "Atualizando..." : "Atualizar"}
             </button>
-            <Select value={selectedMetric} onValueChange={(v) => setSelectedMetric(v as any)}>
-              <SelectTrigger className="w-[180px] h-9 text-xs">
-                <SelectValue placeholder="Métrica" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="auto">Métrica da Campanha</SelectItem>
-                <SelectItem value="conversions">Conversões (Resultados)</SelectItem>
-                <SelectItem value="clicks">Cliques (no Link)</SelectItem>
-                <SelectItem value="impressions">Impressões</SelectItem>
-                <SelectItem value="spend">Investimento</SelectItem>
-                <SelectItem value="roas">ROAS</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={datePreset} onValueChange={setDatePreset}>
               <SelectTrigger className="w-[180px] h-9 text-xs">
                 <SelectValue />
@@ -185,7 +171,6 @@ export default function PodioCreatives() {
                       funnelLabel={g.key}
                       clientId={client.id}
                       currencySymbol={client.currency_symbol || "R$"}
-                      selectedMetricKey={selectedMetric === "auto" ? undefined : selectedMetric as CreativeMetricKey}
                     />
                   );
                 }
@@ -196,7 +181,6 @@ export default function PodioCreatives() {
                     campaign={campaign}
                     clientId={client.id}
                     currencySymbol={client.currency_symbol || "R$"}
-                    selectedMetricKey={selectedMetric === "auto" ? undefined : selectedMetric as CreativeMetricKey}
                   />
                 );
               })}

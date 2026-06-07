@@ -57,7 +57,6 @@ export function DiagnosticoSemanal({
   datePreset,
   currencySymbol = "R$",
 }: Props) {
-  const [selectedMetric, setSelectedMetric] = useState<any>("auto");
   // Refresh forçado dos dados Meta (bypass cache)
   const refreshMeta = useRefreshMetaAds();
   const [refreshing, setRefreshing] = useState(false);
@@ -367,19 +366,6 @@ export function DiagnosticoSemanal({
               <Button onClick={() => setCreateManualOpen(true)} variant="outline" size="sm" className="h-8 px-3 gap-1.5 text-xs">
                 <Plus className="h-3.5 w-3.5" /> Funil manual
               </Button>
-              <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-                <SelectTrigger className="h-8 text-xs w-[140px]">
-                  <SelectValue placeholder="Métrica" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Métrica Padrão</SelectItem>
-                  <SelectItem value="conversions">Conversões</SelectItem>
-                  <SelectItem value="clicks">Cliques</SelectItem>
-                  <SelectItem value="impressions">Impressões</SelectItem>
-                  <SelectItem value="spend">Investimento</SelectItem>
-                  <SelectItem value="roas">ROAS</SelectItem>
-                </SelectContent>
-              </Select>
               <Button onClick={() => setSaveOpen(true)} size="sm" className="h-8 px-3 gap-1.5 text-xs">
                 <Save className="h-3.5 w-3.5" /> Salvar
               </Button>
@@ -501,7 +487,6 @@ export function DiagnosticoSemanal({
               clientId={clientId}
               currencySymbol={currencySymbol}
               datePreset={datePreset}
-              selectedMetricKey={selectedMetric === "auto" ? undefined : selectedMetric}
             />
           ))}
         </div>
