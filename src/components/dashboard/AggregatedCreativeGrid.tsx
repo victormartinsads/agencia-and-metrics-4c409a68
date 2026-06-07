@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Image, Video, Layers, ExternalLink, Pencil } from "lucide-react";
 import { useCreativeOverrides, applyOverrides } from "@/hooks/useCreativeOverrides";
 import { CreativeEditModal } from "@/components/dashboard/CreativeEditModal";
+import { CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
 
 const typeIcon = { image: Image, video: Video, carousel: Layers };
 const rankBadge = [
@@ -18,6 +19,7 @@ interface Props {
   clientId?: string;
   currencySymbol?: string;
   readOnly?: boolean;
+  selectedMetricKey?: CreativeMetricKey;
 }
 
 /**
@@ -25,12 +27,26 @@ interface Props {
  * (ex: 4 campanhas de Captação de Seguidores -> 1 pódio com top 3 dentre todos os criativos).
  * Mesma lógica de ranking em cascata do CreativeGrid (resultado -> CPA -> impressões -> cliques).
  */
-export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false }: Props) {
+export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
 
-  // Métrica primária: usa o label da primeira campanha que tiver
-  const resultLabel = campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Conversões";
+  const getMetricLabel = () => {
+    if (selectedMetricKey === "clicks") return "Cliques";
+    if (selectedMetricKey === "impressions") return "Impressões";
+    if (selectedMetricKey === "spend") return "Investimento";
+    if (selectedMetricKey === "roas") return "ROAS";
+    return campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Conversões";
+  };
+  const resultLabel = getMetricLabel();
+
+  const getMetricValue = (ov: any) => {
+    if (selectedMetricKey === "clicks") return ov.clicks;
+    if (selectedMetricKey === "impressions") return ov.impressions;
+    if (selectedMetricKey === "spend") return ov.spend;
+    if (selectedMetricKey === "roas") return ov.roas;
+    return ov.conversions;
+  };
 
   // Junta criativos de TODAS as campanhas, marcando origem
   const allCreatives = useMemo(() => {
@@ -64,6 +80,10 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return hasDelivery;
     })
     .sort((a, b) => {
+      const valA = getMetricValue(a._ov);
+      const valB = getMetricValue(b._ov);
+      if (valA !== valB) return valB - valA; // Maior primeiro
+
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
       const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
       const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
@@ -73,9 +93,15 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
     })
     .slice(0, 3);
 
-  const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0);
-  const top3Total = sorted.reduce((sum, cr) => sum + cr._ov.conversions, 0);
-  const remainingResults = Math.max(totalConversions - top3Total, 0);
+  const totalMetric = allCreatives.reduce((sum, cr) => {
+    const ov = applyOverrides(cr.id, {
+      conversions: cr.primaryResult ?? cr.conversions,
+      spend: cr.spend, ctr: cr.ctr, impressions: cr.impressions, clicks: cr.clicks, roas: cr.roas
+    }, overrides);
+    return sum + getMetricValue(ov);
+  }, 0);
+  const top3Total = sorted.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
+  const remainingResults = Math.max(totalMetric - top3Total, 0);
 
   if (sorted.length === 0) return null;
 
@@ -95,8 +121,8 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
               Funil: {funnelLabel}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {campaigns.length} campanhas agrupadas • Top 3 somam {top3Total} de {totalConversions} {resultLabel.toLowerCase()}
-              {remainingResults > 0 ? ` • outros criativos: ${remainingResults}` : ""}
+              {campaigns.length} campanhas agrupadas • Top 3 somam {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
+              {remainingResults > 0 && selectedMetricKey !== "spend" && selectedMetricKey !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
             </p>
           </div>
           <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-0.5 rounded-full">
@@ -178,7 +204,13 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                   <div className="space-y-1.5">
                     <div className="bg-primary/10 rounded-md p-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{resultLabel}</span>
-                      <p className="font-bold text-primary text-base">{ov.conversions}</p>
+                      <p className="font-bold text-primary text-base">
+                        {selectedMetricKey === "spend"
+                          ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : selectedMetricKey === "roas"
+                            ? `${getMetricValue(ov).toFixed(2)}x`
+                            : getMetricValue(ov).toLocaleString("pt-BR")}
+                      </p>
                     </div>
                     <div className="bg-muted/50 rounded-md p-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">CPA</span>

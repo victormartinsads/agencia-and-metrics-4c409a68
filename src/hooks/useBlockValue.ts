@@ -5,6 +5,7 @@ import { useGoogleAds } from "@/hooks/useGoogleAds";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { useInstagramInsights } from "@/hooks/useInstagramInsights";
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
+import { useCrmOverviewData } from "@/hooks/useCrmOverviewData";
 import { getPeriodPair } from "@/lib/period";
 
 function inRange(dateStr: string, start: Date, end: Date) {
@@ -54,6 +55,7 @@ export function useBlockValue(params: {
   const gAds = useGoogleAds(clientId, datePreset, type === "google_ads");
   const ga4  = useGoogleAnalytics(clientId, datePreset, type === "ga4");
   const ig   = useInstagramInsights(type === "instagram" ? clientId : undefined);
+  const crm  = useCrmOverviewData(type === "crm" ? clientId : undefined, datePreset);
   const weekly = useWeeklyMetrics(type === "sheet" ? clientId : undefined, 365);
   const sheetCfg = useDashboardSheet(type === "sheet" ? clientId : undefined);
 
@@ -85,6 +87,11 @@ export function useBlockValue(params: {
     if (type === "instagram") {
       const k = ig.data as any;
       return { source: type, value: k?.[config.metric], loading: ig.isLoading };
+    }
+
+    if (type === "crm") {
+      const k = crm.data as any;
+      return { source: type, value: k?.[config.metric], loading: crm.isLoading };
     }
 
     if (type === "sheet") {
@@ -131,5 +138,5 @@ export function useBlockValue(params: {
     }
 
     return { source: type, value: undefined, loading: false };
-  }, [cfg, type, config, meta, gAds, ga4, ig, weekly, sheetCfg, periods]);
+  }, [cfg, type, config, meta, gAds, ga4, ig, crm, weekly, sheetCfg, periods]);
 }

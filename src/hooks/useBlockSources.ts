@@ -8,7 +8,8 @@ export type BlockSourceType =
   | "google_ads"
   | "sheet"
   | "instagram"
-  | "manual";
+  | "manual"
+  | "crm";
 
 export interface BlockSource {
   id?: string;

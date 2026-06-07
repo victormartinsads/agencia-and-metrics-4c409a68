@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Zap, Globe, Sheet, Instagram, Hand, Megaphone, Search } from "lucide-react";
+import { Zap, Globe, Sheet, Instagram, Hand, Megaphone, Search, Database } from "lucide-react";
 import { toast } from "sonner";
 import {
   BlockSource, BlockSourceType,
@@ -20,6 +20,7 @@ const SOURCES: { id: BlockSourceType; label: string; icon: any; desc: string }[]
   { id: "google_ads", label: "Google Ads", icon: Search,    desc: "Campanhas Google Ads." },
   { id: "sheet",      label: "Planilha",   icon: Sheet,     desc: "Google Sheets — escolha qual planilha e campo." },
   { id: "instagram",  label: "Instagram",  icon: Instagram, desc: "Insights orgânicos do Instagram." },
+  { id: "crm",        label: "CRM Nativo", icon: Database,  desc: "Métricas diretas do CRM e Eventos de Venda." },
   { id: "manual",     label: "Manual",     icon: Hand,      desc: "Digite o valor manualmente." },
 ];
 
@@ -180,6 +181,20 @@ export function BlockSourceMenu({ open, onOpenChange, clientId, dashboardKey, bl
                       {["followers","reach","impressions","profile_views","website_clicks","video_views","likes","comments","saves","shares"].map(m => (
                         <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {s.id === "crm" && (
+                <div className="space-y-2">
+                  <Label>Métrica</Label>
+                  <Select value={config.metric || ""} onValueChange={(v) => setConfig({ ...config, metric: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="revenue">Faturamento Aprovado</SelectItem>
+                      <SelectItem value="sales">Quantidade de Vendas</SelectItem>
+                      <SelectItem value="mqls">Total Leads (MQLs)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

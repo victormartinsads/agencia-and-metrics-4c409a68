@@ -24,6 +24,7 @@ import { LeadsChart } from "../LeadsChart";
 import { BestAdsList } from "../BestAdsList";
 import { UtmTrafficTable } from "../UtmTrafficTable";
 import { SheetUtmTable, SheetUtmRow } from "../SheetUtmTable";
+import { CrmUtmPerformanceBlock } from "../CrmUtmPerformanceBlock";
 
 import { useWeeklyMetrics, useDashboardSheet } from "@/hooks/useDashboardSheet";
 import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
@@ -123,6 +124,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
     bestads: "Melhores Criativos",
     leads: "Leads",
     utms: "Fontes de tráfego (UTM)",
+    crm_utms: "Performance CRM (UTM)",
   };
 
   const EditSourceBtn = ({ title = "Editar fonte de dados" }: { title?: string }) => {
@@ -920,6 +922,25 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
                 ? <SheetUtmTable rows={sheetUtmRows} currencySymbol={currencySymbol} />
                 : <UtmTrafficTable utms={ga?.utms || []} currencySymbol={currencySymbol} />}
             </div>
+          </PanelCard>
+        ),
+      });
+    }
+
+    if (isVisible("crm_utms")) {
+      list.push({
+        id: "crm_utms",
+        defaultLayout: { x: 0, y: 25, w: 6, h: 6, minW: 4, minH: 4 },
+        node: (
+          <PanelCard
+            title="Performance CRM (UTM)"
+            noPadding
+            actions={<EditSourceBtn />}
+            panelId="crm_utms"
+            editMode={editMode}
+            onHide={hidePanel}
+          >
+            <CrmUtmPerformanceBlock clientId={clientId} datePreset={datePreset} currencySymbol={currencySymbol} />
           </PanelCard>
         ),
       });

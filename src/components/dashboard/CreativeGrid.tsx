@@ -39,18 +39,36 @@ export function isCaptacaoSeguidores(campaignName: string): boolean {
   return /CAPTACAO_?(?:DE_)?SEGUIDORES|CAPTAÇÃO_?(?:DE_)?SEGUIDORES/i.test(campaignName);
 }
 
+export type CreativeMetricKey = "conversions" | "clicks" | "impressions" | "spend" | "roas";
+
 interface Props {
   campaign: Campaign;
   clientId?: string;
   currencySymbol?: string;
   readOnly?: boolean;
+  selectedMetricKey?: CreativeMetricKey;
 }
 
-export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false }: Props) {
+export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
 
-  const resultLabel = campaign.primaryResultLabel || "Conversões";
+  const getMetricLabel = () => {
+    if (selectedMetricKey === "clicks") return "Cliques";
+    if (selectedMetricKey === "impressions") return "Impressões";
+    if (selectedMetricKey === "spend") return "Investimento";
+    if (selectedMetricKey === "roas") return "ROAS";
+    return campaign.primaryResultLabel || "Conversões";
+  };
+  const resultLabel = getMetricLabel();
+
+  const getMetricValue = (ov: any) => {
+    if (selectedMetricKey === "clicks") return ov.clicks;
+    if (selectedMetricKey === "impressions") return ov.impressions;
+    if (selectedMetricKey === "spend") return ov.spend;
+    if (selectedMetricKey === "roas") return ov.roas;
+    return ov.conversions;
+  };
 
   const sorted = [...campaign.creatives]
     .map((cr) => {
@@ -75,9 +93,11 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       return hasDelivery;
     })
     .sort((a, b) => {
-      // Ranking em cascata: 1) resultado primário; 2) menor CPA;
-      // 3) impressões; 4) cliques. Garante que 2º/3º façam sentido
-      // mesmo quando só 1 criativo teve conversões.
+      const valA = getMetricValue(a._ov);
+      const valB = getMetricValue(b._ov);
+      if (valA !== valB) return valB - valA; // Maior primeiro
+      
+      // Desempate:
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
       const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
       const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
@@ -87,8 +107,15 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     })
     .slice(0, 3);
 
-  const top3Total = sorted.reduce((sum, cr) => sum + cr._ov.conversions, 0);
-  const remainingResults = Math.max(campaign.conversions - top3Total, 0);
+  const top3Total = sorted.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
+  const totalMetric = campaign.creatives.reduce((sum, cr) => {
+    const ov = applyOverrides(cr.id, {
+      conversions: cr.primaryResult ?? cr.conversions,
+      spend: cr.spend, ctr: cr.ctr, impressions: cr.impressions, clicks: cr.clicks, roas: cr.roas
+    }, overrides);
+    return sum + getMetricValue(ov);
+  }, 0);
+  const remainingResults = Math.max(totalMetric - top3Total, 0);
 
   if (sorted.length === 0) return null;
 
@@ -108,8 +135,8 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
               {getFunnelLabel(campaign.name)}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Top 3 somam {top3Total} de {campaign.conversions} {resultLabel.toLowerCase()}
-              {remainingResults > 0 ? ` • outros criativos: ${remainingResults}` : ""}
+              Top 3 somam {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
+              {remainingResults > 0 && selectedMetricKey !== "spend" && selectedMetricKey !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
             </p>
           </div>
           <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-0.5 rounded-full">
@@ -188,7 +215,13 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                   <div className="space-y-1.5">
                     <div className="bg-primary/10 rounded-md p-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{resultLabel}</span>
-                      <p className="font-bold text-primary text-base">{ov.conversions}</p>
+                      <p className="font-bold text-primary text-base">
+                        {selectedMetricKey === "spend"
+                          ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : selectedMetricKey === "roas"
+                            ? `${getMetricValue(ov).toFixed(2)}x`
+                            : getMetricValue(ov).toLocaleString("pt-BR")}
+                      </p>
                     </div>
                     <div className="bg-muted/50 rounded-md p-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">CPA</span>

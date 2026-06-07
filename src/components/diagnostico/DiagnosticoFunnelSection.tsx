@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
-import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import { CreativeGrid, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
 import { Layers, Target, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ interface Props {
   clientId?: string;
   currencySymbol?: string;
   datePreset?: string;
+  selectedMetricKey?: CreativeMetricKey;
 }
 
 function formatMoney(v: number, symbol: string) {
@@ -72,7 +73,7 @@ function aggregateAdsets(campaigns: Campaign[]) {
     .sort((a, b) => b.spend - a.spend);
 }
 
-export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d" }: Props) {
+export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$", datePreset = "last_7d", selectedMetricKey }: Props) {
   const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
   const savePrimaryMetric = useSaveFunnelPrimaryMetric();
 
@@ -547,9 +548,10 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             funnelLabel={rawSectionTitle}
             clientId={clientId}
             currencySymbol={currencySymbol}
+            selectedMetricKey={selectedMetricKey}
           />
         ) : (
-          <CreativeGrid campaign={adaptedCampaigns[0]} clientId={clientId} currencySymbol={currencySymbol} />
+          <CreativeGrid campaign={adaptedCampaigns[0]} clientId={clientId} currencySymbol={currencySymbol} selectedMetricKey={selectedMetricKey} />
         )}
       </div>
     </section>
