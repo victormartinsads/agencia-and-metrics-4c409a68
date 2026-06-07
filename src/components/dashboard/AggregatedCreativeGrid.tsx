@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { Campaign } from "@/data/mockMetaData";
+import { Campaign, Creative } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
 import { Image, Video, Layers, ExternalLink, Pencil } from "lucide-react";
 import { useCreativeOverrides, applyOverrides } from "@/hooks/useCreativeOverrides";
 import { CreativeEditModal } from "@/components/dashboard/CreativeEditModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
+import { PRIMARY_METRIC_OPTIONS } from "@/hooks/useFunnelPrimaryMetric";
+import { getCustomPrimaryMetricValue } from "@/hooks/useAdaptedCampaigns";
 
 const typeIcon = { image: Image, video: Video, carousel: Layers };
 const rankBadge = [
@@ -31,17 +33,23 @@ interface Props {
 export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
-  const [localMetric, setLocalMetric] = useState<CreativeMetricKey | "auto">("auto");
+  
+  const storageKey = `aggregated-grid-metric-${clientId}-${funnelLabel}`;
+  const [localMetric, setLocalMetric] = useState<string>(() => {
+    return localStorage.getItem(storageKey) || "auto";
+  });
 
   useEffect(() => {
-    if (selectedMetricKey) {
+    if (selectedMetricKey && localMetric === "auto") {
       setLocalMetric(selectedMetricKey);
     }
-  }, [selectedMetricKey]);
+  }, [selectedMetricKey, localMetric]);
 
   const activeMetric = localMetric === "auto" ? "conversions" : localMetric;
+  const activeOption = PRIMARY_METRIC_OPTIONS.find(o => o.key === activeMetric);
 
   const getMetricLabel = () => {
+    if (activeOption) return activeOption.label;
     if (activeMetric === "clicks") return "Cliques";
     if (activeMetric === "impressions") return "Impressões";
     if (activeMetric === "spend") return "Investimento";
@@ -55,24 +63,43 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
     if (activeMetric === "impressions") return ov.impressions;
     if (activeMetric === "spend") return ov.spend;
     if (activeMetric === "roas") return ov.roas;
+    if (activeMetric === "conversions") return ov.conversions;
     return ov.conversions;
   };
 
-  // Junta criativos de TODAS as campanhas, marcando origem
+  // Junta criativos de TODAS as campanhas, calculando a métrica customizada se necessário
   const allCreatives = useMemo(() => {
     return campaigns.flatMap(camp =>
-      camp.creatives.map(cr => ({
-        ...cr,
-        _campaignName: camp.name,
-        _campaignId: camp.id,
-      }))
+      camp.creatives.map(cr => {
+        let computedConversions = cr.conversions;
+        if (activeMetric !== "clicks" && activeMetric !== "impressions" && activeMetric !== "spend" && activeMetric !== "roas" && activeMetric !== "conversions") {
+           const campaignTotal = getCustomPrimaryMetricValue(camp, activeMetric);
+           const campaignConvs = camp.conversions || 1;
+           const campaignClicks = camp.clicks || 1;
+           if (campaignTotal === 0) {
+             computedConversions = 0;
+           } else {
+             computedConversions = cr.conversions > 0 
+               ? (cr.conversions / campaignConvs) * campaignTotal
+               : (cr.clicks / campaignClicks) * campaignTotal;
+           }
+        }
+        
+        return {
+          ...cr,
+          _campaignName: camp.name,
+          _campaignId: camp.id,
+          _computedConversions: Math.round(computedConversions),
+        };
+      })
     );
-  }, [campaigns]);
+  }, [campaigns, activeMetric]);
 
   const sorted = allCreatives
     .map((cr) => {
+      const baseline = { ...cr, conversions: (cr as any)._computedConversions };
       const ov = applyOverrides(cr.id, {
-        conversions: cr.primaryResult ?? cr.conversions,
+        conversions: baseline.primaryResult ?? baseline.conversions,
         spend: cr.spend,
         ctr: cr.ctr,
         impressions: cr.impressions,
@@ -104,8 +131,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
     .slice(0, 3);
 
   const totalMetric = allCreatives.reduce((sum, cr) => {
+    const baseline = { ...cr, conversions: (cr as any)._computedConversions };
     const ov = applyOverrides(cr.id, {
-      conversions: cr.primaryResult ?? cr.conversions,
+      conversions: baseline.primaryResult ?? baseline.conversions,
       spend: cr.spend, ctr: cr.ctr, impressions: cr.impressions, clicks: cr.clicks, roas: cr.roas
     }, overrides);
     return sum + getMetricValue(ov);
@@ -135,17 +163,26 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
               {remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
             </p>
           </div>
-          <Select value={localMetric} onValueChange={(v) => setLocalMetric(v as any)}>
+          <Select 
+            value={localMetric} 
+            onValueChange={(v) => {
+              setLocalMetric(v);
+              localStorage.setItem(storageKey, v);
+            }}
+          >
             <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
               <SelectValue placeholder="Métrica" />
             </SelectTrigger>
             <SelectContent className="bg-popover border border-border">
               <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaigns[0]?.primaryResultLabel || "Conversões"})</SelectItem>
-              <SelectItem value="conversions" className="text-xs">Métrica: Resultados</SelectItem>
-              <SelectItem value="clicks" className="text-xs">Métrica: Cliques</SelectItem>
               <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
               <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
               <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
+              {PRIMARY_METRIC_OPTIONS.map(opt => (
+                <SelectItem key={opt.key} value={opt.key} className="text-xs">
+                  Métrica: {opt.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
