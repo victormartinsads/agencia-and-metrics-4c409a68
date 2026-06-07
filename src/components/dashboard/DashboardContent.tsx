@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { OverviewPremium } from "@/components/dashboard/overview/premium/OverviewPremium";
-import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/CreativeGrid";
+import { CreativeGrid, isCaptacaoSeguidores, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BrandingPanel } from "@/components/dashboard/BrandingPanel";
 import { Campaign } from "@/data/mockMetaData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false, isPublicView = false }: Props) {
+  const [selectedCreativeMetric, setSelectedCreativeMetric] = useState<CreativeMetricKey | "auto">("auto");
   const [localActiveTab, setLocalActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
@@ -195,6 +197,25 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               const others = eligible.filter(c => !isCaptacaoSeguidores(c.name));
               return (
                 <>
+                  <div className="flex items-center justify-between mb-4 bg-card border border-border p-3 rounded-lg">
+                    <div>
+                      <h3 className="text-sm font-semibold text-card-foreground">Pódio de Criativos</h3>
+                      <p className="text-[11px] text-muted-foreground">Avalie o desempenho dos criativos por métrica</p>
+                    </div>
+                    <Select value={selectedCreativeMetric} onValueChange={(v) => setSelectedCreativeMetric(v as any)}>
+                      <SelectTrigger className="w-[180px] h-8 text-xs">
+                        <SelectValue placeholder="Métrica" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Métrica da Campanha</SelectItem>
+                        <SelectItem value="conversions">Conversões (Resultados)</SelectItem>
+                        <SelectItem value="clicks">Cliques (no Link)</SelectItem>
+                        <SelectItem value="impressions">Impressões</SelectItem>
+                        <SelectItem value="spend">Investimento</SelectItem>
+                        <SelectItem value="roas">ROAS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {captacao.length > 0 && (
                     <AggregatedCreativeGrid
                       campaigns={captacao}
@@ -202,10 +223,11 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                       clientId={clientId}
                       currencySymbol={currencySymbol}
                       readOnly={isPublicView}
+                      selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric}
                     />
                   )}
                   {others.map(c => (
-                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} />
+                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric} />
                   ))}
                 </>
               );

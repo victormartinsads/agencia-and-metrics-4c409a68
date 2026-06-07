@@ -337,8 +337,8 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                     metricKey: val,
                   });
                   toast.success("Métrica primária atualizada!");
-                } catch (err) {
-                  toast.error("Erro ao salvar métrica primária");
+                } catch (err: any) {
+                  toast.error(err?.message || "Erro ao salvar métrica primária");
                 }
               }}
             >
