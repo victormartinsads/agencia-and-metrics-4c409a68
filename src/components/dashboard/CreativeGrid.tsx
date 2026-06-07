@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Campaign } from "@/data/mockMetaData";
 import { motion } from "framer-motion";
 import { Image, Video, Layers, ExternalLink, Pencil } from "lucide-react";
 import { useCreativeOverrides, applyOverrides } from "@/hooks/useCreativeOverrides";
 import { CreativeEditModal } from "@/components/dashboard/CreativeEditModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const typeIcon = { image: Image, video: Video, carousel: Layers };
 const rankBadge = [
@@ -52,21 +53,30 @@ interface Props {
 export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
+  const [localMetric, setLocalMetric] = useState<CreativeMetricKey | "auto">("auto");
+
+  useEffect(() => {
+    if (selectedMetricKey) {
+      setLocalMetric(selectedMetricKey);
+    }
+  }, [selectedMetricKey]);
+
+  const activeMetric = localMetric === "auto" ? "conversions" : localMetric;
 
   const getMetricLabel = () => {
-    if (selectedMetricKey === "clicks") return "Cliques";
-    if (selectedMetricKey === "impressions") return "Impressões";
-    if (selectedMetricKey === "spend") return "Investimento";
-    if (selectedMetricKey === "roas") return "ROAS";
+    if (activeMetric === "clicks") return "Cliques";
+    if (activeMetric === "impressions") return "Impressões";
+    if (activeMetric === "spend") return "Investimento";
+    if (activeMetric === "roas") return "ROAS";
     return campaign.primaryResultLabel || "Conversões";
   };
   const resultLabel = getMetricLabel();
 
   const getMetricValue = (ov: any) => {
-    if (selectedMetricKey === "clicks") return ov.clicks;
-    if (selectedMetricKey === "impressions") return ov.impressions;
-    if (selectedMetricKey === "spend") return ov.spend;
-    if (selectedMetricKey === "roas") return ov.roas;
+    if (activeMetric === "clicks") return ov.clicks;
+    if (activeMetric === "impressions") return ov.impressions;
+    if (activeMetric === "spend") return ov.spend;
+    if (activeMetric === "roas") return ov.roas;
     return ov.conversions;
   };
 
@@ -135,13 +145,23 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
               {getFunnelLabel(campaign.name)}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Top 3 somam {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {selectedMetricKey === "spend" || selectedMetricKey === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
-              {remainingResults > 0 && selectedMetricKey !== "spend" && selectedMetricKey !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
+              Top 3 somam {activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
+              {remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
             </p>
           </div>
-          <span className="text-[10px] font-medium bg-primary/15 text-primary px-2 py-0.5 rounded-full">
-            Métrica: {resultLabel}
-          </span>
+          <Select value={localMetric} onValueChange={(v) => setLocalMetric(v as any)}>
+            <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
+              <SelectValue placeholder="Métrica" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border">
+              <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaign.primaryResultLabel || "Conversões"})</SelectItem>
+              <SelectItem value="conversions" className="text-xs">Métrica: Resultados</SelectItem>
+              <SelectItem value="clicks" className="text-xs">Métrica: Cliques</SelectItem>
+              <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+              <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
+              <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
           {sorted.map((cr, i) => {
@@ -216,9 +236,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                     <div className="bg-primary/10 rounded-md p-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{resultLabel}</span>
                       <p className="font-bold text-primary text-base">
-                        {selectedMetricKey === "spend"
+                        {activeMetric === "spend"
                           ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : selectedMetricKey === "roas"
+                          : activeMetric === "roas"
                             ? `${getMetricValue(ov).toFixed(2)}x`
                             : getMetricValue(ov).toLocaleString("pt-BR")}
                       </p>
