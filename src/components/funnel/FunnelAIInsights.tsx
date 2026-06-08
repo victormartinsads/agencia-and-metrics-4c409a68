@@ -22,15 +22,23 @@ const SYSTEM_PROMPT = `Você é um Gestor de Tráfego Sênior e Auditor de Perfo
 Sua missão é realizar uma AUDITORIA MASSIVA, COMPLETA E DETALHADA dos dados deste funil e de todas as suas campanhas.
 A sua análise servirá como base fundamental para a tomada de decisões financeiras e estratégicas da empresa.
 
+CRÍTICO: Preste MUITA ATENÇÃO no NOME de cada campanha (ex: [Topo], [Meio], Captacao, Vendas, Distribuição, Seguidores). 
+Você DEVE usar o nome da campanha para deduzir o seu objetivo real e avaliar as métricas com base nisso!
+Exemplos: 
+- Se a campanha é de Distribuição de Conteúdo ou Seguidores, o foco é CPM, Custo por Clique e Custo por Visita, não exija ROAS.
+- Se a campanha é de Captação de Leads, o foco é Custo por Lead (CPL) e Taxa de Conversão da Landing Page.
+- Se a campanha é de Vendas/Conversão Fundo de Funil, aí sim o foco absoluto é ROAS, CPA e quebra de checkout.
+
 Sua análise DEVE conter categorias divididas da seguinte forma, usando a tool 'generate_insights':
 1. "Diagnóstico Geral do Funil": Realize um raio-x profundo da saúde do funil. Analise a correlação entre as taxas de conversão (CTR, LPV, ATC, IC, Purchase), ROAS e CPA. Diga exatamente o que os números estão gritando.
-2. "Otimizações: [Nome da Campanha]": Para CADA campanha fornecida nos dados (topo, meio ou fundo), crie uma categoria dedicada.
-Dentro da categoria de cada campanha, forneça uma análise densa e mastigada:
+2. "Otimizações: [Nome da Campanha]": Para CADA campanha fornecida nos dados, crie uma categoria dedicada.
+Dentro da categoria de cada campanha, forneça uma análise densa, mastigada e com muitos parágrafos:
+- O objetivo deduzido da campanha baseado no seu NOME.
 - O que está bom e por que está bom (baseado nos números).
 - O que está ruim (gargalos específicos como fadiga de criativo, fuga de checkout, clique caro).
-- Plano de Ação prático e técnico (ex: "Escale a verba em 15% pois o CPA está abaixo da média e a frequência controlada", "Pause os criativos com CTR abaixo de 1% e mude o ângulo da copy", "Refaça a Landing Page pois a quebra do CTR para LPV está em 80%").
+- Plano de Ação prático e técnico com passo a passo.
 
-Não seja resumido. Entregue insights densos, explicativos e extremamente profissionais. Escreva como um especialista orientando sua equipe. Para cada categoria, forneça múltiplos pontos de análise detalhados.`;
+Escreva textos LARGOS. Não seja resumido. Entregue insights densos, explicativos e extremamente profissionais. Escreva como um especialista sênior orientando sua equipe de forma extensiva.`;
 
 export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
   const [insights, setInsights] = useState<InsightCategory[] | null>(null);
@@ -39,6 +47,25 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
   const generateInsights = async () => {
     setLoading(true);
     try {
+      const mapCampaignData = (c: FunnelCampaign) => ({
+        name: c.name,
+        objective: c.objective || c.primaryResultKey,
+        spend: c.spend,
+        impressions: c.impressions,
+        clicks: c.clicks,
+        ctr: c.ctr,
+        cpc: c.clicks > 0 ? c.spend / c.clicks : 0,
+        cpm: c.impressions > 0 ? c.spend / c.impressions * 1000 : 0,
+        landingPageViews: c.landingPageViews,
+        addToCart: c.addToCart,
+        initiateCheckout: c.initiateCheckout,
+        purchases: c.purchases,
+        leads: c.actionBreakdown?.['lead'] || 0,
+        roas: c.roas,
+        cpa: c.conversions > 0 ? c.spend / c.conversions : 0,
+        frequency: c.frequency,
+      });
+
       const summary = {
         totalCampaigns: campaigns.length,
         activeCampaigns: campaigns.filter((c) => c.status === "active").length,
@@ -51,9 +78,9 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         atcRate: metrics.atcRate.toFixed(2),
         checkoutRate: metrics.checkoutRate.toFixed(2),
         purchaseRate: metrics.purchaseRate.toFixed(2),
-        topo: campaigns.filter((c) => c.funnelStage === "topo").map((c) => ({ name: c.name, spend: c.spend, ctr: c.ctr, roas: c.roas, frequency: c.frequency })),
-        meio: campaigns.filter((c) => c.funnelStage === "meio").map((c) => ({ name: c.name, spend: c.spend, ctr: c.ctr, roas: c.roas, frequency: c.frequency })),
-        fundo: campaigns.filter((c) => c.funnelStage === "fundo").map((c) => ({ name: c.name, spend: c.spend, ctr: c.ctr, roas: c.roas, frequency: c.frequency })),
+        topo: campaigns.filter((c) => c.funnelStage === "topo").map(mapCampaignData),
+        meio: campaigns.filter((c) => c.funnelStage === "meio").map(mapCampaignData),
+        fundo: campaigns.filter((c) => c.funnelStage === "fundo").map(mapCampaignData),
       };
 
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
