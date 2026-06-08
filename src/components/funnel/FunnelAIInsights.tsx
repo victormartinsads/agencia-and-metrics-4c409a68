@@ -259,24 +259,26 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
       if (!geminiKey) throw new Error("Chave API não configurada");
 
-      const systemInstruction = SYSTEM_PROMPT.split("REGRAS ESTRITAS DE SISTEMA")[0] + "\nAGORA ATUE COMO UM COPILOTO EM CHAT. Você já analisou os dados abaixo e forneceu o diagnóstico listado. Responda as dúvidas do usuário de forma direta, mantendo a persona de Especialista Sênior em Meta Ads. Use linguagem coloquial mas técnica, e emojis.\n\nDados:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico anterior:\n" + JSON.stringify(insights);
+      const systemInstruction = SYSTEM_PROMPT.split("REGRAS ESTRITAS DE SISTEMA")[0] + "\nAGORA ATUE COMO UM COPILOTO EM CHAT. Você já analisou os dados abaixo e forneceu o diagnóstico listado. Responda as dúvidas do usuário de forma direta, mantendo a persona de Especialista Sênior em Meta Ads. Use linguagem coloquial mas técnica, e emojis.\n\nDados:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico anterior:\n" + JSON.stringify(insights) + "\n\n---\nPERGUNTA DO USUÁRIO:\n";
 
-      const geminiMessages = newMessages.map(m => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }]
-      }));
+      // Inject system context into the very first user message so we don't trigger the 500 bug with the "system" role
+      const payload = newMessages.map((msg, idx) => {
+        if (idx === 0 && msg.role === "user") {
+          return { role: "user", content: systemInstruction + msg.content };
+        }
+        return msg;
+      });
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiKey}`, {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${geminiKey}`,
         },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemInstruction }] },
-          contents: geminiMessages,
-          generationConfig: {
-            temperature: 0.6,
-          }
+          model: "gemini-1.5-pro",
+          messages: payload,
+          temperature: 0.6,
         }),
       });
 
@@ -286,7 +288,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       }
       
       const data = await response.json();
-      const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro ao gerar resposta.";
+      const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
 
       setMessages([...newMessages, { role: "assistant", content: aiReply }]);
     } catch (e: any) {
