@@ -19,16 +19,14 @@ interface InsightCategory {
 }
 
 const SYSTEM_PROMPT = `Você é um Analista de Mídia Pleno/Sênior especialista em Meta Ads.
-Analise os dados do funil fornecidos e gere um diagnóstico COMPLETO e PROFISSIONAL em português brasileiro.
+Sua missão é gerar um diagnóstico completo e detalhado deste funil específico e de suas campanhas.
 
-Sua análise DEVE conter exatamente estas 4 categorias, usando a tool 'generate_insights':
-1. Fortalezas (O que está bom) - Destaque métricas de alta performance, CTR alto, ROAS bom.
-2. Gargalos (O que está ruim) - Identifique com precisão onde o funil trava (CPA alto, CTR baixo, frequência excessiva).
-3. Oportunidades (O que melhorar) - Sugestões táticas de realocação de verba, novos testes.
-4. Plano de Ação (Como melhorar) - Instruções diretas passo a passo (ex: 'Pausar campanha X', 'Aumentar budget em 20%').
+Sua análise DEVE conter categorias divididas da seguinte forma, usando a tool 'generate_insights':
+1. "Diagnóstico Geral do Funil": Faça um resumo da saúde matemática do funil como um todo (ROAS, CPA geral, taxas de conversão).
+2. "Otimizações: [Nome da Campanha]": Para CADA campanha que tiver dados relevantes (topo, meio ou fundo), crie uma categoria dedicada.
+Dentro da categoria de cada campanha, diga EXATAMENTE o que deve ser otimizado, pausado, ou escalado, baseando-se nos NÚMEROS REAIS dela (CTR, CPA, gasto, frequência).
 
-Seja extremamente analítico. Use os NÚMEROS REAIS dos dados fornecidos nas suas explicações. Não seja genérico.
-Retorne de 2 a 4 insights poderosos para CADA categoria.`;
+Seja direto, prático, profissional e extremamente tático. Diga o que fazer com cada campanha.`;
 
 export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
   const [insights, setInsights] = useState<InsightCategory[] | null>(null);
@@ -83,7 +81,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                         items: {
                           type: "object",
                           properties: {
-                            title: { type: "string", enum: ["Fortalezas", "Gargalos", "Oportunidades", "Plano de Ação"] },
+                            title: { type: "string", description: "Use 'Diagnóstico Geral do Funil' or 'Otimizações: [Nome da Campanha]'" },
                             insights: { type: "array", items: { type: "string" } },
                           },
                           required: ["title", "insights"],
@@ -158,21 +156,14 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
     if (fundo.length > meio.length * 2) funnel.push("Proporção desproporcional de campanhas de fundo vs meio — equilibre o funil.");
 
     return [
-      { title: "Fortalezas", icon: TrendingUp, insights: performance.length > 0 ? performance : ["Métricas base dentro do padrão de performance aceitável."] },
-      { title: "Gargalos", icon: Brain, insights: creative.length > 0 ? creative : ["Não foram encontrados grandes gargalos técnicos."] },
-      { title: "Oportunidades", icon: Sparkles, insights: funnel.length > 0 ? funnel : ["Mantenha as otimizações em andamento."] },
-      { title: "Plano de Ação", icon: GitBranch, insights: ["Continue acompanhando diariamente as métricas."] },
+      { title: "Diagnóstico Geral do Funil", icon: TrendingUp, insights: ["Métricas base dentro do padrão de performance aceitável.", ...performance] },
+      { title: "Otimizações Gerais", icon: Sparkles, insights: ["Continue acompanhando diariamente as campanhas.", ...creative, ...funnel] },
     ];
   };
 
   const iconMap: Record<string, typeof TrendingUp> = {
-    Fortalezas: TrendingUp,
-    Gargalos: Brain,
-    Oportunidades: Sparkles,
-    "Plano de Ação": GitBranch,
-    Performance: TrendingUp,
-    Criativo: Palette,
-    "Estrutura de Funil": GitBranch,
+    "Diagnóstico Geral do Funil": Brain,
+    "Otimizações Gerais": Sparkles,
   };
 
   return (
@@ -206,7 +197,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         {insights && (
           <div className="space-y-5">
             {insights.map((category, ci) => {
-              const Icon = iconMap[category.title] || category.icon || TrendingUp;
+              const Icon = iconMap[category.title] || (category.title.includes("Campanha") || category.title.includes("Otimiza") ? GitBranch : TrendingUp);
               return (
                 <div key={category.title} className="space-y-2">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
