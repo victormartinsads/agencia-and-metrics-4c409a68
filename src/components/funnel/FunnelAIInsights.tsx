@@ -258,23 +258,24 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!geminiKey) throw new Error("Chave API não configurada");
 
-      const systemRole: ChatMessage = { 
-        role: "system", 
-        content: SYSTEM_PROMPT.split("REGRAS ESTRITAS DE SISTEMA")[0] + "\nAGORA ATUE COMO UM COPILOTO EM CHAT. Você já analisou os dados abaixo e forneceu o diagnóstico listado. Responda as dúvidas do usuário de forma direta, mantendo a persona de Especialista Sênior em Meta Ads. Use linguagem coloquial mas técnica, e emojis.\n\nDados:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico anterior:\n" + JSON.stringify(insights)
-      };
+      const systemInstruction = SYSTEM_PROMPT.split("REGRAS ESTRITAS DE SISTEMA")[0] + "\nAGORA ATUE COMO UM COPILOTO EM CHAT. Você já analisou os dados abaixo e forneceu o diagnóstico listado. Responda as dúvidas do usuário de forma direta, mantendo a persona de Especialista Sênior em Meta Ads. Use linguagem coloquial mas técnica, e emojis.\n\nDados:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico anterior:\n" + JSON.stringify(insights);
 
-      const payload = [systemRole, ...newMessages];
+      const geminiMessages = newMessages.map(m => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }]
+      }));
 
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${geminiKey}`,
         },
         body: JSON.stringify({
-          model: "gemini-1.5-pro",
-          messages: payload,
-          temperature: 0.6,
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: geminiMessages,
+          generationConfig: {
+            temperature: 0.6,
+          }
         }),
       });
 
@@ -284,7 +285,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       }
       
       const data = await response.json();
-      const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
+      const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro ao gerar resposta.";
 
       setMessages([...newMessages, { role: "assistant", content: aiReply }]);
     } catch (e: any) {
