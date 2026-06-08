@@ -98,8 +98,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
   const sorted = allCreatives
     .map((cr) => {
       const baseline = { ...cr, conversions: (cr as any)._computedConversions };
+      const baseConversions = localMetric === "auto" ? (baseline.primaryResult ?? baseline.conversions) : baseline.conversions;
       const ov = applyOverrides(cr.id, {
-        conversions: baseline.primaryResult ?? baseline.conversions,
+        conversions: baseConversions,
         spend: cr.spend,
         ctr: cr.ctr,
         impressions: cr.impressions,
@@ -132,8 +133,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
 
   const totalMetric = allCreatives.reduce((sum, cr) => {
     const baseline = { ...cr, conversions: (cr as any)._computedConversions };
+    const baseConversions = localMetric === "auto" ? (baseline.primaryResult ?? baseline.conversions) : baseline.conversions;
     const ov = applyOverrides(cr.id, {
-      conversions: baseline.primaryResult ?? baseline.conversions,
+      conversions: baseConversions,
       spend: cr.spend, ctr: cr.ctr, impressions: cr.impressions, clicks: cr.clicks, roas: cr.roas
     }, overrides);
     return sum + getMetricValue(ov);

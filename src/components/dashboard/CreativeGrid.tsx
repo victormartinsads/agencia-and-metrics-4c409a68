@@ -85,33 +85,35 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     if (activeMetric === "impressions") return ov.impressions;
     if (activeMetric === "spend") return ov.spend;
     if (activeMetric === "roas") return ov.roas;
-    if (activeMetric === "conversions") return ov.conversions;
-    
-    // Proportional estimate for any custom Meta metric
+    return ov.conversions;
+  };
+
+  const getComputedConversions = (cr: any) => {
+    if (activeMetric === "clicks" || activeMetric === "impressions" || activeMetric === "spend" || activeMetric === "roas" || activeMetric === "conversions") {
+      return cr.conversions;
+    }
     const campaignTotal = getCustomPrimaryMetricValue(campaign, activeMetric);
     const campaignConvs = campaign.conversions || 1;
     const campaignClicks = campaign.clicks || 1;
-    
     if (campaignTotal === 0) return 0;
-    
-    const crConv = ov.conversions > 0
-      ? (ov.conversions / campaignConvs) * campaignTotal
-      : (ov.clicks / campaignClicks) * campaignTotal;
-      
-    return Math.round(crConv);
+    return cr.conversions > 0
+      ? (cr.conversions / campaignConvs) * campaignTotal
+      : (cr.clicks / campaignClicks) * campaignTotal;
   };
 
   const sorted = [...campaign.creatives]
     .map((cr) => {
+      const computedConv = Math.round(getComputedConversions(cr));
+      const baseConversions = localMetric === "auto" ? (cr.primaryResult ?? cr.conversions) : computedConv;
       const ov = applyOverrides(cr.id, {
-        conversions: cr.primaryResult ?? cr.conversions,
+        conversions: baseConversions,
         spend: cr.spend,
         ctr: cr.ctr,
         impressions: cr.impressions,
         clicks: cr.clicks,
         roas: cr.roas,
       }, overrides);
-      return { ...cr, _ov: ov };
+      return { ...cr, _ov: ov, _computedConversions: computedConv };
     })
     // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
     // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
@@ -140,8 +142,10 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
 
   const top3Total = sorted.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
   const totalMetric = campaign.creatives.reduce((sum, cr) => {
+    const computedConv = Math.round(getComputedConversions(cr));
+    const baseConversions = localMetric === "auto" ? (cr.primaryResult ?? cr.conversions) : computedConv;
     const ov = applyOverrides(cr.id, {
-      conversions: cr.primaryResult ?? cr.conversions,
+      conversions: baseConversions,
       spend: cr.spend, ctr: cr.ctr, impressions: cr.impressions, clicks: cr.clicks, roas: cr.roas
     }, overrides);
     return sum + getMetricValue(ov);
