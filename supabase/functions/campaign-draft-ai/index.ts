@@ -110,8 +110,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
 
     const claims = await getUserClaims(req);
     if (!claims) return unauthorized(corsHeaders);
@@ -119,14 +119,14 @@ Deno.serve(async (req) => {
 
     const systemPrompt = `Você é um especialista sênior em Meta Ads. Receberá um briefing do gestor e DEVE chamar a ferramenta build_campaign_structure com a melhor estrutura possível para cumprir o objetivo. Pense em: público (lookalike, interesses, retargeting), número de adsets para teste (geralmente 2-3), número de ads por adset (3 variações), copy persuasivo focado em benefício e prova, CTA correto. Use sempre português brasileiro. Se o briefing não especificar país, assuma BR. Se não especificar orçamento, use R$50/dia por adset.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-1.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       });
     }
     if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
+      return new Response(JSON.stringify({ error: "Créditos de IA esgotados ou erro de faturamento na conta Google." }), {
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

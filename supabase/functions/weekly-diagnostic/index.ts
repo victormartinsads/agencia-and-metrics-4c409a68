@@ -30,9 +30,9 @@ Deno.serve(async (req: Request) => {
   if (!(await hasAdminOrEditor(claims.sub))) return forbidden(corsHeaders, "Admin or editor role required");
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada nos secrets do Supabase. Acesse seu painel do Supabase e adicione esta chave." }), {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY não configurada nos secrets do Supabase. Acesse seu painel do Supabase e adicione esta chave." }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -44,14 +44,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-1.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: summary },
@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados na Lovable. Adicione créditos em Settings > Workspace > Usage." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados ou erro de faturamento na conta Google." }), {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

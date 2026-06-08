@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
 
   try {
     const { messages, context, model } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const systemPrompt = `Você é um especialista sênior em tráfego pago, estratégia de marketing e paid media (Meta Ads e Google Ads). Sua função é analisar dados de campanhas reais do gestor e sugerir otimizações práticas e acionáveis.
 
@@ -42,14 +42,14 @@ Diretrizes de resposta:
 Contexto das campanhas do cliente atual:
 ${context ? JSON.stringify(context, null, 2) : "Sem dados carregados ainda."}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: model || "google/gemini-2.5-pro",
+        model: "gemini-1.5-flash",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         stream: true,
       }),
@@ -63,7 +63,7 @@ ${context ? JSON.stringify(context, null, 2) : "Sem dados carregados ainda."}`;
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados ou erro de faturamento na conta Google." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

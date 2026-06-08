@@ -14,8 +14,8 @@ Deno.serve(async (req) => {
 
   try {
     const { message, currentSources, availableMetrics, sheetColumns } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const systemPrompt = `Você é um assistente que configura fontes de dados de um dashboard.
 Para cada métrica, o usuário pode escolher entre 3 fontes:
@@ -29,14 +29,14 @@ Configuração atual: ${JSON.stringify(currentSources)}
 
 Responda SEMPRE chamando a função update_sources com o objeto completo atualizado (mantendo configurações que não foram alteradas).`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message },
@@ -69,7 +69,7 @@ Responda SEMPRE chamando a função update_sources com o objeto completo atualiz
       });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos na workspace." }), {
+      return new Response(JSON.stringify({ error: "Créditos de IA esgotados ou erro de faturamento na conta Google." }), {
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
