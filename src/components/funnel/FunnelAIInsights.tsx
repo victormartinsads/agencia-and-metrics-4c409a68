@@ -15,7 +15,7 @@ interface Props {
 interface InsightCategory {
   title: string;
   icon: typeof TrendingUp;
-  insights: string[];
+  content: string;
 }
 
 interface ChatMessage {
@@ -117,6 +117,7 @@ Você DEVE obrigatoriamente usar a tool 'generate_insights'.
 Sua análise DEVE conter as seguintes categorias exatas no campo 'title' do JSON (uma para o geral, e uma para cada campanha):
 1. "Diagnóstico Geral do Funil": Faça o Mapa do Funil com o Gargalo Principal e os top problemas, focado nas 5 camadas.
 2. "Otimizações: [Nome da Campanha]": Para CADA campanha enviada no JSON, crie uma categoria dedicada. Dentro dessa categoria de campanha, entregue o plano de ação, a simulação e os alertas. Deduza o tipo da campanha pelo nome.
+MUITO IMPORTANTE: Escreva textos longos, ricos em detalhes e com múltiplos parágrafos dentro do campo 'content'. Use formatação Markdown (negrito, listas). Não seja resumido.
 `;
 
 export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
@@ -188,7 +189,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                 type: "function",
                 function: {
                   name: "generate_insights",
-                  description: "Return professional funnel analysis insights in 4 strict categories",
+                  description: "Return professional funnel analysis insights in strict categories",
                   parameters: {
                     type: "object",
                     properties: {
@@ -198,9 +199,9 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                           type: "object",
                           properties: {
                             title: { type: "string", description: "Use 'Diagnóstico Geral do Funil' or 'Otimizações: [Nome da Campanha]'" },
-                            insights: { type: "array", items: { type: "string" } },
+                            content: { type: "string", description: "Markdown text containing massive, deep analysis, multiple paragraphs and emojis" },
                           },
-                          required: ["title", "insights"],
+                          required: ["title", "content"],
                           additionalProperties: false,
                         },
                       },
@@ -323,8 +324,8 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
     if (fundo.length > meio.length * 2) funnel.push("Proporção desproporcional de campanhas de fundo vs meio — equilibre o funil.");
 
     return [
-      { title: "Diagnóstico Geral do Funil", icon: TrendingUp, insights: ["Métricas base dentro do padrão de performance aceitável.", ...performance] },
-      { title: "Otimizações Gerais", icon: Sparkles, insights: ["Continue acompanhando diariamente as campanhas.", ...creative, ...funnel] },
+      { title: "Diagnóstico Geral do Funil", icon: TrendingUp, content: ["Métricas base dentro do padrão de performance aceitável.", ...performance].join("\n\n") },
+      { title: "Otimizações Gerais", icon: Sparkles, content: ["Continue acompanhando diariamente as campanhas.", ...creative, ...funnel].join("\n\n") },
     ];
   };
 
@@ -371,13 +372,8 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                     <Icon className="h-3.5 w-3.5" />
                     {category.title}
                   </h4>
-                  <div className="space-y-3">
-                    {category.insights.map((insight, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <span className="text-primary mt-1 flex-shrink-0 text-[10px]">■</span>
-                        <span className="text-muted-foreground text-xs leading-relaxed">{insight}</span>
-                      </div>
-                    ))}
+                  <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap pl-1 border-l-2 border-primary/20 bg-muted/10 p-3 rounded-r-md">
+                    {category.content}
                   </div>
                 </div>
               );
