@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Brain, Loader2, Sparkles, TrendingUp, Palette, GitBranch } from "lucide-react";
+import { Brain, Loader2, Sparkles, TrendingUp, Palette, GitBranch, Send } from "lucide-react";
 import { FunnelMetrics, FunnelCampaign } from "@/hooks/useFunnelAnalysis";
 
 interface Props {
@@ -16,6 +16,11 @@ interface InsightCategory {
   title: string;
   icon: typeof TrendingUp;
   insights: string[];
+}
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
 }
 
 const SYSTEM_PROMPT = `Você é um Gestor de Tráfego Pago especialista de alto nível, com mais de 10 anos de experiência real em Meta Ads e Google Ads, focado em infoprodutos, ecommerce e geração de leads.
@@ -120,6 +125,11 @@ Sua análise DEVE conter as seguintes categorias exatas no campo 'title' do JSON
 export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
   const [insights, setInsights] = useState<InsightCategory[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState<any>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const generateInsights = async () => {
     setLoading(true);
@@ -159,6 +169,7 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         meio: campaigns.filter((c) => c.funnelStage === "meio").map(mapCampaignData),
         fundo: campaigns.filter((c) => c.funnelStage === "fundo").map(mapCampaignData),
       };
+      setSummaryData(summary);
 
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -234,6 +245,52 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       setInsights(generateFallbackInsights());
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!geminiKey) throw new Error("Chave API não configurada");
+
+      const systemRole: ChatMessage = { 
+        role: "system", 
+        content: SYSTEM_PROMPT.split("REGRAS ESTRITAS DE SISTEMA")[0] + "\nAGORA ATUE COMO UM COPILOTO EM CHAT. Você já analisou os dados abaixo e forneceu o diagnóstico listado. Responda as dúvidas do usuário de forma direta, mantendo a persona de Especialista Sênior em Meta Ads. Use linguagem coloquial mas técnica, e emojis.\n\nDados:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico anterior:\n" + JSON.stringify(insights)
+      };
+
+      const payload = [systemRole, ...newMessages];
+
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${geminiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gemini-1.5-pro",
+          messages: payload,
+          temperature: 0.6,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Falha na API do Chat");
+      const data = await response.json();
+      const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
+
+      setMessages([...newMessages, { role: "assistant", content: aiReply }]);
+    } catch (e) {
+      console.error("Chat error:", e);
+      setMessages([...newMessages, { role: "assistant", content: "⚠️ Desculpe, não consegui processar a resposta agora." }]);
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -323,6 +380,49 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                 </div>
               );
             })}
+
+            {/* Chat Section */}
+            <div className="mt-8 pt-6 border-t border-border">
+              <h4 className="text-sm font-semibold mb-4 text-card-foreground flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" />
+                Copiloto (Chat)
+              </h4>
+              
+              {messages.length > 0 && (
+                <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-lg p-3 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] rounded-lg p-3 text-sm bg-muted text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendChatMessage()}
+                  placeholder="Faça uma pergunta sobre a análise..."
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={chatLoading}
+                />
+                <Button size="icon" onClick={sendChatMessage} disabled={chatLoading || !chatInput.trim()}>
+                  {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
           </div>
         )}
       </div>
