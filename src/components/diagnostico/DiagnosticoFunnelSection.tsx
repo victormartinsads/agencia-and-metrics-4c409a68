@@ -3,7 +3,7 @@ import { Campaign } from "@/data/mockMetaData";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { CreativeGrid, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
-import { Layers, Target, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
+import { Layers, Target, Eye, EyeOff, Pencil, Check, X, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MetricsCustomizer } from "./MetricsCustomizer";
@@ -29,6 +29,7 @@ import { useFunnelPrimaryMetrics, useSaveFunnelPrimaryMetric, PRIMARY_METRIC_OPT
 import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
+import { CampaignDrillDown } from "@/components/gestor/CampaignDrillDown";
 
 
 interface Props {
@@ -143,6 +144,8 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
       toast.error("Erro ao salvar o nome");
     }
   };
+
+  const [drillDownCampaign, setDrillDownCampaign] = useState<{ id: string; name: string } | null>(null);
 
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [campaignDraft, setCampaignDraft] = useState("");
@@ -312,13 +315,24 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                   {displaySectionTitle}
                 </h3>
                 {clientId && (
-                  <button
-                    onClick={handleEditTitleClick}
-                    className="opacity-0 group-hover/title:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1"
-                    title="Editar nome"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  <>
+                    <button
+                      onClick={handleEditTitleClick}
+                      className="opacity-0 group-hover/title:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1"
+                      title="Editar nome"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    {!group.isFunnel && group.campaigns[0] && (
+                      <button
+                        onClick={() => setDrillDownCampaign({ id: group.campaigns[0].id, name: group.campaigns[0].name })}
+                        className="opacity-0 group-hover/title:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1"
+                        title="Gerenciar Campanha"
+                      >
+                        <Settings2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -470,13 +484,22 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                             <div className="flex items-center gap-2 group/camp">
                               <span className="truncate max-w-[230px] block">{customCampName}</span>
                               {clientId && (
-                                <button
-                                  onClick={() => handleStartEditCampaign(c.id, customCampName)}
-                                  className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
-                                  title="Editar nome"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleStartEditCampaign(c.id, customCampName)}
+                                    className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
+                                    title="Editar nome"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDrillDownCampaign({ id: c.id, name: customCampName })}
+                                    className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
+                                    title="Gerenciar Campanha"
+                                  >
+                                    <Settings2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           )}
@@ -567,6 +590,18 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
           totalPurchaseValue={totalPurchaseValue}
         />
       </div>
+
+      {drillDownCampaign && clientId && (
+        <CampaignDrillDown
+          open={!!drillDownCampaign}
+          onOpenChange={(v) => !v && setDrillDownCampaign(null)}
+          clientId={clientId}
+          campaignId={drillDownCampaign.id}
+          campaignName={drillDownCampaign.name}
+          datePreset={datePreset}
+          currencySymbol={currencySymbol}
+        />
+      )}
     </section>
   );
 }

@@ -18,6 +18,18 @@ interface InsightCategory {
   insights: string[];
 }
 
+const SYSTEM_PROMPT = `Você é um Analista de Mídia Pleno/Sênior especialista em Meta Ads.
+Analise os dados do funil fornecidos e gere um diagnóstico COMPLETO e PROFISSIONAL em português brasileiro.
+
+Sua análise DEVE conter exatamente estas 4 categorias, usando a tool 'generate_insights':
+1. Fortalezas (O que está bom) - Destaque métricas de alta performance, CTR alto, ROAS bom.
+2. Gargalos (O que está ruim) - Identifique com precisão onde o funil trava (CPA alto, CTR baixo, frequência excessiva).
+3. Oportunidades (O que melhorar) - Sugestões táticas de realocação de verba, novos testes.
+4. Plano de Ação (Como melhorar) - Instruções diretas passo a passo (ex: 'Pausar campanha X', 'Aumentar budget em 20%').
+
+Seja extremamente analítico. Use os NÚMEROS REAIS dos dados fornecidos nas suas explicações. Não seja genérico.
+Retorne de 2 a 4 insights poderosos para CADA categoria.`;
+
 export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
   const [insights, setInsights] = useState<InsightCategory[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,6 +54,66 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         fundo: campaigns.filter((c) => c.funnelStage === "fundo").map((c) => ({ name: c.name, spend: c.spend, ctr: c.ctr, roas: c.roas, frequency: c.frequency })),
       };
 
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+      if (geminiKey) {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${geminiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gemini-1.5-pro",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: `Dados consolidados do Funil:\n${JSON.stringify(summary, null, 2)}` },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "generate_insights",
+                  description: "Return professional funnel analysis insights in 4 strict categories",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      insights: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            title: { type: "string", enum: ["Fortalezas", "Gargalos", "Oportunidades", "Plano de Ação"] },
+                            insights: { type: "array", items: { type: "string" } },
+                          },
+                          required: ["title", "insights"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["insights"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+            ],
+            tool_choice: { type: "function", function: { name: "generate_insights" } },
+            temperature: 0.2,
+          }),
+        });
+
+        if (!response.ok) throw new Error("Falha na API do Gemini");
+        const aiData = await response.json();
+        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+        
+        if (toolCall?.function?.arguments) {
+          const parsed = JSON.parse(toolCall.function.arguments);
+          setInsights(parsed.insights || []);
+          return;
+        }
+      }
+
+      // Fallback para edge function antiga caso não tenha a chave no frontend
       const { data, error } = await supabase.functions.invoke("funnel-insights", {
         body: { summary },
       });
@@ -86,13 +158,18 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
     if (fundo.length > meio.length * 2) funnel.push("Proporção desproporcional de campanhas de fundo vs meio — equilibre o funil.");
 
     return [
-      { title: "Performance", icon: TrendingUp, insights: performance.length > 0 ? performance : ["Métricas dentro dos parâmetros normais."] },
-      { title: "Criativo", icon: Palette, insights: creative.length > 0 ? creative : ["Criativos com performance adequada."] },
-      { title: "Estrutura de Funil", icon: GitBranch, insights: funnel.length > 0 ? funnel : ["Estrutura de funil equilibrada."] },
+      { title: "Fortalezas", icon: TrendingUp, insights: performance.length > 0 ? performance : ["Métricas base dentro do padrão de performance aceitável."] },
+      { title: "Gargalos", icon: Brain, insights: creative.length > 0 ? creative : ["Não foram encontrados grandes gargalos técnicos."] },
+      { title: "Oportunidades", icon: Sparkles, insights: funnel.length > 0 ? funnel : ["Mantenha as otimizações em andamento."] },
+      { title: "Plano de Ação", icon: GitBranch, insights: ["Continue acompanhando diariamente as métricas."] },
     ];
   };
 
   const iconMap: Record<string, typeof TrendingUp> = {
+    Fortalezas: TrendingUp,
+    Gargalos: Brain,
+    Oportunidades: Sparkles,
+    "Plano de Ação": GitBranch,
     Performance: TrendingUp,
     Criativo: Palette,
     "Estrutura de Funil": GitBranch,
@@ -136,17 +213,14 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
                     <Icon className="h-3.5 w-3.5" />
                     {category.title}
                   </h4>
-                  {category.insights.map((insight, ii) => (
-                    <motion.div
-                      key={ii}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: (ci * 3 + ii) * 0.05 }}
-                      className="p-3 rounded-lg bg-primary/5 border border-primary/10"
-                    >
-                      <p className="text-xs text-card-foreground leading-relaxed">{insight}</p>
-                    </motion.div>
-                  ))}
+                  <div className="space-y-3">
+                    {category.insights.map((insight, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <span className="text-primary mt-1 flex-shrink-0 text-[10px]">■</span>
+                        <span className="text-muted-foreground text-xs leading-relaxed">{insight}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
