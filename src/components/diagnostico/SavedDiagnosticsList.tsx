@@ -15,6 +15,8 @@ import { DiagnosticoGoogleFunnelSection } from "./DiagnosticoGoogleFunnelSection
 import { DiagnosticoGoogleCampaignsSection } from "./DiagnosticoGoogleCampaignsSection";
 import { formatMetricValue } from "@/lib/metaMetrics";
 import { getMetricValue } from "@/lib/metaMetricCatalog";
+import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
+import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
 
 interface Props {
   clientId: string;
@@ -221,6 +223,7 @@ function SavedDiagnosticViewer({
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
             {groups.map(g => {
+              const { classified, metrics, totalSpend, totalPurchaseValue } = useFunnelAnalysis(g.campaigns);
               const totals = g.campaigns.reduce((acc, c) => {
                 acc.spend += c.spend; acc.impressions += c.impressions;
                 acc.clicks += c.clicks; acc.conversions += c.conversions;
@@ -278,6 +281,15 @@ function SavedDiagnosticViewer({
                       <Mini label="CTR" value={getMetricValueAndOverride("ctr").value} />
                     </div>
                   )}
+
+                  <div className="print:hidden mt-6">
+                    <FunnelAIInsights 
+                      campaigns={classified}
+                      metrics={metrics}
+                      totalSpend={totalSpend}
+                      totalPurchaseValue={totalPurchaseValue}
+                    />
+                  </div>
                 </div>
               );
             })}
