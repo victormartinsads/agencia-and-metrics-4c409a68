@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, Sparkles, TrendingUp, GitBranch } from "lucide-react";
+import { Brain, Loader2, Sparkles, TrendingUp, GitBranch, Send } from "lucide-react";
 import { FunnelMetrics, FunnelCampaign } from "@/hooks/useFunnelAnalysis";
 import { ExpertEngine, InsightCategory } from "@/utils/ExpertEngine";
 
@@ -11,13 +11,65 @@ interface Props {
   totalPurchaseValue: number;
 }
 
-export function FunnelAIInsights({ campaigns, metrics }: Props) {
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+const SYSTEM_PROMPT = `Você é um Gestor de Tráfego Pago especialista de alto nível.
+Sua função é atuar como um Copiloto em formato de chat. O usuário já recebeu um diagnóstico matemático de regras na tela.
+Responda às dúvidas do usuário sobre as campanhas e o funil de forma direta, mantendo a persona de Especialista Sênior em Meta Ads.
+Use linguagem coloquial mas técnica, e emojis.`;
+
+export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchaseValue }: Props) {
   const [insights, setInsights] = useState<InsightCategory[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState<any>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const generateInsights = async () => {
     setLoading(true);
     try {
+      const mapCampaignData = (c: FunnelCampaign) => ({
+        name: c.name,
+        objective: c.objective || c.primaryResultKey,
+        spend: c.spend,
+        impressions: c.impressions,
+        clicks: c.clicks,
+        ctr: c.ctr,
+        cpc: c.clicks > 0 ? c.spend / c.clicks : 0,
+        cpm: c.impressions > 0 ? c.spend / c.impressions * 1000 : 0,
+        landingPageViews: c.landingPageViews,
+        addToCart: c.addToCart,
+        initiateCheckout: c.initiateCheckout,
+        purchases: c.purchases,
+        leads: c.actionBreakdown?.['lead'] || 0,
+        roas: c.roas,
+        cpa: c.conversions > 0 ? c.spend / c.conversions : 0,
+        frequency: c.frequency,
+      });
+
+      const summary = {
+        totalCampaigns: campaigns.length,
+        activeCampaigns: campaigns.filter((c) => c.status === "active").length,
+        totalSpend: totalSpend.toFixed(2),
+        totalRevenue: totalPurchaseValue.toFixed(2),
+        roas: metrics.roas.toFixed(2),
+        cpa: metrics.cpa.toFixed(2),
+        ctrRate: metrics.ctrRate.toFixed(2),
+        lpRate: metrics.lpRate.toFixed(2),
+        atcRate: metrics.atcRate.toFixed(2),
+        checkoutRate: metrics.checkoutRate.toFixed(2),
+        purchaseRate: metrics.purchaseRate.toFixed(2),
+        topo: campaigns.filter((c) => c.funnelStage === "topo").map(mapCampaignData),
+        meio: campaigns.filter((c) => c.funnelStage === "meio").map(mapCampaignData),
+        fundo: campaigns.filter((c) => c.funnelStage === "fundo").map(mapCampaignData),
+      };
+      setSummaryData(summary);
+
       // Simulando um tempo de "processamento" de 1 segundo para dar feedback visual de análise
       await new Promise(resolve => setTimeout(resolve, 800));
       
@@ -27,6 +79,58 @@ export function FunnelAIInsights({ campaigns, metrics }: Props) {
       console.error("Expert Engine error:", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
+      if (!geminiKey) throw new Error("Chave API não configurada. Configure a VITE_GEMINI_API_KEY.");
+
+      const systemInstruction = SYSTEM_PROMPT + "\n\nDados do Funil:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico Baseado em Regras:\n" + JSON.stringify(insights) + "\n\n---\nPERGUNTA DO USUÁRIO:\n";
+
+      const payload = newMessages.map((msg, idx) => {
+        if (idx === 0 && msg.role === "user") {
+          return { role: "user", content: systemInstruction + msg.content };
+        }
+        return msg;
+      });
+
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${geminiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gemini-1.5-pro",
+          messages: payload,
+          temperature: 0.6,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Falha na API (${response.status}): ${errorText}`);
+      }
+      
+      const data = await response.json();
+      const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
+
+      setMessages([...newMessages, { role: "assistant", content: aiReply }]);
+    } catch (e: any) {
+      console.error("Chat error:", e);
+      setMessages([...newMessages, { role: "assistant", content: `⚠️ Desculpe, não consegui processar a resposta agora.\nDetalhe: ${e.message}` }]);
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -79,9 +183,47 @@ export function FunnelAIInsights({ campaigns, metrics }: Props) {
                 </div>
               );
             })}
+            {/* Chat Section Híbrido */}
+            <div className="mt-8 pt-6 border-t border-border">
+              <h4 className="text-sm font-semibold mb-4 text-card-foreground flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" />
+                Copiloto IA (Pesquisas e Dúvidas)
+              </h4>
+              
+              {messages.length > 0 && (
+                <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-lg p-3 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] rounded-lg p-3 text-sm bg-muted text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-
-
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendChatMessage()}
+                  placeholder="Ex: Como eu otimizo o ROAS da campanha X?"
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={chatLoading}
+                />
+                <Button size="icon" onClick={sendChatMessage} disabled={chatLoading || !chatInput.trim()}>
+                  {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
