@@ -278,14 +278,18 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         }),
       });
 
-      if (!response.ok) throw new Error("Falha na API do Chat");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Falha na API (${response.status}): ${errorText}`);
+      }
+      
       const data = await response.json();
       const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
 
       setMessages([...newMessages, { role: "assistant", content: aiReply }]);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Chat error:", e);
-      setMessages([...newMessages, { role: "assistant", content: "⚠️ Desculpe, não consegui processar a resposta agora." }]);
+      setMessages([...newMessages, { role: "assistant", content: `⚠️ Desculpe, não consegui processar a resposta agora.\nDetalhe: ${e.message}` }]);
     } finally {
       setChatLoading(false);
     }
