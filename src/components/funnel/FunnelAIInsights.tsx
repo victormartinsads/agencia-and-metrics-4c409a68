@@ -266,10 +266,11 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
         parts: [{ text: m.content }]
       }));
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiKey}`, {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": geminiKey,
         },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemInstruction }] },
