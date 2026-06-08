@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { useFunnelPrimaryMetrics, useSaveFunnelPrimaryMetric, PRIMARY_METRIC_OPTIONS } from "@/hooks/useFunnelPrimaryMetric";
 import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
+import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
+import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
 
 
 interface Props {
@@ -86,6 +88,8 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
   }, [group]);
 
   const adaptedCampaigns = useAdaptedCampaigns(group.campaigns, primaryMetrics);
+
+  const { classified, metrics, totalSpend, totalPurchaseValue } = useFunnelAnalysis(adaptedCampaigns);
 
   const totals = useMemo(() => aggregateCampaignMetrics(adaptedCampaigns), [adaptedCampaigns]);
   const adsets = useMemo(() => aggregateAdsets(adaptedCampaigns), [adaptedCampaigns]);
@@ -553,6 +557,15 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
         ) : (
           <CreativeGrid campaign={adaptedCampaigns[0]} clientId={clientId} currencySymbol={currencySymbol} selectedMetricKey={selectedMetricKey} />
         )}
+      </div>
+
+      <div className="print:hidden mt-6">
+        <FunnelAIInsights 
+          campaigns={classified}
+          metrics={metrics}
+          totalSpend={totalSpend}
+          totalPurchaseValue={totalPurchaseValue}
+        />
       </div>
     </section>
   );
