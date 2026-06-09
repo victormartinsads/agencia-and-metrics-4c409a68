@@ -3,7 +3,9 @@ import { useGestorNotionData, useSaveGestorNotionData } from "@/hooks/useGestorD
 import { Loader2 } from "lucide-react";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
+import "@mantine/core/styles.css";
 import { BlockNoteView } from "@blocknote/mantine";
+import { MantineProvider } from "@mantine/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { PartialBlock } from "@blocknote/core";
 
@@ -11,9 +13,8 @@ import { PartialBlock } from "@blocknote/core";
 function InnerEditor({ initialContent, gestorId, canManage, saveNotionData }: any) {
   // Cria o editor apenas UMA VEZ na montagem usando o initialContent.
   // Sem array de dependências para não recriar e causar loop infinito no React Query.
-  const editor = useCreateBlockNote({
-    initialContent: initialContent,
-  });
+  const options = initialContent ? { initialContent } : {};
+  const editor = useCreateBlockNote(options);
 
   const handleChange = () => {
     if (!editor) return;
@@ -21,12 +22,14 @@ function InnerEditor({ initialContent, gestorId, canManage, saveNotionData }: an
   };
 
   return (
-    <BlockNoteView
-      editor={editor}
-      editable={canManage}
-      onChange={handleChange}
-      theme="dark"
-    />
+    <MantineProvider>
+      <BlockNoteView
+        editor={editor}
+        editable={canManage}
+        onChange={handleChange}
+        theme="dark"
+      />
+    </MantineProvider>
   );
 }
 
