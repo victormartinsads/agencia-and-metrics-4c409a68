@@ -50,6 +50,7 @@ export interface GestorDiaryCalendarEvent {
   gestor_id: string;
   date: string;
   title: string;
+  meet_link?: string;
   status: "pending" | "done";
   created_at: string;
 }
@@ -609,6 +610,7 @@ export function useManageGestorCalendar() {
               gestor_id: gestorId,
               date: event.date,
               title: event.title,
+              meet_link: event.meet_link,
               status: "pending",
             })
             .select()
@@ -619,7 +621,7 @@ export function useManageGestorCalendar() {
           if (!event.id) throw new Error("ID is required for updates");
           const { data, error } = await (supabase as any)
             .from("gestor_diary_calendar")
-            .update({ status: event.status, title: event.title })
+            .update({ status: event.status, title: event.title, meet_link: event.meet_link, date: event.date })
             .eq("id", event.id)
             .select()
             .single();
@@ -640,6 +642,7 @@ export function useManageGestorCalendar() {
               gestor_id: gestorId,
               date: event.date || new Date().toISOString().split("T")[0],
               title: event.title || "",
+              meet_link: event.meet_link,
               status: "pending",
               created_at: new Date().toISOString(),
             };

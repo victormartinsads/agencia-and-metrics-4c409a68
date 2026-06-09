@@ -172,6 +172,52 @@ export default function DiarioDoGestor() {
   const { data: calendarEvents = [] } = useGestorCalendar(activeGestorId);
   const manageCalendar = useManageGestorCalendar();
 
+  const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState<Partial<GestorDiaryCalendarEvent> | null>(null);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+
+  const handleOpenMeetingDialog = (meeting?: GestorDiaryCalendarEvent) => {
+    if (meeting) {
+      setEditingMeeting(meeting);
+      setMeetingTitle(meeting.title || "");
+      setMeetingDate(meeting.date ? meeting.date.split("T")[0] : "");
+      setMeetingLink(meeting.meet_link || "");
+    } else {
+      setEditingMeeting(null);
+      setMeetingTitle("");
+      setMeetingDate("");
+      setMeetingLink("");
+    }
+    setIsMeetingDialogOpen(true);
+  };
+
+  const handleSaveMeeting = () => {
+    if (!meetingTitle || !meetingDate) {
+      toast.error("Título e Data são obrigatórios!");
+      return;
+    }
+    
+    manageCalendar.mutate({
+      action: editingMeeting ? "update" : "insert",
+      event: {
+        id: editingMeeting?.id,
+        gestor_id: activeGestorId,
+        title: meetingTitle,
+        date: meetingDate,
+        meet_link: meetingLink,
+        status: editingMeeting?.status || "pending",
+      }
+    }, {
+      onSuccess: () => {
+        toast.success("Reunião salva!");
+        setIsMeetingDialogOpen(false);
+      },
+      onError: (err) => toast.error(`Erro: ${err.message}`)
+    });
+  };
+
   const { data: profileMeta } = useGestorProfileMeta(activeGestorId);
   const saveProfileMeta = useSaveGestorProfileMeta();
 
@@ -306,6 +352,10 @@ export default function DiarioDoGestor() {
         status: status,
         client_id: clientObj.id,
       },
+    }, {
+      onError: (err) => {
+        toast.error(`Erro ao vincular: ${err.message}`);
+      }
     });
     setSelectedClientToLink("");
   };
@@ -554,106 +604,110 @@ export default function DiarioDoGestor() {
 
           <div className="w-full border-t border-border/40 my-8"></div>
 
-          <Tabs defaultValue="ativos" className="w-full space-y-6">
-            <TabsList className="bg-muted/30 p-1 w-full flex justify-start border border-border/50">
-              <TabsTrigger value="ativos" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
-                <Users className="h-4 w-4" /> Clientes Ativos
-              </TabsTrigger>
-              <TabsTrigger value="pausados" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
-                <UserX className="h-4 w-4" /> Clientes Pausados
-              </TabsTrigger>
-              <TabsTrigger value="diario" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
-                <ClipboardList className="h-4 w-4" /> Tarefa Diária
-              </TabsTrigger>
-            </TabsList>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1.2fr] xl:grid-cols-[2fr_1fr] gap-8">
+            <div className="space-y-6">
+              <Tabs defaultValue="ativos" className="w-full space-y-6">
+                <TabsList className="bg-muted/30 p-1 w-full flex justify-start border border-border/50">
+                  <TabsTrigger value="ativos" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
+                    <Users className="h-4 w-4" /> Clientes Ativos
+                  </TabsTrigger>
+                  <TabsTrigger value="pausados" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
+                    <UserX className="h-4 w-4" /> Clientes Pausados
+                  </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="ativos" className="space-y-6 outline-none focus-visible:ring-0">
-              {/* Add Client Bar */}
-              <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
-                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                  <Plus className="h-4 w-4" /> Adicionar Cliente Ativo:
-                </span>
-                <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
-                  <SelectTrigger className="h-8 w-[250px] text-xs">
-                    <SelectValue placeholder="Selecione um cliente..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {globalClients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" className="h-8 text-xs" onClick={() => handleAddClient("Em andamento")}>Vincular Cliente</Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gestorClients.filter((c: any) => c.status !== "Pausado").length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
-                    Nenhum cliente ativo vinculado a este gestor.
+                <TabsContent value="ativos" className="space-y-6 outline-none focus-visible:ring-0">
+                  {/* Add Client Bar */}
+                  <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                      <Plus className="h-4 w-4" /> Adicionar Cliente Ativo:
+                    </span>
+                    <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                      <SelectTrigger className="h-8 w-[250px] text-xs">
+                        <SelectValue placeholder="Selecione um cliente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {globalClients.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => handleAddClient("Em andamento")}>Vincular Cliente</Button>
                   </div>
-                ) : (
-                  gestorClients
-                    .filter((c: any) => c.status !== "Pausado")
-                    .map((c: any) => (
-                      <ClientCard 
-                        key={c.client_id} 
-                        gestorId={activeGestorId} 
-                        clientId={c.client_id} 
-                        clientName={c.client_name} 
-                        clientStatus={c.status}
-                        isPaused={false}
-                      />
-                    ))
-                )}
-              </div>
-            </TabsContent>
 
-            <TabsContent value="pausados" className="space-y-6 outline-none focus-visible:ring-0">
-              {/* Add Paused Client Bar */}
-              <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
-                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                  <Plus className="h-4 w-4" /> Adicionar Cliente Pausado:
-                </span>
-                <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
-                  <SelectTrigger className="h-8 w-[250px] text-xs">
-                    <SelectValue placeholder="Selecione um cliente..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {globalClients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => handleAddClient("Pausado")}>Vincular Cliente Pausado</Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gestorClients.filter((c: any) => c.status === "Pausado").length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
-                    Nenhum cliente pausado.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {gestorClients.filter((c: any) => c.status !== "Pausado").length === 0 ? (
+                      <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
+                        Nenhum cliente ativo vinculado a este gestor.
+                      </div>
+                    ) : (
+                      gestorClients
+                        .filter((c: any) => c.status !== "Pausado")
+                        .map((c: any) => (
+                          <ClientCard 
+                            key={c.client_id} 
+                            gestorId={activeGestorId} 
+                            clientId={c.client_id} 
+                            clientName={c.client_name} 
+                            clientStatus={c.status}
+                            isPaused={false}
+                          />
+                        ))
+                    )}
                   </div>
-                ) : (
-                  gestorClients
-                    .filter((c: any) => c.status === "Pausado")
-                    .map((c: any) => (
-                      <ClientCard 
-                        key={c.client_id} 
-                        gestorId={activeGestorId} 
-                        clientId={c.client_id} 
-                        clientName={c.client_name} 
-                        clientStatus={c.status}
-                        isPaused={true}
-                      />
-                    ))
-                )}
-              </div>
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="diario" className="outline-none focus-visible:ring-0">
-              {/* Main Content: Gestor Notion Template for Daily Tasks */}
+                <TabsContent value="pausados" className="space-y-6 outline-none focus-visible:ring-0">
+                  {/* Add Paused Client Bar */}
+                  <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                      <Plus className="h-4 w-4" /> Adicionar Cliente Pausado:
+                    </span>
+                    <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                      <SelectTrigger className="h-8 w-[250px] text-xs">
+                        <SelectValue placeholder="Selecione um cliente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {globalClients.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => handleAddClient("Pausado")}>Vincular Cliente Pausado</Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {gestorClients.filter((c: any) => c.status === "Pausado").length === 0 ? (
+                      <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
+                        Nenhum cliente pausado.
+                      </div>
+                    ) : (
+                      gestorClients
+                        .filter((c: any) => c.status === "Pausado")
+                        .map((c: any) => (
+                          <ClientCard 
+                            key={c.client_id} 
+                            gestorId={activeGestorId} 
+                            clientId={c.client_id} 
+                            clientName={c.client_name} 
+                            clientStatus={c.status}
+                            isPaused={true}
+                          />
+                        ))
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 bg-card border border-border/50 px-4 py-3 rounded-lg shadow-sm">
+                <ClipboardList className="h-5 w-5 text-emerald-500" />
+                <h2 className="text-lg font-bold tracking-tight">Tarefa Diária</h2>
+              </div>
               <GestorNotionTemplate gestorId={activeGestorId} canManage={canManageOthers} />
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
 
           <div className="w-full border-t border-border/40 my-8"></div>
             
@@ -663,6 +717,48 @@ export default function DiarioDoGestor() {
                 <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                   <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> REUNIÕES
                 </h3>
+                <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => handleOpenMeetingDialog()}>
+                      <Plus className="h-4 w-4 mr-1" /> Nova Reunião
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>{editingMeeting ? "Editar Reunião" : "Nova Reunião"}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Título da Reunião</Label>
+                        <Input 
+                          placeholder="Ex: Alinhamento Estratégico" 
+                          value={meetingTitle}
+                          onChange={(e) => setMeetingTitle(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data</Label>
+                        <Input 
+                          type="date"
+                          value={meetingDate}
+                          onChange={(e) => setMeetingDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Link do Meet (opcional)</Label>
+                        <Input 
+                          placeholder="https://meet.google.com/..." 
+                          value={meetingLink}
+                          onChange={(e) => setMeetingLink(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setIsMeetingDialogOpen(false)}>Cancelar</Button>
+                      <Button onClick={handleSaveMeeting}>Salvar</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               
               <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
@@ -672,6 +768,7 @@ export default function DiarioDoGestor() {
                       <th className="font-medium p-2.5">Aa Título</th>
                       <th className="font-medium p-2.5">Data</th>
                       <th className="font-medium p-2.5">Status</th>
+                      <th className="font-medium p-2.5 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -695,6 +792,16 @@ export default function DiarioDoGestor() {
                             ) : (
                               <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20">Pendente</Badge>
                             )}
+                          </td>
+                          <td className="p-2.5 flex items-center justify-end gap-2">
+                            {ev.meet_link && (
+                              <a href={ev.meet_link} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                                Acessar Meet
+                              </a>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => handleOpenMeetingDialog(ev)}>
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </Button>
                           </td>
                         </tr>
                       ))
