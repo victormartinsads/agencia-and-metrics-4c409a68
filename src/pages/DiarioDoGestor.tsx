@@ -22,6 +22,8 @@ import {
   type GestorDiaryLog,
   type GestorDiaryClient,
   type GestorDiaryCalendarEvent,
+  useGestorProfileMeta,
+  useSaveGestorProfileMeta,
 } from "@/hooks/useGestorDiary";
 import { useGestorAssignments } from "@/hooks/useGestorAssignments";
 import { useMembers } from "@/hooks/useMembers";
@@ -64,9 +66,12 @@ import {
   ClipboardList,
   Users,
   UserX,
+  Edit3,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ClientCard from "@/components/gestor/ClientCard";
 
 export default function DiarioDoGestor() {
@@ -166,6 +171,9 @@ export default function DiarioDoGestor() {
 
   const { data: calendarEvents = [] } = useGestorCalendar(activeGestorId);
   const manageCalendar = useManageGestorCalendar();
+
+  const { data: profileMeta } = useGestorProfileMeta(activeGestorId);
+  const saveProfileMeta = useSaveGestorProfileMeta();
 
   // ----------------------------------------------------
   // SUB-COMPONENTS/HANDLERS
@@ -282,8 +290,7 @@ export default function DiarioDoGestor() {
 
   // Clients
   const [selectedClientToLink, setSelectedClientToLink] = useState("");
-  const [newClientStatus, setNewClientStatus] = useState<"Pendente" | "Configurando" | "Em andamento">("Pendente");
-  const handleAddClient = () => {
+  const handleAddClient = (status: "Em andamento" | "Pausado") => {
     if (!selectedClientToLink) {
       toast.error("Selecione um cliente para vincular!");
       return;
@@ -296,7 +303,7 @@ export default function DiarioDoGestor() {
       item: {
         gestor_id: activeGestorId,
         client_name: clientObj.name,
-        status: newClientStatus,
+        status: status,
         client_id: clientObj.id,
       },
     });
@@ -404,6 +411,40 @@ export default function DiarioDoGestor() {
     }
   };
 
+  // Profile Form States
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editSalary, setEditSalary] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+  const handleOpenEditProfile = () => {
+    setEditSalary(profileMeta?.salary || "");
+    setEditRole(profileMeta?.role_override || activeGestor.roleName);
+    setEditName(profileMeta?.name_override || activeGestor.name);
+    setEditEmail(profileMeta?.email_override || activeGestor.email);
+    setIsEditProfileOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    saveProfileMeta.mutate({
+      gestor_id: activeGestorId,
+      meta: {
+        salary: editSalary,
+        role_override: editRole,
+        name_override: editName,
+        email_override: editEmail,
+      }
+    });
+    setIsEditProfileOpen(false);
+    toast.success("Perfil atualizado localmente!");
+  };
+
+  const displayRole = profileMeta?.role_override || activeGestor.roleName;
+  const displayName = profileMeta?.name_override || activeGestor.name;
+  const displayEmail = profileMeta?.email_override || activeGestor.email;
+  const displaySalary = profileMeta?.salary || "R$ 0,00";
+
   return (
     <AppShell currentPage="manager" header={null}>
       <div className="min-h-screen bg-background pb-12">
@@ -447,29 +488,67 @@ export default function DiarioDoGestor() {
 
         <div className="px-8 md:px-16 mt-16 max-w-5xl space-y-6">
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
-            GESTOR DE TRÁFEGO - {activeGestor.name}
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
+              GESTOR DE TRÁFEGO - {displayName}
+            </h1>
+            
+            {canManageOthers && (
+              <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={handleOpenEditProfile} className="gap-2">
+                    <Edit3 className="h-4 w-4" /> Editar Perfil
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Editar Perfil do Gestor</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>E-mail</Label>
+                      <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cargo / Função</Label>
+                      <Input value={editRole} onChange={e => setEditRole(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Salário</Label>
+                      <Input value={editSalary} onChange={e => setEditSalary(e.target.value)} placeholder="R$ 3.000,00" />
+                    </div>
+                    <Button onClick={handleSaveProfile} className="w-full">Salvar Alterações</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
 
           {/* Properties */}
-          <div className="flex flex-col gap-1.5 text-[13px] max-w-md">
-            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
-              <span className="text-muted-foreground flex items-center gap-1.5"><Activity className="h-3.5 w-3.5"/> E-mail</span>
-              <span className="font-medium truncate">{activeGestor.email}</span>
+          <div className="flex flex-wrap gap-4 text-[13px] items-center">
+            <div className="flex items-center gap-2 bg-card border border-border/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground"><Activity className="h-4 w-4"/></span>
+              <span className="font-medium">{displayEmail}</span>
             </div>
-            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
-              <span className="text-muted-foreground flex items-center gap-1.5"><Settings className="h-3.5 w-3.5"/> Status</span>
-              <Badge variant="outline" className="text-[10px] w-fit uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                Ativo
-              </Badge>
+            <div className="flex items-center gap-2 bg-card border border-border/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground"><Settings className="h-4 w-4"/></span>
+              <Badge variant="outline" className="text-[10px] uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Ativo</Badge>
             </div>
-            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
-              <span className="text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5"/> Funções</span>
-              <span className="font-medium bg-muted/50 px-1.5 py-0.5 rounded text-xs">{activeGestor.roleName}</span>
+            <div className="flex items-center gap-2 bg-card border border-border/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground"><User className="h-4 w-4"/></span>
+              <span className="font-medium bg-muted/50 px-2 py-0.5 rounded text-xs">{displayRole}</span>
             </div>
-            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
-              <span className="text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5"/> Criado em</span>
+            <div className="flex items-center gap-2 bg-card border border-border/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground"><Clock className="h-4 w-4"/></span>
               <span className="font-medium text-xs">{activeGestor.created_at ? new Date(activeGestor.created_at).toLocaleDateString('pt-BR') : '-'}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-card border border-border/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground"><DollarSign className="h-4 w-4 text-emerald-500"/></span>
+              <span className="font-bold text-emerald-500">{displaySalary}</span>
             </div>
           </div>
 
@@ -489,6 +568,24 @@ export default function DiarioDoGestor() {
             </TabsList>
 
             <TabsContent value="ativos" className="space-y-6 outline-none focus-visible:ring-0">
+              {/* Add Client Bar */}
+              <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                  <Plus className="h-4 w-4" /> Adicionar Cliente Ativo:
+                </span>
+                <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                  <SelectTrigger className="h-8 w-[250px] text-xs">
+                    <SelectValue placeholder="Selecione um cliente do CRM..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {globalClients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" className="h-8 text-xs" onClick={() => handleAddClient("Em andamento")}>Vincular Cliente</Button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {gestorClients.filter((c: any) => c.status !== "Pausado").length === 0 ? (
                   <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
@@ -512,6 +609,24 @@ export default function DiarioDoGestor() {
             </TabsContent>
 
             <TabsContent value="pausados" className="space-y-6 outline-none focus-visible:ring-0">
+              {/* Add Paused Client Bar */}
+              <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                  <Plus className="h-4 w-4" /> Adicionar Cliente Pausado:
+                </span>
+                <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                  <SelectTrigger className="h-8 w-[250px] text-xs">
+                    <SelectValue placeholder="Selecione um cliente do CRM..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {globalClients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => handleAddClient("Pausado")}>Vincular Cliente Pausado</Button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {gestorClients.filter((c: any) => c.status === "Pausado").length === 0 ? (
                   <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">

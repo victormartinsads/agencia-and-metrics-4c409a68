@@ -40,7 +40,7 @@ export interface GestorDiaryClient {
   id: string;
   gestor_id: string;
   client_name: string;
-  status: "Pendente" | "Configurando" | "Em andamento";
+  status: "Pendente" | "Configurando" | "Em andamento" | "Pausado";
   created_at: string;
   client_id?: string;
 }
@@ -818,6 +818,104 @@ export function useSaveGestorClientMeta() {
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["gestor-client-meta", variables.gestor_id, variables.client_id] });
+    },
+  });
+}
+
+// ---- Novo Hook para Dados Adicionais do Perfil do Gestor (Salário, Cargo, etc) ----
+export interface GestorProfileMeta {
+  gestor_id: string;
+  salary: string;
+  role_override: string;
+  name_override: string;
+  email_override: string;
+}
+
+export function useGestorProfileMeta(gestorId: string) {
+  return useQuery({
+    queryKey: ["gestor-profile-meta", gestorId],
+    queryFn: async () => {
+      if (!gestorId) return null;
+      try {
+        const { data, error } = await (supabase as any)
+          .from("gestor_profile_meta")
+          .select("*")
+          .eq("gestor_id", gestorId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          return {
+            gestor_id: gestorId,
+            salary: "",
+            role_override: "",
+            name_override: "",
+            email_override: "",
+          } as GestorProfileMeta;
+        }
+        return data as GestorProfileMeta;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          return getLocal<GestorProfileMeta>(`profile_meta:${gestorId}`, {
+            gestor_id: gestorId,
+            salary: "",
+            role_override: "",
+            name_override: "",
+            email_override: "",
+          });
+        }
+        throw err;
+      }
+    },
+    enabled: !!gestorId,
+  });
+}
+
+export function useSaveGestorProfileMeta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ gestor_id, meta }: { gestor_id: string; meta: Partial<GestorProfileMeta> }) => {
+      try {
+        const { data: current } = await (supabase as any)
+          .from("gestor_profile_meta")
+          .select("*")
+          .eq("gestor_id", gestor_id)
+          .maybeSingle();
+
+        const newMeta = {
+          gestor_id,
+          salary: meta.salary ?? (current?.salary ?? ""),
+          role_override: meta.role_override ?? (current?.role_override ?? ""),
+          name_override: meta.name_override ?? (current?.name_override ?? ""),
+          email_override: meta.email_override ?? (current?.email_override ?? ""),
+        };
+
+        const { data: result, error } = await (supabase as any)
+          .from("gestor_profile_meta")
+          .upsert(newMeta, { onConflict: "gestor_id" })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return result;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const current = getLocal<GestorProfileMeta>(`profile_meta:${gestor_id}`, {
+            gestor_id,
+            salary: "",
+            role_override: "",
+            name_override: "",
+            email_override: "",
+          });
+          const updated = { ...current, ...meta };
+          setLocal(`profile_meta:${gestor_id}`, updated);
+          return updated;
+        }
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["gestor-profile-meta", variables.gestor_id] });
     },
   });
 }
