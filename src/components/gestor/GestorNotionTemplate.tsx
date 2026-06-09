@@ -1,11 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useGestorNotionData, useSaveGestorNotionData } from "@/hooks/useGestorDiary";
 import { Loader2 } from "lucide-react";
-import "@blocknote/core/style.css";
-import "@blocknote/mantine/style.css";
-import "@mantine/core/styles.css";
-import { BlockNoteView } from "@blocknote/mantine";
-import { MantineProvider } from "@mantine/core";
+import "@blocknote/shadcn/style.css";
+import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
 import { PartialBlock } from "@blocknote/core";
 
@@ -22,14 +19,12 @@ function InnerEditor({ initialContent, gestorId, canManage, saveNotionData }: an
   };
 
   return (
-    <MantineProvider>
-      <BlockNoteView
-        editor={editor}
-        editable={canManage}
-        onChange={handleChange}
-        theme="dark"
-      />
-    </MantineProvider>
+    <BlockNoteView
+      editor={editor}
+      editable={canManage}
+      onChange={handleChange}
+      theme="dark"
+    />
   );
 }
 
