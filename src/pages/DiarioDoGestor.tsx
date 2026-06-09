@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import AppShell from "@/components/layout/AppShell";
+import GestorNotionTemplate from "@/components/gestor/GestorNotionTemplate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useQuery } from "@tanstack/react-query";
@@ -400,18 +401,18 @@ export default function DiarioDoGestor() {
 
   return (
     <AppShell currentPage="manager" header={null}>
-      <div className="space-y-6 min-h-screen text-foreground pb-12">
+      <div className="min-h-screen bg-background pb-12">
         
         {/* Superior selector (Admins/CEOs/Gerentes only) */}
         {canManageOthers && gestoresList.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 bg-card border border-border/80 px-4 py-3 rounded-2xl max-w-md">
+          <div className="flex flex-wrap items-center gap-3 px-8 py-4 border-b border-border/40 bg-card/50">
             <User className="h-4 w-4 text-primary shrink-0" />
             <span className="text-xs font-semibold text-muted-foreground">Visualizando Diário de:</span>
             <Select
               value={activeGestorId}
               onValueChange={(val) => setSelectedGestorId(val)}
             >
-              <SelectTrigger className="h-8 flex-1 text-xs font-semibold bg-background">
+              <SelectTrigger className="h-8 w-[200px] text-xs font-semibold bg-background">
                 <SelectValue placeholder="Selecione um gestor..." />
               </SelectTrigger>
               <SelectContent>
@@ -425,522 +426,154 @@ export default function DiarioDoGestor() {
           </div>
         )}
 
-        {/* Gestor Header Card */}
-        <Card className="relative overflow-hidden border border-border bg-card p-6 shadow-sm">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/5 blur-[80px]" />
-          
-          <div className="flex flex-col sm:flex-row items-center gap-5">
-            <div className="h-20 w-20 shrink-0 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] ring-2 ring-primary/20 grid place-items-center text-2xl font-bold text-primary-foreground overflow-hidden">
+        {/* Notion Cover */}
+        <div className="h-48 w-full bg-[#2a2b2d] border-b border-border relative">
+          <img src="https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=2070&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-50" />
+          <div className="absolute -bottom-12 left-8 md:left-16">
+            <div className="h-24 w-24 shrink-0 rounded bg-card ring-4 ring-background grid place-items-center text-4xl font-bold text-foreground overflow-hidden shadow-sm">
               {activeGestor.avatar ? (
                 <img src={activeGestor.avatar} alt="avatar" className="h-full w-full object-cover" />
               ) : (
                 (activeGestor.name?.[0] || "G").toUpperCase()
               )}
             </div>
-            
-            <div className="text-center sm:text-left space-y-1.5 flex-1 min-w-0">
-              <h2 className="text-xl md:text-2xl font-extrabold tracking-wide uppercase">
-                GESTOR DE TRÁFEGO - {activeGestor.name}
-              </h2>
-              
-              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-semibold">{activeGestor.email}</span>
-                <span className="text-border">•</span>
-                <Badge variant="outline" className="text-[10px] uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                  {activeGestor.roleName}
-                </Badge>
-              </div>
-            </div>
           </div>
-        </Card>
-
-        {/* Main Three-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          
-          {/* COLUMN 1: CHECKLISTS (lg:span-4) */}
-          <div className="lg:col-span-4 space-y-5">
-            
-            {/* 1. Daily routine tasks */}
-            <Card className="border border-border/80 bg-card p-4 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                <div>
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
-                    📅 Checklist de Rotina
-                  </CardTitle>
-                  <CardDescription className="text-[10px] mt-0.5">Rotina e tarefas operacionais diárias</CardDescription>
-                </div>
-                <Badge className="text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                  {tasks.filter((t) => t.status === "done").length}/{tasks.length}
-                </Badge>
-              </div>
-
-              {/* Tasks List */}
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {tasks.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-4">Nenhuma tarefa criada.</p>
-                ) : (
-                  tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="group flex items-center justify-between gap-2 p-2 rounded-lg border border-border/40 bg-background/40 hover:bg-background/80 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleToggleTask(task)}
-                        className="flex items-center gap-2.5 text-left text-xs min-w-0"
-                      >
-                        {task.status === "done" ? (
-                          <CheckSquare className="h-4 w-4 text-primary shrink-0" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground shrink-0" />
-                        )}
-                        <span className={task.status === "done" ? "line-through text-muted-foreground truncate" : "truncate font-medium"}>
-                          {task.title}
-                        </span>
-                      </button>
-                      
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {task.tag && (
-                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-surface border border-border/50 text-muted-foreground uppercase">
-                            {task.tag}
-                          </span>
-                        )}
-                        {canManageOthers && (
-                          <button
-                            onClick={() => handleDeleteTask(task.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-red-400 p-0.5"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add Task Form (Admins/CEOs/Gerentes only) */}
-              {canManageOthers && (
-                <div className="space-y-2 pt-2 border-t border-border/40">
-                  <div className="flex gap-1.5">
-                    <Input
-                      placeholder="Título da tarefa..."
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="h-8 text-xs bg-background"
-                      onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-                    />
-                    <Select value={newTaskTag} onValueChange={setNewTaskTag}>
-                      <SelectTrigger className="h-8 w-24 text-[10px] bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Campanha">Campanha</SelectItem>
-                        <SelectItem value="Criativos">Criativos</SelectItem>
-                        <SelectItem value="Métricas">Métricas</SelectItem>
-                        <SelectItem value="Relatório">Relatório</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleAddTask}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* 2. Weekly Goals */}
-            <Card className="border border-border/80 bg-card p-4 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                <div>
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
-                    🎯 Metas da Semana
-                  </CardTitle>
-                  <CardDescription className="text-[10px] mt-0.5">Metas principais de tráfego</CardDescription>
-                </div>
-                <Badge className="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  {diary?.meta_semana?.filter((g) => g.done).length || 0}/{diary?.meta_semana?.length || 0}
-                </Badge>
-              </div>
-
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {!diary?.meta_semana || diary.meta_semana.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-4">Nenhuma meta cadastrada.</p>
-                ) : (
-                  diary.meta_semana.map((goal) => (
-                    <div
-                      key={goal.id}
-                      className="group flex items-center justify-between gap-2 p-2 rounded-lg border border-border/40 bg-background/40 hover:bg-background/80 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleToggleGoal(goal.id)}
-                        className="flex items-center gap-2.5 text-left text-xs min-w-0"
-                      >
-                        {goal.done ? (
-                          <CheckSquare className="h-4 w-4 text-primary shrink-0" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground shrink-0" />
-                        )}
-                        <span className={goal.done ? "line-through text-muted-foreground truncate" : "truncate font-medium"}>
-                          {goal.text}
-                        </span>
-                      </button>
-                      
-                      {canManageOthers && (
-                        <button
-                          onClick={() => handleDeleteGoal(goal.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-red-400 p-0.5"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {canManageOthers && (
-                <div className="flex gap-1.5 pt-2 border-t border-border/40">
-                  <Input
-                    placeholder="Adicionar meta da semana..."
-                    value={newGoalText}
-                    onChange={(e) => setNewGoalText(e.target.value)}
-                    className="h-8 text-xs bg-background"
-                    onKeyDown={(e) => e.key === "Enter" && handleAddGoal()}
-                  />
-                  <Button size="icon" className="h-8 w-8 shrink-0 font-bold" onClick={handleAddGoal}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </Card>
-
-            {/* 3. Requests to Client */}
-            <Card className="border border-border/80 bg-card p-4 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                <div>
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
-                    📥 Pedidos ao Cliente
-                  </CardTitle>
-                  <CardDescription className="text-[10px] mt-0.5">Acessos, criativos e solicitações</CardDescription>
-                </div>
-                <Badge className="text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  {diary?.pedidos_cliente?.filter((r) => r.done).length || 0}/{diary?.pedidos_cliente?.length || 0}
-                </Badge>
-              </div>
-
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {!diary?.pedidos_cliente || diary.pedidos_cliente.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-4">Nenhum pedido feito.</p>
-                ) : (
-                  diary.pedidos_cliente.map((req) => (
-                    <div
-                      key={req.id}
-                      className="group flex items-center justify-between gap-2 p-2 rounded-lg border border-border/40 bg-background/40 hover:bg-background/80 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleToggleRequest(req.id)}
-                        className="flex items-center gap-2.5 text-left text-xs min-w-0"
-                      >
-                        {req.done ? (
-                          <CheckSquare className="h-4 w-4 text-primary shrink-0" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground shrink-0" />
-                        )}
-                        <span className={req.done ? "line-through text-muted-foreground truncate" : "truncate font-medium"}>
-                          {req.text}
-                        </span>
-                      </button>
-                      
-                      {canManageOthers && (
-                        <button
-                          onClick={() => handleDeleteRequest(req.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-red-400 p-0.5"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {canManageOthers && (
-                <div className="flex gap-1.5 pt-2 border-t border-border/40">
-                  <Input
-                    placeholder="Solicitação ao cliente..."
-                    value={newRequestText}
-                    onChange={(e) => setNewRequestText(e.target.value)}
-                    className="h-8 text-xs bg-background"
-                    onKeyDown={(e) => e.key === "Enter" && handleAddRequest()}
-                  />
-                  <Button size="icon" className="h-8 w-8 shrink-0 font-bold" onClick={handleAddRequest}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </Card>
-
-          </div>
-
-          {/* COLUMN 2: TIMELINE NOTES / DIARY LOGS (lg:span-5) */}
-          <div className="lg:col-span-5">
-            <Card className="border border-border/80 bg-card p-4 space-y-4 h-full flex flex-col">
-              <div className="pb-2 border-b border-border/40">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
-                  🔥 Histórico & Logs de Rotina
-                </CardTitle>
-                <CardDescription className="text-[10px] mt-0.5">Linha do tempo diária de otimizações e notas</CardDescription>
-              </div>
-
-              {/* Add Log Form */}
-              <div className="space-y-2.5 p-3 rounded-xl border border-border/40 bg-background/25">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nova anotação diária</span>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="O que foi otimizado ou anotado hoje?"
-                    value={newLogContent}
-                    onChange={(e) => setNewLogContent(e.target.value)}
-                    className="h-8 text-xs bg-background flex-1"
-                    onKeyDown={(e) => e.key === "Enter" && handleAddLog()}
-                  />
-                  <Select value={newLogIcon} onValueChange={setNewLogIcon}>
-                    <SelectTrigger className="h-8 w-24 text-[10px] bg-background font-mono shrink-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Activity">⚡ Geral</SelectItem>
-                      <SelectItem value="Flame">🔥 Otimização</SelectItem>
-                      <SelectItem value="Settings">⚙️ Setup</SelectItem>
-                      <SelectItem value="MessageSquare">💬 Cliente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" className="h-8 text-xs gap-1 px-3 shrink-0" onClick={handleAddLog}>
-                    Postar
-                  </Button>
-                </div>
-              </div>
-
-              {/* Logs Timeline */}
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 mt-2 max-h-[700px]">
-                {logs.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-12">Nenhum log registrado para este gestor.</p>
-                ) : (
-                  logs.map((log) => {
-                    const logDate = new Date(log.date + "T00:00:00").toLocaleDateString("pt-BR");
-                    return (
-                      <div key={log.id} className="relative flex gap-3 group">
-                        
-                        {/* Timeline Connector node */}
-                        <div className="flex flex-col items-center shrink-0">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-surface border border-border/80 shadow-inner">
-                            {getLogIcon(log.icon)}
-                          </div>
-                          <div className="w-px flex-1 bg-border/40 group-last:bg-transparent min-h-[40px]" />
-                        </div>
-
-                        {/* Log Text Content */}
-                        <div className="flex-1 p-2.5 rounded-xl border border-border/40 bg-background/25 space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-bold text-primary font-mono">{logDate}</span>
-                            {canManageOthers && (
-                              <button
-                                onClick={() => handleDeleteLog(log.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-red-400 p-0.5"
-                                title="Deletar anotação"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line font-medium">
-                            {log.content}
-                          </p>
-                        </div>
-
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </Card>
-          </div>
-
-          {/* COLUMN 3: CLIENTS & CALENDAR (lg:span-3) */}
-          <div className="lg:col-span-3 space-y-5">
-            
-            {/* 1. Managed clients */}
-            <Card className="border border-border/80 bg-card p-4 space-y-4">
-              <div className="pb-2 border-b border-border/40">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground">
-                  🤝 Clientes Gerenciados
-                </CardTitle>
-                <CardDescription className="text-[10px] mt-0.5">Clientes atribuídos a este gestor</CardDescription>
-              </div>
-
-              {/* Clients list */}
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {gestorClients.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-4">Nenhum cliente vinculado.</p>
-                ) : (
-                  gestorClients.map((c: any) => (
-                    <div
-                      key={c.client_id}
-                      className="group flex flex-col p-2.5 rounded-xl border border-border/40 bg-background/40 gap-2 hover:bg-background/80 transition-colors"
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <a
-                          href={`/dashboard/${c.client_id}`}
-                          className="text-xs font-bold text-primary hover:underline truncate uppercase flex items-center gap-1"
-                          title="Ir para o Dashboard"
-                        >
-                          {c.client_name}
-                          <ArrowRight className="h-2.5 w-2.5" />
-                        </a>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
-
-            {/* 2. Interactive Calendar */}
-            <Card className="border border-border/80 bg-card p-4 space-y-4">
-              <div className="flex justify-between items-center pb-1">
-                <div>
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-card-foreground flex items-center gap-1.5">
-                    <CalendarIcon className="h-4 w-4 text-primary" /> Calendário
-                  </CardTitle>
-                </div>
-                
-                {/* Month navigation */}
-                <div className="flex items-center gap-1.5">
-                  <button onClick={handlePrevMonth} className="p-1 hover:bg-background/80 rounded-md border border-border/40 text-muted-foreground">
-                    <ChevronLeft className="h-3 w-3" />
-                  </button>
-                  <button onClick={handleNextMonth} className="p-1 hover:bg-background/80 rounded-md border border-border/40 text-muted-foreground">
-                    <ChevronRight className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-              <span className="text-[10px] uppercase font-bold text-primary font-mono tracking-wider block text-center pb-2 border-b border-border/40">
-                {monthName}
-              </span>
-
-              {/* Monthly calendar grid */}
-              <div className="grid grid-cols-7 gap-1 text-[10px] text-center font-semibold text-muted-foreground pb-1">
-                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-              </div>
-              
-              <div className="grid grid-cols-7 gap-1">
-                {/* Offset spaces */}
-                {Array.from({ length: startOffset }).map((_, i) => (
-                  <div key={`offset-${i}`} className="aspect-square" />
-                ))}
-
-                {/* Days list */}
-                {daysInMonth.map((day) => {
-                  const dayNum = day.getDate();
-                  const yearStr = day.getFullYear();
-                  const monthStr = String(day.getMonth() + 1).padStart(2, "0");
-                  const dayStr = String(dayNum).padStart(2, "0");
-                  const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
-
-                  // Check events on this day
-                  const dayEvents = calendarEvents.filter((ev) => ev.date === dateKey);
-                  const hasDone = dayEvents.some((ev) => ev.status === "done");
-                  const hasPending = dayEvents.some((ev) => ev.status === "pending");
-
-                  let dotColor = "";
-                  if (hasPending && hasDone) dotColor = "bg-amber-400";
-                  else if (hasPending) dotColor = "bg-primary";
-                  else if (hasDone) dotColor = "bg-emerald-400";
-
-                  const isToday = new Date().toDateString() === day.toDateString();
-
-                  return (
-                    <button
-                      key={dayNum}
-                      onClick={() => handleDayClick(dayNum)}
-                      className={`relative aspect-square rounded flex flex-col items-center justify-center border hover:border-primary/50 transition-colors ${
-                        isToday 
-                          ? "bg-primary/20 border-primary text-primary font-bold" 
-                          : "border-border/20 bg-background/25 text-card-foreground"
-                      }`}
-                    >
-                      <span>{dayNum}</span>
-                      {dotColor && (
-                        <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${dotColor} animate-pulse`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Selected date events preview */}
-              <div className="pt-3 border-t border-border/40 space-y-1.5">
-                <span className="text-[10px] font-bold uppercase text-muted-foreground">Compromissos agendados</span>
-                
-                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
-                  {calendarEvents.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground italic text-center py-2">Nenhum evento no calendário.</p>
-                  ) : (
-                    calendarEvents.map((ev) => {
-                      const evDate = new Date(ev.date + "T00:00:00");
-                      const evDateStr = evDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-                      return (
-                        <div key={ev.id} className="group/event flex items-center justify-between gap-1.5 p-1.5 rounded bg-background/50 border border-border/40 text-[10px]">
-                          <button
-                            onClick={() => handleToggleCalendarEvent(ev)}
-                            className="flex items-center gap-1.5 text-left min-w-0"
-                          >
-                            <span className="font-mono text-primary text-[9px] shrink-0 font-bold">[{evDateStr}]</span>
-                            <span className={ev.status === "done" ? "line-through text-muted-foreground truncate" : "truncate font-medium text-card-foreground"}>
-                              {ev.title}
-                            </span>
-                          </button>
-                          {canManageOthers && (
-                            <button
-                              onClick={() => handleDeleteCalendarEvent(ev.id)}
-                              className="opacity-0 group-hover/event:opacity-100 transition-opacity text-destructive p-0.5"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Inline input for scheduling event */}
-              {calendarInputOpen && calendarSelectedDay !== null && (
-                <div className="p-2.5 rounded-lg border border-primary/20 bg-primary/5 space-y-2 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-primary">Agendar p/ Dia {calendarSelectedDay}</span>
-                    <button onClick={() => setCalendarInputOpen(false)} className="text-muted-foreground hover:text-foreground text-[10px]">✕</button>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Input
-                      placeholder="Título do compromisso..."
-                      value={calendarInputTitle}
-                      onChange={(e) => setCalendarInputTitle(e.target.value)}
-                      className="h-7 text-[10px] bg-background"
-                      onKeyDown={(e) => e.key === "Enter" && handleAddCalendarEvent()}
-                      autoFocus
-                    />
-                    <Button size="sm" className="h-7 px-2.5 text-[10px]" onClick={handleAddCalendarEvent}>
-                      OK
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
-          </div>
-
         </div>
 
+        <div className="px-8 md:px-16 mt-16 max-w-5xl space-y-6">
+          {/* Title */}
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
+            GESTOR DE TRÁFEGO - {activeGestor.name}
+          </h1>
+
+          {/* Properties */}
+          <div className="flex flex-col gap-1.5 text-[13px] max-w-md">
+            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
+              <span className="text-muted-foreground flex items-center gap-1.5"><Activity className="h-3.5 w-3.5"/> E-mail</span>
+              <span className="font-medium truncate">{activeGestor.email}</span>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
+              <span className="text-muted-foreground flex items-center gap-1.5"><Settings className="h-3.5 w-3.5"/> Status</span>
+              <Badge variant="outline" className="text-[10px] w-fit uppercase bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                Ativo
+              </Badge>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
+              <span className="text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5"/> Funções</span>
+              <span className="font-medium bg-muted/50 px-1.5 py-0.5 rounded text-xs">{activeGestor.roleName}</span>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center hover:bg-muted/30 py-1 px-1 rounded transition-colors">
+              <span className="text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5"/> Criado em</span>
+              <span className="font-medium text-xs">{activeGestor.created_at ? new Date(activeGestor.created_at).toLocaleDateString('pt-BR') : '-'}</span>
+            </div>
+          </div>
+
+          <div className="w-full border-t border-border/40 my-8"></div>
+
+          {/* Main Content: Gestor Notion Template */}
+          <GestorNotionTemplate gestorId={activeGestorId} canManage={canManageOthers} />
+
+          <div className="w-full border-t border-border/40 my-8"></div>
+
+          {/* Databases: PROJETOS e REUNIÕES */}
+          <div className="space-y-12 pb-12">
+            
+            {/* PROJETOS */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                  <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> PROJETOS
+                </h3>
+              </div>
+              
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-muted/50 text-muted-foreground text-xs border-b border-border/50">
+                    <tr>
+                      <th className="font-medium p-2.5">Aa Nome</th>
+                      <th className="font-medium p-2.5">Status</th>
+                      <th className="font-medium p-2.5 w-24">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {gestorClients.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">Nenhum projeto vinculado.</td>
+                      </tr>
+                    ) : (
+                      gestorClients.map((c: any) => (
+                        <tr key={c.client_id} className="hover:bg-muted/20 transition-colors">
+                          <td className="p-2.5 font-medium flex items-center gap-2">
+                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            {c.client_name}
+                          </td>
+                          <td className="p-2.5">
+                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 font-medium">
+                              Em andamento
+                            </Badge>
+                          </td>
+                          <td className="p-2.5">
+                            <a href={`/dashboard/${c.client_id}`} className="text-[10px] bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors">
+                              Abrir
+                            </a>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* REUNIÕES */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                  <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> REUNIÕES
+                </h3>
+              </div>
+              
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-muted/50 text-muted-foreground text-xs border-b border-border/50">
+                    <tr>
+                      <th className="font-medium p-2.5">Aa Título</th>
+                      <th className="font-medium p-2.5">Data</th>
+                      <th className="font-medium p-2.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {calendarEvents.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">Nenhuma reunião agendada.</td>
+                      </tr>
+                    ) : (
+                      calendarEvents.map((ev) => (
+                        <tr key={ev.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="p-2.5 font-medium flex items-center gap-2">
+                            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            {ev.title}
+                          </td>
+                          <td className="p-2.5 text-muted-foreground">
+                            {new Date(ev.date + "T00:00:00").toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="p-2.5">
+                            {ev.status === "done" ? (
+                              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Concluído</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20">Pendente</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </AppShell>
   );

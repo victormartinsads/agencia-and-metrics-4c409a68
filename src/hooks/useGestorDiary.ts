@@ -667,3 +667,63 @@ export function useManageGestorCalendar() {
     },
   });
 }
+
+/**
+ * Hook to retrieve the Notion-like template state (toggles, checkboxes, text)
+ */
+export function useGestorNotionData(gestorId: string) {
+  return useQuery({
+    queryKey: ["gestor-notion-data", gestorId],
+    queryFn: async () => {
+      if (!gestorId) return {};
+      try {
+        const { data, error } = await (supabase as any)
+          .from("gestor_diary_notion")
+          .select("notion_data")
+          .eq("gestor_id", gestorId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) return {};
+        return data.notion_data || {};
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          return getLocal<any>(`notion_data:${gestorId}`, {});
+        }
+        throw err;
+      }
+    },
+    enabled: !!gestorId,
+  });
+}
+
+/**
+ * Mutation to save the Notion-like template state
+ */
+export function useSaveGestorNotionData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ gestor_id, data }: { gestor_id: string; data: any }) => {
+      try {
+        const { data: result, error } = await (supabase as any)
+          .from("gestor_diary_notion")
+          .upsert({ gestor_id, notion_data: data }, { onConflict: "gestor_id" })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return result;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          setLocal(`notion_data:${gestor_id}`, data);
+          return data;
+        }
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["gestor-notion-data", variables.gestor_id] });
+    },
+  });
+}
+
