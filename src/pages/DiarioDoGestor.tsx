@@ -61,8 +61,13 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  Users,
+  UserX,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ClientCard from "@/components/gestor/ClientCard";
 
 export default function DiarioDoGestor() {
   const { user } = useAuth();
@@ -470,63 +475,75 @@ export default function DiarioDoGestor() {
 
           <div className="w-full border-t border-border/40 my-8"></div>
 
-          {/* Main Content: Gestor Notion Template */}
-          <GestorNotionTemplate gestorId={activeGestorId} canManage={canManageOthers} />
+          <Tabs defaultValue="ativos" className="w-full space-y-6">
+            <TabsList className="bg-muted/30 p-1 w-full flex justify-start border border-border/50">
+              <TabsTrigger value="ativos" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
+                <Users className="h-4 w-4" /> Clientes Ativos
+              </TabsTrigger>
+              <TabsTrigger value="pausados" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
+                <UserX className="h-4 w-4" /> Clientes Pausados
+              </TabsTrigger>
+              <TabsTrigger value="diario" className="flex items-center gap-2 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-primary flex-1 sm:flex-none">
+                <ClipboardList className="h-4 w-4" /> Tarefa Diária
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="ativos" className="space-y-6 outline-none focus-visible:ring-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gestorClients.filter((c: any) => c.status !== "Pausado").length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
+                    Nenhum cliente ativo vinculado a este gestor.
+                  </div>
+                ) : (
+                  gestorClients
+                    .filter((c: any) => c.status !== "Pausado")
+                    .map((c: any) => (
+                      <ClientCard 
+                        key={c.client_id} 
+                        gestorId={activeGestorId} 
+                        clientId={c.client_id} 
+                        clientName={c.client_name} 
+                        clientStatus={c.status}
+                        isPaused={false}
+                      />
+                    ))
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pausados" className="space-y-6 outline-none focus-visible:ring-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gestorClients.filter((c: any) => c.status === "Pausado").length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-muted-foreground italic bg-muted/10 rounded border border-dashed border-border/50">
+                    Nenhum cliente pausado.
+                  </div>
+                ) : (
+                  gestorClients
+                    .filter((c: any) => c.status === "Pausado")
+                    .map((c: any) => (
+                      <ClientCard 
+                        key={c.client_id} 
+                        gestorId={activeGestorId} 
+                        clientId={c.client_id} 
+                        clientName={c.client_name} 
+                        clientStatus={c.status}
+                        isPaused={true}
+                      />
+                    ))
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="diario" className="outline-none focus-visible:ring-0">
+              {/* Main Content: Gestor Notion Template for Daily Tasks */}
+              <GestorNotionTemplate gestorId={activeGestorId} canManage={canManageOthers} />
+            </TabsContent>
+          </Tabs>
 
           <div className="w-full border-t border-border/40 my-8"></div>
-
-          {/* Databases: PROJETOS e REUNIÕES */}
-          <div className="space-y-12 pb-12">
             
-            {/* PROJETOS */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-                  <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> PROJETOS
-                </h3>
-              </div>
-              
-              <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
-                <table className="w-full text-left">
-                  <thead className="bg-muted/50 text-muted-foreground text-xs border-b border-border/50">
-                    <tr>
-                      <th className="font-medium p-2.5">Aa Nome</th>
-                      <th className="font-medium p-2.5">Status</th>
-                      <th className="font-medium p-2.5 w-24">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/50">
-                    {gestorClients.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">Nenhum projeto vinculado.</td>
-                      </tr>
-                    ) : (
-                      gestorClients.map((c: any) => (
-                        <tr key={c.client_id} className="hover:bg-muted/20 transition-colors">
-                          <td className="p-2.5 font-medium flex items-center gap-2">
-                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                            {c.client_name}
-                          </td>
-                          <td className="p-2.5">
-                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 font-medium">
-                              Em andamento
-                            </Badge>
-                          </td>
-                          <td className="p-2.5">
-                            <a href={`/dashboard/${c.client_id}`} className="text-[10px] bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors">
-                              Abrir
-                            </a>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* REUNIÕES */}
-            <div>
+          {/* REUNIÕES */}
+          <div className="space-y-12 pb-12">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                   <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> REUNIÕES
@@ -574,7 +591,6 @@ export default function DiarioDoGestor() {
 
           </div>
         </div>
-      </div>
     </AppShell>
   );
 }

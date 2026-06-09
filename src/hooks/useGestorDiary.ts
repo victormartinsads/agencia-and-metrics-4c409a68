@@ -727,3 +727,97 @@ export function useSaveGestorNotionData() {
   });
 }
 
+// ---- Novo Hook para Dados Adicionais do Cliente (Saúde e Tarefas) ----
+export interface GestorClientMeta {
+  gestor_id: string;
+  client_id: string;
+  health: number; // 0 a 10
+  tasks: Array<{ id: string; text: string; done: boolean }>;
+}
+
+export function useGestorClientMeta(gestorId: string, clientId: string) {
+  return useQuery({
+    queryKey: ["gestor-client-meta", gestorId, clientId],
+    queryFn: async () => {
+      if (!gestorId || !clientId) return null;
+      try {
+        const { data, error } = await (supabase as any)
+          .from("gestor_diary_client_meta")
+          .select("*")
+          .eq("gestor_id", gestorId)
+          .eq("client_id", clientId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          return {
+            gestor_id: gestorId,
+            client_id: clientId,
+            health: 10,
+            tasks: [],
+          } as GestorClientMeta;
+        }
+        return data as GestorClientMeta;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          return getLocal<GestorClientMeta>(`client_meta:${gestorId}:${clientId}`, {
+            gestor_id: gestorId,
+            client_id: clientId,
+            health: 10,
+            tasks: [],
+          });
+        }
+        throw err;
+      }
+    },
+    enabled: !!gestorId && !!clientId,
+  });
+}
+
+export function useSaveGestorClientMeta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ gestor_id, client_id, meta }: { gestor_id: string; client_id: string; meta: Partial<GestorClientMeta> }) => {
+      try {
+        const { data: current } = await (supabase as any)
+          .from("gestor_diary_client_meta")
+          .select("*")
+          .eq("gestor_id", gestor_id)
+          .eq("client_id", client_id)
+          .maybeSingle();
+
+        const newMeta = {
+          gestor_id,
+          client_id,
+          health: meta.health ?? (current?.health ?? 10),
+          tasks: meta.tasks ?? (current?.tasks ?? []),
+        };
+
+        const { data: result, error } = await (supabase as any)
+          .from("gestor_diary_client_meta")
+          .upsert(newMeta, { onConflict: "gestor_id, client_id" })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return result;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const current = getLocal<GestorClientMeta>(`client_meta:${gestor_id}:${client_id}`, {
+            gestor_id,
+            client_id,
+            health: 10,
+            tasks: [],
+          });
+          const updated = { ...current, ...meta };
+          setLocal(`client_meta:${gestor_id}:${client_id}`, updated);
+          return updated;
+        }
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["gestor-client-meta", variables.gestor_id, variables.client_id] });
+    },
+  });
+}
