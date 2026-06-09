@@ -29,6 +29,7 @@ export default function ClientDashboard() {
       if (tabParam === "criativos") return "creatives";
       if (tabParam === "distribuicao") return "branding";
       if (tabParam === "planilha") return "spreadsheet";
+      if (tabParam === "diario") return "diario";
       return tabParam;
     }
     return "overview";
@@ -44,6 +45,7 @@ export default function ClientDashboard() {
     else if (tab === "creatives") tabParam = "criativos";
     else if (tab === "branding") tabParam = "distribuicao";
     else if (tab === "spreadsheet") tabParam = "planilha";
+    else if (tab === "diario") tabParam = "diario";
     url.searchParams.set("tab", tabParam);
     window.history.replaceState({}, "", url.toString());
   };
@@ -131,6 +133,7 @@ export default function ClientDashboard() {
     { id: "overview", label: "Visão Geral" },
     { id: "diagnostico", label: "Como Estamos" },
     { id: "funnel", label: "Análise de Funis" },
+    { id: "diario", label: "Diário" },
     { id: "creatives", label: "Criativos" },
     { id: "branding", label: "Distribuição" },
     { id: "spreadsheet", label: "Planilha" },

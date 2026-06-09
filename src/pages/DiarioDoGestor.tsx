@@ -575,7 +575,7 @@ export default function DiarioDoGestor() {
                 </span>
                 <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
                   <SelectTrigger className="h-8 w-[250px] text-xs">
-                    <SelectValue placeholder="Selecione um cliente do CRM..." />
+                    <SelectValue placeholder="Selecione um cliente..." />
                   </SelectTrigger>
                   <SelectContent>
                     {globalClients.map(c => (
@@ -616,7 +616,7 @@ export default function DiarioDoGestor() {
                 </span>
                 <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
                   <SelectTrigger className="h-8 w-[250px] text-xs">
-                    <SelectValue placeholder="Selecione um cliente do CRM..." />
+                    <SelectValue placeholder="Selecione um cliente..." />
                   </SelectTrigger>
                   <SelectContent>
                     {globalClients.map(c => (

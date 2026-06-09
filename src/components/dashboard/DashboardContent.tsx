@@ -19,6 +19,7 @@ import { AnalyticsTab } from "@/components/analytics/AnalyticsTab";
 import { GoogleAdsPanel } from "@/components/dashboard/GoogleAdsPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import ClientNotionTemplate from "@/components/clients/ClientNotionTemplate";
 
 interface Props {
   clientId?: string;
@@ -142,6 +143,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             {showTab("overview") && <TabsTrigger value="overview">Visão Geral</TabsTrigger>}
             {!hideDiagnostico && showTab("diagnostico") && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
             {showTab("funnel") && <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>}
+            {showTab("diario") && <TabsTrigger value="diario">Diário</TabsTrigger>}
             {showTab("spreadsheet") && <TabsTrigger value="spreadsheet">Planilha de Métricas</TabsTrigger>}
             {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
             {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
@@ -157,6 +159,13 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               currencySymbol={currencySymbol}
               publicSlug={clientInfo?.slug}
               isPublicView={isPublicView}
+            />
+          </TabsContent>}
+
+          {showTab("diario") && <TabsContent value="diario" className="space-y-6">
+            <ClientNotionTemplate
+              clientId={clientId || ""}
+              canManage={!isPublicView}
             />
           </TabsContent>}
 

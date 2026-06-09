@@ -919,3 +919,56 @@ export function useSaveGestorProfileMeta() {
     },
   });
 }
+
+// ==========================================
+// CLIENT DIARY NOTION DATA (Ficha do Cliente)
+// ==========================================
+
+export function useClientNotionData(clientId: string) {
+  return useQuery({
+    queryKey: ["client-notion-data", clientId],
+    queryFn: async () => {
+      if (!clientId) return {};
+      try {
+        const { data, error } = await (supabase as any)
+          .from("client_diary_notion")
+          .select("notion_data")
+          .eq("client_id", clientId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) return {};
+        return data.notion_data || {};
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          return getLocal<any>(`client_notion_data:${clientId}`, {});
+        }
+        throw err;
+      }
+    },
+  });
+}
+
+export function useSaveClientNotionData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ client_id, data }: { client_id: string; data: any }) => {
+      try {
+        const { error } = await (supabase as any)
+          .from("client_diary_notion")
+          .upsert({ client_id, notion_data: data }, { onConflict: "client_id" });
+        if (error) throw error;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          setLocal(`client_notion_data:${client_id}`, data);
+          return;
+        }
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["client-notion-data", variables.client_id] });
+    },
+  });
+}
+
