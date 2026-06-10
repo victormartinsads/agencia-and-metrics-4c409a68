@@ -466,12 +466,14 @@ export default function DiarioDoGestor() {
   const [editRole, setEditRole] = useState("");
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editBanner, setEditBanner] = useState("");
 
   const handleOpenEditProfile = () => {
     setEditSalary(profileMeta?.salary || "");
     setEditRole(profileMeta?.role_override || activeGestor.roleName);
     setEditName(profileMeta?.name_override || activeGestor.name);
     setEditEmail(profileMeta?.email_override || activeGestor.email);
+    setEditBanner(profileMeta?.banner_override || "");
     setIsEditProfileOpen(true);
   };
 
@@ -483,6 +485,7 @@ export default function DiarioDoGestor() {
         role_override: editRole,
         name_override: editName,
         email_override: editEmail,
+        banner_override: editBanner,
       }
     });
     setIsEditProfileOpen(false);
@@ -523,7 +526,7 @@ export default function DiarioDoGestor() {
 
         {/* Notion Cover */}
         <div className="h-48 w-full bg-[#2a2b2d] border-b border-border relative">
-          <img src="https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=2070&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-50" />
+          <img src={profileMeta?.banner_override || "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=2070&auto=format&fit=crop"} alt="Cover" className="h-full w-full object-cover opacity-50" />
           <div className="absolute -bottom-12 left-8 md:left-16">
             <div className="h-24 w-24 shrink-0 rounded bg-card ring-4 ring-background grid place-items-center text-4xl font-bold text-foreground overflow-hidden shadow-sm">
               {activeGestor.avatar ? (
@@ -535,7 +538,7 @@ export default function DiarioDoGestor() {
           </div>
         </div>
 
-        <div className="px-8 md:px-16 mt-16 max-w-5xl space-y-6">
+        <div className="px-8 md:px-16 mt-16 max-w-7xl mx-auto space-y-6">
           {/* Title */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
@@ -570,6 +573,10 @@ export default function DiarioDoGestor() {
                       <Label>Salário</Label>
                       <Input value={editSalary} onChange={e => setEditSalary(e.target.value)} placeholder="R$ 3.000,00" />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Imagem de Capa (URL)</Label>
+                      <Input value={editBanner} onChange={e => setEditBanner(e.target.value)} placeholder="https://..." />
+                    </div>
                     <Button onClick={handleSaveProfile} className="w-full">Salvar Alterações</Button>
                   </div>
                 </DialogContent>
@@ -603,7 +610,7 @@ export default function DiarioDoGestor() {
 
           <div className="w-full border-t border-border/40 my-8"></div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1.2fr] xl:grid-cols-[2fr_1fr] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.6fr_1fr] gap-12">
             <div className="space-y-6">
               <Tabs defaultValue="ativos" className="w-full space-y-6">
                 <TabsList className="bg-muted/30 p-1 w-full flex justify-start border border-border/50">
