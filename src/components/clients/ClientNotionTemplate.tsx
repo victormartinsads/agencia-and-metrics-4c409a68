@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useClientNotionData, useSaveClientNotionData } from "@/hooks/useGestorDiary";
-import { Loader2, CheckCircle, Square, Plus, Trash2, ListChecks } from "lucide-react";
+import { Loader2, CheckCircle, Square, Plus, Trash2, ListChecks, Compass, Users, FolderOpen, Flame, Link2, Database, Video, Milestone, GitMerge, Trophy } from "lucide-react";
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
@@ -10,53 +10,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import * as locales from "@blocknote/core/locales";
 
-// Template padrão estilo Notion com as seções solicitadas
-const defaultClientTemplate: any[] = [
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "PLANO ESTRATÉGICO - CLIENTE:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "PLANO ESTRATÉGICO - EQUIPE AND:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "DOCUMENTOS:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "ESTRATÉGIAS ATIVAS:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "MATERIAL DE APOIO:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "DADOS:"
-  },
+// Template padrão estilo Notion apenas para a seção DADOS (como no print)
+const defaultDadosTemplate: any[] = [
   {
     type: "bulletListItem",
     content: "PÁGINAS"
@@ -76,64 +31,55 @@ const defaultClientTemplate: any[] = [
   {
     type: "bulletListItem",
     content: "INTELIGÊNCIA DO TRÁFEGO"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "GRAVAÇÃO DA CALL:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "TRILHA SEMANAL:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "PROCESSOS:"
-  },
-  {
-    type: "paragraph"
-  },
-  {
-    type: "heading",
-    props: { level: 3 },
-    content: "METAS:"
-  },
-  {
-    type: "paragraph"
   }
 ];
 
-function InnerEditor({ initialContent, clientId, canManage, saveNotionData }: any) {
-  // Cria o editor apenas UMA VEZ na montagem usando o conteúdo fornecido ou o template default.
+function SectionEditor({ initialContent, sectionKey, onSave, canManage }: any) {
+  // Cria o editor apenas UMA VEZ na montagem usando o conteúdo fornecido
   const options = {
-    initialContent: initialContent || defaultClientTemplate,
+    initialContent: (initialContent && initialContent.length > 0) ? initialContent : [{ type: "paragraph", content: [] }],
     dictionary: locales.pt
   };
   const editor = useCreateBlockNote(options);
 
   const handleChange = () => {
     if (!editor) return;
-    saveNotionData.mutate({ client_id: clientId, data: editor.document });
+    onSave(sectionKey, editor.document);
   };
 
   return (
-    <BlockNoteView
-      editor={editor}
-      editable={canManage}
-      onChange={handleChange}
-      theme="dark"
-    />
+    <div className="ml-[-46px]">
+      <BlockNoteView
+        editor={editor}
+        editable={canManage}
+        onChange={handleChange}
+        theme="dark"
+      />
+    </div>
+  );
+}
+
+function DiaryCard({ title, icon, sectionKey, initialContent, onSave, canManage, clientId }: any) {
+  return (
+    <div className="border border-border/80 rounded-xl p-5 bg-card shadow-sm flex flex-col gap-3">
+      <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+        <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+          {icon}
+        </div>
+        <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
+          {title}
+        </span>
+      </div>
+      <div className="flex-1 min-h-[80px]">
+        <SectionEditor
+          key={`${clientId}-${sectionKey}`} // Força a recriação do editor ao mudar de cliente
+          initialContent={initialContent}
+          sectionKey={sectionKey}
+          onSave={onSave}
+          canManage={canManage}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -256,25 +202,128 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
     );
   }
 
-  // Resolve o conteúdo inicial se for um array válido
-  let initialContent = undefined;
-  if (Array.isArray(notionData) && notionData.length > 0) {
-    initialContent = notionData;
+  // Resolve os conteúdos de cada seção
+  let sectionsData: any = {};
+  if (notionData) {
+    if (Array.isArray(notionData)) {
+      // Caso haja dado legado no formato flat array, colocamos na primeira seção
+      sectionsData = { plano_cliente: notionData };
+    } else {
+      sectionsData = notionData;
+    }
   }
 
+  const handleSaveSection = (key: string, doc: any) => {
+    const updated = {
+      ...sectionsData,
+      [key]: doc
+    };
+    saveNotionData.mutate({ client_id: clientId, data: updated });
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 min-h-[500px] border border-border/80 rounded-xl p-4 md:p-8 bg-card shadow-sm">
-        <InnerEditor
-          key={clientId} // Força a recriação do editor ao mudar de cliente
-          initialContent={initialContent}
-          clientId={clientId}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      {/* Coluna Esquerda */}
+      <div className="space-y-6">
+        <DiaryCard
+          title="Plano Estratégico - Cliente"
+          icon={<Compass className="h-4 w-4" />}
+          sectionKey="plano_cliente"
+          initialContent={sectionsData.plano_cliente}
+          onSave={handleSaveSection}
           canManage={canManage}
-          saveNotionData={saveNotionData}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Plano Estratégico - Equipe AND"
+          icon={<Users className="h-4 w-4" />}
+          sectionKey="plano_equipe"
+          initialContent={sectionsData.plano_equipe}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Documentos"
+          icon={<FolderOpen className="h-4 w-4" />}
+          sectionKey="documentos"
+          initialContent={sectionsData.documentos}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Estratégias Ativas"
+          icon={<Flame className="h-4 w-4" />}
+          sectionKey="estrategias_ativas"
+          initialContent={sectionsData.estrategias_ativas}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
         />
       </div>
-      <div className="lg:col-span-1 border border-border/80 rounded-xl p-6 bg-card shadow-sm flex flex-col h-fit">
-        <ClientTasksSection clientId={clientId} canManage={canManage} />
+
+      {/* Coluna Direita */}
+      <div className="space-y-6">
+        {/* Card de Tarefas Sincronizado */}
+        <div className="border border-border/80 rounded-xl p-5 bg-card shadow-sm flex flex-col h-fit">
+          <ClientTasksSection clientId={clientId} canManage={canManage} />
+        </div>
+
+        <DiaryCard
+          title="Material de Apoio"
+          icon={<Link2 className="h-4 w-4" />}
+          sectionKey="material_apoio"
+          initialContent={sectionsData.material_apoio}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Dados"
+          icon={<Database className="h-4 w-4" />}
+          sectionKey="dados"
+          initialContent={sectionsData.dados || defaultDadosTemplate}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Gravação da Call"
+          icon={<Video className="h-4 w-4" />}
+          sectionKey="gravacao_call"
+          initialContent={sectionsData.gravacao_call}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Trilha Semanal"
+          icon={<Milestone className="h-4 w-4" />}
+          sectionKey="trilha_semanal"
+          initialContent={sectionsData.trilha_semanal}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Processos"
+          icon={<GitMerge className="h-4 w-4" />}
+          sectionKey="processos"
+          initialContent={sectionsData.processos}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
+        <DiaryCard
+          title="Metas"
+          icon={<Trophy className="h-4 w-4" />}
+          sectionKey="metas"
+          initialContent={sectionsData.metas}
+          onSave={handleSaveSection}
+          canManage={canManage}
+          clientId={clientId}
+        />
       </div>
     </div>
   );
