@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { Brain, Search, Star, Loader2, Heart, DollarSign, TrendingUp, AlertTriangle } from "lucide-react";
+import { Brain, Search, Star, Loader2, Heart, DollarSign, TrendingUp, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,12 @@ import { useMyAssignments, useToggleAssignment } from "@/hooks/useClientAssignme
 import { useGestorOverview } from "@/hooks/useGestorOverview";
 import { ClientOverviewCard } from "@/components/gestor/ClientOverviewCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllClientManagerMeta } from "@/hooks/useClientManagerMeta";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 
 const periods = [
   { value: "today", label: "Hoje" },
@@ -24,6 +27,61 @@ const periods = [
   { value: "last_30d", label: "Últimos 30 dias" },
 ];
 
+function SpreadsheetRow({ client, initialGoal, onSaveGoal, onSaveRevenue }: any) {
+  const [localGoal, setLocalGoal] = useState(initialGoal !== null ? String(initialGoal) : "");
+  const [localRev, setLocalRev] = useState(client.monthly_revenue !== null ? String(client.monthly_revenue) : "");
+
+  useEffect(() => {
+    setLocalGoal(initialGoal !== null ? String(initialGoal) : "");
+  }, [initialGoal]);
+
+  useEffect(() => {
+    setLocalRev(client.monthly_revenue !== null ? String(client.monthly_revenue) : "");
+  }, [client.monthly_revenue]);
+
+  const handleBlurGoal = () => {
+    const val = localGoal.trim() === "" ? null : Number(localGoal);
+    if (val !== initialGoal) {
+      onSaveGoal(client.id, val);
+    }
+  };
+
+  const handleBlurRev = () => {
+    const val = localRev.trim() === "" ? null : Number(localRev);
+    if (val !== client.monthly_revenue) {
+      onSaveRevenue(client.id, val);
+    }
+  };
+
+  return (
+    <TableRow key={client.id} className="hover:bg-accent/10 border-b border-border/40 text-xs">
+      <TableCell className="font-extrabold select-none uppercase tracking-tight text-foreground">{client.name}</TableCell>
+      <TableCell>
+        <input
+          type="number"
+          value={localRev}
+          onChange={(e) => setLocalRev(e.target.value)}
+          onBlur={handleBlurRev}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          placeholder="0"
+          className="bg-accent/20 border border-border/60 rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
+        />
+      </TableCell>
+      <TableCell>
+        <input
+          type="number"
+          value={localGoal}
+          onChange={(e) => setLocalGoal(e.target.value)}
+          onBlur={handleBlurGoal}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          placeholder="0"
+          className="bg-accent/20 border border-border/60 rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
+        />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function GestorOverview({ isHomePage = false }: { isHomePage?: boolean } = {}) {
   const { user } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -31,12 +89,15 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
   const { data: assignments } = useMyAssignments();
   const toggleAssign = useToggleAssignment();
   const { data: healthMap } = useAllClientManagerMeta();
+  const qc = useQueryClient();
+
+  const [isSpreadsheetOpen, setIsSpreadsheetOpen] = useState(false);
 
   // Load clients assigned to the gestor if the logged-in user is a gestor
   const { data: gestorAssignments, isLoading: assignmentsLoading } = useQuery({
     queryKey: ["gestor-assignments", user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("gestor_diary_clients")
         .select("client_id")
         .eq("gestor_id", user?.id);
@@ -44,6 +105,27 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     },
     enabled: !!user?.id && !!role?.isGestor,
   });
+
+  // Load monthly revenue goals for all clients
+  const { data: allConfigs } = useQuery({
+    queryKey: ["all-sheet-configs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("dashboard_sheet_config")
+        .select("client_id, monthly_revenue_goal");
+      return data || [];
+    }
+  });
+
+  const goalsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (allConfigs || []).forEach((c: any) => {
+      if (c.monthly_revenue_goal !== null) {
+        map.set(c.client_id, Number(c.monthly_revenue_goal));
+      }
+    });
+    return map;
+  }, [allConfigs]);
 
   const [period, setPeriod] = useState("last_7d");
   const [search, setSearch] = useState("");
@@ -92,7 +174,50 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     });
   }, [filteredClients, overview, favoriteIds]);
 
-  const isAllowed = role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor;
+  const handleSaveGoal = async (clientId: string, goal: number | null) => {
+    try {
+      const { data: existing } = await (supabase as any)
+        .from("dashboard_sheet_config")
+        .select("client_id")
+        .eq("client_id", clientId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await (supabase as any)
+          .from("dashboard_sheet_config")
+          .update({ monthly_revenue_goal: goal })
+          .eq("client_id", clientId);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any)
+          .from("dashboard_sheet_config")
+          .insert({
+            client_id: clientId,
+            monthly_revenue_goal: goal,
+            spreadsheet_id: "placeholder"
+          });
+        if (error) throw error;
+      }
+      toast.success("Meta de faturamento atualizada!");
+      qc.invalidateQueries({ queryKey: ["all-sheet-configs"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-sheet", clientId] });
+    } catch (e: any) {
+      toast.error("Erro ao atualizar meta: " + e.message);
+    }
+  };
+
+  const handleSaveRevenue = async (clientId: string, revenue: number | null) => {
+    try {
+      await supabase
+        .from("clients")
+        .update({ monthly_revenue: revenue })
+        .eq("id", clientId);
+      toast.success("Faturamento atualizado!");
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    } catch (e: any) {
+      toast.error("Erro ao atualizar faturamento: " + e.message);
+    }
+  };
 
   const summaryStats = useMemo(() => {
     if (!filteredClients.length || !overview) {
@@ -129,6 +254,10 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     };
   }, [filteredClients, overview, healthMap]);
 
+  const isAllowed = role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor;
+
+  const overviewMap = new Map((overview || []).map((o) => [o.clientId, o]));
+
   if (roleLoading || (role?.isGestor && assignmentsLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -137,8 +266,6 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     );
   }
   if (!isAllowed) return <Navigate to="/" replace />;
-
-  const overviewMap = new Map((overview || []).map((o) => [o.clientId, o]));
 
   const header = (
     <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
@@ -180,6 +307,15 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
             {periods.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setIsSpreadsheetOpen(true)}
+          className="h-9 gap-1.5 text-xs font-bold bg-card border-border/60 hover:bg-accent/40"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+          Faturamento
+        </Button>
       </div>
     </div>
   );
@@ -266,11 +402,47 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
                 }
                 data={overviewMap.get(c.id)}
                 isLoading={isLoading && !overviewMap.has(c.id)}
+                monthlyRevenueGoal={goalsMap.get(c.id) ?? null}
+                adAccountId={c.ad_account_ids && c.ad_account_ids.length > 0 ? c.ad_account_ids[0] : null}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Spreadsheet Dialog Modal for Monthly Revenue and Goals */}
+      <Dialog open={isSpreadsheetOpen} onOpenChange={setIsSpreadsheetOpen}>
+        <DialogContent className="max-w-4xl bg-card border-border/80">
+          <DialogHeader className="border-b border-border/40 pb-3">
+            <DialogTitle className="uppercase tracking-wider flex items-center gap-2 text-sm font-bold text-foreground select-none">
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              Faturamento Mensal por Cliente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] mt-4 border border-border/60 rounded-xl shadow-[var(--shadow-card)]">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-b border-border/60">
+                  <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Cliente</TableHead>
+                  <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Faturamento Atual (R$)</TableHead>
+                  <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Meta de Faturamento (R$)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clients?.map((client) => (
+                  <SpreadsheetRow
+                    key={client.id}
+                    client={client}
+                    initialGoal={goalsMap.get(client.id) ?? null}
+                    onSaveGoal={handleSaveGoal}
+                    onSaveRevenue={handleSaveRevenue}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

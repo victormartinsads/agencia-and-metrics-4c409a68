@@ -24,7 +24,7 @@ function InnerEditor({ initialContent, gestorId, canManage, saveNotionData }: an
 
   return (
     <BlockNoteView
-      editor={editor}
+      editor={editor as any}
       editable={canManage}
       onChange={handleChange}
       theme="dark"

@@ -168,13 +168,13 @@ export function useStaffMemberRole(userId?: string) {
   }
 
   return {
-    role: roleValue === "gerente" ? "diretor" : roleValue,
+    role: (roleValue as any) === "gerente" ? "diretor" : roleValue,
     isAdmin: roleValue === "admin",
     isCeo: roleValue === "ceo",
-    isGerente: roleValue === "diretor" || roleValue === "gerente",
-    isDiretor: roleValue === "diretor" || roleValue === "gerente",
+    isGerente: roleValue === "diretor" || (roleValue as any) === "gerente",
+    isDiretor: roleValue === "diretor" || (roleValue as any) === "gerente",
     isGestor: roleValue === "gestor",
-    realRole: realRole === "gerente" ? "diretor" : realRole,
+    realRole: (realRole as any) === "gerente" ? "diretor" : realRole,
   };
 }
 
@@ -835,6 +835,7 @@ export interface GestorProfileMeta {
   role_override: string;
   name_override: string;
   email_override: string;
+  banner_override?: string;
 }
 
 export function useGestorProfileMeta(gestorId: string) {
@@ -857,6 +858,7 @@ export function useGestorProfileMeta(gestorId: string) {
             role_override: "",
             name_override: "",
             email_override: "",
+            banner_override: "",
           } as GestorProfileMeta;
         }
         return data as GestorProfileMeta;
@@ -868,6 +870,7 @@ export function useGestorProfileMeta(gestorId: string) {
             role_override: "",
             name_override: "",
             email_override: "",
+            banner_override: "",
           });
         }
         throw err;
@@ -894,6 +897,7 @@ export function useSaveGestorProfileMeta() {
           role_override: meta.role_override ?? (current?.role_override ?? ""),
           name_override: meta.name_override ?? (current?.name_override ?? ""),
           email_override: meta.email_override ?? (current?.email_override ?? ""),
+          banner_override: meta.banner_override ?? (current?.banner_override ?? ""),
         };
 
         const { data: result, error } = await (supabase as any)
@@ -912,6 +916,7 @@ export function useSaveGestorProfileMeta() {
             role_override: "",
             name_override: "",
             email_override: "",
+            banner_override: "",
           });
           const updated = { ...current, ...meta };
           setLocal(`profile_meta:${gestor_id}`, updated);
