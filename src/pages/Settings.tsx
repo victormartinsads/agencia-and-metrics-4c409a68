@@ -1,6 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon, UserCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   useRemoveMember,
   useSetMemberPassword,
 } from "@/hooks/useMembers";
-import { useStaffRoles, useSetStaffRole } from "@/hooks/useGestorDiary";
+import { useStaffRoles, useSetStaffRole, useGestorClients, useManageGestorClient } from "@/hooks/useGestorDiary";
 import { toast } from "sonner";
 import { Trash2, UserPlus, Mail } from "lucide-react";
 import {
@@ -43,7 +44,7 @@ import { Facebook, Link2, Unlink } from "lucide-react";
 import { useMetaConnectionStatus, useConnectMeta, useDisconnectMeta } from "@/hooks/useMetaAds";
 import { getMetaOAuthRedirectUri } from "@/lib/metaOAuth";
 import { friendlyError } from "@/lib/friendlyError";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
@@ -89,6 +90,9 @@ export default function SettingsPage() {
                 <TabsTrigger value="client-access" className="gap-1.5">
                   <KanbanSquare className="h-3.5 w-3.5" /> Acessos de Clientes
                 </TabsTrigger>
+                <TabsTrigger value="assignments" className="gap-1.5">
+                  <UserCheck className="h-3.5 w-3.5" /> Atribuições
+                </TabsTrigger>
                 <TabsTrigger value="permissions" className="gap-1.5">
                   <Shield className="h-3.5 w-3.5" /> Permissões
                 </TabsTrigger>
@@ -111,6 +115,7 @@ export default function SettingsPage() {
             <>
               <TabsContent value="members"><MembersSection /></TabsContent>
               <TabsContent value="client-access"><ClientAccessSection /></TabsContent>
+              <TabsContent value="assignments"><AssignmentsSection /></TabsContent>
               <TabsContent value="permissions"><PermissionsSection /></TabsContent>
             </>
           )}
@@ -1086,5 +1091,200 @@ function ClientAccessSection() {
         )}
       </Card>
     </div>
+  );
+}
+
+function AssignmentsSection() {
+  const { data: members = [], isLoading: membersLoading } = useMembers();
+  const { data: staffRoles = [] } = useStaffRoles();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [search, setSearch] = useState("");
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("*");
+      return data || [];
+    },
+  });
+
+  const { data: gestorClients = [], isLoading: gestorClientsLoading } = useGestorClients(selectedMemberId);
+  const manageClient = useManageGestorClient();
+
+  const staffMembers = useMemo(() => {
+    return members
+      .filter((m) => {
+        const uRole = staffRoles.find((r) => r.user_id === m.id);
+        return !!uRole?.role;
+      })
+      .map((m) => {
+        const profile = profiles.find((p) => p.user_id === m.id);
+        const uRole = staffRoles.find((r) => r.user_id === m.id);
+        return {
+          id: m.id,
+          email: m.email,
+          name: profile?.full_name || m.email.split("@")[0],
+          role: uRole?.role,
+        };
+      });
+  }, [members, staffRoles, profiles]);
+
+  const assignedClientIds = useMemo(() => {
+    return new Set(gestorClients.map((c) => c.client_id));
+  }, [gestorClients]);
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => c.name.toLowerCase().includes(q));
+  }, [clients, search]);
+
+  const handleToggle = async (clientId: string, clientName: string, checked: boolean) => {
+    if (!selectedMemberId) return;
+
+    if (checked) {
+      try {
+        await manageClient.mutateAsync({
+          action: "insert",
+          item: {
+            gestor_id: selectedMemberId,
+            client_id: clientId,
+            client_name: clientName,
+            status: "Em andamento",
+          },
+        });
+        toast.success(`Cliente ${clientName.toUpperCase()} atribuído com sucesso!`);
+      } catch (err: any) {
+        toast.error(`Erro ao atribuir: ${err.message}`);
+      }
+    } else {
+      const record = gestorClients.find((c) => c.client_id === clientId);
+      if (!record) return;
+
+      try {
+        await manageClient.mutateAsync({
+          action: "delete",
+          item: {
+            gestor_id: selectedMemberId,
+            id: record.id,
+          },
+        });
+        toast.success(`Atribuição do cliente ${clientName.toUpperCase()} removida!`);
+      } catch (err: any) {
+        toast.error(`Erro ao remover: ${err.message}`);
+      }
+    }
+  };
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h2 className="text-base font-semibold text-card-foreground">
+          Atribuição de Clientes a Gestores
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Selecione um membro da equipe para gerenciar quais contas de clientes estarão visíveis e sob gerência no dashboard dele.
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="space-y-1.5 flex-1 max-w-xs">
+          <Label className="text-xs">Membro da Equipe</Label>
+          <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Selecione um gestor..." />
+            </SelectTrigger>
+            <SelectContent>
+              {staffMembers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name.toUpperCase()} ({m.role?.toUpperCase()})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedMemberId && (
+          <div className="space-y-1.5 flex-1 max-w-xs">
+            <Label className="text-xs">Filtrar Clientes</Label>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar cliente..."
+              className="h-9"
+            />
+          </div>
+        )}
+      </div>
+
+      {!selectedMemberId ? (
+        <div className="py-12 text-center text-sm text-muted-foreground border border-dashed border-border rounded-xl">
+          Selecione um membro da equipe acima para gerenciar as atribuições.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Clientes da Agência ({filteredClients.length})
+          </div>
+
+          {gestorClientsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhum cliente encontrado.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredClients.map((c) => {
+                const isAssigned = assignedClientIds.has(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/50 hover:bg-background/80 hover:border-primary/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {c.logo_url ? (
+                        <img
+                          src={c.logo_url}
+                          alt={c.name}
+                          className="h-8 w-8 rounded-md object-cover bg-black border border-border shrink-0"
+                        />
+                      ) : (
+                        <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 border border-primary/20 font-mono text-xs font-bold text-primary shrink-0">
+                          {c.name.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-foreground uppercase truncate block">
+                          {c.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono truncate block">
+                          /{c.slug || c.id.slice(0, 8)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className={`text-xs ${isAssigned ? "text-emerald-400 font-semibold" : "text-muted-foreground"}`}>
+                        {isAssigned ? "Atribuído" : "Não atribuído"}
+                      </span>
+                      <Switch
+                        checked={isAssigned}
+                        onCheckedChange={(checked) => handleToggle(c.id, c.name, checked)}
+                        disabled={manageClient.isPending}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
