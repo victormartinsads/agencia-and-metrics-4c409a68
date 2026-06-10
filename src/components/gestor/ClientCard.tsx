@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGestorClientMeta, useSaveGestorClientMeta } from "@/hooks/useGestorDiary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Activity, Plus, CheckCircle, Square, Trash2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAllClientManagerMeta, useUpsertClientHealth } from "@/hooks/useClientManagerMeta";
+import { useClientTasks, useCreateClientTask, useUpdateClientTask, useDeleteClientTask } from "@/hooks/useClientTasks";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ClientCardProps {
   gestorId: string;
@@ -24,6 +27,42 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
   const { data: healthMap } = useAllClientManagerMeta();
   const upsertHealth = useUpsertClientHealth();
   const [newTaskText, setNewTaskText] = useState("");
+
+  const { data: tasks, isLoading: tasksLoading } = useClientTasks(clientId);
+  const createTask = useCreateClientTask();
+  const updateTask = useUpdateClientTask();
+  const deleteTask = useDeleteClientTask();
+  const qc = useQueryClient();
+
+  // Migrar dados JSONB legados para client_tasks automaticamente se existirem
+  useEffect(() => {
+    if (tasks && tasks.length === 0 && meta?.tasks && meta.tasks.length > 0) {
+      const migrate = async () => {
+        for (const t of meta.tasks) {
+          try {
+            await supabase.from("client_tasks" as any).insert({
+              client_id: clientId,
+              content: t.text,
+              completed: t.done,
+              completed_at: t.done ? new Date().toISOString() : null,
+            });
+          } catch (e) {
+            console.error("Erro na migração de tarefa legada:", e);
+          }
+        }
+        // Limpar o array JSONB para evitar re-migração
+        saveMeta.mutate({
+          gestor_id: gestorId,
+          client_id: clientId,
+          meta: { tasks: [] }
+        });
+        // Invalidar queries para recarregar
+        qc.invalidateQueries({ queryKey: ["client-tasks", clientId] });
+        qc.invalidateQueries({ queryKey: ["client-tasks-count", clientId] });
+      };
+      migrate();
+    }
+  }, [tasks, meta, clientId, gestorId, saveMeta, qc]);
 
   const handleHealthChange = async (val: string) => {
     const score = parseInt(val, 10);
@@ -44,38 +83,23 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
     }
   };
 
-  const handleAddTask = () => {
-    if (!newTaskText.trim() || !meta) return;
-    const updatedTasks = [
-      ...(meta.tasks || []),
-      { id: `task-${Date.now()}`, text: newTaskText.trim(), done: false }
-    ];
-    saveMeta.mutate({
-      gestor_id: gestorId,
-      client_id: clientId,
-      meta: { tasks: updatedTasks }
-    });
-    setNewTaskText("");
+  const handleAddTask = async () => {
+    if (!newTaskText.trim()) return;
+    try {
+      await createTask.mutateAsync({ clientId, content: newTaskText.trim() });
+      setNewTaskText("");
+      toast.success("Tarefa adicionada!");
+    } catch (e: any) {
+      toast.error("Erro ao adicionar tarefa: " + e.message);
+    }
   };
 
-  const handleToggleTask = (taskId: string) => {
-    if (!meta) return;
-    const updatedTasks = meta.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
-    saveMeta.mutate({
-      gestor_id: gestorId,
-      client_id: clientId,
-      meta: { tasks: updatedTasks }
-    });
+  const handleToggleTask = (taskId: string, currentCompleted: boolean) => {
+    updateTask.mutate({ id: taskId, completed: !currentCompleted });
   };
 
   const handleDeleteTask = (taskId: string) => {
-    if (!meta) return;
-    const updatedTasks = meta.tasks.filter(t => t.id !== taskId);
-    saveMeta.mutate({
-      gestor_id: gestorId,
-      client_id: clientId,
-      meta: { tasks: updatedTasks }
-    });
+    deleteTask.mutate(taskId);
   };
 
   const health = healthMap?.[clientId] ?? meta?.health ?? 10;
@@ -130,14 +154,14 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
             <span className="text-xs font-semibold text-muted-foreground">Pendências e Tarefas</span>
             
             <div className="flex flex-col gap-2 flex-1">
-              {meta?.tasks && meta.tasks.length > 0 ? (
-                meta.tasks.map(task => (
+              {tasks && tasks.length > 0 ? (
+                tasks.map(task => (
                   <div key={task.id} className="flex items-start gap-2 group">
-                    <button onClick={() => handleToggleTask(task.id)} className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors">
-                      {task.done ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Square className="h-4 w-4" />}
+                    <button onClick={() => handleToggleTask(task.id, task.completed)} className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors">
+                      {task.completed ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Square className="h-4 w-4" />}
                     </button>
-                    <span className={`text-sm flex-1 break-words ${task.done ? 'line-through text-muted-foreground opacity-70' : 'text-foreground'}`}>
-                      {task.text}
+                    <span className={`text-sm flex-1 break-words ${task.completed ? 'line-through text-muted-foreground opacity-70' : 'text-foreground'}`}>
+                      {task.content}
                     </span>
                     <button onClick={() => handleDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1 shrink-0 text-muted-foreground hover:text-red-400 transition-all">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -146,7 +170,7 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
                 ))
               ) : (
                 <div className="text-xs text-muted-foreground italic text-center py-2 bg-muted/20 rounded border border-dashed border-border/50">
-                  Nenhuma pendência anotada.
+                  {tasksLoading ? "Carregando tarefas..." : "Nenhuma pendência anotada."}
                 </div>
               )}
             </div>
