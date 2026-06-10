@@ -538,7 +538,7 @@ export default function DiarioDoGestor() {
           </div>
         </div>
 
-        <div className="px-8 md:px-16 mt-16 max-w-7xl mx-auto space-y-6">
+        <div className="px-8 md:px-16 mt-16 w-full space-y-6">
           {/* Title */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
@@ -610,7 +610,7 @@ export default function DiarioDoGestor() {
 
           <div className="w-full border-t border-border/40 my-8"></div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.6fr_1fr] gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="space-y-6">
               <Tabs defaultValue="ativos" className="w-full space-y-6">
                 <TabsList className="bg-muted/30 p-1 w-full flex justify-start border border-border/50">
