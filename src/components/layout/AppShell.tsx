@@ -115,7 +115,10 @@ export default function AppShell({
     }
     toast.success(`Simulando perfil de ${val.toUpperCase()}`);
     setTimeout(() => {
-      window.location.reload();
+      navigate("/");
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }, 800);
   };
   const navigate = useNavigate();
@@ -162,7 +165,7 @@ export default function AppShell({
       label: "Operação",
       items: [
         { id: "crm", label: "CRM", icon: KanbanSquare, href: "/crm-app" },
-        ...((role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor)
+        ...((role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
           ? [{ id: "manager", label: "Gestor", icon: Brain, href: "/gestor" }]
           : []),
         ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
@@ -170,7 +173,7 @@ export default function AppShell({
           : []),
       ],
     },
-    ...((role?.canAccessSettings)
+    ...((role?.canAccessSettings || isStaffAdmin || isStaffCeo || isStaffDiretor)
       ? [
           {
             label: "Conta",
