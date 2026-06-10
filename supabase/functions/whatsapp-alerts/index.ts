@@ -49,6 +49,41 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Determine the type of alert
+    let alertType = "generic";
+    if (alertKey.startsWith("account_disabled:") || alertKey.includes("disabled")) {
+      alertType = "disabled";
+    } else if (alertKey.startsWith("negative_balance:") || alertKey.includes("balance")) {
+      alertType = "balance";
+    } else if (alertKey.startsWith("budget_limit:") || alertKey.startsWith("budget_spent:")) {
+      alertType = "budget";
+    } else if (alertKey.startsWith("high_cpa:")) {
+      alertType = "cpa";
+    }
+
+    // Check if this type of alert is enabled in system_settings
+    if (!isTest && alertType !== "generic") {
+      const { data: configSetting } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "whatsapp_alerts_config")
+        .maybeSingle();
+
+      let config = { disabled: true, balance: true, budget: true, cpa: true };
+      if (configSetting?.value) {
+        try {
+          config = JSON.parse(configSetting.value);
+        } catch (_) {}
+      }
+
+      const isEnabled = (config as any)[alertType] ?? true;
+      if (!isEnabled) {
+        return new Response(JSON.stringify({ status: "skipped", reason: `alert_type_${alertType}_disabled` }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     if (!isTest) {
       // Check if we already sent this alert in the last 24 hours
       const { data: existingLog } = await supabase

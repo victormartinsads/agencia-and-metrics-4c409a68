@@ -464,7 +464,7 @@ function MetaConnectionSection({ clientId }: { clientId: string }) {
 }
 
 function AlertsSection() {
-  const { data: webhookUrl, isLoading, refetch } = useQuery({
+  const { data: webhookUrl, isLoading: loadingUrl, refetch: refetchUrl } = useQuery({
     queryKey: ["whatsapp-webhook-url"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -476,6 +476,27 @@ function AlertsSection() {
       return data?.value || "";
     }
   });
+
+  const { data: configString, isLoading: loadingConfig, refetch: refetchConfig } = useQuery({
+    queryKey: ["whatsapp-alerts-config"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("system_settings")
+        .select("value")
+        .eq("key", "whatsapp_alerts_config")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value || '{"disabled":true,"balance":true,"budget":true,"cpa":true}';
+    }
+  });
+
+  const parsedConfig = useMemo(() => {
+    try {
+      return JSON.parse(configString || '{"disabled":true,"balance":true,"budget":true,"cpa":true}');
+    } catch {
+      return { disabled: true, balance: true, budget: true, cpa: true };
+    }
+  }, [configString]);
 
   const [urlDraft, setUrlDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -495,11 +516,25 @@ function AlertsSection() {
         .upsert({ key: "whatsapp_webhook_url", value: urlDraft }, { onConflict: "key" });
       if (error) throw error;
       toast.success("Webhook do WhatsApp atualizado com sucesso!");
-      refetch();
+      refetchUrl();
     } catch (e: any) {
       toast.error("Erro ao salvar webhook: " + e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggle = async (key: string, val: boolean) => {
+    const next = { ...parsedConfig, [key]: val };
+    try {
+      const { error } = await (supabase as any)
+        .from("system_settings")
+        .upsert({ key: "whatsapp_alerts_config", value: JSON.stringify(next) }, { onConflict: "key" });
+      if (error) throw error;
+      toast.success("Configuração de alerta atualizada!");
+      refetchConfig();
+    } catch (e: any) {
+      toast.error("Erro ao salvar configuração: " + e.message);
     }
   };
 
@@ -545,7 +580,7 @@ function AlertsSection() {
     }
   };
 
-  if (isLoading) {
+  if (loadingUrl || loadingConfig) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -589,6 +624,61 @@ function AlertsSection() {
                 Salvar
               </Button>
             </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 border-border/60 bg-card/45 backdrop-blur-md">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Tipos de Alerta Habilitados</h3>
+          <p className="text-xs text-muted-foreground">
+            Escolha quais tipos de alertas você deseja disparar para o WhatsApp.
+          </p>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-accent/10">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold text-foreground">Bloqueios e Contas Desabilitadas</Label>
+              <p className="text-[10px] text-muted-foreground">Alertas críticos quando as contas de anúncio sofrem restrição ou bloqueio.</p>
+            </div>
+            <Switch
+              checked={!!parsedConfig.disabled}
+              onCheckedChange={(val) => handleToggle("disabled", val)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-accent/10">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold text-foreground">Saldo e Cobranças Pendentes</Label>
+              <p className="text-[10px] text-muted-foreground">Alertas de saldo negativo, cobranças recusadas no cartão de crédito ou status unsettled.</p>
+            </div>
+            <Switch
+              checked={!!parsedConfig.balance}
+              onCheckedChange={(val) => handleToggle("balance", val)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-accent/10">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold text-foreground">Estouro de Orçamento (Daily Budget)</Label>
+              <p className="text-[10px] text-muted-foreground">Alertas quando o gasto do dia da campanha atinge ou ultrapassa o orçamento configurado.</p>
+            </div>
+            <Switch
+              checked={!!parsedConfig.budget}
+              onCheckedChange={(val) => handleToggle("budget", val)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-accent/10">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold text-foreground">Custo por Aquisição (CPA) Elevado</Label>
+              <p className="text-[10px] text-muted-foreground">Alertas de campanhas ativas com o CPA médio acima do multiplicador do limite definido.</p>
+            </div>
+            <Switch
+              checked={!!parsedConfig.cpa}
+              onCheckedChange={(val) => handleToggle("cpa", val)}
+            />
           </div>
         </div>
       </Card>
