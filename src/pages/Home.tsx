@@ -30,9 +30,14 @@ export default function Home() {
     return <GestorOverview isHomePage={true} />;
   }
 
-  // Se for Diretor, CEO ou Admin, exibe a visão do Diretor na Home
-  if (isDiretor || isCeo || isAdmin) {
+  // Se for Diretor ou CEO, exibe a visão do Diretor na Home
+  if (isDiretor || isCeo) {
     return <DiretorOverview />;
+  }
+
+  // Se for Admin, redireciona para a listagem geral de clientes (/clients)
+  if (isAdmin) {
+    return <Navigate to="/clients" replace />;
   }
 
   return <Navigate to="/clients" replace />;

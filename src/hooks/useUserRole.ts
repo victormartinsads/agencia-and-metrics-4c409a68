@@ -30,24 +30,11 @@ export function useUserRole() {
         .maybeSingle();
       const staffRole = staffRolesData?.role || null;
 
-      // Determine if user has real admin permissions
-      const isRealAdmin = isMasterAdmin || staffRole === "admin" || systemRoles.includes("admin");
-
-      let activeStaffRole = staffRole;
-      if (isRealAdmin) {
-        const simulated = localStorage.getItem("simulated-staff-role");
-        if (simulated && ["gestor", "diretor", "ceo", "admin"].includes(simulated)) {
-          activeStaffRole = simulated;
-        } else if (simulated === "gerente") {
-          activeStaffRole = "diretor";
-        }
-      }
-
       // Determine clean role flags based on hierarchy
-      const isAdminRole = isRealAdmin && (activeStaffRole === "admin" || !localStorage.getItem("simulated-staff-role"));
-      const isCeoRole = isRealAdmin ? activeStaffRole === "ceo" : (staffRole === "ceo");
-      const isDiretorRole = isRealAdmin ? (activeStaffRole === "diretor" || activeStaffRole === "gerente") : (staffRole === "diretor" || staffRole === "gerente");
-      const isGestorRole = isRealAdmin ? activeStaffRole === "gestor" : (staffRole === "gestor");
+      const isAdminRole = isMasterAdmin || staffRole === "admin" || systemRoles.includes("admin");
+      const isCeoRole = !isMasterAdmin && staffRole === "ceo";
+      const isDiretorRole = !isMasterAdmin && (staffRole === "diretor" || staffRole === "gerente");
+      const isGestorRole = !isMasterAdmin && staffRole === "gestor";
 
       // A client is someone explicitly defined as client or someone with no staff roles who has 'client' system role
       const isClientRole = !isAdminRole && !isCeoRole && !isDiretorRole && !isGestorRole && 
@@ -58,7 +45,7 @@ export function useUserRole() {
 
       return {
         roles: systemRoles,
-        staffRole: activeStaffRole,
+        staffRole,
         isMasterAdmin,
         isAdmin: isAdminRole,
         isCeo: isCeoRole,
