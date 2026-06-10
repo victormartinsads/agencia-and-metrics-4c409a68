@@ -542,7 +542,7 @@ export default function DiarioDoGestor() {
           {/* Title */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight uppercase">
-              GESTOR DE TRÁFEGO - {displayName}
+              {displayName}
             </h1>
             
             {canManageOthers && (
