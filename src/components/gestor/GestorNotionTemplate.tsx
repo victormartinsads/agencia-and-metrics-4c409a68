@@ -5,12 +5,16 @@ import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
 import { PartialBlock } from "@blocknote/core";
+import * as locales from "@blocknote/core/locales";
 
 
 function InnerEditor({ initialContent, gestorId, canManage, saveNotionData }: any) {
   // Cria o editor apenas UMA VEZ na montagem usando o initialContent.
   // Sem array de dependências para não recriar e causar loop infinito no React Query.
-  const options = initialContent ? { initialContent } : {};
+  const options: any = { dictionary: locales.pt };
+  if (initialContent) {
+    options.initialContent = initialContent;
+  }
   const editor = useCreateBlockNote(options);
 
   const handleChange = () => {
