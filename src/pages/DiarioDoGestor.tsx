@@ -165,8 +165,7 @@ export default function DiarioDoGestor() {
   const { data: logs = [] } = useGestorLogs(activeGestorId);
   const manageLog = useManageGestorLog();
 
-  const { data: gestorClients = [] } = useGestorAssignments(activeGestorId);
-  // manageClient is kept if needed elsewhere, otherwise we can ignore it
+  const { data: gestorClients = [] } = useGestorClients(activeGestorId);
   const manageClient = useManageGestorClient();
 
   const { data: calendarEvents = [] } = useGestorCalendar(activeGestorId);
