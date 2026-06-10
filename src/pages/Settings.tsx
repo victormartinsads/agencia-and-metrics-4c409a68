@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
-import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon, UserCheck } from "lucide-react";
+import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon, UserCheck, Webhook } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -80,6 +80,9 @@ export default function SettingsPage() {
                 <TabsTrigger value="sheets" className="gap-1.5">
                   <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
                 </TabsTrigger>
+                <TabsTrigger value="alerts" className="gap-1.5">
+                  <Webhook className="h-3.5 w-3.5" /> Alertas
+                </TabsTrigger>
               </>
             )}
             {role?.canManageUsers && (
@@ -108,6 +111,7 @@ export default function SettingsPage() {
             <>
               <TabsContent value="google"><GoogleAnalyticsSection /></TabsContent>
               <TabsContent value="sheets"><SheetsSection /></TabsContent>
+              <TabsContent value="alerts"><AlertsSection /></TabsContent>
             </>
           )}
 
@@ -455,6 +459,218 @@ function MetaConnectionSection({ clientId }: { clientId: string }) {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AlertsSection() {
+  const { data: webhookUrl, isLoading, refetch } = useQuery({
+    queryKey: ["whatsapp-webhook-url"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("system_settings")
+        .select("value")
+        .eq("key", "whatsapp_webhook_url")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value || "";
+    }
+  });
+
+  const [urlDraft, setUrlDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (webhookUrl !== undefined) {
+      setUrlDraft(webhookUrl);
+    }
+  }, [webhookUrl]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("system_settings")
+        .upsert({ key: "whatsapp_webhook_url", value: urlDraft }, { onConflict: "key" });
+      if (error) throw error;
+      toast.success("Webhook do WhatsApp atualizado com sucesso!");
+      refetch();
+    } catch (e: any) {
+      toast.error("Erro ao salvar webhook: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestAlert = async (type: string) => {
+    setTesting(type);
+    try {
+      let message = "";
+      let alertKey = "";
+      if (type === "disabled") {
+        alertKey = "account_disabled:act_mock123";
+        message = "Conta de Anúncios 'Agência AND (Mock)' foi desabilitada. Motivo: Violação de políticas de publicidade.";
+      } else if (type === "balance") {
+        alertKey = "negative_balance:act_mock123";
+        message = "Conta de Anúncios 'Larissa Pantoja (Mock)' está com saldo pendente (UNSETTLED) de R$ -143.50.";
+      } else if (type === "budget") {
+        alertKey = "budget_spent:camp_mock456";
+        message = "Campanha 'Conversão Lead Q4' usou 105% do seu orçamento diário (gasto: R$ 525.00 / R$ 500.00).";
+      } else if (type === "cpa") {
+        alertKey = "high_cpa:camp_mock456";
+        message = "Campanha 'Google Ads - Purchase' registrou CPA elevado de R$ 92.40 (teto configurado: R$ 60.00).";
+      }
+
+      const { data, error } = await supabase.functions.invoke("whatsapp-alerts", {
+        body: {
+          clientId: "11111111-1111-1111-1111-111111111111", // Demo client id
+          clientName: "CLIENTE DEMO (AND)",
+          alertKey,
+          message,
+          isTest: true
+        }
+      });
+
+      if (error) throw error;
+      if (data?.status === "skipped") {
+        toast.warning(`Alerta enviado, mas ignorado: ${data.reason}`);
+      } else {
+        toast.success("Alerta enviado com sucesso para o webhook!");
+      }
+    } catch (e: any) {
+      toast.error("Falha ao enviar alerta de teste: " + e.message);
+    } finally {
+      setTesting(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6 border-border/60 bg-card/45 backdrop-blur-md">
+        <div className="flex items-start gap-4">
+          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <Webhook className="h-5 w-5" />
+          </div>
+          <div className="space-y-1 flex-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Webhook de Alertas (WhatsApp)</h2>
+            <p className="text-xs text-muted-foreground">
+              Configure a URL do webhook para enviar notificações em tempo real sempre que ocorrerem problemas nas contas de anúncios.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="webhook_url" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">URL do Webhook</Label>
+            <div className="flex gap-2">
+              <Input
+                id="webhook_url"
+                type="url"
+                placeholder="https://sua-instancia.evolution-api.com/webhook/..."
+                value={urlDraft}
+                onChange={(e) => setUrlDraft(e.target.value)}
+                className="bg-accent/25 border-border/80 text-foreground text-xs"
+              />
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="shrink-0 h-9 font-bold text-xs uppercase"
+              >
+                {saving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 border-border/60 bg-card/45 backdrop-blur-md">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Testar Alertas do WhatsApp</h3>
+          <p className="text-xs text-muted-foreground">
+            Dispare payloads de simulação para verificar como o endpoint da Evolution API processa e formata as mensagens no WhatsApp.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+          <div className="p-4 rounded-xl border border-border/60 bg-accent/20 flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">Conta Desabilitada</p>
+              <p className="text-[10px] text-muted-foreground">Simula uma conta que foi restrita ou bloqueada pela Meta por violação de políticas.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={testing !== null || !urlDraft}
+              onClick={() => handleTestAlert("disabled")}
+              className="h-8 text-xs font-bold"
+            >
+              {testing === "disabled" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Testar Conta Desabilitada
+            </Button>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border/60 bg-accent/20 flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-yellow-400">Saldo/Pagamento Pendente</p>
+              <p className="text-[10px] text-muted-foreground">Simula uma falha de cobrança no cartão ou saldo insuficiente (UNSETTLED).</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={testing !== null || !urlDraft}
+              onClick={() => handleTestAlert("balance")}
+              className="h-8 text-xs font-bold"
+            >
+              {testing === "balance" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Testar Saldo Negativo
+            </Button>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border/60 bg-accent/20 flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400">Estouro de Orçamento</p>
+              <p className="text-[10px] text-muted-foreground">Simula o estouro do limite diário estipulado (gastos &gt;= 90% do orçamento).</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={testing !== null || !urlDraft}
+              onClick={() => handleTestAlert("budget")}
+              className="h-8 text-xs font-bold"
+            >
+              {testing === "budget" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Testar Limite do Budget
+            </Button>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border/60 bg-accent/20 flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">CPA Elevado</p>
+              <p className="text-[10px] text-muted-foreground">Simula o custo por conversão (leads ou compras) ultrapassando a meta do cliente.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={testing !== null || !urlDraft}
+              onClick={() => handleTestAlert("cpa")}
+              className="h-8 text-xs font-bold"
+            >
+              {testing === "cpa" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Testar Alerta CPA Alto
+            </Button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

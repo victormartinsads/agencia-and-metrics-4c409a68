@@ -17,6 +17,7 @@ export interface ClientOverview {
 
 interface ClientCfg {
   id: string;
+  name?: string;
   target_cpa_lead?: number;
   target_cpa_purchase?: number;
   cpa_alert_multiplier?: number;
@@ -93,6 +94,29 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
         severity: "medium",
         message: `${c.name} — CPA alto (${c.costPerConversion.toFixed(2)})`,
       });
+    });
+
+    // Dispatch alerts webhook in background
+    alerts.forEach((a) => {
+      let alertKey = "generic";
+      if (a.message.includes("usou")) {
+        alertKey = `budget_limit:${client.id}:${a.message.split(" ")[0]}`;
+      } else if (a.message.includes("CPA alto")) {
+        alertKey = `high_cpa:${client.id}:${a.message.split(" — ")[0]}`;
+      } else if (a.message.includes("Saldo negativo")) {
+        alertKey = `negative_balance:${client.id}`;
+      } else {
+        alertKey = `account_status:${client.id}`;
+      }
+
+      supabase.functions.invoke("whatsapp-alerts", {
+        body: {
+          clientId: client.id,
+          clientName: client.name || "Cliente",
+          alertKey,
+          message: a.message,
+        }
+      }).catch((err) => console.error("Error sending whatsapp alert:", err));
     });
 
     return {
