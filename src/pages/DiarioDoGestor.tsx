@@ -26,7 +26,7 @@ import {
   useSaveGestorProfileMeta,
 } from "@/hooks/useGestorDiary";
 import { useGestorAssignments } from "@/hooks/useGestorAssignments";
-import { useMembers } from "@/hooks/useMembers";
+
 import { useClients } from "@/hooks/useClients";
 import {
   Card,
@@ -90,8 +90,7 @@ export default function DiarioDoGestor() {
   // Can manage other diaries
   const canManageOthers = isAdmin || isCeo || isDiretor || sysRole?.isAdmin || sysRole?.isCeo || sysRole?.isDiretor;
 
-  // Active members
-  const { data: members = [] } = useMembers();
+
 
   // Load global active clients list (for supervisors, load all; for gestores, load only their assigned clients)
   const { data: globalClients = [] } = useClients({ allClientsForStaff: canManageOthers });
@@ -108,23 +107,20 @@ export default function DiarioDoGestor() {
   // Get active roles of staff to filter "Gestores"
   const { data: staffRoles = [] } = useStaffRoles();
 
-  // Gestores list
+  // Gestores list (derived from staffRoles and profiles to avoid calling admin-only manage-members function)
   const gestoresList = useMemo(() => {
-    return members
-      .filter((m) => {
-        const uRole = staffRoles.find((r) => r.user_id === m.id);
-        return !!uRole?.role;
-      })
-      .map((m) => {
-        const profile = profiles.find((p) => p.user_id === m.id);
+    return staffRoles
+      .filter((r) => r.role === "gestor")
+      .map((r) => {
+        const p = profiles.find((prof) => prof.user_id === r.user_id);
         return {
-          id: m.id,
-          email: m.email,
-          name: profile?.full_name || m.email.split("@")[0],
-          avatar: profile?.avatar_url || null,
+          id: r.user_id,
+          email: p?.email || "",
+          name: p?.full_name || p?.email?.split("@")[0] || "Gestor",
+          avatar: p?.avatar_url || null,
         };
       });
-  }, [members, staffRoles, profiles]);
+  }, [staffRoles, profiles]);
 
   // Selected gestor state
   const [selectedGestorId, setSelectedGestorId] = useState<string>("");
@@ -140,18 +136,17 @@ export default function DiarioDoGestor() {
   // Active gestor profile details
   const activeGestor = useMemo(() => {
     const profile = profiles.find((p) => p.user_id === activeGestorId);
-    const member = members.find((m) => m.id === activeGestorId);
     const uRole = staffRoles.find((r) => r.user_id === activeGestorId);
     
     return {
       id: activeGestorId,
-      name: profile?.full_name || member?.email?.split("@")[0] || "Gestor",
-      email: member?.email || "",
+      name: profile?.full_name || profile?.email?.split("@")[0] || "Gestor",
+      email: profile?.email || "",
       avatar: profile?.avatar_url || null,
       roleName: uRole?.role || "gestor",
       created_at: profile?.created_at,
     };
-  }, [activeGestorId, profiles, members, staffRoles]);
+  }, [activeGestorId, profiles, staffRoles]);
 
   // ----------------------------------------------------
   // DIARY MUTATIONS & HOOKS
