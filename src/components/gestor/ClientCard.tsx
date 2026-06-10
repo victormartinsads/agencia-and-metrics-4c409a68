@@ -14,9 +14,10 @@ interface ClientCardProps {
   clientName: string;
   clientStatus: string;
   isPaused?: boolean;
+  onUnlink?: () => void;
 }
 
-export default function ClientCard({ gestorId, clientId, clientName, clientStatus, isPaused }: ClientCardProps) {
+export default function ClientCard({ gestorId, clientId, clientName, clientStatus, isPaused, onUnlink }: ClientCardProps) {
   const { data: meta } = useGestorClientMeta(gestorId, clientId);
   const saveMeta = useSaveGestorClientMeta();
   const [newTaskText, setNewTaskText] = useState("");
@@ -83,9 +84,16 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
             )}
           </div>
         </div>
-        <a href={`/dashboard/${clientId}`} target="_blank" rel="noreferrer" className="shrink-0 p-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors">
-          <ArrowRight className="h-4 w-4" />
-        </a>
+        <div className="flex items-center gap-2">
+          {onUnlink && (
+            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={onUnlink} title="Desvincular Cliente">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <a href={`/dashboard/${clientId}`} target="_blank" rel="noreferrer" className="shrink-0 p-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors" title="Acessar Dashboard">
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </div>
       </CardHeader>
       
       {!isPaused && (

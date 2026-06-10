@@ -113,7 +113,7 @@ export default function DiarioDoGestor() {
     return members
       .filter((m) => {
         const uRole = staffRoles.find((r) => r.user_id === m.id);
-        return uRole?.role === "gestor";
+        return !!uRole?.role;
       })
       .map((m) => {
         const profile = profiles.find((p) => p.user_id === m.id);
@@ -650,6 +650,7 @@ export default function DiarioDoGestor() {
                             clientName={c.client_name} 
                             clientStatus={c.status}
                             isPaused={false}
+                            onUnlink={() => handleDeleteClient(c.id)}
                           />
                         ))
                     )}
@@ -691,6 +692,7 @@ export default function DiarioDoGestor() {
                             clientName={c.client_name} 
                             clientStatus={c.status}
                             isPaused={true}
+                            onUnlink={() => handleDeleteClient(c.id)}
                           />
                         ))
                     )}
