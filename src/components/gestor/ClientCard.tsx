@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Plus, CheckCircle, Square, Trash2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { useAllClientManagerMeta, useUpsertClientHealth } from "@/hooks/useClientManagerMeta";
 
 interface ClientCardProps {
   gestorId: string;
@@ -20,14 +21,27 @@ interface ClientCardProps {
 export default function ClientCard({ gestorId, clientId, clientName, clientStatus, isPaused, onUnlink }: ClientCardProps) {
   const { data: meta } = useGestorClientMeta(gestorId, clientId);
   const saveMeta = useSaveGestorClientMeta();
+  const { data: healthMap } = useAllClientManagerMeta();
+  const upsertHealth = useUpsertClientHealth();
   const [newTaskText, setNewTaskText] = useState("");
 
-  const handleHealthChange = (val: string) => {
-    saveMeta.mutate({
-      gestor_id: gestorId,
-      client_id: clientId,
-      meta: { health: parseInt(val, 10) }
-    });
+  const handleHealthChange = async (val: string) => {
+    const score = parseInt(val, 10);
+    try {
+      // 1. Update global health score
+      await upsertHealth.mutateAsync({ clientId, score });
+      
+      // 2. Update diary health score
+      await saveMeta.mutateAsync({
+        gestor_id: gestorId,
+        client_id: clientId,
+        meta: { health: score }
+      });
+      
+      toast.success("Saúde do cliente atualizada!");
+    } catch (e: any) {
+      toast.error("Erro ao atualizar saúde: " + e.message);
+    }
   };
 
   const handleAddTask = () => {
@@ -64,7 +78,7 @@ export default function ClientCard({ gestorId, clientId, clientName, clientStatu
     });
   };
 
-  const health = meta?.health ?? 10;
+  const health = healthMap?.[clientId] ?? meta?.health ?? 10;
   const healthColor = health >= 8 ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" : 
                       health >= 5 ? "text-amber-500 bg-amber-500/10 border-amber-500/20" : 
                       "text-red-500 bg-red-500/10 border-red-500/20";
