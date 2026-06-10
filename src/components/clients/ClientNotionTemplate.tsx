@@ -8,10 +8,118 @@ import { useClientTasks, useCreateClientTask, useUpdateClientTask, useDeleteClie
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import * as locales from "@blocknote/core/locales";
+
+// Template padrão estilo Notion com as seções solicitadas
+const defaultClientTemplate: any[] = [
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "PLANO ESTRATÉGICO - CLIENTE:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "PLANO ESTRATÉGICO - EQUIPE AND:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "DOCUMENTOS:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "ESTRATÉGIAS ATIVAS:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "MATERIAL DE APOIO:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "DADOS:"
+  },
+  {
+    type: "bulletListItem",
+    content: "PÁGINAS"
+  },
+  {
+    type: "bulletListItem",
+    content: "ICP"
+  },
+  {
+    type: "bulletListItem",
+    content: "PRODUTOS"
+  },
+  {
+    type: "bulletListItem",
+    content: "CRIATIVOS"
+  },
+  {
+    type: "bulletListItem",
+    content: "INTELIGÊNCIA DO TRÁFEGO"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "GRAVAÇÃO DA CALL:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "TRILHA SEMANAL:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "PROCESSOS:"
+  },
+  {
+    type: "paragraph"
+  },
+  {
+    type: "heading",
+    props: { level: 3 },
+    content: "METAS:"
+  },
+  {
+    type: "paragraph"
+  }
+];
 
 function InnerEditor({ initialContent, clientId, canManage, saveNotionData }: any) {
-  // Cria o editor apenas UMA VEZ na montagem usando o initialContent.
-  const options = initialContent ? { initialContent } : {};
+  // Cria o editor apenas UMA VEZ na montagem usando o conteúdo fornecido ou o template default.
+  const options = {
+    initialContent: initialContent || defaultClientTemplate,
+    dictionary: locales.pt
+  };
   const editor = useCreateBlockNote(options);
 
   const handleChange = () => {
@@ -148,7 +256,7 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
     );
   }
 
-  // Resolve o conteúdo inicial
+  // Resolve o conteúdo inicial se for um array válido
   let initialContent = undefined;
   if (Array.isArray(notionData) && notionData.length > 0) {
     initialContent = notionData;
