@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, Settings, Loader2, Share2, Check, RefreshCw, Zap,
 } from "lucide-react";
-import { Client } from "@/hooks/useClients";
+import { Client, useClients } from "@/hooks/useClients";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
@@ -16,7 +16,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 export default function ClientDashboard() {
   const { clientId } = useParams<{ clientId: string }>();
-  const { data: userRole } = useUserRole();
+  const { data: userRole, isLoading: roleLoading } = useUserRole();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
   const isStaff = !!(userRole?.isAdmin || userRole?.isEditor);
   const [datePreset, setDatePreset] = useState("last_7d");
   const [activeTab, setActiveTab] = useState(() => {
@@ -90,7 +91,7 @@ export default function ClientDashboard() {
       await Promise.all(tasks);
       // Invalidate all client-scoped caches
       await queryClient.invalidateQueries();
-      toast.success("Dados atualizados");
+      toast.success("Dados updates");
     } catch (e: any) {
       toast.error(e?.message || "Erro ao atualizar");
     } finally {
@@ -112,7 +113,10 @@ export default function ClientDashboard() {
     }
   };
 
-  if (clientLoading) {
+  const isLoading = clientLoading || roleLoading || clientsLoading;
+  const isAllowed = userRole?.isAdmin || userRole?.isCeo || userRole?.isDiretor || clients.some((c) => c.id === clientId);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -120,11 +124,11 @@ export default function ClientDashboard() {
     );
   }
 
-  if (!client) {
+  if (!client || !isAllowed) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground">Cliente não encontrado</p>
-        <Link to="/clients" className="text-primary underline">Voltar</Link>
+        <p className="text-muted-foreground">Acesso não autorizado ou cliente não encontrado.</p>
+        <Link to="/clients" className="text-primary underline">Voltar para a página inicial</Link>
       </div>
     );
   }

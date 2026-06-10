@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Client {
   id: string;
@@ -42,10 +43,36 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function useClients(opts?: { includeArchived?: boolean; onlyArchived?: boolean }) {
+export function useClients(opts?: { includeArchived?: boolean; onlyArchived?: boolean; allClientsForStaff?: boolean }) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["clients", opts?.includeArchived ? "all" : opts?.onlyArchived ? "archived" : "active"],
+    queryKey: ["clients", opts?.includeArchived ? "all" : opts?.onlyArchived ? "archived" : "active", user?.id, opts?.allClientsForStaff],
     queryFn: async () => {
+      if (!user) return [] as Client[];
+
+      // Fetch user email override
+      const isMasterAdmin = user.email?.toLowerCase() === "victordbmartins@gmail.com";
+
+      // Fetch staff roles
+      const { data: staffRolesData } = await (supabase as any)
+        .from("staff_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const staffRole = staffRolesData?.role || null;
+
+      // Fetch system roles
+      const { data: userRolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const systemRoles = (userRolesData || []).map((r) => r.role);
+
+      const isAdmin = isMasterAdmin || staffRole === "admin" || systemRoles.includes("admin");
+      const isCeo = !isMasterAdmin && staffRole === "ceo";
+      const isDiretor = !isMasterAdmin && (staffRole === "diretor" || staffRole === "gerente");
+      const isGestor = !isMasterAdmin && staffRole === "gestor";
+
       let q = supabase.from("clients").select("*").order("created_at", { ascending: false });
       if (opts?.onlyArchived) {
         q = q.not("archived_at", "is", null);
@@ -54,8 +81,10 @@ export function useClients(opts?: { includeArchived?: boolean; onlyArchived?: bo
       }
       const { data, error } = await q;
       if (error) throw error;
+
       return data as Client[];
     },
+    enabled: !!user,
   });
 }
 

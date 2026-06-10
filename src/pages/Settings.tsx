@@ -48,15 +48,9 @@ import { useQueryClient } from "@tanstack/react-query";
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
 
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (!role?.canAccessSettings) {
+    return <Navigate to="/" replace />;
   }
-
-  const isAdmin = !!role?.isAdmin;
 
   const header = (
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-4">
@@ -64,7 +58,7 @@ export default function SettingsPage() {
         <SettingsIcon className="h-5 w-5 text-primary" /> Configurações
       </h1>
       <p className="text-xs text-muted-foreground mt-0.5">
-        {isAdmin ? "Painel de administração e conta pessoal" : "Configurações da sua conta"}
+        {role?.canManageUsers ? "Painel de administração e conta pessoal" : "Configurações da sua conta"}
       </p>
     </div>
   );
@@ -77,7 +71,7 @@ export default function SettingsPage() {
             <TabsTrigger value="account" className="gap-1.5">
               <UserIcon className="h-3.5 w-3.5" /> Minha conta
             </TabsTrigger>
-            {isAdmin && (
+            {role?.canAccessSettings && (
               <>
                 <TabsTrigger value="google" className="gap-1.5">
                   <Globe className="h-3.5 w-3.5" /> Conexões
@@ -85,6 +79,10 @@ export default function SettingsPage() {
                 <TabsTrigger value="sheets" className="gap-1.5">
                   <FileSpreadsheet className="h-3.5 w-3.5" /> Planilhas
                 </TabsTrigger>
+              </>
+            )}
+            {role?.canManageUsers && (
+              <>
                 <TabsTrigger value="members" className="gap-1.5">
                   <Users className="h-3.5 w-3.5" /> Membros
                 </TabsTrigger>
@@ -102,10 +100,15 @@ export default function SettingsPage() {
             <MyAccountSection />
           </TabsContent>
 
-          {isAdmin && (
+          {role?.canAccessSettings && (
             <>
               <TabsContent value="google"><GoogleAnalyticsSection /></TabsContent>
               <TabsContent value="sheets"><SheetsSection /></TabsContent>
+            </>
+          )}
+
+          {role?.canManageUsers && (
+            <>
               <TabsContent value="members"><MembersSection /></TabsContent>
               <TabsContent value="client-access"><ClientAccessSection /></TabsContent>
               <TabsContent value="permissions"><PermissionsSection /></TabsContent>
@@ -720,9 +723,16 @@ function MembersSection() {
                   className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-border bg-background/50"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {m.email}
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {m.email}
+                      </p>
+                      {m.password && (
+                        <span className="text-[10px] bg-muted border border-border px-1.5 py-0.5 rounded font-mono text-muted-foreground flex items-center gap-1">
+                          Senha: <span className="font-bold text-foreground">{m.password}</span>
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
                       {currentRole ? (
                         <Badge
@@ -742,13 +752,15 @@ function MembersSection() {
                         const colors: Record<string, string> = {
                           admin: "bg-red-500/10 border-red-500/20 text-red-400",
                           ceo: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+                          diretor: "bg-blue-500/10 border-blue-500/20 text-blue-400",
                           gerente: "bg-blue-500/10 border-blue-500/20 text-blue-400",
                           gestor: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
                         };
                         const labels: Record<string, string> = {
                           admin: "Staff Admin",
                           ceo: "CEO",
-                          gerente: "Gerente",
+                          diretor: "Diretor",
+                          gerente: "Diretor",
                           gestor: "Gestor",
                         };
                         return (
@@ -801,7 +813,7 @@ function MembersSection() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="gestor">Gestor</SelectItem>
-                          <SelectItem value="gerente">Gerente</SelectItem>
+                          <SelectItem value="diretor">Diretor</SelectItem>
                           <SelectItem value="ceo">CEO</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>

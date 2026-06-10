@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft, Settings, Code, Webhook, BarChart3, Activity,
-  Zap, BookOpen, ListChecks, AlertTriangle, Copy, Check, RefreshCw, Users, Radio
+  Zap, BookOpen, ListChecks, AlertTriangle, Copy, Check, RefreshCw, Users, Radio, Loader2
 } from "lucide-react";
 import TrackingConfig from "@/components/tracking/TrackingConfig";
 import TrackingScript from "@/components/tracking/TrackingScript";
@@ -19,10 +19,14 @@ import InboundWebhooksTab from "@/components/tracking/InboundWebhooks";
 import UserJourney from "@/components/tracking/UserJourney";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useClients } from "@/hooks/useClients";
 
 export default function TrackingHub() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const { data: userRole, isLoading: roleLoading } = useUserRole();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
   const [clientName, setClientName] = useState<string>("");
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,10 +34,12 @@ export default function TrackingHub() {
   const [activeTab, setActiveTab] = useState("guide");
   const [copiedSql, setCopiedSql] = useState(false);
 
+  const isAllowed = userRole?.isAdmin || userRole?.isCeo || userRole?.isDiretor || clients.some((c) => c.id === clientId);
+
   useEffect(() => {
-    if (!clientId) return;
+    if (!clientId || roleLoading || clientsLoading || !isAllowed) return;
     fetchData();
-  }, [clientId]);
+  }, [clientId, roleLoading, clientsLoading, isAllowed]);
 
   async function fetchData() {
     setLoading(true);
@@ -96,6 +102,24 @@ export default function TrackingHub() {
     toast.success("Copiado!");
     setTimeout(() => setCopiedSql(false), 2000);
   };
+
+  // ── Access Guards ────────────────────────────────────────────────────────
+  if (roleLoading || clientsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isAllowed) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Acesso não autorizado ou cliente não encontrado.</p>
+        <Link to="/clients" className="text-primary underline">Voltar para a página inicial</Link>
+      </div>
+    );
+  }
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {

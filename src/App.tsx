@@ -30,6 +30,7 @@ import ClientPortalRouter from "./components/ClientPortalRouter.tsx";
 import FunnelPlayground from "./pages/FunnelPlayground.tsx";
 import DiarioDoGestor from "./pages/DiarioDoGestor.tsx";
 import TrackingHub from "./pages/TrackingHub.tsx";
+import Home from "./pages/Home.tsx";
 
 const queryClient = new QueryClient();
 
@@ -60,7 +61,7 @@ const App = () => (
             <Route path="/google/callback" element={<GoogleCallback />} />
             <Route path="/meta/callback" element={<MetaCallback />} />
             {/* Protected routes */}
-            <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Navigate to="/clients" replace /></ClientPortalRouter></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><ClientPortalRouter><Home /></ClientPortalRouter></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/:clientId/sheets" element={<ProtectedRoute><ClientSheetsConfig /></ProtectedRoute>} />

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Client, useClients, useUpdateClient } from "@/hooks/useClients";
 import { VisibleTabsEditor } from "@/components/clients/VisibleTabsEditor";
+import { useUserRole } from "@/hooks/useUserRole";
 import { ClientLogoUploader } from "@/components/clients/ClientLogoUploader";
 import { useClientOrgs, useEnableClientCrm, useDisableClientCrm } from "@/hooks/useClientCrm";
 import { DataSourcesPanel } from "@/components/settings/DataSourcesPanel";
@@ -29,6 +30,7 @@ import {
 
 export default function ClientSettings() {
   const { clientId } = useParams<{ clientId: string }>();
+  const { data: userRole, isLoading: roleLoading } = useUserRole();
   const { data: clients, isLoading } = useClients();
   const update = useUpdateClient();
   const client = clients?.find((c) => c.id === clientId);
@@ -144,10 +146,21 @@ export default function ClientSettings() {
     }
   }, [client?.id]);
 
-  if (isLoading || !client) {
+  const isAllowed = userRole?.isAdmin || userRole?.isCeo || userRole?.isDiretor || (clients || []).some((c) => c.id === clientId);
+
+  if (isLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client || !isAllowed) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Acesso não autorizado ou cliente não encontrado.</p>
+        <Link to="/clients" className="text-primary underline">Voltar para a página inicial</Link>
       </div>
     );
   }

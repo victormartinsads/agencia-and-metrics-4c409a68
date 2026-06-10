@@ -213,7 +213,7 @@ export default function ClientsPage() {
   const sheetOpen = creating || !!editing;
 
   return (
-    <AppShell currentPage="manage">
+    <AppShell currentPage="clients">
       <div className="mx-auto w-full max-w-[1400px]">
         {/* Header */}
         <motion.header

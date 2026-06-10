@@ -6,7 +6,7 @@ import { toast } from "sonner";
 export interface GestorStaffRole {
   id: string;
   user_id: string;
-  role: "admin" | "ceo" | "gerente" | "gestor";
+  role: "admin" | "ceo" | "diretor" | "gestor";
   created_at: string;
 }
 
@@ -160,18 +160,21 @@ export function useStaffMemberRole(userId?: string) {
   // Role impersonation/simulation (only if real role is admin)
   if (realRole === "admin") {
     const simulated = localStorage.getItem("simulated-staff-role");
-    if (simulated && ["gestor", "gerente", "ceo", "admin"].includes(simulated)) {
+    if (simulated && ["gestor", "diretor", "ceo", "admin"].includes(simulated)) {
       roleValue = simulated as any;
+    } else if (simulated === "gerente") {
+      roleValue = "diretor" as any;
     }
   }
 
   return {
-    role: roleValue,
+    role: roleValue === "gerente" ? "diretor" : roleValue,
     isAdmin: roleValue === "admin",
     isCeo: roleValue === "ceo",
-    isGerente: roleValue === "gerente",
+    isGerente: roleValue === "diretor" || roleValue === "gerente",
+    isDiretor: roleValue === "diretor" || roleValue === "gerente",
     isGestor: roleValue === "gestor",
-    realRole,
+    realRole: realRole === "gerente" ? "diretor" : realRole,
   };
 }
 

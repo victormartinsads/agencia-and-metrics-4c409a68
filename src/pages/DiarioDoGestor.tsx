@@ -83,18 +83,18 @@ export default function DiarioDoGestor() {
     role: currentStaffRole,
     isAdmin,
     isCeo,
-    isGerente,
+    isDiretor,
     isGestor,
   } = useStaffMemberRole(user?.id);
 
   // Can manage other diaries
-  const canManageOthers = isAdmin || isCeo || isGerente || sysRole?.isAdmin;
+  const canManageOthers = isAdmin || isCeo || isDiretor || sysRole?.isAdmin || sysRole?.isCeo || sysRole?.isDiretor;
 
   // Active members
   const { data: members = [] } = useMembers();
 
-  // Load global active clients list
-  const { data: globalClients = [] } = useClients();
+  // Load global active clients list (for supervisors, load all; for gestores, load only their assigned clients)
+  const { data: globalClients = [] } = useClients({ allClientsForStaff: canManageOthers });
 
   // Load all user profiles to map names/avatars/jobs
   const { data: profiles = [] } = useQuery({
@@ -623,23 +623,25 @@ export default function DiarioDoGestor() {
                 </TabsList>
 
                 <TabsContent value="ativos" className="space-y-6 outline-none focus-visible:ring-0">
-                  {/* Add Client Bar */}
-                  <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
-                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> Adicionar Cliente Ativo:
-                    </span>
-                    <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
-                      <SelectTrigger className="h-8 w-[250px] text-xs">
-                        <SelectValue placeholder="Selecione um cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {globalClients.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleAddClient("Em andamento")}>Vincular Cliente</Button>
-                  </div>
+                  {/* Add Client Bar (Admins/CEOs/Diretores only) */}
+                  {canManageOthers && (
+                    <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                      <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                        <Plus className="h-4 w-4" /> Adicionar Cliente Ativo:
+                      </span>
+                      <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                        <SelectTrigger className="h-8 w-[250px] text-xs">
+                          <SelectValue placeholder="Selecione um cliente..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {globalClients.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" className="h-8 text-xs" onClick={() => handleAddClient("Em andamento")}>Vincular Cliente</Button>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {gestorClients.filter((c: any) => c.status !== "Pausado").length === 0 ? (
@@ -657,7 +659,7 @@ export default function DiarioDoGestor() {
                             clientName={c.client_name} 
                             clientStatus={c.status}
                             isPaused={false}
-                            onUnlink={() => handleDeleteClient(c.id)}
+                            onUnlink={canManageOthers ? () => handleDeleteClient(c.id) : undefined}
                           />
                         ))
                     )}
@@ -665,23 +667,25 @@ export default function DiarioDoGestor() {
                 </TabsContent>
 
                 <TabsContent value="pausados" className="space-y-6 outline-none focus-visible:ring-0">
-                  {/* Add Paused Client Bar */}
-                  <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
-                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> Adicionar Cliente Pausado:
-                    </span>
-                    <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
-                      <SelectTrigger className="h-8 w-[250px] text-xs">
-                        <SelectValue placeholder="Selecione um cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {globalClients.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => handleAddClient("Pausado")}>Vincular Cliente Pausado</Button>
-                  </div>
+                  {/* Add Paused Client Bar (Admins/CEOs/Diretores only) */}
+                  {canManageOthers && (
+                    <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-lg border border-border/50">
+                      <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                        <Plus className="h-4 w-4" /> Adicionar Cliente Pausado:
+                      </span>
+                      <Select value={selectedClientToLink} onValueChange={setSelectedClientToLink}>
+                        <SelectTrigger className="h-8 w-[250px] text-xs">
+                          <SelectValue placeholder="Selecione um cliente..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {globalClients.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => handleAddClient("Pausado")}>Vincular Cliente Pausado</Button>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {gestorClients.filter((c: any) => c.status === "Pausado").length === 0 ? (
@@ -699,7 +703,7 @@ export default function DiarioDoGestor() {
                             clientName={c.client_name} 
                             clientStatus={c.status}
                             isPaused={true}
-                            onUnlink={() => handleDeleteClient(c.id)}
+                            onUnlink={canManageOthers ? () => handleDeleteClient(c.id) : undefined}
                           />
                         ))
                     )}

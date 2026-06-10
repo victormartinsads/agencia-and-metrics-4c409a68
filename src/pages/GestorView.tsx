@@ -151,8 +151,10 @@ export default function GestorView() {
   const [newRuleValue, setNewRuleValue] = useState("");
   const [newRuleAction, setNewRuleAction] = useState<"pause" | "activate" | "scale" | "reduce" | "alert">("pause");
 
+  const isAllowed = role?.isAdmin || role?.isCeo || role?.isDiretor || (clients || []).some((c) => c.id === clientId);
+
   if (roleLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (!role?.isAdmin) return <Navigate to="/" replace />;
+  if (!isAllowed) return <Navigate to="/" replace />;
 
   const currentClient = clients?.find((c) => c.id === clientId);
   const overview = meta?.overviewMetrics;

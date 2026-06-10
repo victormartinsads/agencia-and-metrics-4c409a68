@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useClients } from "@/hooks/useClients";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   DASHBOARD_FIELDS,
   useBrowseSheets,
@@ -36,14 +37,34 @@ function extractSpreadsheetFromInput(value: string) {
 
 export default function ClientSheetsConfig() {
   const { clientId } = useParams<{ clientId: string }>();
-  const { data: clients } = useClients();
+  const { data: userRole, isLoading: roleLoading } = useUserRole();
+  const { data: clients, isLoading: clientsLoading } = useClients();
   const client = clients?.find((c) => c.id === clientId);
 
   const { data: config } = useDashboardSheet(clientId);
   const upsert = useUpsertDashboardSheet();
   const sync = useSyncDashboardSheet();
   const del = useDeleteDashboardSheet();
-  const { data: metrics } = useWeeklyMetrics(clientId, 12);
+  const { data: metrics = [] } = useWeeklyMetrics(clientId, 12);
+
+  const isAllowed = userRole?.isAdmin || userRole?.isCeo || userRole?.isDiretor || (clients || []).some((c) => c.id === clientId);
+
+  if (clientsLoading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client || !isAllowed) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Acesso não autorizado ou cliente não encontrado.</p>
+        <Link to="/clients" className="text-primary underline">Voltar para a página inicial</Link>
+      </div>
+    );
+  }
 
   const [search, setSearch] = useState("");
   const { data: browseRes, isFetching: browsing, refetch: refetchBrowse } = useBrowseSheets(search);

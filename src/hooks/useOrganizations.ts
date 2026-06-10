@@ -36,21 +36,49 @@ export function useMyOrganizations() {
         .filter((m: any) => m.organizations)
         .map((m: any) => ({ ...m.organizations, role: m.role }));
 
-      // Admin/editor da plataforma: incluir TODAS as orgs vinculadas a clientes
+      // Platform staff check
+      const isMasterAdmin = user!.email?.toLowerCase() === "victordbmartins@gmail.com";
+
       const { data: roles } = await sb
         .from("user_roles")
         .select("role")
         .eq("user_id", user!.id);
-      const isPlatformStaff = (roles || []).some(
-        (r: any) => r.role === "admin" || r.role === "editor",
-      );
+      
+      const { data: staffRolesData } = await sb
+        .from("staff_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      const staffRole = staffRolesData?.role || null;
+
+      const isAdmin = isMasterAdmin || staffRole === "admin" || (roles || []).some((r: any) => r.role === "admin");
+      const isCeo = !isMasterAdmin && staffRole === "ceo";
+      const isDiretor = !isMasterAdmin && (staffRole === "diretor" || staffRole === "gerente");
+      const isGestor = !isMasterAdmin && staffRole === "gestor";
+
+      const isPlatformStaff = isAdmin || isCeo || isDiretor || isGestor || (roles || []).some((r: any) => r.role === "editor");
 
       let merged = own;
       if (isPlatformStaff) {
-        const { data: clientOrgs } = await sb
-          .from("organizations")
-          .select("*")
-          .not("client_id", "is", null);
+        let q = sb.from("organizations").select("*").not("client_id", "is", null);
+
+        // If the user is a gestor, filter the organizations query by their assigned client IDs
+        if (isGestor) {
+          const { data: gestorClients } = await sb
+            .from("gestor_diary_clients")
+            .select("client_id")
+            .eq("gestor_id", user!.id);
+          const assignedClientIds = (gestorClients || []).map((gc: any) => gc.client_id).filter(Boolean);
+          
+          if (assignedClientIds.length > 0) {
+            q = q.in("client_id", assignedClientIds);
+          } else {
+            // No clients assigned, return empty results for clients
+            q = q.eq("client_id", "00000000-0000-0000-0000-000000000000");
+          }
+        }
+
+        const { data: clientOrgs } = await q;
         const ids = new Set(merged.map((o: any) => o.id));
         for (const o of clientOrgs || []) {
           if (!ids.has(o.id)) merged.push({ ...o, role: "admin" });

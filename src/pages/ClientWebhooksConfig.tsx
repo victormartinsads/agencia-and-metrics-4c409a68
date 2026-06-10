@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { ArrowLeft, Copy, Webhook, RefreshCw, Send, Upload, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import Papa from "papaparse";
 import {
@@ -38,9 +39,10 @@ const PLATFORMS = [
 export default function ClientWebhooksConfig() {
   const { clientId } = useParams<{ clientId: string }>();
   const { toast } = useToast();
-  const { data: clients } = useClients();
+  const { data: userRole, isLoading: roleLoading } = useUserRole();
+  const { data: clients, isLoading: clientsLoading } = useClients();
   const client = clients?.find((c) => c.id === clientId);
-  const { data: cfg, isLoading } = useSalesWebhookConfig(clientId);
+  const { data: cfg, isLoading: cfgLoading } = useSalesWebhookConfig(clientId);
   const update = useUpdateSalesWebhookConfig();
 
   const last30 = {
@@ -263,8 +265,23 @@ export default function ClientWebhooksConfig() {
     toast({ title: "Filtros salvos" });
   };
 
-  if (isLoading) {
-    return <div className="p-8 text-muted-foreground">Carregando...</div>;
+  const isAllowed = userRole?.isAdmin || userRole?.isCeo || userRole?.isDiretor || (clients || []).some((c) => c.id === clientId);
+
+  if (roleLoading || clientsLoading || cfgLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client || !isAllowed) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Acesso não autorizado ou cliente não encontrado.</p>
+        <Link to="/clients" className="text-primary underline">Voltar para a página inicial</Link>
+      </div>
+    );
   }
 
   return (

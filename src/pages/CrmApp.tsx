@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink } from "lucide-react";
+import { BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,12 +18,15 @@ import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
 import { useOrgClient } from "@/hooks/useClientCrm";
 import { Lead } from "@/lib/crm-app";
 import AppShell from "@/components/layout/AppShell";
+import { useMyOrganizations } from "@/hooks/useOrganizations";
 
 export default function CrmAppPage() {
   const [searchParams] = useSearchParams();
   const queryOrg = searchParams.get("org");
+  const { data: orgs = [], isLoading: orgsLoading } = useMyOrganizations();
   const [orgId, setOrgId] = useState<string | null>(() => queryOrg || localStorage.getItem("crm-app:orgId"));
   const [pipelineId, setPipelineId] = useState<string | null>(() => localStorage.getItem("crm-app:pipelineId"));
+
   useEffect(() => {
     if (queryOrg && queryOrg !== orgId) {
       setOrgId(queryOrg);
@@ -31,12 +34,27 @@ export default function CrmAppPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryOrg]);
-  const { data: allLeads = [], isLoading } = useLeadsForOrg(orgId || undefined);
-  const { data: pipelines = [] } = usePipelines(orgId || undefined);
+
+  // Sync orgId with a valid/authorized organization
+  useEffect(() => {
+    if (!orgsLoading && orgs.length > 0) {
+      if (!orgId || !orgs.some((o) => o.id === orgId)) {
+        const fallbackId = orgs[0].id;
+        setOrgId(fallbackId);
+        localStorage.setItem("crm-app:orgId", fallbackId);
+      }
+    }
+  }, [orgs, orgsLoading, orgId]);
+
+  const isOrgAuthorized = orgs.some((o) => o.id === orgId);
+  const activeOrgId = isOrgAuthorized ? orgId : null;
+
+  const { data: allLeads = [], isLoading } = useLeadsForOrg(activeOrgId || undefined);
+  const { data: pipelines = [] } = usePipelines(activeOrgId || undefined);
   const leads = pipelineId
     ? allLeads.filter((l: any) => l.pipeline_id === pipelineId)
     : allLeads;
-  const { data: orgClient } = useOrgClient(orgId);
+  const { data: orgClient } = useOrgClient(activeOrgId);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
@@ -74,18 +92,26 @@ export default function CrmAppPage() {
           <p className="text-[11px] text-muted-foreground">{leads.length} leads</p>
         </div>
       </div>
-      <OrgSwitcher value={orgId} onChange={handleOrgChange} />
-      {orgId && <PipelineSwitcher orgId={orgId} value={pipelineId} onChange={handlePipelineChange} />}
-      <Button size="sm" className="gap-1.5" onClick={() => setOpenAdd(true)} disabled={!orgId}>
+      <OrgSwitcher value={activeOrgId} onChange={handleOrgChange} />
+      {activeOrgId && <PipelineSwitcher orgId={activeOrgId} value={pipelineId} onChange={handlePipelineChange} />}
+      <Button size="sm" className="gap-1.5" onClick={() => setOpenAdd(true)} disabled={!activeOrgId}>
         <Plus className="h-3.5 w-3.5" /> Novo lead
       </Button>
     </div>
   );
 
+  if (orgsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <AppShell currentPage="crm" header={header} noContainer>
       <main className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">
-        {!orgId ? (
+        {!activeOrgId ? (
           <Card className="p-8 text-center">
             <h2 className="text-lg font-semibold mb-2">Crie sua primeira organização</h2>
             <p className="text-sm text-muted-foreground">Use o botão "Nova" no topo para começar.</p>
@@ -107,10 +133,10 @@ export default function CrmAppPage() {
             <TabsContent value="board" className="mt-4">
               {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : (
                 <>
-                  <BulkActionsBar orgId={orgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+                  <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
                   <KanbanBoard
                     leads={leads}
-                    orgId={orgId}
+                    orgId={activeOrgId}
                     onCardClick={(l) => { setSelected(l); setOpenDetail(true); }}
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelect}
@@ -119,7 +145,7 @@ export default function CrmAppPage() {
               )}
             </TabsContent>
             <TabsContent value="list" className="mt-4">
-              <BulkActionsBar orgId={orgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+              <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
               <LeadsList
                 leads={leads}
                 onClick={(l) => { setSelected(l); setOpenDetail(true); }}
@@ -135,14 +161,14 @@ export default function CrmAppPage() {
               {orgClient ? <EmbedFrame title="Pódio de Criativos" url={`/podio/${orgClient.slug}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
             </TabsContent>
             <TabsContent value="webhooks" className="mt-4 max-w-2xl">
-              <WebhookPanel orgId={orgId} pipelineId={pipelineId} pipelineName={currentPipeline?.name} />
+              <WebhookPanel orgId={activeOrgId} pipelineId={pipelineId} pipelineName={currentPipeline?.name} />
             </TabsContent>
           </Tabs>
         )}
       </main>
 
-      <LeadDetail lead={selected} orgId={orgId || ""} open={openDetail} onClose={() => setOpenDetail(false)} />
-      {orgId && <AddLeadDialog orgId={orgId} pipelineId={pipelineId} open={openAdd} onClose={() => setOpenAdd(false)} />}
+      <LeadDetail lead={selected} orgId={activeOrgId || ""} open={openDetail} onClose={() => setOpenDetail(false)} />
+      {activeOrgId && <AddLeadDialog orgId={activeOrgId} pipelineId={pipelineId} open={openAdd} onClose={() => setOpenAdd(false)} />}
     </AppShell>
   );
 }

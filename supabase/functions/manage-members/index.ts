@@ -60,12 +60,23 @@ Deno.serve(async (req) => {
         arr.push(r.role);
         rolesByUser.set(r.user_id, arr);
       }
+
+      // Fetch passwords if caller is master admin
+      const passwordMap = new Map<string, string>();
+      if (userData.user.email?.toLowerCase() === "victordbmartins@gmail.com") {
+        const { data: pwds } = await admin.from("member_passwords").select("user_id, password");
+        for (const p of pwds || []) {
+          passwordMap.set(p.user_id, p.password);
+        }
+      }
+
       const members = usersList.users.map((u: any) => ({
         id: u.id,
         email: u.email,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
         roles: rolesByUser.get(u.id) || [],
+        password: passwordMap.get(u.id) || null,
       }));
       return new Response(JSON.stringify({ members }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -144,6 +155,13 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Store plain text password in member_passwords
+      await admin.from("member_passwords").upsert(
+        { user_id: userId, password: password, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

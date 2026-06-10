@@ -7,6 +7,7 @@ export interface Member {
   created_at: string;
   last_sign_in_at: string | null;
   roles: ("admin" | "editor")[];
+  password?: string | null;
 }
 
 export function useMembers(enabled = true) {
@@ -70,6 +71,7 @@ export function useRemoveMember() {
 }
 
 export function useSetMemberPassword() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
       const { data, error } = await supabase.functions.invoke("manage-members", {
@@ -79,5 +81,6 @@ export function useSetMemberPassword() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["members"] }),
   });
 }

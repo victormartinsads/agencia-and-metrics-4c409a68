@@ -14,6 +14,7 @@ import {
   Search,
   Command,
   BookOpen,
+  Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,14 +62,15 @@ interface AppShellProps {
     | "settings"
     | "crm"
     | "manager"
-    | "manage";
+    | "manage"
+    | "home";
   header?: ReactNode;
   noContainer?: boolean;
 }
 
 const PAGE_LABELS: Record<string, string> = {
   "": "Home",
-  clients: "Home",
+  clients: "Clientes",
   dashboard: "Dashboard",
   "crm-app": "CRM",
   gestor: "Gestor",
@@ -93,7 +95,7 @@ export default function AppShell({
     role: staffRole,
     isAdmin: isStaffAdmin,
     isCeo: isStaffCeo,
-    isGerente: isStaffGerente,
+    isDiretor: isStaffDiretor,
     isGestor: isStaffGestor,
     realRole,
   } = useStaffMemberRole(user?.id);
@@ -152,22 +154,23 @@ export default function AppShell({
     {
       label: "Visão geral",
       items: [
-        { id: "manage", label: "Home", icon: Users, href: "/clients" },
+        { id: "home", label: "Home", icon: Home, href: "/" },
+        { id: "clients", label: "Clientes", icon: Users, href: "/clients" },
       ],
     },
     {
       label: "Operação",
       items: [
         { id: "crm", label: "CRM", icon: KanbanSquare, href: "/crm-app" },
-        ...((role?.isAdmin || role?.isEditor)
+        ...((role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor)
           ? [{ id: "manager", label: "Gestor", icon: Brain, href: "/gestor" }]
           : []),
-        ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffGerente || isStaffGestor)
+        ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
           ? [{ id: "diario-gestor", label: "Diário do Gestor", icon: BookOpen, href: "/diario-do-gestor" }]
           : []),
       ],
     },
-    ...((role?.isAdmin || role?.isEditor)
+    ...((role?.canAccessSettings)
       ? [
           {
             label: "Conta",
@@ -290,7 +293,7 @@ export default function AppShell({
                   <SelectContent className="bg-sidebar border-sidebar-border">
                     <SelectItem value="admin">Admin (Completo)</SelectItem>
                     <SelectItem value="ceo">CEO</SelectItem>
-                    <SelectItem value="gerente">Gerente</SelectItem>
+                    <SelectItem value="diretor">Diretor</SelectItem>
                     <SelectItem value="gestor">Gestor</SelectItem>
                   </SelectContent>
                 </Select>
@@ -307,7 +310,7 @@ export default function AppShell({
                   {user?.email?.split("@")[0] || "Conta"}
                 </p>
                 <p className="truncate text-[10px] text-muted-foreground">
-                  {role?.isAdmin ? "Administrador" : role?.isEditor ? "Editor" : "Membro"}
+                  {role?.isMasterAdmin ? "Master Admin" : role?.isAdmin ? "Administrador" : role?.isCeo ? "CEO" : role?.isDiretor ? "Diretor" : role?.isGestor ? "Gestor" : "Membro"}
                 </p>
               </div>
             )}
@@ -358,7 +361,7 @@ export default function AppShell({
             </svg>
           </button>
           <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm min-w-0 overflow-hidden">
-            <Link to="/clients" className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
               Home
             </Link>
             {breadcrumbs.map((label, i) => (
@@ -464,21 +467,24 @@ export default function AppShell({
             ))}
           </CommandGroup>
           <CommandGroup heading="Navegação">
+            <CommandItem onSelect={() => { setSearchOpen(false); navigate("/"); }}>
+              <Home className="h-3.5 w-3.5 mr-2" /> Home
+            </CommandItem>
             <CommandItem onSelect={() => { setSearchOpen(false); navigate("/clients"); }}>
-              <Users className="h-3.5 w-3.5 mr-2" /> Home (clientes)
+              <Users className="h-3.5 w-3.5 mr-2" /> Clientes
             </CommandItem>
             <CommandItem onSelect={() => { setSearchOpen(false); navigate("/crm-app"); }}>
               <KanbanSquare className="h-3.5 w-3.5 mr-2" /> CRM
             </CommandItem>
-            {role?.isAdmin && (
-              <>
-                <CommandItem onSelect={() => { setSearchOpen(false); navigate("/gestor"); }}>
-                  <Brain className="h-3.5 w-3.5 mr-2" /> Gestor
-                </CommandItem>
-                <CommandItem onSelect={() => { setSearchOpen(false); navigate("/settings"); }}>
-                  <SettingsIcon className="h-3.5 w-3.5 mr-2" /> Configurações
-                </CommandItem>
-              </>
+            {(role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor) && (
+              <CommandItem onSelect={() => { setSearchOpen(false); navigate("/gestor"); }}>
+                <Brain className="h-3.5 w-3.5 mr-2" /> Gestor
+              </CommandItem>
+            )}
+            {role?.canAccessSettings && (
+              <CommandItem onSelect={() => { setSearchOpen(false); navigate("/settings"); }}>
+                <SettingsIcon className="h-3.5 w-3.5 mr-2" /> Configurações
+              </CommandItem>
             )}
           </CommandGroup>
         </CommandList>

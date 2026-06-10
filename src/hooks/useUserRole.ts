@@ -10,17 +10,53 @@ export function useUserRole() {
     queryKey: ["user-role", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await supabase
+
+      // Master Admin override by email
+      const isMasterAdmin = user.email?.toLowerCase() === "victordbmartins@gmail.com";
+
+      // 1. Fetch system roles
+      const { data: userRolesData, error: userRolesErr } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      if (error) throw error;
-      const roles = (data || []).map((r) => r.role as AppRole);
+      if (userRolesErr) throw userRolesErr;
+      const systemRoles = (userRolesData || []).map((r) => r.role as AppRole);
+
+      // 2. Fetch staff roles (cast as any to bypass generated types if missing)
+      const { data: staffRolesData } = await (supabase as any)
+        .from("staff_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const staffRole = staffRolesData?.role || null;
+
+      // Determine clean role flags based on hierarchy
+      const isAdminRole = isMasterAdmin || staffRole === "admin" || systemRoles.includes("admin");
+      const isCeoRole = !isMasterAdmin && staffRole === "ceo";
+      const isDiretorRole = !isMasterAdmin && (staffRole === "diretor" || staffRole === "gerente");
+      const isGestorRole = !isMasterAdmin && staffRole === "gestor";
+
+      // A client is someone explicitly defined as client or someone with no staff roles who has 'client' system role
+      const isClientRole = !isAdminRole && !isCeoRole && !isDiretorRole && !isGestorRole && 
+        (systemRoles.includes("client") || (!staffRole && systemRoles.length === 0));
+
+      // Editor flag (for backward compatibility in some pages)
+      const isEditorRole = isAdminRole || isCeoRole || isDiretorRole || isGestorRole || systemRoles.includes("editor");
+
       return {
-        roles,
-        isAdmin: roles.includes("admin"),
-        isEditor: roles.includes("editor") || roles.includes("admin"),
-        isClient: roles.includes("client"),
+        roles: systemRoles,
+        staffRole,
+        isMasterAdmin,
+        isAdmin: isAdminRole,
+        isCeo: isCeoRole,
+        isDiretor: isDiretorRole,
+        isGestor: isGestorRole,
+        isClient: isClientRole,
+        isEditor: isEditorRole,
+        // Detailed permissions
+        canManageUsers: isAdminRole, // Only admin can manage accesses, senhas, members
+        canAccessSettings: isAdminRole || isCeoRole || isDiretorRole, // Gestor and Client cannot see general settings
+        canManageDiaries: isAdminRole || isCeoRole || isDiretorRole, // Can see everyone's diaries
       };
     },
     enabled: !!user,
