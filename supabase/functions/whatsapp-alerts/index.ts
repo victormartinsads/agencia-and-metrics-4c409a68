@@ -66,9 +66,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve the gestor (manager) name
+    let gestorName = "Não atribuído";
+    if (isTest) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", claims.sub)
+        .maybeSingle();
+      if (profile) {
+        gestorName = profile.full_name || profile.email || "Gestor de Teste";
+      } else {
+        gestorName = "Gestor de Teste";
+      }
+    } else {
+      const { data: assignments } = await supabase
+        .from("gestor_diary_clients")
+        .select("gestor_id")
+        .eq("client_id", clientId);
+
+      if (assignments && assignments.length > 0) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", assignments[0].gestor_id)
+          .maybeSingle();
+        if (profile) {
+          gestorName = profile.full_name || profile.email || "Gestor";
+        }
+      }
+    }
+
     // Trigger webhook POST request
     const payload = {
       client: clientName || "Cliente Desconhecido",
+      gestor: gestorName,
       message: message || "",
       alert_key: alertKey || "generic",
       timestamp: new Date().toISOString(),
