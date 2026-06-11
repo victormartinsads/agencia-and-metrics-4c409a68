@@ -33,6 +33,35 @@ export default function DiretorOverview() {
   const qc = useQueryClient();
   const { data: sysRole } = useUserRole();
 
+  const header = (
+    <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-[image:var(--gradient-hero)] flex items-center justify-center shadow-[var(--shadow-elevated)]">
+          <Activity className="h-5 w-5 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="font-display text-xl font-extrabold tracking-tight">
+            Saúde da <span className="bg-[image:var(--gradient-hero)] bg-clip-text text-transparent">Carteira de Gestores</span>
+          </h1>
+          <p className="text-[11px] text-muted-foreground">
+            Visão comparativa de competências, pontos de melhoria e plano de evolução
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleResetPDIs()}
+          className="h-9 gap-1.5 text-xs font-bold border-border/60 hover:bg-accent/40"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          Redefinir PDIs
+        </Button>
+      </div>
+    </div>
+  );
+
   // Load all profiles
   const { data: profiles = [] } = useQuery({
     queryKey: ["profiles-list"],
@@ -424,7 +453,8 @@ export default function DiretorOverview() {
               key={levelIdx}
               points={points}
               fill="none"
-              stroke="#1b253b"
+              stroke="currentColor"
+              className="text-border/40"
               strokeWidth="1.5"
             />
           );
@@ -438,25 +468,26 @@ export default function DiretorOverview() {
             y1={cy}
             x2={getX(maxRadius, angle)}
             y2={getY(maxRadius, angle)}
-            stroke="#1b253b"
+            stroke="currentColor"
+            className="text-border/40"
             strokeWidth="1.5"
           />
         ))}
 
         {/* Labels outside pentagon */}
-        <text x={getX(maxRadius + 14, angles[0])} y={getY(maxRadius + 5, angles[0])} fill="#8a99ad" fontSize="9" fontWeight="bold" textAnchor="end">
+        <text x={getX(maxRadius + 14, angles[0])} y={getY(maxRadius + 5, angles[0])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="end">
           Proatividade {scores.proatividade.toFixed(1).replace(".", ",")}
         </text>
-        <text x={getX(maxRadius + 14, angles[1])} y={getY(maxRadius + 5, angles[1])} fill="#8a99ad" fontSize="9" fontWeight="bold" textAnchor="start">
+        <text x={getX(maxRadius + 14, angles[1])} y={getY(maxRadius + 5, angles[1])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="start">
           Comunicação {scores.comunicacao.toFixed(1).replace(".", ",")}
         </text>
-        <text x={getX(maxRadius + 14, angles[2])} y={getY(maxRadius + 5, angles[2])} fill="#8a99ad" fontSize="9" fontWeight="bold" textAnchor="start">
+        <text x={getX(maxRadius + 14, angles[2])} y={getY(maxRadius + 5, angles[2])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="start">
           Organização {scores.organizacao.toFixed(1).replace(".", ",")}
         </text>
-        <text x={getX(maxRadius + 5, angles[3])} y={getY(maxRadius + 14, angles[3])} fill="#8a99ad" fontSize="9" fontWeight="bold" textAnchor="middle">
+        <text x={getX(maxRadius + 5, angles[3])} y={getY(maxRadius + 14, angles[3])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="middle">
           Velocidade {scores.velocidade.toFixed(1).replace(".", ",")}
         </text>
-        <text x={getX(maxRadius + 14, angles[4])} y={getY(maxRadius + 5, angles[4])} fill="#8a99ad" fontSize="9" fontWeight="bold" textAnchor="end">
+        <text x={getX(maxRadius + 14, angles[4])} y={getY(maxRadius + 5, angles[4])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="end">
           Qualidade {scores.qualidade.toFixed(1).replace(".", ",")}
         </text>
 
@@ -464,8 +495,8 @@ export default function DiretorOverview() {
         {polyPoints && (
           <polygon
             points={polyPoints}
-            fill="rgba(141, 237, 53, 0.16)"
-            stroke="rgba(141, 237, 53, 0.9)"
+            fill="hsl(var(--primary) / 0.16)"
+            stroke="hsl(var(--primary))"
             strokeWidth="2.5"
           />
         )}
@@ -480,8 +511,8 @@ export default function DiretorOverview() {
               cx={getX(radius, angle)}
               cy={getY(radius, angle)}
               r="4.5"
-              fill="#8ded35"
-              stroke="#0f172a"
+              fill="hsl(var(--primary))"
+              stroke="hsl(var(--background))"
               strokeWidth="2.0"
             />
           );
@@ -491,333 +522,305 @@ export default function DiretorOverview() {
   };
 
   return (
-    <AppShell currentPage="home" noContainer={true}>
-      {/* Background neon theme configurations */}
-      <div className="min-h-screen bg-[#05080c] text-slate-100 font-sans pb-16">
-        {/* Banner Header */}
-        <div className="border-b border-border/40 bg-slate-950/60 py-6 px-6 backdrop-blur-xl">
-          <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-[0.14em] text-white">
-                SAÚDE DA CARTEIRA DE GESTORES
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="h-[2px] w-12 bg-primary"></span>
-                <p className="text-xs uppercase tracking-[0.14em] text-[#8ded35] font-bold">
-                  Visão comparativa de habilidades de fato, pontos de melhoria e plano de evolução
-                </p>
-              </div>
+    <AppShell currentPage="home" header={header} noContainer>
+      {/* Main Content Area */}
+      <main className="max-w-[1500px] mx-auto px-4 md:px-6 py-5 space-y-6">
+        {/* Top Panel Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Chart Column */}
+          <div className="lg:col-span-7 glass-card rounded-2xl p-6 shadow-card">
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className="h-5 w-5 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                Síntese da Saúde Geral dos Gestores
+              </h2>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetPDIs}
-              className="border-primary/40 text-xs font-semibold uppercase tracking-wider hover:bg-primary/20 text-[#8ded35] gap-2"
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Redefinir PDIs
-            </Button>
-          </div>
-        </div>
 
-        {/* Main Content Area */}
-        <div className="max-w-[1500px] mx-auto px-6 mt-8 space-y-8">
-          {/* Top Panel Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Chart Column */}
-            <div className="lg:col-span-7 bg-slate-950/40 border border-slate-900 rounded-xl p-6 shadow-2xl">
+            {/* Bar Chart Container */}
+            <div className="h-[220px] flex items-end gap-1 sm:gap-4 px-2 pt-4">
+              {gestores.map((g) => {
+                const percent = g.overallAverage * 10;
+                return (
+                  <div key={g.id} className="flex-1 flex flex-col items-center group relative">
+                    {/* Score Value tooltip above the bar */}
+                    <span className="text-xs font-black text-foreground mb-2 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                      {g.overallAverage.toFixed(1).replace(".", ",")}
+                    </span>
+                    {/* Bar body */}
+                    <div className="w-full sm:w-16 bg-muted/40 border border-border/60 rounded-t-xl overflow-hidden h-[130px] flex items-end">
+                      <div
+                        style={{ height: `${percent}%` }}
+                        className="w-full bg-[image:var(--gradient-hero)] rounded-t-sm transition-all duration-1000 ease-out shadow-[var(--shadow-elevated)]"
+                      ></div>
+                    </div>
+                    {/* Name label */}
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-3 text-center truncate w-full">
+                      {g.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border/40">
+              <div className="h-3 w-3 rounded-full bg-primary shadow-elevated"></div>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
+                Média das 6 Competências Reais (Sincronizado de Fato)
+              </span>
+            </div>
+          </div>
+
+          {/* Growth Insights Column */}
+          <div className="lg:col-span-5 glass-card rounded-2xl p-6 shadow-card flex flex-col justify-between">
+            <div>
               <div className="flex items-center gap-3 mb-6">
-                <Activity className="h-5 w-5 text-[#8ded35]" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-                  Síntese da Saúde Geral dos Gestores
+                <Star className="h-5 w-5 text-primary" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                  Insights da Equipe de Growth
                 </h2>
               </div>
 
-              {/* Bar Chart Container */}
-              <div className="h-[220px] flex items-end gap-1 sm:gap-4 px-2 pt-4">
-                {gestores.map((g) => {
-                  const percent = g.overallAverage * 10;
-                  return (
-                    <div key={g.id} className="flex-1 flex flex-col items-center group relative">
-                      {/* Score Value tooltip above the bar */}
-                      <span className="text-xs font-black text-white mb-2 bg-[#8ded35]/15 px-2 py-0.5 rounded border border-[#8ded35]/30">
-                        {g.overallAverage.toFixed(1).replace(".", ",")}
-                      </span>
-                      {/* Bar body */}
-                      <div className="w-full sm:w-16 bg-slate-900 border border-slate-800 rounded-t-md overflow-hidden h-[130px] flex items-end">
-                        <div
-                          style={{ height: `${percent}%` }}
-                          className="w-full bg-[#8ded35] rounded-t-sm transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(141,237,53,0.3)]"
-                        ></div>
-                      </div>
-                      {/* Name label */}
-                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 mt-3 text-center truncate w-full">
-                        {g.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-slate-900/60">
-                <div className="h-3 w-3 rounded-full bg-[#8ded35] shadow-[0_0_8px_rgba(141,237,53,0.4)]"></div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">
-                  Média das 6 Competências Reais (Sincronizado de Fato)
-                </span>
-              </div>
-            </div>
-
-            {/* Growth Insights Column */}
-            <div className="lg:col-span-5 bg-slate-950/40 border border-slate-900 rounded-xl p-6 shadow-2xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <Star className="h-5 w-5 text-[#8ded35]" />
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-                    Insights da Equipe de Growth
-                  </h2>
-                </div>
-
-                <div className="space-y-4 text-xs font-medium">
-                  <div className="flex items-center gap-3 bg-slate-950/50 p-2.5 rounded-lg border border-slate-900/60">
-                    <span className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold border border-yellow-500/20">🏆</span>
-                    <div>
-                      <p className="text-slate-400 text-[10px] uppercase tracking-wider">Melhor média</p>
-                      <p className="text-slate-200 font-bold">{teamInsights.bestAvg}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-950/50 p-2.5 rounded-lg border border-slate-900/60">
-                    <span className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/20">⚖️</span>
-                    <div>
-                      <p className="text-slate-400 text-[10px] uppercase tracking-wider">Sustentação Soft-Skills</p>
-                      <p className="text-slate-200 font-bold">{teamInsights.bestSoft}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-950/50 p-2.5 rounded-lg border border-slate-900/60">
-                    <span className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-bold border border-rose-500/20">🎯</span>
-                    <div>
-                      <p className="text-slate-400 text-[10px] uppercase tracking-wider">Foco estratégico da equipe</p>
-                      <p className="text-slate-200 font-extrabold text-[#8ded35]">{teamInsights.focus}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-950/50 p-2.5 rounded-lg border border-slate-900/60">
-                    <span className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">👤</span>
-                    <div>
-                      <p className="text-slate-400 text-[10px] uppercase tracking-wider">Equipe operacional</p>
-                      <p className="text-[#8ded35] font-bold">{teamInsights.activeCount} Gestores de Fato Operando</p>
-                    </div>
+              <div className="space-y-4 text-xs font-medium">
+                <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                  <span className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold border border-yellow-500/20">🏆</span>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Melhor média</p>
+                    <p className="text-foreground font-bold">{teamInsights.bestAvg}</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Synchronizer Box */}
-              <div className="mt-6 bg-[#8ded35]/5 border border-[#8ded35]/10 rounded-lg p-3 flex items-start gap-3.5">
-                <Wrench className="h-4 w-4 text-[#8ded35] shrink-0 mt-0.5" />
-                <div className="leading-tight">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-[#8ded35]">Sincronizador Multiusuário</p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Clique no <strong className="text-slate-200 font-bold">lápis</strong> de qualquer gestor para editar suas competências no scorecard e seu plano de cursos manual.
-                  </p>
+                <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                  <span className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/20">⚖️</span>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Sustentação Soft-Skills</p>
+                    <p className="text-foreground font-bold">{teamInsights.bestSoft}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                  <span className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-bold border border-rose-500/20">🎯</span>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Foco estratégico da equipe</p>
+                    <p className="text-primary font-extrabold">{teamInsights.focus}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                  <span className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">👤</span>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Equipe operacional</p>
+                    <p className="text-primary font-bold">{teamInsights.activeCount} Gestores de Fato Operando</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Director Tasks Panel */}
-          <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-6 shadow-2xl">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 mb-4 flex items-center gap-2">
-              <CheckSquare className="h-5 w-5 text-[#8ded35]" /> Minhas Tarefas Diárias (Diretor)
-            </h2>
-            <form onSubmit={handleAddTask} className="flex gap-2 mb-4">
-              <Input
-                type="text"
-                placeholder="Adicionar nova tarefa diária de liderança..."
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                className="bg-slate-900 border-slate-800 text-white text-xs"
-              />
-              <Button type="submit" size="sm" className="bg-[#8ded35] hover:bg-[#8ded35]/85 text-black font-bold text-xs uppercase px-4">
-                <Plus className="h-4 w-4 mr-1" /> Adicionar
-              </Button>
-            </form>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-              {directorTasks.length === 0 ? (
-                <p className="text-xs text-slate-500 italic py-2">Nenhuma tarefa criada para hoje.</p>
-              ) : (
-                directorTasks.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-2.5 bg-slate-900/60 border border-slate-800/40 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTask(t)}
-                      className="flex items-center gap-3 text-left flex-1"
-                    >
-                      {t.status === "done" ? (
-                        <CheckSquare className="h-4.5 w-4.5 text-[#8ded35]" />
-                      ) : (
-                        <Square className="h-4.5 w-4.5 text-slate-500" />
-                      )}
-                      <span className={`text-xs font-medium ${t.status === "done" ? "line-through text-slate-500" : "text-slate-200"}`}>
-                        {t.title}
-                      </span>
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTask(t.id)}
-                      className="hover:text-red-400 text-slate-500 h-8 w-8 p-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Gestores Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {gestores.map((g) => (
-              <div
-                key={g.id}
-                className="bg-slate-950/40 border border-slate-900/80 rounded-xl p-5 shadow-2xl relative flex flex-col justify-between overflow-hidden"
-              >
-                <div>
-                  {/* Card Header Override */}
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-900/60 pb-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      {g.avatar ? (
-                        <img src={g.avatar} alt={g.name} className="h-10 w-10 rounded-full object-cover ring-2 ring-primary/20" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-slate-900 grid place-items-center font-bold text-xs text-slate-400">
-                          {g.name[0]}
-                        </div>
-                      )}
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                            {g.name}
-                          </h3>
-                          <span className="h-4 w-4 bg-[#8ded35] rounded-full flex items-center justify-center border border-black shrink-0">
-                            <Check className="h-2.5 w-2.5 text-black stroke-[4px]" />
-                          </span>
-                        </div>
-                        <p className="text-[10px] font-bold text-[#8ded35] uppercase mt-0.5">
-                          {g.role}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">
-                        Hard: <strong className="text-white ml-1">{g.hardAverage.toFixed(1).replace(".", ",")}</strong>
-                      </span>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">
-                        Soft: <strong className="text-white ml-1">{g.softAverage.toFixed(1).replace(".", ",")}</strong>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Main Score & Edit Pencil */}
-                  <div className="flex justify-between items-center bg-slate-900/30 p-2.5 rounded-lg border border-slate-900/60 mb-2">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Técnica no tráfego</p>
-                      <p className="text-2xl font-black text-white mt-0.5">
-                        {g.scores.tecnica.toFixed(1).replace(".", ",")}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(g)}
-                      className="hover:bg-[#8ded35]/10 hover:text-[#8ded35] text-slate-400 h-8 w-8 p-0"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  {/* Radar Chart */}
-                  <div className="flex justify-center my-3 relative">
-                    {renderRadarChart(g.scores)}
-                  </div>
-
-                  {/* Forces and Improvements */}
-                  <div className="grid grid-cols-2 gap-4 border-t border-slate-900/60 pt-4 mt-2 text-xs">
-                    <div>
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold mb-2">
-                        <span>💪</span>
-                        <span className="uppercase text-[10px] tracking-wider">Forças</span>
-                      </div>
-                      <ul className="space-y-1 list-disc list-inside text-slate-300 pl-1">
-                        {g.forces.slice(0, 4).map((f: string, idx: number) => (
-                          <li key={idx} className="truncate">{f}</li>
-                        ))}
-                        {g.forces.length === 0 && <span className="text-slate-500 italic text-[10px]">Sem registros</span>}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1.5 text-amber-500 font-bold mb-2">
-                        <span>📝</span>
-                        <span className="uppercase text-[10px] tracking-wider">Melhoria</span>
-                      </div>
-                      <ul className="space-y-1 list-disc list-inside text-slate-300 pl-1">
-                        {g.improvements.slice(0, 4).map((f: string, idx: number) => (
-                          <li key={idx} className="truncate">{f}</li>
-                        ))}
-                        {g.improvements.length === 0 && <span className="text-slate-500 italic text-[10px]">Sem registros</span>}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Courses & Deadlines */}
-                  <div className="grid grid-cols-2 gap-4 border-t border-slate-900/60 pt-4 mt-4 text-xs">
-                    <div>
-                      <div className="flex items-center gap-1.5 text-[#8ded35] font-bold mb-2">
-                        <span>📚</span>
-                        <span className="uppercase text-[10px] tracking-wider">C) Cursos & Tools</span>
-                      </div>
-                      <ul className="space-y-1 list-disc list-inside text-slate-300 pl-1">
-                        {g.courses.slice(0, 4).map((c: string, idx: number) => (
-                          <li key={idx} className="truncate">{c}</li>
-                        ))}
-                        {g.courses.length === 0 && <span className="text-slate-500 italic text-[10px]">Nenhum curso</span>}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1.5 text-indigo-400 font-bold mb-2">
-                        <span>⏰</span>
-                        <span className="uppercase text-[10px] tracking-wider">D) Prazos (8+)</span>
-                      </div>
-                      <div className="space-y-2">
-                        {g.deadlines.slice(0, 3).map((d: any, idx: number) => (
-                          <div key={idx} className="leading-tight">
-                            <p className="font-extrabold text-[10px] uppercase text-white tracking-wide truncate">{d.title}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{d.timeframe}</p>
-                          </div>
-                        ))}
-                        {g.deadlines.length === 0 && <span className="text-slate-500 italic text-[10px]">Sem prazos</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* Synchronizer Box */}
+            <div className="mt-6 bg-primary/5 border border-primary/10 rounded-xl p-3 flex items-start gap-3.5">
+              <Wrench className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="leading-tight">
+                <p className="text-[10px] font-black uppercase tracking-wider text-primary">Sincronizador Multiusuário</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Clique no <strong className="text-foreground font-bold">lápis</strong> de qualquer gestor para editar suas competências no scorecard e seu plano de cursos manual.
+                </p>
               </div>
-            ))}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Director Tasks Panel */}
+        <div className="glass-card rounded-2xl p-6 shadow-card">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-foreground mb-4 flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-primary" /> Minhas Tarefas Diárias (Diretor)
+          </h2>
+          <form onSubmit={handleAddTask} className="flex gap-2 mb-4">
+            <Input
+              type="text"
+              placeholder="Adicionar nova tarefa diária de liderança..."
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              className="bg-muted/20 border-border/60 text-foreground text-xs"
+            />
+            <Button type="submit" size="sm" className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-4">
+              <Plus className="h-4 w-4 mr-1" /> Adicionar
+            </Button>
+          </form>
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+            {directorTasks.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic py-2">Nenhuma tarefa criada para hoje.</p>
+            ) : (
+              directorTasks.map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-2.5 bg-muted/20 border border-border/40 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTask(t)}
+                    className="flex items-center gap-3 text-left flex-1"
+                  >
+                    {t.status === "done" ? (
+                      <CheckSquare className="h-4.5 w-4.5 text-primary" />
+                    ) : (
+                      <Square className="h-4.5 w-4.5 text-muted-foreground" />
+                    )}
+                    <span className={`text-xs font-medium ${t.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                      {t.title}
+                    </span>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTask(t.id)}
+                    className="hover:text-destructive text-muted-foreground h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Gestores Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {gestores.map((g) => (
+            <div
+              key={g.id}
+              className="glass-card glass-card-hover rounded-2xl p-5 shadow-card relative flex flex-col justify-between overflow-hidden"
+            >
+              <div>
+                {/* Card Header Override */}
+                <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    {g.avatar ? (
+                      <img src={g.avatar} alt={g.name} className="h-10 w-10 rounded-full object-cover ring-2 ring-primary/20" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-muted grid place-items-center font-bold text-xs text-muted-foreground">
+                        {g.name[0]}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-foreground">
+                          {g.name}
+                        </h3>
+                        <span className="h-4 w-4 bg-primary rounded-full flex items-center justify-center border border-background shrink-0">
+                          <Check className="h-2.5 w-2.5 text-primary-foreground stroke-[4px]" />
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-primary uppercase mt-0.5">
+                        {g.role}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Hard: <strong className="text-foreground ml-1">{g.hardAverage.toFixed(1).replace(".", ",")}</strong>
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Soft: <strong className="text-foreground ml-1">{g.softAverage.toFixed(1).replace(".", ",")}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Main Score & Edit Pencil */}
+                <div className="flex justify-between items-center bg-muted/30 p-2.5 rounded-xl border border-border/40 mb-2">
+                  <div>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Técnica no tráfego</p>
+                    <p className="text-2xl font-black text-foreground mt-0.5">
+                      {g.scores.tecnica.toFixed(1).replace(".", ",")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenEdit(g)}
+                    className="hover:bg-primary/10 hover:text-primary text-muted-foreground h-8 w-8 p-0"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* Radar Chart */}
+                <div className="flex justify-center my-3 relative">
+                  {renderRadarChart(g.scores)}
+                </div>
+
+                {/* Forces and Improvements */}
+                <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4 mt-2 text-xs">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold mb-2">
+                      <span>💪</span>
+                      <span className="uppercase text-[10px] tracking-wider">Forças</span>
+                    </div>
+                    <ul className="space-y-1 list-disc list-inside text-muted-foreground pl-1">
+                      {g.forces.slice(0, 4).map((f: string, idx: number) => (
+                        <li key={idx} className="truncate text-foreground">{f}</li>
+                      ))}
+                      {g.forces.length === 0 && <span className="text-muted-foreground italic text-[10px]">Sem registros</span>}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-1.5 text-amber-500 font-bold mb-2">
+                      <span>📝</span>
+                      <span className="uppercase text-[10px] tracking-wider">Melhoria</span>
+                    </div>
+                    <ul className="space-y-1 list-disc list-inside text-muted-foreground pl-1">
+                      {g.improvements.slice(0, 4).map((f: string, idx: number) => (
+                        <li key={idx} className="truncate text-foreground">{f}</li>
+                      ))}
+                      {g.improvements.length === 0 && <span className="text-muted-foreground italic text-[10px]">Sem registros</span>}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Courses & Deadlines */}
+                <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4 mt-4 text-xs">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-primary font-bold mb-2">
+                      <span>📚</span>
+                      <span className="uppercase text-[10px] tracking-wider">C) Cursos & Tools</span>
+                    </div>
+                    <ul className="space-y-1 list-disc list-inside text-muted-foreground pl-1">
+                      {g.courses.slice(0, 4).map((c: string, idx: number) => (
+                        <li key={idx} className="truncate text-foreground">{c}</li>
+                      ))}
+                      {g.courses.length === 0 && <span className="text-muted-foreground italic text-[10px]">Nenhum curso</span>}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-1.5 text-indigo-400 font-bold mb-2">
+                      <span>⏰</span>
+                      <span className="uppercase text-[10px] tracking-wider">D) Prazos (8+)</span>
+                    </div>
+                    <div className="space-y-2">
+                      {g.deadlines.slice(0, 3).map((d: any, idx: number) => (
+                        <div key={idx} className="leading-tight">
+                          <p className="font-extrabold text-[10px] uppercase text-foreground tracking-wide truncate">{d.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{d.timeframe}</p>
+                        </div>
+                      ))}
+                      {g.deadlines.length === 0 && <span className="text-muted-foreground italic text-[10px]">Sem prazos</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
 
       {/* Edit PDI Modal */}
       <Dialog open={editingGestor !== null} onOpenChange={(open) => !open && setEditingGestor(null)}>
-        <DialogContent className="max-w-2xl bg-slate-950 border border-slate-900 text-slate-100 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl bg-card border border-border text-foreground max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold uppercase tracking-wider text-white">
+            <DialogTitle className="text-lg font-bold uppercase tracking-wider text-foreground">
               Editar PDI de {editingGestor?.name}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4 text-xs font-semibold text-slate-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4 text-xs font-semibold text-muted-foreground">
             {/* Left Column: Basic Info & Scores */}
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -826,7 +829,7 @@ export default function DiretorOverview() {
                   id="gestorName"
                   value={editForm.name}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="bg-slate-900 border-slate-800 text-white"
+                  className="bg-muted/20 border-border/60 text-foreground"
                 />
               </div>
 
@@ -836,12 +839,12 @@ export default function DiretorOverview() {
                   id="gestorRole"
                   value={editForm.role}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
-                  className="bg-slate-900 border-slate-800 text-white"
+                  className="bg-muted/20 border-border/60 text-foreground"
                 />
               </div>
 
-              <div className="border-t border-slate-900 pt-4 mt-2">
-                <h4 className="text-xs uppercase font-extrabold tracking-wider text-[#8ded35] mb-3">
+              <div className="border-t border-border/40 pt-4 mt-2">
+                <h4 className="text-xs uppercase font-extrabold tracking-wider text-primary mb-3">
                   Competências Manuais (0 a 10)
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -855,7 +858,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.tecnica}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, tecnica: Number(e.target.value) }))}
-                      className="bg-slate-900 border-slate-800 text-white"
+                      className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -868,7 +871,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.proatividade}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, proatividade: Number(e.target.value) }))}
-                      className="bg-slate-900 border-slate-800 text-white"
+                      className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -881,7 +884,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.velocidade}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, velocidade: Number(e.target.value) }))}
-                      className="bg-slate-900 border-slate-800 text-white"
+                      className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -894,7 +897,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.comunicacao}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, comunicacao: Number(e.target.value) }))}
-                      className="bg-slate-900 border-slate-800 text-white"
+                      className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                 </div>
@@ -910,7 +913,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.forces}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, forces: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-2 text-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Comunicação 9,5&#10;Proatividade 9"
                 />
               </div>
@@ -922,7 +925,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.improvements}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, improvements: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-2 text-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Organização de Tarefas&#10;Técnica no Tráfego"
                 />
               </div>
@@ -934,7 +937,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.courses}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, courses: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-2 text-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Ads Avançado&#10;GA4 + GTM"
                 />
               </div>
@@ -942,10 +945,10 @@ export default function DiretorOverview() {
           </div>
 
           {/* Deadlines Section */}
-          <div className="border-t border-slate-900 pt-4 text-xs font-semibold text-slate-300">
+          <div className="border-t border-border/40 pt-4 text-xs font-semibold text-muted-foreground">
             <div className="flex justify-between items-center mb-3">
               <Label>⏰ Plano de Prazos (timeframes)</Label>
-              <Button type="button" size="sm" onClick={handleAddDeadline} className="bg-slate-900 border border-slate-800 text-[#8ded35] font-bold text-[10px] hover:bg-slate-800 h-7">
+              <Button type="button" size="sm" onClick={handleAddDeadline} className="bg-muted/20 border border-border/60 text-primary font-bold text-[10px] hover:bg-accent/40 h-7">
                 <Plus className="h-3 w-3 mr-1" /> Adicionar Prazo
               </Button>
             </div>
@@ -962,7 +965,7 @@ export default function DiretorOverview() {
                         return { ...prev, deadlines: next };
                       })
                     }
-                    className="bg-slate-900 border-slate-800 text-white text-xs"
+                    className="bg-muted/20 border-border/60 text-foreground text-xs"
                   />
                   <Input
                     placeholder="Ex: 4-6 sem"
@@ -974,33 +977,34 @@ export default function DiretorOverview() {
                         return { ...prev, deadlines: next };
                       })
                     }
-                    className="bg-slate-900 border-slate-800 text-white text-xs w-[140px]"
+                    className="bg-muted/20 border-border/60 text-foreground text-xs w-[140px]"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveDeadline(idx)}
-                    className="hover:text-red-400 text-slate-500 h-8 w-8 p-0"
+                    className="hover:text-destructive text-muted-foreground h-8 w-8 p-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
               {editForm.deadlines.length === 0 && (
-                <p className="text-slate-500 italic text-[10px]">Nenhum prazo configurado.</p>
+                <p className="text-muted-foreground italic text-[10px]">Nenhum prazo configurado.</p>
               )}
             </div>
           </div>
 
-          <DialogFooter className="mt-6 border-t border-slate-900 pt-4">
+          <DialogFooter className="mt-6 border-t border-border/40 pt-4">
             <Button variant="ghost" onClick={() => setEditingGestor(null)} className="text-xs">
               Cancelar
             </Button>
-            <Button onClick={handleSaveEdit} className="bg-[#8ded35] hover:bg-[#8ded35]/85 text-black font-bold text-xs uppercase px-5">
+            <Button onClick={handleSaveEdit} className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-5">
               Salvar PDI
             </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
     </AppShell>
