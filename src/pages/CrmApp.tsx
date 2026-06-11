@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BarChart3, KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Trophy, Webhook, ExternalLink, Loader2 } from "lucide-react";
+import { KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Webhook, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,10 +15,10 @@ import { WebhookPanel } from "@/components/crm-app/WebhookPanel";
 import { CrmDashboard } from "@/components/crm-app/CrmDashboard";
 import { BulkActionsBar } from "@/components/crm-app/BulkActionsBar";
 import { useLeadsForOrg } from "@/hooks/useCrmAppLeads";
-import { useOrgClient } from "@/hooks/useClientCrm";
 import { Lead } from "@/lib/crm-app";
 import AppShell from "@/components/layout/AppShell";
 import { useMyOrganizations } from "@/hooks/useOrganizations";
+import { usePipelineStages } from "@/hooks/usePipelineStages";
 
 export default function CrmAppPage() {
   const [searchParams] = useSearchParams();
@@ -51,10 +51,21 @@ export default function CrmAppPage() {
 
   const { data: allLeads = [], isLoading } = useLeadsForOrg(activeOrgId || undefined);
   const { data: pipelines = [] } = usePipelines(activeOrgId || undefined);
+  const { data: stages = [] } = usePipelineStages(pipelineId);
   const leads = pipelineId
     ? allLeads.filter((l: any) => l.pipeline_id === pipelineId)
     : allLeads;
-  const { data: orgClient } = useOrgClient(activeOrgId);
+
+  // Sync pipelineId with a valid pipeline of the active organization
+  useEffect(() => {
+    if (activeOrgId && pipelines.length > 0) {
+      if (!pipelineId || !pipelines.some((p) => p.id === pipelineId)) {
+        const fallbackPipelineId = pipelines[0].id;
+        setPipelineId(fallbackPipelineId);
+        localStorage.setItem("crm-app:pipelineId", fallbackPipelineId);
+      }
+    }
+  }, [activeOrgId, pipelines, pipelineId]);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
@@ -122,8 +133,6 @@ export default function CrmAppPage() {
               <TabsTrigger value="dashboard" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Dashboard</TabsTrigger>
               <TabsTrigger value="board" className="gap-1.5"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
               <TabsTrigger value="list" className="gap-1.5"><ListIcon className="h-3.5 w-3.5" /> Lista</TabsTrigger>
-              <TabsTrigger value="overview" className="gap-1.5" disabled={!orgClient}><BarChart3 className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
-              <TabsTrigger value="podium" className="gap-1.5" disabled={!orgClient}><Trophy className="h-3.5 w-3.5" /> Pódio</TabsTrigger>
               <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
             </TabsList>
 
@@ -137,6 +146,8 @@ export default function CrmAppPage() {
                   <KanbanBoard
                     leads={leads}
                     orgId={activeOrgId}
+                    pipelineId={pipelineId}
+                    stages={stages}
                     onCardClick={(l) => { setSelected(l); setOpenDetail(true); }}
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelect}
@@ -154,12 +165,6 @@ export default function CrmAppPage() {
                 onToggleAll={toggleAll}
               />
             </TabsContent>
-            <TabsContent value="overview" className="mt-4">
-              {orgClient ? <EmbedFrame title="Visão Geral" url={`/share/${orgClient.id}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
-            </TabsContent>
-            <TabsContent value="podium" className="mt-4">
-              {orgClient ? <EmbedFrame title="Pódio de Criativos" url={`/podio/${orgClient.slug}`} /> : <EmptyEmbed label="Cliente vinculado não encontrado" />}
-            </TabsContent>
             <TabsContent value="webhooks" className="mt-4 max-w-2xl">
               <WebhookPanel orgId={activeOrgId} pipelineId={pipelineId} pipelineName={currentPipeline?.name} />
             </TabsContent>
@@ -171,22 +176,4 @@ export default function CrmAppPage() {
       {activeOrgId && <AddLeadDialog orgId={activeOrgId} pipelineId={pipelineId} open={openAdd} onClose={() => setOpenAdd(false)} />}
     </AppShell>
   );
-}
-
-function EmbedFrame({ title, url }: { title: string; url: string }) {
-  return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <a href={url} target="_blank" rel="noreferrer">
-          <Button size="sm" variant="outline" className="gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> Abrir em nova aba</Button>
-        </a>
-      </div>
-      <iframe src={url} title={title} className="w-full" style={{ height: "calc(100vh - 280px)", minHeight: 600, border: 0 }} />
-    </Card>
-  );
-}
-
-function EmptyEmbed({ label }: { label: string }) {
-  return <Card className="p-8 text-center text-sm text-muted-foreground">{label}</Card>;
 }

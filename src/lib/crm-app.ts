@@ -25,6 +25,8 @@ export interface Lead {
   custom_fields: Record<string, unknown> | null;
   tags: string[] | null;
   organization_id: string | null;
+  pipeline_id: string | null;
+  stage_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,8 +56,21 @@ export const leadsService = {
     return (data || []) as Lead[];
   },
 
-  async updateStatus(id: string, status: LeadStatus, oldStatus?: LeadStatus): Promise<void> {
+  async updateStatus(id: string, status: string, oldStatus?: string): Promise<void> {
     const { error } = await sb.from('leads').update({ status }).eq('id', id);
+    if (error) throw error;
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      await fetch(`https://${projectId}.supabase.co/functions/v1/crm-app-dispatch-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: id, event_type: status, old_status: oldStatus || null }),
+      });
+    } catch { /* non-blocking */ }
+  },
+
+  async updateLeadStage(id: string, stageId: string, status: string, oldStatus?: string): Promise<void> {
+    const { error } = await sb.from('leads').update({ stage_id: stageId, status }).eq('id', id);
     if (error) throw error;
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;

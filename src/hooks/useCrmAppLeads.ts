@@ -42,8 +42,17 @@ export function useLeadsForOrg(orgId?: string) {
 export function useUpdateLeadStatus(orgId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, oldStatus }: { id: string; status: LeadStatus; oldStatus?: LeadStatus }) =>
+    mutationFn: ({ id, status, oldStatus }: { id: string; status: string; oldStatus?: string }) =>
       leadsService.updateStatus(id, status, oldStatus),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-app-leads", orgId] }),
+  });
+}
+
+export function useUpdateLeadStage(orgId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, stageId, status, oldStatus }: { id: string; stageId: string; status: string; oldStatus?: string }) =>
+      leadsService.updateLeadStage(id, stageId, status, oldStatus),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-app-leads", orgId] }),
   });
 }

@@ -7,11 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
+import { usePipelineStages } from "@/hooks/usePipelineStages";
 import { toast } from "sonner";
 
 export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { orgId: string; pipelineId?: string | null; open: boolean; onClose: () => void; }) {
   const qc = useQueryClient();
   const { data: defs = [] } = useLeadCustomFieldDefs(orgId, pipelineId);
+  const { data: stages = [] } = usePipelineStages(pipelineId);
   const [form, setForm] = useState<any>({ name: "", email: "", phone: "", company: "", source: "manual", value: "", message: "", custom_fields: {} });
   const [saving, setSaving] = useState(false);
 
@@ -19,7 +21,14 @@ export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { org
     if (!form.name && !form.email && !form.phone) { toast.error("Informe nome, email ou telefone"); return; }
     setSaving(true);
     try {
-      const payload: any = { ...form, organization_id: orgId, pipeline_id: pipelineId, status: 'new' };
+      const firstStage = stages[0];
+      const payload: any = { 
+        ...form, 
+        organization_id: orgId, 
+        pipeline_id: pipelineId,
+        stage_id: firstStage?.id || null,
+        status: firstStage ? (firstStage.is_won ? 'closed' : firstStage.is_lost ? 'lost' : 'new') : 'new'
+      };
       payload.value = form.value ? Number(form.value) : null;
       payload.custom_fields = form.custom_fields || {};
       const { error } = await (supabase as any).from("leads").insert(payload);
