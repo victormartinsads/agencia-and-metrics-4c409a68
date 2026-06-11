@@ -49,6 +49,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 export default function SettingsPage() {
   const { data: role, isLoading: roleLoading } = useUserRole();
 
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!role?.canAccessSettings) {
     return <Navigate to="/" replace />;
   }
