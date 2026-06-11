@@ -997,7 +997,19 @@ export function useSyncDriveCalls() {
       const { data, error } = await supabase.functions.invoke("google-drive-sync", {
         body: { clientId },
       });
-      if (error) throw error;
+      
+      if (error) {
+        if (error instanceof Error && (error as any).context) {
+          try {
+            const errData = await (error as any).context.json();
+            throw new Error(errData.error || errData.details || error.message);
+          } catch(e) {
+            throw error;
+          }
+        }
+        throw error;
+      }
+      
       if (data?.error) throw new Error(data.error);
       return data as { success: boolean; count: number; files: Array<{ name: string; link: string }> };
     },

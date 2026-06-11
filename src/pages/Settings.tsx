@@ -806,10 +806,15 @@ function GoogleAnalyticsSection() {
     try {
       // Helper function to extract Folder ID if a full URL is pasted
       let finalId = driveFolderInput.trim();
-      const folderUrlRegex = /\/folders\/([a-zA-Z0-9_-]+)/;
-      const match = folderUrlRegex.exec(finalId);
-      if (match) {
-        finalId = match[1];
+      if (finalId.includes("id=")) {
+        const match = /id=([a-zA-Z0-9_-]+)/.exec(finalId);
+        if (match) finalId = match[1];
+      } else {
+        const folderUrlRegex = /\/folders\/([a-zA-Z0-9_-]+)/;
+        const match = folderUrlRegex.exec(finalId);
+        if (match) {
+          finalId = match[1];
+        }
       }
 
       const { error } = await supabase
