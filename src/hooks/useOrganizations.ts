@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStaffMemberRole } from "@/hooks/useGestorDiary";
 
 export interface Organization {
   id: string;
@@ -23,8 +24,12 @@ const sb = supabase as any;
 export function useMyOrganizations() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const staffRole = useStaffMemberRole(user?.id);
+  const { isGestor, isAdmin, isCeo, isDiretor } = staffRole;
+  const isPlatformStaff = isAdmin || isCeo || isDiretor || isGestor;
+
   const query = useQuery({
-    queryKey: ["my-orgs", user?.id],
+    queryKey: ["my-orgs", user?.id, isGestor, isAdmin, isCeo, isDiretor],
     enabled: !!user?.id,
     queryFn: async () => {
       const { data: members, error } = await sb
@@ -35,28 +40,6 @@ export function useMyOrganizations() {
       const own = (members || [])
         .filter((m: any) => m.organizations)
         .map((m: any) => ({ ...m.organizations, role: m.role }));
-
-      // Platform staff check
-      const isMasterAdmin = user!.email?.toLowerCase() === "victordbmartins@gmail.com";
-
-      const { data: roles } = await sb
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user!.id);
-      
-      const { data: staffRolesData } = await sb
-        .from("staff_roles")
-        .select("role")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      const staffRole = staffRolesData?.role || null;
-
-      const isAdmin = isMasterAdmin || staffRole === "admin" || (roles || []).some((r: any) => r.role === "admin");
-      const isCeo = !isMasterAdmin && staffRole === "ceo";
-      const isDiretor = !isMasterAdmin && (staffRole === "diretor" || staffRole === "gerente");
-      const isGestor = !isMasterAdmin && staffRole === "gestor";
-
-      const isPlatformStaff = isAdmin || isCeo || isDiretor || isGestor || (roles || []).some((r: any) => r.role === "editor");
 
       let merged = own;
       if (isPlatformStaff) {

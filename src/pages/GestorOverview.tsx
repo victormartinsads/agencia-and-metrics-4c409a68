@@ -18,6 +18,7 @@ import { useAllClientManagerMeta } from "@/hooks/useClientManagerMeta";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useStaffMemberRole } from "@/hooks/useGestorDiary";
 
 const periods = [
   { value: "today", label: "Hoje" },
@@ -84,6 +85,7 @@ function SpreadsheetRow({ client, initialGoal, onSaveGoal, onSaveRevenue }: any)
 
 export default function GestorOverview({ isHomePage = false }: { isHomePage?: boolean } = {}) {
   const { user } = useAuth();
+  const staffRole = useStaffMemberRole(user?.id);
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { data: clients } = useClients();
   const { data: assignments } = useMyAssignments();
@@ -103,7 +105,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
         .eq("user_id", user?.id);
       return data || [];
     },
-    enabled: !!user?.id && !!role?.isGestor,
+    enabled: !!user?.id && !!staffRole.isGestor,
   });
 
   // Load monthly revenue goals for all clients
@@ -141,7 +143,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     let list = clients;
     
     // Gestores can access all clients, but they only see their assigned ones in their overview dashboard
-    if (role?.isGestor && gestorAssignments) {
+    if (staffRole.isGestor && gestorAssignments) {
       const assignedIds = new Set(gestorAssignments.map((a: any) => a.client_id).filter(Boolean));
       list = list.filter((c) => assignedIds.has(c.id));
     }
@@ -152,7 +154,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
       list = list.filter((c) => c.name.toLowerCase().includes(q));
     }
     return list;
-  }, [clients, favOnly, favoriteIds, search, role?.isGestor, gestorAssignments]);
+  }, [clients, favOnly, favoriteIds, search, staffRole.isGestor, gestorAssignments]);
 
   const { data: overview, isLoading } = useGestorOverview(filteredClients as any, period);
 
