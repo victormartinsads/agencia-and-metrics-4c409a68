@@ -135,17 +135,41 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     (c.name || "").toLowerCase().includes(campQuery.toLowerCase())
   );
 
-  // Mock Search terms matching the visual screenshot
-  const searchTerms = [
-    { term: "japao com tsuge", impressions: 15, clicks: 4, conversions: 1 },
-    { term: "roteiro japao", impressions: 53, clicks: 2, conversions: 0 },
-    { term: "dicas japao", impressions: 7, clicks: 2, conversions: 0 },
-    { term: "guia japao tsuge", impressions: 24, clicks: 5, conversions: 0 },
-    { term: "viagem para japao", impressions: 88, clicks: 12, conversions: 2 }
-  ];
+  // Extract real search terms from campaigns keywords
+  const searchTerms = useMemo(() => {
+    const termMap = new Map<string, { term: string; impressions: number; clicks: number; conversions: number }>();
+    for (const c of campaigns) {
+      if (c.keywords) {
+        for (const kw of c.keywords) {
+          const key = kw.text;
+          if (!key) continue;
+          if (!termMap.has(key)) {
+            termMap.set(key, {
+              term: key,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0
+            });
+          }
+          const existing = termMap.get(key)!;
+          existing.impressions += kw.impressions || 0;
+          existing.clicks += kw.clicks || 0;
+          existing.conversions += kw.conversions || 0;
+        }
+      }
+    }
+    const list = Array.from(termMap.values());
+    if (list.length > 0) {
+      return list.sort((a, b) => b.conversions - a.conversions || b.clicks - a.clicks);
+    }
+    // Fallback if no keywords are returned
+    return [
+      { term: "Nenhum termo de pesquisa no período", impressions: 0, clicks: 0, conversions: 0 }
+    ];
+  }, [campaigns]);
 
   const filteredSearchTerms = searchTerms.filter(t =>
-    t.term.toLowerCase().includes(termQuery.toLowerCase())
+    (t.term || "").toLowerCase().includes(termQuery.toLowerCase())
   );
 
   // Generate dynamic daily charts data based on total count
