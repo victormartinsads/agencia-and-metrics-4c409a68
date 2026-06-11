@@ -43,6 +43,10 @@ import {
   Briefcase,
   AlertCircle,
   ThumbsUp,
+  Heart,
+  TrendingUp,
+  Bell,
+  Users,
 } from "lucide-react";
 
 export default function DiretorOverview() {
@@ -52,6 +56,9 @@ export default function DiretorOverview() {
 
   // Tab switching state
   const [activeTab, setActiveTab] = useState<"gestores" | "clientes" | "criativos">("gestores");
+
+  // Alert Dialog open state
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
   const header = (
     <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
@@ -154,6 +161,15 @@ export default function DiretorOverview() {
         .order("completed", { ascending: true })
         .order("created_at", { ascending: false });
       return data || [];
+    },
+  });
+
+  // Load all gestores' diary tasks
+  const { data: allGestorDiaryTasks = [], refetch: refetchAllGestorTasks } = useQuery({
+    queryKey: ["all-gestores-diary-tasks"],
+    queryFn: async () => {
+      const { data } = await supabase.from("gestor_diary_tasks" as any).select("*");
+      return (data || []) as any[];
     },
   });
 
@@ -340,7 +356,7 @@ export default function DiretorOverview() {
   // Scorecard Upsert Mutation
   const upsertScorecardMutation = useUpsertScorecard();
 
-  // List of active Gestores
+  // List of active Gestores & 9 Competencies calculations
   const gestores = useMemo(() => {
     return staffRoles
       .filter((r) => r.role === "gestor")
@@ -370,16 +386,24 @@ export default function DiretorOverview() {
         const totalTasksCount = tasksForGestor.length;
         const autoOrganizacao = totalTasksCount > 0 ? (completedTasksCount / totalTasksCount) * 10 : 8.0;
 
-        // Manual scores
+        // Manual scores (7 competencies)
         const proatividade = scorecard?.proatividade ?? 8.0;
         const comunicacao = scorecard?.comunicacao ?? 8.0;
-        const velocidade = scorecard?.velocidade ?? 8.0;
-        const tecnica = scorecard?.tecnica ?? 8.0;
+        const trafego = scorecard?.trafego ?? 8.0;
+        const traqueamento = scorecard?.traqueamento ?? 8.0;
+        const analise_dados = scorecard?.analise_dados ?? 8.0;
+        const copy = scorecard?.copy ?? 8.0;
+        const comercial = scorecard?.comercial ?? 8.0;
 
-        // Skill Groupings
-        const hardAverage = (tecnica + velocidade + autoQualidade) / 3;
+        // Skill Groupings:
+        // Hard Skills: Tráfego, Traqueamento, Análise de Dados, Copy, Comercial, Qualidade (auto)
+        const hardAverage = (trafego + traqueamento + analise_dados + copy + comercial + autoQualidade) / 6;
+
+        // Soft Skills: Proatividade, Comunicação, Organização (auto)
         const softAverage = (proatividade + comunicacao + autoOrganizacao) / 3;
-        const overallAverage = (tecnica + proatividade + autoQualidade + autoOrganizacao + comunicacao + velocidade) / 6;
+
+        // Weighted Average: 60% Hard, 40% Soft (Fair Scoring)
+        const overallAverage = (hardAverage * 0.6) + (softAverage * 0.4);
 
         return {
           id: r.user_id,
@@ -388,12 +412,15 @@ export default function DiretorOverview() {
           role: roleOverride,
           avatar,
           scores: {
-            tecnica,
-            proatividade,
-            qualidade: autoQualidade,
-            organizacao: autoOrganizacao,
+            trafego,
+            traqueamento,
+            analise_dados,
+            copy,
+            comercial,
             comunicacao,
-            velocidade,
+            proatividade,
+            organizacao: autoOrganizacao,
+            qualidade: autoQualidade,
           },
           hardAverage,
           softAverage,
@@ -414,14 +441,27 @@ export default function DiretorOverview() {
     const sortedByOverall = [...gestores].sort((a, b) => b.overallAverage - a.overallAverage);
     const sortedBySoft = [...gestores].sort((a, b) => b.softAverage - a.softAverage);
 
-    const competencySums = { tecnica: 0, proatividade: 0, qualidade: 0, organizacao: 0, comunicacao: 0, velocidade: 0 };
+    const competencySums = {
+      trafego: 0,
+      traqueamento: 0,
+      analise_dados: 0,
+      copy: 0,
+      comercial: 0,
+      proatividade: 0,
+      qualidade: 0,
+      organizacao: 0,
+      comunicacao: 0,
+    };
     gestores.forEach((g) => {
-      competencySums.tecnica += g.scores.tecnica;
+      competencySums.trafego += g.scores.trafego;
+      competencySums.traqueamento += g.scores.traqueamento;
+      competencySums.analise_dados += g.scores.analise_dados;
+      competencySums.copy += g.scores.copy;
+      competencySums.comercial += g.scores.comercial;
       competencySums.proatividade += g.scores.proatividade;
       competencySums.qualidade += g.scores.qualidade;
       competencySums.organizacao += g.scores.organizacao;
       competencySums.comunicacao += g.scores.comunicacao;
-      competencySums.velocidade += g.scores.velocidade;
     });
 
     const entries = Object.entries(competencySums).map(([key, value]) => ({
@@ -431,12 +471,15 @@ export default function DiretorOverview() {
     entries.sort((a, b) => a.avg - b.avg);
 
     const translate: Record<string, string> = {
-      tecnica: "Técnica",
+      trafego: "Tráfego",
+      traqueamento: "Traqueamento",
+      analise_dados: "Análise de Dados",
+      copy: "Copy",
+      comercial: "Comercial",
       proatividade: "Proatividade",
       qualidade: "Qualidade",
       organizacao: "Organização",
       comunicacao: "Comunicação",
-      velocidade: "Velocidade",
     };
 
     const focusStr = entries
@@ -452,14 +495,91 @@ export default function DiretorOverview() {
     };
   }, [gestores]);
 
+  // Overall summaries for Top KPIs panel
+  const clientHealthAvg = useMemo(() => {
+    const activeClients = clients.filter((c) => !c.archived_at);
+    if (activeClients.length === 0) return 8.0;
+    const scores = activeClients.map((c) => {
+      const meta = clientMeta.find((m) => m.client_id === c.id);
+      return meta && meta.health_score !== null ? meta.health_score : 8;
+    });
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  }, [clients, clientMeta]);
+
+  const gestorRatingAvg = useMemo(() => {
+    if (gestores.length === 0) return 8.0;
+    return gestores.reduce((acc, curr) => acc + curr.overallAverage, 0) / gestores.length;
+  }, [gestores]);
+
+  const gestorTasksSummary = useMemo(() => {
+    const activeGestorIds = gestores.map((g) => g.id);
+    const tasks = allGestorDiaryTasks.filter((t) => activeGestorIds.includes(t.gestor_id));
+    const total = tasks.length;
+    const completed = tasks.filter((t) => t.status === "done").length;
+    const rate = total > 0 ? (completed / total) * 100 : 0;
+    return { completed, total, rate };
+  }, [allGestorDiaryTasks, gestores]);
+
+  const activeAlerts = useMemo(() => {
+    const list: Array<{ id: string; type: "health" | "task" | "guide"; title: string; desc: string }> = [];
+
+    // 1. Critical client health (< 5)
+    clients.forEach((c) => {
+      const meta = clientMeta.find((m) => m.client_id === c.id);
+      const score = meta && meta.health_score !== null ? meta.health_score : 8;
+      if (score < 5) {
+        list.push({
+          id: `health-${c.id}`,
+          type: "health",
+          title: `Cliente Crítico: ${c.name}`,
+          desc: `A nota de saúde deste cliente está em ${score}.0/10.`,
+        });
+      }
+    });
+
+    // 2. High number of client pending tasks (>= 3)
+    clients.forEach((c) => {
+      const tasks = clientTasksFull.filter((t) => t.client_id === c.id && !t.completed);
+      if (tasks.length >= 3) {
+        list.push({
+          id: `tasks-${c.id}`,
+          type: "task",
+          title: `Acúmulo de Pendências: ${c.name}`,
+          desc: `Há ${tasks.length} tarefas pendentes de execução.`,
+        });
+      }
+    });
+
+    // 3. Creative guides overdue
+    creativeGuides.forEach((g) => {
+      if (g.due_date && g.status !== "done" && g.status !== "approved") {
+        const today = new Date().toISOString().split("T")[0];
+        if (g.due_date < today) {
+          const clientName = clients.find((c) => c.id === g.client_id)?.name || "Cliente";
+          list.push({
+            id: `guide-${g.id}`,
+            type: "guide",
+            title: `Guia de Criativos Atrasado: ${clientName}`,
+            desc: `O guia "${g.title}" expirou em ${new Date(g.due_date + "T00:00:00").toLocaleDateString("pt-BR")}.`,
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [clients, clientMeta, clientTasksFull, creativeGuides]);
+
   // Editing scorecard state
   const [editingGestor, setEditingGestor] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
     role: "",
-    tecnica: 8.0,
+    trafego: 8.0,
+    traqueamento: 8.0,
+    analise_dados: 8.0,
+    copy: 8.0,
+    comercial: 8.0,
     proatividade: 8.0,
-    velocidade: 8.0,
     comunicacao: 8.0,
     forces: "",
     improvements: "",
@@ -472,9 +592,12 @@ export default function DiretorOverview() {
     setEditForm({
       name: g.name,
       role: g.role,
-      tecnica: g.scores.tecnica,
+      trafego: g.scores.trafego,
+      traqueamento: g.scores.traqueamento,
+      analise_dados: g.scores.analise_dados,
+      copy: g.scores.copy,
+      comercial: g.scores.comercial,
       proatividade: g.scores.proatividade,
-      velocidade: g.scores.velocidade,
       comunicacao: g.scores.comunicacao,
       forces: g.forces.join("\n"),
       improvements: g.improvements.join("\n"),
@@ -514,9 +637,12 @@ export default function DiretorOverview() {
 
       await upsertScorecardMutation.mutateAsync({
         gestor_id: editingGestor.id,
-        tecnica: Number(editForm.tecnica),
+        trafego: Number(editForm.trafego),
+        traqueamento: Number(editForm.traqueamento),
+        analise_dados: Number(editForm.analise_dados),
+        copy: Number(editForm.copy),
+        comercial: Number(editForm.comercial),
         proatividade: Number(editForm.proatividade),
-        velocidade: Number(editForm.velocidade),
         comunicacao: Number(editForm.comunicacao),
         forces: forceList,
         improvements: impList,
@@ -589,18 +715,32 @@ export default function DiretorOverview() {
     }
   };
 
-  // Radar chart renderer
-  const renderRadarChart = (scores: { tecnica: number; proatividade: number; qualidade: number; organizacao: number; comunicacao: number; velocidade: number }) => {
+  // Enneagon SVG Radar Chart (9 vertices distributed mathematically)
+  const renderEnneagonRadarChart = (scores: {
+    trafego: number;
+    traqueamento: number;
+    analise_dados: number;
+    copy: number;
+    comercial: number;
+    comunicacao: number;
+    proatividade: number;
+    organizacao: number;
+    qualidade: number;
+  }) => {
     const cx = 110;
     const cy = 115;
     const maxRadius = 60;
 
     const angles = [
-      (-126 * Math.PI) / 180, // Proatividade
-      (-54 * Math.PI) / 180,  // Comunicação
-      (18 * Math.PI) / 180,   // Organização
-      (90 * Math.PI) / 180,   // Velocidade
-      (162 * Math.PI) / 180,  // Qualidade
+      -Math.PI / 2,
+      (-Math.PI / 2) + (1 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (2 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (3 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (4 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (5 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (6 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (7 * 2 * Math.PI) / 9,
+      (-Math.PI / 2) + (8 * 2 * Math.PI) / 9,
     ];
 
     const getX = (radius: number, angle: number) => cx + radius * Math.cos(angle);
@@ -609,10 +749,14 @@ export default function DiretorOverview() {
     const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
 
     const values = [
-      scores.proatividade,
+      scores.trafego,
+      scores.traqueamento,
+      scores.analise_dados,
+      scores.copy,
+      scores.comercial,
       scores.comunicacao,
+      scores.proatividade,
       scores.organizacao,
-      scores.velocidade,
       scores.qualidade,
     ];
 
@@ -625,7 +769,8 @@ export default function DiretorOverview() {
       .join(" ");
 
     return (
-      <svg className="w-full h-[220px]" viewBox="0 0 220 220">
+      <svg className="w-full h-[230px]" viewBox="0 0 220 230">
+        {/* Radar Web grid lines */}
         {gridLevels.map((level, levelIdx) => {
           const r = level * maxRadius;
           const points = angles.map((a) => `${getX(r, a)},${getY(r, a)}`).join(" ");
@@ -636,11 +781,12 @@ export default function DiretorOverview() {
               fill="none"
               stroke="currentColor"
               className="text-border/40"
-              strokeWidth="1.5"
+              strokeWidth="1.2"
             />
           );
         })}
 
+        {/* Axes lines */}
         {angles.map((angle, idx) => (
           <line
             key={idx}
@@ -650,35 +796,50 @@ export default function DiretorOverview() {
             y2={getY(maxRadius, angle)}
             stroke="currentColor"
             className="text-border/40"
-            strokeWidth="1.5"
+            strokeWidth="1.2"
           />
         ))}
 
-        <text x={getX(maxRadius + 14, angles[0])} y={getY(maxRadius + 5, angles[0])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="end">
-          Proatividade {scores.proatividade.toFixed(1).replace(".", ",")}
+        {/* Labels outside enneagon */}
+        <text x={getX(maxRadius + 6, angles[0])} y={getY(maxRadius + 4, angles[0]) - 4} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="middle">
+          Tráfego
         </text>
-        <text x={getX(maxRadius + 14, angles[1])} y={getY(maxRadius + 5, angles[1])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="start">
-          Comunicação {scores.comunicacao.toFixed(1).replace(".", ",")}
+        <text x={getX(maxRadius + 6, angles[1]) + 2} y={getY(maxRadius + 4, angles[1])} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="start">
+          Track
         </text>
-        <text x={getX(maxRadius + 14, angles[2])} y={getY(maxRadius + 5, angles[2])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="start">
-          Organização {scores.organizacao.toFixed(1).replace(".", ",")}
+        <text x={getX(maxRadius + 6, angles[2]) + 2} y={getY(maxRadius + 4, angles[2]) + 2} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="start">
+          Análise
         </text>
-        <text x={getX(maxRadius + 5, angles[3])} y={getY(maxRadius + 14, angles[3])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="middle">
-          Velocidade {scores.velocidade.toFixed(1).replace(".", ",")}
+        <text x={getX(maxRadius + 6, angles[3]) + 2} y={getY(maxRadius + 4, angles[3]) + 3} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="start">
+          Copy
         </text>
-        <text x={getX(maxRadius + 14, angles[4])} y={getY(maxRadius + 5, angles[4])} fill="currentColor" className="text-muted-foreground" fontSize="9" fontWeight="bold" textAnchor="end">
-          Qualidade {scores.qualidade.toFixed(1).replace(".", ",")}
+        <text x={getX(maxRadius + 6, angles[4])} y={getY(maxRadius + 4, angles[4]) + 6} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="middle">
+          Comercial
+        </text>
+        <text x={getX(maxRadius + 6, angles[5]) - 2} y={getY(maxRadius + 4, angles[5]) + 3} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="end">
+          Comun.
+        </text>
+        <text x={getX(maxRadius + 6, angles[6]) - 2} y={getY(maxRadius + 4, angles[6]) + 2} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="end">
+          Proativ.
+        </text>
+        <text x={getX(maxRadius + 6, angles[7]) - 2} y={getY(maxRadius + 4, angles[7])} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="end">
+          Organiz.
+        </text>
+        <text x={getX(maxRadius + 6, angles[8]) - 2} y={getY(maxRadius + 4, angles[8]) - 2} fill="currentColor" className="text-muted-foreground font-black" fontSize="7.5" textAnchor="end">
+          Qualidade
         </text>
 
+        {/* Values Filled Polygon */}
         {polyPoints && (
           <polygon
             points={polyPoints}
             fill="hsl(var(--primary) / 0.16)"
             stroke="hsl(var(--primary))"
-            strokeWidth="2.5"
+            strokeWidth="2.0"
           />
         )}
 
+        {/* Small dots on vertices */}
         {angles.map((angle, idx) => {
           const val = Math.min(10, Math.max(0, values[idx]));
           const radius = (val / 10) * maxRadius;
@@ -687,10 +848,10 @@ export default function DiretorOverview() {
               key={idx}
               cx={getX(radius, angle)}
               cy={getY(radius, angle)}
-              r="4.5"
+              r="3.5"
               fill="hsl(var(--primary))"
               stroke="hsl(var(--background))"
-              strokeWidth="2.0"
+              strokeWidth="1.5"
             />
           );
         })}
@@ -702,6 +863,64 @@ export default function DiretorOverview() {
     <AppShell currentPage="home" header={header} noContainer>
       <main className="max-w-[1500px] mx-auto px-4 md:px-6 py-5 space-y-6">
         
+        {/* Top Summaries KPI Row (Global Dashboard) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="glass-card rounded-2xl p-4 shadow-card flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <Heart className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Saúde dos Clientes</p>
+              <h3 className="text-xl font-black text-foreground mt-0.5">{clientHealthAvg.toFixed(1).replace(".", ",")}/10</h3>
+              <p className="text-[10px] text-muted-foreground">Média de {clients.filter(c => !c.archived_at).length} clientes ativos</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-4 shadow-card flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Saúde dos Gestores</p>
+              <h3 className="text-xl font-black text-foreground mt-0.5">{gestorRatingAvg.toFixed(1).replace(".", ",")}/10</h3>
+              <p className="text-[10px] text-muted-foreground">Nota ponderada (60% Hard, 40% Soft)</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-4 shadow-card flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
+              <CheckCircle className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Tarefas dos Gestores</p>
+              <h3 className="text-xl font-black text-foreground mt-0.5">{gestorTasksSummary.rate.toFixed(0)}%</h3>
+              <p className="text-[10px] text-muted-foreground">{gestorTasksSummary.completed}/{gestorTasksSummary.total} diárias concluídas</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsAlertsModalOpen(true)}
+            className="glass-card glass-card-hover rounded-2xl p-4 shadow-card flex items-center gap-4 text-left w-full transition-all focus:outline-none"
+          >
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
+              activeAlerts.length > 0 
+                ? "bg-destructive/10 border-destructive/20 text-destructive animate-pulse" 
+                : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+            }`}>
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Alertas Ativos</p>
+              <h3 className={`text-xl font-black mt-0.5 ${activeAlerts.length > 0 ? "text-destructive" : "text-emerald-400"}`}>
+                {activeAlerts.length} {activeAlerts.length === 1 ? "Alerta" : "Alertas"}
+              </h3>
+              <p className="text-[10px] text-muted-foreground underline decoration-dotted">
+                {activeAlerts.length > 0 ? "Clique para analisar" : "Tudo sob controle"}
+              </p>
+            </div>
+          </button>
+        </div>
+
         {/* Navigation Tabs switch */}
         <div className="flex border-b border-border/40 gap-2 overflow-x-auto pb-px">
           <button
@@ -746,7 +965,7 @@ export default function DiretorOverview() {
                 <div className="flex items-center gap-3 mb-6">
                   <Activity className="h-5 w-5 text-primary" />
                   <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                    Síntese da Saúde Geral dos Gestores
+                    Média de Nota Final dos Gestores
                   </h2>
                 </div>
 
@@ -776,7 +995,7 @@ export default function DiretorOverview() {
                 <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border/40">
                   <div className="h-3 w-3 rounded-full bg-primary shadow-elevated"></div>
                   <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                    Média das 6 Competências Reais (Sincronizado de Fato)
+                    Média Ponderada: 60% Hard (Traf/Track/Dados/Copy/Comercial/Qualidade) e 40% Soft (Comun/Proat/Organiz)
                   </span>
                 </div>
               </div>
@@ -795,7 +1014,7 @@ export default function DiretorOverview() {
                     <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
                       <span className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold border border-yellow-500/20">🏆</span>
                       <div>
-                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Melhor média</p>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Melhor média ponderada</p>
                         <p className="text-foreground font-bold">{teamInsights.bestAvg}</p>
                       </div>
                     </div>
@@ -811,7 +1030,7 @@ export default function DiretorOverview() {
                     <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
                       <span className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-bold border border-rose-500/20">🎯</span>
                       <div>
-                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Foco estratégico da equipe</p>
+                        <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Foco estratégico (Menores Notas)</p>
                         <p className="text-primary font-extrabold">{teamInsights.focus}</p>
                       </div>
                     </div>
@@ -829,7 +1048,7 @@ export default function DiretorOverview() {
                 <div className="mt-6 bg-primary/5 border border-primary/10 rounded-xl p-3 flex items-start gap-3.5">
                   <Wrench className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                   <div className="leading-tight">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-primary">Sincronizador Multiusuário</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-primary">Sincronizador de PDIs</p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       Clique no <strong className="text-foreground font-bold">lápis</strong> de qualquer gestor para editar suas competências no scorecard e seu plano de evolução.
                     </p>
@@ -924,10 +1143,10 @@ export default function DiretorOverview() {
 
                       <div className="flex flex-col items-end gap-1">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                          Hard: <strong className="text-foreground ml-1">{g.hardAverage.toFixed(1).replace(".", ",")}</strong>
+                          Hard (60%): <strong className="text-foreground ml-1">{g.hardAverage.toFixed(1).replace(".", ",")}</strong>
                         </span>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                          Soft: <strong className="text-foreground ml-1">{g.softAverage.toFixed(1).replace(".", ",")}</strong>
+                          Soft (40%): <strong className="text-foreground ml-1">{g.softAverage.toFixed(1).replace(".", ",")}</strong>
                         </span>
                       </div>
                     </div>
@@ -935,9 +1154,9 @@ export default function DiretorOverview() {
                     {/* Main Score & Edit Pencil */}
                     <div className="flex justify-between items-center bg-muted/30 p-2.5 rounded-xl border border-border/40 mb-2">
                       <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Técnica no tráfego</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Nota Final do Gestor</p>
                         <p className="text-2xl font-black text-foreground mt-0.5">
-                          {g.scores.tecnica.toFixed(1).replace(".", ",")}
+                          {g.overallAverage.toFixed(1).replace(".", ",")}
                         </p>
                       </div>
                       <Button
@@ -950,9 +1169,9 @@ export default function DiretorOverview() {
                       </Button>
                     </div>
 
-                    {/* Radar Chart */}
+                    {/* Enneagon Radar Chart */}
                     <div className="flex justify-center my-3 relative">
-                      {renderRadarChart(g.scores)}
+                      {renderEnneagonRadarChart(g.scores)}
                     </div>
 
                     {/* Forces and Improvements */}
@@ -1340,7 +1559,7 @@ export default function DiretorOverview() {
 
       {/* Edit PDI Modal */}
       <Dialog open={editingGestor !== null} onOpenChange={(open) => !open && setEditingGestor(null)}>
-        <DialogContent className="max-w-2xl bg-card border border-border text-foreground max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl bg-card border border-border text-foreground max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold uppercase tracking-wider text-foreground">
               Editar PDI de {editingGestor?.name}
@@ -1376,46 +1595,72 @@ export default function DiretorOverview() {
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="scoreTecnica">Técnica no Tráfego</Label>
+                    <Label htmlFor="scoreTrafego">Tráfego (Media Buying)</Label>
                     <Input
-                      id="scoreTecnica"
+                      id="scoreTrafego"
                       type="number"
                       min="0"
                       max="10"
                       step="0.1"
-                      value={editForm.tecnica}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, tecnica: Number(e.target.value) }))}
+                      value={editForm.trafego}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, trafego: Number(e.target.value) }))}
                       className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="scoreProatividade">Proatividade</Label>
+                    <Label htmlFor="scoreTraqueamento">Traqueamento (GTM/GA4)</Label>
                     <Input
-                      id="scoreProatividade"
+                      id="scoreTraqueamento"
                       type="number"
                       min="0"
                       max="10"
                       step="0.1"
-                      value={editForm.proatividade}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, proatividade: Number(e.target.value) }))}
+                      value={editForm.traqueamento}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, traqueamento: Number(e.target.value) }))}
                       className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="scoreVelocidade">Velocidade</Label>
+                    <Label htmlFor="scoreAnalise">Análise de Dados</Label>
                     <Input
-                      id="scoreVelocidade"
+                      id="scoreAnalise"
                       type="number"
                       min="0"
                       max="10"
                       step="0.1"
-                      value={editForm.velocidade}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, velocidade: Number(e.target.value) }))}
+                      value={editForm.analise_dados}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, analise_dados: Number(e.target.value) }))}
                       className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="scoreComunicacao">Comunicação</Label>
+                    <Label htmlFor="scoreCopy">Copy (Roteiros/Anúncios)</Label>
+                    <Input
+                      id="scoreCopy"
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={editForm.copy}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, copy: Number(e.target.value) }))}
+                      className="bg-muted/20 border-border/60 text-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scoreComercial">Comercial / Atendimento</Label>
+                    <Input
+                      id="scoreComercial"
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={editForm.comercial}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, comercial: Number(e.target.value) }))}
+                      className="bg-muted/20 border-border/60 text-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scoreComunicacao">Comunicação (Soft)</Label>
                     <Input
                       id="scoreComunicacao"
                       type="number"
@@ -1424,6 +1669,19 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.comunicacao}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, comunicacao: Number(e.target.value) }))}
+                      className="bg-muted/20 border-border/60 text-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="scoreProatividade">Proatividade (Soft)</Label>
+                    <Input
+                      id="scoreProatividade"
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={editForm.proatividade}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, proatividade: Number(e.target.value) }))}
                       className="bg-muted/20 border-border/60 text-foreground"
                     />
                   </div>
@@ -1615,6 +1873,54 @@ export default function DiretorOverview() {
             </Button>
             <Button onClick={handleSaveGuide} className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-5">
               Salvar Guia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Active Alerts Detailed Modal */}
+      <Dialog open={isAlertsModalOpen} onOpenChange={setIsAlertsModalOpen}>
+        <DialogContent className="max-w-lg bg-card border border-border text-foreground max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" /> Painel de Alertas Operacionais
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 my-3 text-xs">
+            {activeAlerts.length === 0 ? (
+              <div className="py-6 text-center text-muted-foreground flex flex-col items-center gap-2">
+                <ThumbsUp className="h-8 w-8 text-emerald-400" />
+                <p className="font-bold">Nenhum alerta crítico ativo no momento.</p>
+                <p className="text-[10px] text-muted-foreground">Toda a operação está rodando de forma saudável.</p>
+              </div>
+            ) : (
+              activeAlerts.map((alert) => {
+                let badgeColor = "bg-destructive/10 text-destructive border-destructive/20";
+                if (alert.type === "task") {
+                  badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                } else if (alert.type === "guide") {
+                  badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                }
+
+                return (
+                  <div key={alert.id} className="p-3 bg-muted/20 border border-border/40 rounded-xl flex items-start gap-3">
+                    <span className={`px-2 py-0.5 rounded-lg border text-[9px] uppercase font-bold shrink-0 mt-0.5 ${badgeColor}`}>
+                      {alert.type === "health" ? "saúde" : alert.type === "task" ? "pendência" : "atraso"}
+                    </span>
+                    <div>
+                      <h4 className="font-black text-foreground uppercase text-[10px] tracking-wide">{alert.title}</h4>
+                      <p className="text-muted-foreground text-[10px] mt-0.5">{alert.desc}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter className="mt-4 pt-3 border-t border-border/40">
+            <Button onClick={() => setIsAlertsModalOpen(false)} className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-5">
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

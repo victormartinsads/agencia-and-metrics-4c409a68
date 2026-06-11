@@ -10,8 +10,11 @@ export interface GestorScorecard {
   gestor_id: string;
   proatividade: number;
   comunicacao: number;
-  velocidade: number;
-  tecnica: number;
+  trafego: number;
+  traqueamento: number;
+  analise_dados: number;
+  comercial: number;
+  copy: number;
   forces: string[];
   improvements: string[];
   courses: string[];
@@ -31,14 +34,17 @@ export function useGestorScorecards() {
         gestor_id: row.gestor_id,
         proatividade: Number(row.proatividade ?? 8.0),
         comunicacao: Number(row.comunicacao ?? 8.0),
-        velocidade: Number(row.velocidade ?? 8.0),
-        tecnica: Number(row.tecnica ?? 8.0),
+        trafego: Number(row.trafego ?? 8.0),
+        traqueamento: Number(row.traqueamento ?? 8.0),
+        analise_dados: Number(row.analise_dados ?? 8.0),
+        comercial: Number(row.comercial ?? 8.0),
+        copy: Number(row.copy ?? 8.0),
         forces: Array.isArray(row.forces) ? row.forces : [],
         improvements: Array.isArray(row.improvements) ? row.improvements : [],
         courses: Array.isArray(row.courses) ? row.courses : [],
         deadlines: Array.isArray(row.deadlines) ? row.deadlines : [],
         updated_at: row.updated_at,
-      })) as GestorScorecard[];
+      })) as unknown as GestorScorecard[];
     },
   });
 }
