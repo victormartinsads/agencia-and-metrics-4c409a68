@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useUserRole } from "./useUserRole";
 
 // Type definitions
 export interface GestorStaffRole {
@@ -153,17 +154,23 @@ export function useSetStaffRole() {
 
 export function useStaffMemberRole(userId?: string) {
   const { data: roles = [] } = useStaffRoles();
+  const { data: sysRole } = useUserRole();
   const userRole = roles.find((r) => r.user_id === userId);
   const realRole = userRole?.role || null;
+  
+  const isRealAdmin = sysRole?.isAdmin || realRole === "admin";
   let roleValue = realRole;
 
-  // Role impersonation/simulation (only if real role is admin)
-  if (realRole === "admin") {
+  // Role impersonation/simulation (if real role is admin or system admin)
+  if (isRealAdmin) {
     const simulated = localStorage.getItem("simulated-staff-role");
     if (simulated && ["gestor", "diretor", "ceo", "admin"].includes(simulated)) {
       roleValue = simulated as any;
     } else if (simulated === "gerente") {
       roleValue = "diretor" as any;
+    } else {
+      // Default system admins to 'admin' so they land on /clients by default
+      roleValue = "admin";
     }
   }
 
