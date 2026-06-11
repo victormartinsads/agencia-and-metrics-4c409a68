@@ -32,6 +32,73 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
   const [campQuery, setCampQuery] = useState("");
   const [termQuery, setTermQuery] = useState("");
 
+  const campaigns = data?.campaigns || [];
+  const totals = data?.totals;
+
+  // Safe fallback metrics for useMemo calculation before any potential early return
+  const spend = totals?.cost || 0;
+  const conversions = totals?.conversions || 0;
+  const clicks = totals?.clicks || 0;
+  const impressions = totals?.impressions || 0;
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+
+  // Extract real search terms from campaigns keywords (called unconditionally)
+  const searchTerms = useMemo(() => {
+    const termMap = new Map<string, { term: string; impressions: number; clicks: number; conversions: number }>();
+    for (const c of campaigns) {
+      if (c.keywords) {
+        for (const kw of c.keywords) {
+          const key = kw.text;
+          if (!key) continue;
+          if (!termMap.has(key)) {
+            termMap.set(key, {
+              term: key,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0
+            });
+          }
+          const existing = termMap.get(key)!;
+          existing.impressions += kw.impressions || 0;
+          existing.clicks += kw.clicks || 0;
+          existing.conversions += kw.conversions || 0;
+        }
+      }
+    }
+    const list = Array.from(termMap.values());
+    if (list.length > 0) {
+      return list.sort((a, b) => b.conversions - a.conversions || b.clicks - a.clicks);
+    }
+    // Fallback if no keywords are returned
+    return [
+      { term: "Nenhum termo de pesquisa no período", impressions: 0, clicks: 0, conversions: 0 }
+    ];
+  }, [campaigns]);
+
+  // Generate dynamic daily charts data based on total count (called unconditionally)
+  const dailyChartData = useMemo(() => {
+    const dataList = [];
+    const today = new Date();
+    const count = datePreset === "last_30d" ? 30 : 7;
+    const baseConvs = conversions / count;
+    const baseClicks = clicks / count;
+    
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
+      
+      const factor = 0.5 + Math.sin(i * 0.8) * 0.35 + Math.random() * 0.2;
+      dataList.push({
+        date: dateStr,
+        Conversões: Math.round(baseConvs * factor),
+        Cliques: Math.round(baseClicks * factor),
+        CTR: Number((ctr * (0.8 + Math.random() * 0.4)).toFixed(2))
+      });
+    }
+    return dataList;
+  }, [conversions, clicks, ctr, datePreset]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 gap-3">
@@ -89,9 +156,6 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     );
   }
 
-  const totals = data?.totals;
-  const campaigns = data?.campaigns || [];
-
   if (!totals || campaigns.length === 0) {
     return (
       <Card className="p-6">
@@ -100,14 +164,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     );
   }
 
-  // Safe fallback metrics to prevent runtime crashes (TypeErrors)
-  const spend = totals.cost || 0;
-  const conversions = totals.conversions || 0;
-  const clicks = totals.clicks || 0;
-  const impressions = totals.impressions || 0;
   const revenueVal = totals.revenue || (conversions * 150); // Fallback estimate
-
-  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
   const cpa = conversions > 0 ? spend / conversions : 0;
   const roas = spend > 0 ? revenueVal / spend : 0;
   const avgCpc = clicks > 0 ? spend / clicks : 0;
@@ -135,66 +192,9 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
     (c.name || "").toLowerCase().includes(campQuery.toLowerCase())
   );
 
-  // Extract real search terms from campaigns keywords
-  const searchTerms = useMemo(() => {
-    const termMap = new Map<string, { term: string; impressions: number; clicks: number; conversions: number }>();
-    for (const c of campaigns) {
-      if (c.keywords) {
-        for (const kw of c.keywords) {
-          const key = kw.text;
-          if (!key) continue;
-          if (!termMap.has(key)) {
-            termMap.set(key, {
-              term: key,
-              impressions: 0,
-              clicks: 0,
-              conversions: 0
-            });
-          }
-          const existing = termMap.get(key)!;
-          existing.impressions += kw.impressions || 0;
-          existing.clicks += kw.clicks || 0;
-          existing.conversions += kw.conversions || 0;
-        }
-      }
-    }
-    const list = Array.from(termMap.values());
-    if (list.length > 0) {
-      return list.sort((a, b) => b.conversions - a.conversions || b.clicks - a.clicks);
-    }
-    // Fallback if no keywords are returned
-    return [
-      { term: "Nenhum termo de pesquisa no período", impressions: 0, clicks: 0, conversions: 0 }
-    ];
-  }, [campaigns]);
-
   const filteredSearchTerms = searchTerms.filter(t =>
     (t.term || "").toLowerCase().includes(termQuery.toLowerCase())
   );
-
-  // Generate dynamic daily charts data based on total count
-  const dailyChartData = useMemo(() => {
-    const dataList = [];
-    const today = new Date();
-    const count = datePreset === "last_30d" ? 30 : 7;
-    const baseConvs = conversions / count;
-    const baseClicks = clicks / count;
-    
-    for (let i = count - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
-      
-      const factor = 0.5 + Math.sin(i * 0.8) * 0.35 + Math.random() * 0.2;
-      dataList.push({
-        date: dateStr,
-        Conversões: Math.round(baseConvs * factor),
-        Cliques: Math.round(baseClicks * factor),
-        CTR: Number((ctr * (0.8 + Math.random() * 0.4)).toFixed(2))
-      });
-    }
-    return dataList;
-  }, [conversions, clicks, ctr, datePreset]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
