@@ -20,13 +20,14 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const { data: userRes, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userRes.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized", details: userErr?.message }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const userData = userRes;
 
     const admin = createClient(supabaseUrl, serviceKey);
 
@@ -47,37 +48,12 @@ Deno.serve(async (req) => {
     const action = body.action as string;
 
     if (action === "list") {
-      // List all users with their roles
-      const { data: usersList, error: listErr } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 200,
+      // Fetch members via database function to bypass GoTrue listUsers issues
+      const { data: members, error: listErr } = await admin.rpc("get_members_list", {
+        _caller_uid: userData.user.id,
       });
       if (listErr) throw listErr;
-      const { data: allRoles } = await admin.from("user_roles").select("user_id, role");
-      const rolesByUser = new Map<string, string[]>();
-      for (const r of (allRoles || []) as any[]) {
-        const arr = rolesByUser.get(r.user_id) || [];
-        arr.push(r.role);
-        rolesByUser.set(r.user_id, arr);
-      }
 
-      // Fetch passwords if caller is master admin
-      const passwordMap = new Map<string, string>();
-      if (userData.user.email?.toLowerCase() === "victordbmartins@gmail.com") {
-        const { data: pwds } = await admin.from("member_passwords").select("user_id, password");
-        for (const p of pwds || []) {
-          passwordMap.set(p.user_id, p.password);
-        }
-      }
-
-      const members = usersList.users.map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at,
-        roles: rolesByUser.get(u.id) || [],
-        password: passwordMap.get(u.id) || null,
-      }));
       return new Response(JSON.stringify({ members }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -202,7 +178,11 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("manage-members error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
+      JSON.stringify({ 
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        details: (err as any)?.details || (err as any)?.message || null
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
