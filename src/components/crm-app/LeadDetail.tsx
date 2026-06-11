@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateLead, useDeleteLead, useUpdateLeadStatus } from "@/hooks/useCrmAppLeads";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
+import { usePipelineStages } from "@/hooks/usePipelineStages";
 import { Trash2, MessageSquare, Instagram } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   const del = useDeleteLead(orgId);
   const updStatus = useUpdateLeadStatus(orgId);
   const { data: defs = [] } = useLeadCustomFieldDefs(orgId);
+  const { data: stages = [] } = usePipelineStages(lead?.pipeline_id);
   const [form, setForm] = useState<Partial<Lead>>({});
 
   useEffect(() => {
@@ -161,6 +163,58 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
               </div>
             </div>
           )}
+
+          {/* Linha do Tempo e Estágios */}
+          <div className="col-span-2 border-t border-border pt-3 mt-1">
+            <h4 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Histórico de Estágios do Lead</h4>
+            <div className="grid grid-cols-2 gap-4 bg-muted/20 p-3 rounded-lg border border-border/40 mb-4 text-xs">
+              <div>
+                <span className="text-muted-foreground block mb-0.5">Criado em</span>
+                <span className="font-medium text-foreground">
+                  {lead.created_at ? new Date(lead.created_at).toLocaleString("pt-BR") : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-0.5">Última atualização</span>
+                <span className="font-medium text-foreground">
+                  {lead.updated_at ? new Date(lead.updated_at).toLocaleString("pt-BR") : "—"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <span className="text-xs font-semibold text-muted-foreground block mb-1">Entrada nos Estágios</span>
+              {stages.length > 0 ? (
+                <div className="relative pl-4 border-l border-border/80 ml-1.5 space-y-3">
+                  {stages.map((stage) => {
+                    const entryDateStr = lead.stage_history?.[stage.id];
+                    const entryDate = entryDateStr ? new Date(entryDateStr) : null;
+                    const isCurrent = lead.stage_id === stage.id;
+
+                    return (
+                      <div key={stage.id} className="relative flex items-center justify-between text-xs py-0.5">
+                        {/* Timeline dot */}
+                        <span
+                          className={`absolute -left-[21px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-background ${isCurrent ? 'ring-2 ring-primary/30' : ''}`}
+                          style={{ backgroundColor: stage.color || '#22c55e' }}
+                        />
+
+                        <span className={`font-medium ${isCurrent ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                          {stage.name} {isCurrent && <span className="text-[9px] ml-1.5 px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">Atual</span>}
+                        </span>
+
+                        <span className="text-muted-foreground font-mono">
+                          {entryDate ? entryDate.toLocaleString("pt-BR") : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Nenhum estágio configurado para este pipeline.</p>
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex justify-between mt-2">
           <Button variant="ghost" onClick={remove} className="text-destructive">

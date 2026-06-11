@@ -27,6 +27,7 @@ export interface Lead {
   organization_id: string | null;
   pipeline_id: string | null;
   stage_id: string | null;
+  stage_history: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }
