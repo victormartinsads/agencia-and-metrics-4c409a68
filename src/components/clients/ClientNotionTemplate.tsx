@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useClientNotionData, useSaveClientNotionData } from "@/hooks/useGestorDiary";
-import { Loader2, CheckCircle, Square, Plus, Trash2, ListChecks, Compass, Users, FolderOpen, Flame, Link2, Database, Video, Milestone, GitMerge, Trophy, Calendar, MessageCircle, Mail, DollarSign, Flag, Instagram } from "lucide-react";
+import { useClientNotionData, useSaveClientNotionData, useSyncDriveCalls } from "@/hooks/useGestorDiary";
+import { Loader2, CheckCircle, Square, Plus, Trash2, ListChecks, Compass, Users, FolderOpen, Flame, Link2, Database, Video, Milestone, GitMerge, Trophy, Calendar, MessageCircle, Mail, DollarSign, Flag, Instagram, RefreshCw } from "lucide-react";
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
@@ -133,16 +133,19 @@ function SectionEditor({ initialContent, sectionKey, onSave, canManage }: any) {
   );
 }
 
-function DiaryCard({ title, icon, sectionKey, initialContent, onSave, canManage, clientId, children }: any) {
+function DiaryCard({ title, icon, sectionKey, initialContent, onSave, canManage, clientId, children, action }: any) {
   return (
     <div className="border border-border/80 rounded-xl p-5 bg-card shadow-sm flex flex-col gap-3">
-      <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-        <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
-          {icon}
+      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+            {icon}
+          </div>
+          <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
+            {title}
+          </span>
         </div>
-        <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
-          {title}
-        </span>
+        {action}
       </div>
       <div className="flex-1 min-h-[85px]">
         {children ? children : (
@@ -268,7 +271,18 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
 export default function ClientNotionTemplate({ clientId, canManage }: { clientId: string, canManage: boolean }) {
   const { data: notionData, isLoading } = useClientNotionData(clientId);
   const saveNotionData = useSaveClientNotionData();
+  const syncDrive = useSyncDriveCalls();
   const [activeSubSection, setActiveSubSection] = useState<string | null>(null);
+
+  const handleSyncDrive = async () => {
+    try {
+      toast.loading("Buscando gravações no Google Drive...", { id: "sync-drive" });
+      const res = await syncDrive.mutateAsync(clientId);
+      toast.success(`Sincronização concluída! ${res.count} gravações encontradas.`, { id: "sync-drive" });
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar: " + e.message, { id: "sync-drive" });
+    }
+  };
 
   const { data: clientInfo } = useQuery({
     queryKey: ["client-info-notion", clientId],
@@ -505,6 +519,22 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
             onSave={handleSaveSection}
             canManage={canManage}
             clientId={clientId}
+            action={canManage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSyncDrive}
+                disabled={syncDrive.isPending}
+                className="h-6 text-[10px] uppercase font-bold text-primary hover:text-primary hover:bg-primary/10 gap-1 px-2 border border-primary/20"
+              >
+                {syncDrive.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Sincronizar Drive
+              </Button>
+            )}
           />
           <DiaryCard
             title="Trilha Semanal"

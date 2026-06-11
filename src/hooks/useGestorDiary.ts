@@ -990,3 +990,21 @@ export function useSaveClientNotionData() {
   });
 }
 
+export function useSyncDriveCalls() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const { data, error } = await supabase.functions.invoke("google-drive-sync", {
+        body: { clientId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { success: boolean; count: number; files: Array<{ name: string; link: string }> };
+    },
+    onSuccess: (_, clientId) => {
+      qc.invalidateQueries({ queryKey: ["client-notion-data", clientId] });
+    },
+  });
+}
+
+

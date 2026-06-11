@@ -769,11 +769,99 @@ function GoogleAnalyticsSection() {
   const { data: clients, isLoading } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
 
+  // Load Google Drive Folder ID configuration
+  const { data: driveFolderId, refetch: refetchDriveFolder } = useQuery({
+    queryKey: ["google-drive-folder-id"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "google_drive_folder_id")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value || "";
+    }
+  });
+
+  const [driveFolderInput, setDriveFolderInput] = useState("");
+  const [savingDriveFolder, setSavingDriveFolder] = useState(false);
+
+  // Sync draft value when driveFolderId loads
+  useEffect(() => {
+    if (driveFolderId !== undefined) {
+      setDriveFolderInput(driveFolderId);
+    }
+  }, [driveFolderId]);
+
+  const handleSaveDriveFolder = async () => {
+    setSavingDriveFolder(true);
+    try {
+      // Helper function to extract Folder ID if a full URL is pasted
+      let finalId = driveFolderInput.trim();
+      const folderUrlRegex = /\/folders\/([a-zA-Z0-9_-]+)/;
+      const match = folderUrlRegex.exec(finalId);
+      if (match) {
+        finalId = match[1];
+      }
+
+      const { error } = await supabase
+        .from("system_settings")
+        .upsert({ key: "google_drive_folder_id", value: finalId }, { onConflict: "key" });
+      
+      if (error) throw error;
+      setDriveFolderInput(finalId); // Show cleaned Folder ID
+      toast.success("Pasta do Google Drive configurada com sucesso!");
+      refetchDriveFolder();
+    } catch (e: any) {
+      toast.error("Erro ao salvar configuração do Drive: " + e.message);
+    } finally {
+      setSavingDriveFolder(false);
+    }
+  };
+
   // Utilizar o primeiro cliente para a conexão global do Google
   const firstClient = clients?.[0];
 
   return (
     <div className="space-y-4">
+      {/* Bloco de Configuração do Google Drive */}
+      <Card className="p-6 space-y-4">
+        <div className="flex items-start gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+            <FolderOpen className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-card-foreground">
+              Pasta de Gravações do Google Drive (Global)
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cole o link completo da pasta (ex: <code>https://drive.google.com/drive/folders/...</code>) ou o ID da pasta do Google Drive onde são salvas as gravações das calls.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2.5 items-end pt-2">
+          <div className="flex-1 space-y-1.5 w-full">
+            <Label htmlFor="google_drive_folder" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Link ou ID da Pasta</Label>
+            <Input
+              id="google_drive_folder"
+              type="text"
+              placeholder="Cole o link ou ID da pasta do Drive..."
+              value={driveFolderInput}
+              onChange={(e) => setDriveFolderInput(e.target.value)}
+              className="bg-accent/25 border-border/80 text-foreground text-xs"
+            />
+          </div>
+          <Button
+            onClick={handleSaveDriveFolder}
+            disabled={savingDriveFolder}
+            className="shrink-0 h-9 font-bold text-xs uppercase w-full sm:w-auto"
+          >
+            {savingDriveFolder && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            Salvar Pasta
+          </Button>
+        </div>
+      </Card>
       {/* Bloco de Conexão Global */}
       <Card className="p-6 space-y-4">
         <div>
