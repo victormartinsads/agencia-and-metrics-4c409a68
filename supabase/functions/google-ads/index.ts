@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_ADS_API = "https://googleads.googleapis.com/v20";
+const GOOGLE_ADS_API = "https://googleads.googleapis.com/v24";
 
 async function refreshAccessToken(refreshToken: string) {
   const clientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
         friendly = "Developer token inválido ou não aprovado pelo Google Ads.";
       }
       console.error("google-ads non-ok:", res.status, errMsg);
-      return new Response(JSON.stringify({ error: "Google Ads API error", status: res.status, message: friendly, detail: errMsg }), {
+      return new Response(JSON.stringify({ error: "Google Ads API error", status: res.status, message: friendly, detail: data }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

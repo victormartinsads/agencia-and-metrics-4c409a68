@@ -132,7 +132,7 @@ export function GoogleAdsPanel({ clientId, datePreset = "last_7d", currencySymbo
 
   // Filter campaigns
   const filteredCampaigns = campaigns.filter(c =>
-    c.name.toLowerCase().includes(campQuery.toLowerCase())
+    (c.name || "").toLowerCase().includes(campQuery.toLowerCase())
   );
 
   // Mock Search terms matching the visual screenshot
