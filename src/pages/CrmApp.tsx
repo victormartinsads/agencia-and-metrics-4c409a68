@@ -58,11 +58,10 @@ export default function CrmAppPage() {
 
   // Sync pipelineId with a valid pipeline of the active organization
   useEffect(() => {
-    if (activeOrgId && pipelines.length > 0) {
-      if (!pipelineId || !pipelines.some((p) => p.id === pipelineId)) {
-        const fallbackPipelineId = pipelines[0].id;
-        setPipelineId(fallbackPipelineId);
-        localStorage.setItem("crm-app:pipelineId", fallbackPipelineId);
+    if (activeOrgId && pipelineId) {
+      if (!pipelines.some((p) => p.id === pipelineId)) {
+        setPipelineId(null);
+        localStorage.removeItem("crm-app:pipelineId");
       }
     }
   }, [activeOrgId, pipelines, pipelineId]);
@@ -137,7 +136,11 @@ export default function CrmAppPage() {
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-4">
-              {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : <CrmDashboard leads={leads} />}
+              {isLoading ? (
+                <div className="text-sm text-muted-foreground">Carregando...</div>
+              ) : (
+                <CrmDashboard leads={leads} pipelines={pipelines} isAllPipelines={!pipelineId} />
+              )}
             </TabsContent>
             <TabsContent value="board" className="mt-4">
               {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : (

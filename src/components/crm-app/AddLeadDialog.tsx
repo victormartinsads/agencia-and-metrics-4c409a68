@@ -8,12 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
 import { usePipelineStages } from "@/hooks/usePipelineStages";
+import { usePipelines } from "@/hooks/usePipelines";
 import { toast } from "sonner";
 
 export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { orgId: string; pipelineId?: string | null; open: boolean; onClose: () => void; }) {
   const qc = useQueryClient();
-  const { data: defs = [] } = useLeadCustomFieldDefs(orgId, pipelineId);
-  const { data: stages = [] } = usePipelineStages(pipelineId);
+  const { data: pipelines = [] } = usePipelines(orgId);
+  const activePipelineId = pipelineId || pipelines[0]?.id || null;
+  const { data: defs = [] } = useLeadCustomFieldDefs(orgId, activePipelineId);
+  const { data: stages = [] } = usePipelineStages(activePipelineId);
   const [form, setForm] = useState<any>({ name: "", email: "", phone: "", company: "", source: "manual", value: "", message: "", custom_fields: {} });
   const [saving, setSaving] = useState(false);
 
@@ -25,7 +28,7 @@ export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { org
       const payload: any = { 
         ...form, 
         organization_id: orgId, 
-        pipeline_id: pipelineId,
+        pipeline_id: activePipelineId,
         stage_id: firstStage?.id || null,
         status: firstStage ? (firstStage.is_won ? 'closed' : firstStage.is_lost ? 'lost' : 'new') : 'new'
       };

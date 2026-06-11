@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Lead, LeadStatus, STATUS_CONFIG } from "@/lib/crm-app";
+import { Pipeline } from "@/hooks/usePipelines";
 import { TrendingUp, Users, DollarSign, Target, Calendar, Activity } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell,
@@ -8,6 +9,8 @@ import {
 
 interface Props {
   leads: Lead[];
+  pipelines?: Pipeline[];
+  isAllPipelines?: boolean;
 }
 
 const STATUS_ORDER: LeadStatus[] = ["new", "contacted", "qualified", "proposal", "closed", "lost"];
@@ -23,7 +26,7 @@ function daysAgo(n: number) {
   return d;
 }
 
-export function CrmDashboard({ leads }: Props) {
+export function CrmDashboard({ leads, pipelines = [], isAllPipelines = false }: Props) {
   const stats = useMemo(() => {
     const total = leads.length;
     const byStatus: Record<string, number> = {};
@@ -103,6 +106,19 @@ export function CrmDashboard({ leads }: Props) {
       .slice(0, 5)
       .map(([name, value]) => ({ name, value }));
   }, [leads]);
+
+  const topPipelines = useMemo(() => {
+    const src = new Map<string, number>();
+    leads.forEach((l) => {
+      const p = pipelines.find((x) => x.id === l.pipeline_id);
+      const key = p ? p.name : "Sem pipeline";
+      src.set(key, (src.get(key) || 0) + 1);
+    });
+    return Array.from(src.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value }));
+  }, [leads, pipelines]);
 
   const KPI = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
     <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60 hover:border-primary/40 transition-all hover:-translate-y-0.5">
@@ -184,13 +200,15 @@ export function CrmDashboard({ leads }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60">
           <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
-          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Top fontes</h3>
-          {topSources.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sem dados de fonte.</p>
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">
+            {isAllPipelines ? "Leads por Pipeline" : "Top fontes"}
+          </h3>
+          {((isAllPipelines ? topPipelines : topSources).length === 0) ? (
+            <p className="text-xs text-muted-foreground">Sem dados.</p>
           ) : (
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topSources} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                <BarChart data={isAllPipelines ? topPipelines : topSources} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
@@ -204,19 +222,21 @@ export function CrmDashboard({ leads }: Props) {
 
         <Card className="relative overflow-hidden p-4 rounded-2xl border-border/60">
           <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-hero)] opacity-70" />
-          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">Top campanhas (UTM)</h3>
-          {topCampaigns.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sem dados de campanha.</p>
+          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight mb-3">
+            {isAllPipelines ? "Origem (campo origem)" : "Top campanhas (UTM)"}
+          </h3>
+          {((isAllPipelines ? topSources : topCampaigns).length === 0) ? (
+            <p className="text-xs text-muted-foreground">Sem dados.</p>
           ) : (
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topCampaigns} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                <BarChart data={isAllPipelines ? topSources : topCampaigns} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {topCampaigns.map((_, i) => (
+                    {(isAllPipelines ? topSources : topCampaigns).map((_, i) => (
                       <Cell key={i} fill="hsl(var(--primary))" fillOpacity={0.6 + (i * 0.08)} />
                     ))}
                   </Bar>
