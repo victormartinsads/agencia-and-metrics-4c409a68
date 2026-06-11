@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateLead, useDeleteLead, useUpdateLeadStatus } from "@/hooks/useCrmAppLeads";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
-import { Trash2 } from "lucide-react";
+import { Trash2, MessageSquare, Instagram } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -75,8 +75,63 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
           <div><Label>Nome</Label><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><Label>Empresa</Label><Input value={form.company || ""} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
           <div><Label>Email</Label><Input value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div><Label>Telefone</Label><Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div><Label>Instagram</Label><Input value={form.instagram || ""} onChange={(e) => setForm({ ...form, instagram: e.target.value })} /></div>
+          <div>
+            <Label>Telefone</Label>
+            <div className="flex gap-2">
+              <Input
+                value={form.phone || ""}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                disabled={!form.phone}
+                onClick={() => {
+                  if (form.phone) {
+                    const cleaned = form.phone.replace(/\D/g, "");
+                    if (cleaned) {
+                      const link = cleaned.length <= 11 && !cleaned.startsWith("55")
+                        ? `https://wa.me/55${cleaned}`
+                        : `https://wa.me/${cleaned}`;
+                      window.open(link, "_blank");
+                    }
+                  }
+                }}
+                title="Abrir WhatsApp"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label>Instagram</Label>
+            <div className="flex gap-2">
+              <Input
+                value={form.instagram || ""}
+                onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                disabled={!form.instagram}
+                onClick={() => {
+                  if (form.instagram) {
+                    const cleaned = form.instagram.trim().replace(/^@/, "").toLowerCase();
+                    if (cleaned) {
+                      window.open(`https://instagram.com/${cleaned}`, "_blank");
+                    }
+                  }
+                }}
+                title="Abrir Instagram"
+              >
+                <Instagram className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           <div><Label>Origem</Label><Input value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} /></div>
           <div><Label>Produto</Label><Input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value })} /></div>
           <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.value ?? ""} onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })} /></div>
