@@ -65,9 +65,9 @@ export function useMyOrganizations() {
         // If the user is a gestor, filter the organizations query by their assigned client IDs
         if (isGestor) {
           const { data: gestorClients } = await sb
-            .from("gestor_diary_clients")
+            .from("client_assignments")
             .select("client_id")
-            .eq("gestor_id", user!.id);
+            .eq("user_id", user!.id);
           const assignedClientIds = (gestorClients || []).map((gc: any) => gc.client_id).filter(Boolean);
           
           if (assignedClientIds.length > 0) {

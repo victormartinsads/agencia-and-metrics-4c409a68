@@ -98,9 +98,9 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
     queryKey: ["gestor-assignments", user?.id],
     queryFn: async () => {
       const { data } = await (supabase as any)
-        .from("gestor_diary_clients")
+        .from("client_assignments")
         .select("client_id")
-        .eq("gestor_id", user?.id);
+        .eq("user_id", user?.id);
       return data || [];
     },
     enabled: !!user?.id && !!role?.isGestor,
