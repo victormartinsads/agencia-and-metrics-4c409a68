@@ -999,11 +999,15 @@ export function useSyncDriveCalls() {
       });
       
       if (error) {
+        console.error("Supabase Edge Function Error:", error);
         if (error instanceof Error && (error as any).context) {
           try {
-            const errData = await (error as any).context.json();
+            const errText = await (error as any).context.clone().text();
+            console.error("Edge Function Error Body:", errText);
+            const errData = JSON.parse(errText);
             throw new Error(errData.error || errData.details || error.message);
           } catch(e) {
+            console.error("Failed to parse error context", e);
             throw error;
           }
         }
