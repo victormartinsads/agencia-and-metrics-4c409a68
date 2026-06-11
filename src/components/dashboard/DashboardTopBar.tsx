@@ -126,27 +126,7 @@ export function DashboardTopBar({
           })}
         </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => (onTemplate ? onTemplate() : toast.info("Templates de layout em breve"))}
-            className="h-9 px-3.5 rounded-lg border border-border/70 bg-card/40 hover:bg-card text-[12.5px] font-medium text-foreground flex items-center gap-1.5 transition-colors"
-          >
-            <LayoutTemplate className="h-3.5 w-3.5" /> Template
-          </button>
-          <button
-            onClick={() => (onSources ? onSources() : toast.info("Fontes de dados em breve"))}
-            className="h-9 px-3.5 rounded-lg border border-border/70 bg-card/40 hover:bg-card text-[12.5px] font-medium text-foreground flex items-center gap-1.5 transition-colors"
-          >
-            <Database className="h-3.5 w-3.5" /> Fontes
-          </button>
-          <button
-            onClick={() => (onEdit ? onEdit() : toast.info("Modo de edição em breve"))}
-            className="h-9 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[12.5px] font-bold flex items-center gap-1.5 transition-colors shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
-          >
-            <Pencil className="h-3.5 w-3.5" /> Editar
-          </button>
-        </div>
+
       </div>
 
       {/* Row 2 — período chips */}

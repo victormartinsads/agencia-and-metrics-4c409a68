@@ -140,7 +140,6 @@ export default function ClientDashboard() {
     { id: "diario", label: "Diário" },
     { id: "creatives", label: "Criativos" },
     { id: "branding", label: "Distribuição" },
-    { id: "spreadsheet", label: "Planilha" },
     { id: "analytics", label: "Analytics" },
     { id: "google-ads", label: "Google Ads" },
   ];

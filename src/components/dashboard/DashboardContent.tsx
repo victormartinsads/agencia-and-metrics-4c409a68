@@ -144,7 +144,6 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             {!hideDiagnostico && showTab("diagnostico") && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
             {showTab("funnel") && <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>}
             {showTab("diario") && <TabsTrigger value="diario">Diário</TabsTrigger>}
-            {showTab("spreadsheet") && <TabsTrigger value="spreadsheet">Planilha de Métricas</TabsTrigger>}
             {showTab("creatives") && <TabsTrigger value="creatives">Pódio de Criativos</TabsTrigger>}
             {showTab("branding") && <TabsTrigger value="branding">Distribuição</TabsTrigger>}
             {showTab("analytics") && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
@@ -191,13 +190,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
             />
           </TabsContent>}
 
-          {showTab("spreadsheet") && <TabsContent value="spreadsheet" className="space-y-6">
-            <MetricsSpreadsheet
-              clientId={clientId || ""}
-              campaigns={campaigns}
-              currencySymbol={currencySymbol}
-            />
-          </TabsContent>}
+
 
           {showTab("creatives") && <TabsContent value="creatives" className="space-y-6">
             {(() => {

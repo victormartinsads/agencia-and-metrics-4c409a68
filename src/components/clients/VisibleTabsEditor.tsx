@@ -9,7 +9,6 @@ const ALL = [
   { key: "overview", label: "Visão Geral" },
   { key: "diagnostico", label: "Como Estamos" },
   { key: "funnel", label: "Análise de Funis" },
-  { key: "spreadsheet", label: "Planilha de Métricas" },
   { key: "creatives", label: "Pódio de Criativos" },
   { key: "branding", label: "Distribuição" },
   { key: "analytics", label: "Analytics" },
