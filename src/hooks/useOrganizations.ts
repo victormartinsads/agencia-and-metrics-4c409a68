@@ -77,7 +77,7 @@ export function useMyOrganizations() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`my-orgs-sync:${user.id}`)
+      .channel(`my-orgs-sync:${user.id}:${Math.random().toString(36).slice(2, 9)}`)
       .on(
         "postgres_changes",
         {

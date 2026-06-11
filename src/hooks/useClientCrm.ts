@@ -24,7 +24,7 @@ export function useClientOrgs() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("client-orgs-sync")
+      .channel(`client-orgs-sync:${Math.random().toString(36).slice(2, 9)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "organizations" },

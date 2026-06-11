@@ -16,7 +16,7 @@ export function useLeadsForOrg(orgId?: string) {
     if (!orgId) return;
 
     const channel = supabase
-      .channel(`crm-app-leads:${orgId}`)
+      .channel(`crm-app-leads:${orgId}:${Math.random().toString(36).slice(2, 9)}`)
       .on(
         "postgres_changes",
         {
