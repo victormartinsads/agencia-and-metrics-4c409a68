@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
-import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon, UserCheck, Webhook } from "lucide-react";
+import { Settings as SettingsIcon, Globe, Users, Shield, Loader2, FileSpreadsheet, ExternalLink, KanbanSquare, KeyRound, Mail as MailIcon, User as UserIcon, Upload, Save as SaveIcon, UserCheck, Webhook, FolderOpen } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
