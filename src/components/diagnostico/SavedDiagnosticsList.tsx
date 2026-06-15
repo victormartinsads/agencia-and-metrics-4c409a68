@@ -13,7 +13,7 @@ import { SendDiagnosticWhatsAppDialog } from "./SendDiagnosticWhatsAppDialog";
 import { EditSavedDiagnosticDialog } from "./EditSavedDiagnosticDialog";
 import { DiagnosticoGoogleFunnelSection } from "./DiagnosticoGoogleFunnelSection";
 import { DiagnosticoGoogleCampaignsSection } from "./DiagnosticoGoogleCampaignsSection";
-import { formatMetricValue } from "@/lib/metaMetrics";
+import { formatMetricValue, aggregateCampaignMetrics } from "@/lib/metaMetrics";
 import { getMetricValue } from "@/lib/metaMetricCatalog";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
@@ -224,13 +224,7 @@ function SavedDiagnosticViewer({
             <h3 className="text-xl font-bold text-card-foreground">📊 Funis e campanhas</h3>
             {groups.map(g => {
               const { classified, metrics, totalSpend, totalPurchaseValue } = useFunnelAnalysis(g.campaigns);
-              const totals = g.campaigns.reduce((acc, c) => {
-                acc.spend += c.spend; acc.impressions += c.impressions;
-                acc.clicks += c.clicks; acc.conversions += c.conversions;
-                acc.reach += c.reach || 0;
-                acc.purchaseValue += (c as any).purchaseValue || 0;
-                return acc;
-              }, { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchaseValue: 0 });
+              const totals = aggregateCampaignMetrics(g.campaigns);
               
               const resultLabel = g.campaigns.find(c => (c as any).primaryResultLabel)?.primaryResultLabel || "Resultados";
               const cfg = metricsConfig[g.key];

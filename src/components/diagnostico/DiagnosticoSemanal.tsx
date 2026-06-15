@@ -31,6 +31,8 @@ import type { MetricsConfig } from "@/hooks/useDiagnosticMetricsConfig";
 import { FunnelPreviewCard } from "@/components/funnel/FunnelPreviewCard";
 import { FunnelPremiumDetailDialog } from "@/components/funnel/FunnelPremiumDetailDialog";
 import { useManualFunnels, useCreateManualFunnel } from "@/hooks/useManualFunnels";
+import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
+import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 
 function formatPeriodRange(preset: string): string {
   const { current } = getPeriodPair(preset);
@@ -75,10 +77,13 @@ export function DiagnosticoSemanal({
 
   const periodRange = useMemo(() => formatPeriodRange(datePreset), [datePreset]);
 
+  const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
+  const adaptedCampaigns = useAdaptedCampaigns(campaigns, primaryMetrics);
+
   // Apenas campanhas com gasto no período
   const activeCampaigns = useMemo(
-    () => campaigns.filter(c => c.spend > 0),
-    [campaigns]
+    () => adaptedCampaigns.filter(c => c.spend > 0),
+    [adaptedCampaigns]
   );
   const groups = useMemo(() => groupCampaignsByFunnel(activeCampaigns), [activeCampaigns]);
   const { data: labelMap } = useFunnelLabels(clientId);
