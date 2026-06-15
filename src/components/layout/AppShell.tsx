@@ -15,6 +15,7 @@ import {
   Command,
   BookOpen,
   Home,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -171,6 +172,7 @@ export default function AppShell({
         ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
           ? [{ id: "diario-gestor", label: "Diário do Gestor", icon: BookOpen, href: "/diario-do-gestor" }]
           : []),
+        { id: "robo-analista", label: "Robô Analista", icon: Bot, href: "/robo-analista" },
       ],
     },
     ...((role?.canAccessSettings || isStaffAdmin || isStaffCeo || isStaffDiretor)

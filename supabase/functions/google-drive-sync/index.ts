@@ -135,6 +135,8 @@ Deno.serve(async (req) => {
     driveUrl.searchParams.set("fields", "files(id,name,webViewLink,createdTime)");
     driveUrl.searchParams.set("orderBy", "createdTime desc");
     driveUrl.searchParams.set("pageSize", "50");
+    driveUrl.searchParams.set("supportsAllDrives", "true");
+    driveUrl.searchParams.set("includeItemsFromAllDrives", "true");
 
     const driveRes = await fetch(driveUrl.toString(), {
       headers: {
