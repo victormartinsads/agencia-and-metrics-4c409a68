@@ -3,12 +3,13 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Loader2, Trophy, RefreshCw } from "lucide-react";
+import { Loader2, Trophy, RefreshCw, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
 import { CreativeGrid, isCaptacaoSeguidores, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
+import { CreativeHistoryModal } from "@/components/dashboard/CreativeHistoryModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { groupCampaignsByFunnel } from "@/lib/funnelGrouping";
 import { friendlyError } from "@/lib/friendlyError";
@@ -28,6 +29,7 @@ export default function PodioCreatives() {
   const { slug } = useParams<{ slug: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
   const [refreshing, setRefreshing] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -94,6 +96,14 @@ export default function PodioCreatives() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setHistoryOpen(true)}
+              className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+              title="Exibir histórico completo e insights de criativos"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Histórico
+            </button>
             <button
               onClick={handleRefresh}
               disabled={refreshing || metaLoading}
