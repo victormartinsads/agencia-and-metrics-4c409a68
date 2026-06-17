@@ -776,12 +776,12 @@ export default function GestorView() {
   const header = (
     <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center shadow-lg">
+        <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
           <Brain className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
           <h1 className="font-display text-xl font-extrabold tracking-tight">
-            Painel do <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">Gestor</span>
+            Painel do <span className="text-primary">Gestor</span>
           </h1>
           <p className="text-[11px] text-muted-foreground">Cockpit de Gestão & Otimização em Tempo Real</p>
         </div>
@@ -860,7 +860,7 @@ export default function GestorView() {
                 {clients?.map((client) => (
                   <Link key={client.id} to={`/dashboard/${client.id}`}>
                     <Card className="p-6 flex flex-col items-center text-center space-y-4 hover:border-primary/50 hover:shadow-md transition-all duration-300 group cursor-pointer bg-card/40 hover:bg-card/80">
-                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <span className="text-xl font-bold text-primary">{client.name.charAt(0).toUpperCase()}</span>
                       </div>
                       <div>
@@ -1663,7 +1663,7 @@ export default function GestorView() {
                           <Button
                             onClick={handleGenerateBulkCampaign}
                             disabled={generatingBulk}
-                            className="bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground font-semibold text-xs gap-1.5 h-9"
+                            className="bg-primary text-primary-foreground font-semibold text-xs gap-1.5 h-9"
                           >
                             {generatingBulk ? (
                               <>
@@ -1842,7 +1842,7 @@ export default function GestorView() {
       {!chatOpen && clientId && (
         <button
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground shadow-2xl flex items-center justify-center hover:scale-105 transition"
+          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center hover:scale-105 transition"
           aria-label="Abrir Performance AI"
         >
           <Sparkles className="h-6 w-6" />
@@ -1852,8 +1852,8 @@ export default function GestorView() {
       {/* Performance AI chat sidebar drawer */}
       <Sheet open={chatOpen} onOpenChange={setChatOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-card/95 backdrop-blur-xl">
-          <div className="p-4 border-b border-border bg-gradient-to-r from-primary/10 to-emerald-500/10 flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center">
+          <div className="p-4 border-b border-border bg-primary/10 flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
@@ -1922,7 +1922,7 @@ export default function GestorView() {
               disabled={!clientId || sending}
               className="text-xs h-9"
             />
-            <Button size="sm" onClick={() => send()} disabled={!clientId || sending || !input.trim()} className="bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground font-semibold">
+            <Button size="sm" onClick={() => send()} disabled={!clientId || sending || !input.trim()} className="bg-primary text-primary-foreground font-semibold">
               <Send className="h-3.5 w-3.5" />
             </Button>
           </div>

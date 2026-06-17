@@ -344,7 +344,7 @@ export default function ClientsPage() {
                           {c.logo_url ? (
                             <img src={c.logo_url} alt={c.name} className="h-10 w-10 shrink-0 rounded-md object-cover bg-black border border-border" />
                           ) : (
-                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-sm font-semibold">
+                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-primary/15 font-mono text-sm font-semibold">
                               {getInitials(c.name)}
                             </div>
                           )}
@@ -457,7 +457,7 @@ export default function ClientsPage() {
                           {c.logo_url ? (
                             <img src={c.logo_url} alt={c.name} className="h-8 w-8 rounded-md object-cover bg-black border border-border" />
                           ) : (
-                            <div className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary/30 to-[hsl(152_69%_45%)]/30 font-mono text-xs font-semibold">
+                            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/15 font-mono text-xs font-semibold">
                               {getInitials(c.name)}
                             </div>
                           )}

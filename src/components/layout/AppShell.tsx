@@ -306,7 +306,7 @@ export default function AppShell({
             </div>
           )}
           <div className={cn("flex items-center gap-2 px-1 py-1.5", !open && "justify-center")}>
-            <div className="h-7 w-7 shrink-0 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] grid place-items-center text-[11px] font-semibold text-primary-foreground">
+            <div className="h-7 w-7 shrink-0 rounded-full bg-primary grid place-items-center text-[11px] font-semibold text-primary-foreground">
               {userInitial}
             </div>
             {open && (
@@ -400,7 +400,7 @@ export default function AppShell({
               />
             ) : (
               <div
-                className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] ring-2 ring-background grid place-items-center text-[11px] font-semibold text-primary-foreground"
+                className="h-8 w-8 rounded-full bg-primary ring-2 ring-background grid place-items-center text-[11px] font-semibold text-primary-foreground"
                 aria-label="Sua conta"
                 title={userName || undefined}
               >

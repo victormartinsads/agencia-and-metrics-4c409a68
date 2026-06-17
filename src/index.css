@@ -66,7 +66,7 @@ All colors MUST be HSL.
     --status-lost-bg: 0 84% 60% / 0.15;
 
     /* CRM-App: gradients & shadows */
-    --gradient-hero: linear-gradient(135deg, hsl(75 100% 55%) 0%, hsl(152 69% 41%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(75 100% 55%) 0%, hsl(75 100% 55%) 100%);
     --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
     --shadow-elevated: 0 4px 20px -4px hsl(75 100% 55% / 0.18), 0 1px 3px 0 hsl(0 0% 0% / 0.4);
 

@@ -226,7 +226,7 @@ function MyAccountSection() {
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-border" />
           ) : (
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-[hsl(152_69%_45%)] grid place-items-center text-lg font-semibold text-primary-foreground">
+            <div className="h-16 w-16 rounded-full bg-primary grid place-items-center text-lg font-semibold text-primary-foreground">
               {initials}
             </div>
           )}
