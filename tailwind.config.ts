@@ -74,8 +74,8 @@ export default {
         warning: "hsl(var(--warning))",
       },
       fontFamily: {
-        sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Syne', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Outfit', 'Syne', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
