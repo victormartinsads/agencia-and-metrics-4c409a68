@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 import { OverviewPremium } from "@/components/dashboard/overview/premium/OverviewPremium";
 import { CreativeGrid, isCaptacaoSeguidores, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
@@ -38,6 +38,7 @@ interface Props {
 
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false, isPublicView = false }: Props) {
   const [selectedCreativeMetric, setSelectedCreativeMetric] = useState<CreativeMetricKey | "auto">("auto");
+  const [showAll, setShowAll] = useState(false);
   const [localActiveTab, setLocalActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
@@ -194,7 +195,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           {showTab("creatives") && <TabsContent value="creatives" className="space-y-6">
             {(() => {
-              const eligible = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0);
+              const eligible = campaigns.filter(c => (c.status === "active" || showAll || c.spend > 0) && c.creatives && c.creatives.length > 0);
               const captacao = eligible.filter(c => isCaptacaoSeguidores(c.name));
               const others = eligible.filter(c => !isCaptacaoSeguidores(c.name));
               return (
@@ -204,19 +205,33 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                       <h3 className="text-sm font-semibold text-card-foreground">Pódio de Criativos</h3>
                       <p className="text-[11px] text-muted-foreground">Avalie o desempenho dos criativos por métrica</p>
                     </div>
-                    <Select value={selectedCreativeMetric} onValueChange={(v) => setSelectedCreativeMetric(v as any)}>
-                      <SelectTrigger className="w-[180px] h-8 text-xs">
-                        <SelectValue placeholder="Métrica" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto">Métrica da Campanha</SelectItem>
-                        <SelectItem value="conversions">Conversões (Resultados)</SelectItem>
-                        <SelectItem value="clicks">Cliques (no Link)</SelectItem>
-                        <SelectItem value="impressions">Impressões</SelectItem>
-                        <SelectItem value="spend">Investimento</SelectItem>
-                        <SelectItem value="roas">ROAS</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowAll(!showAll)}
+                        className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                          showAll
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                            : "bg-secondary text-secondary-foreground hover:bg-accent"
+                        }`}
+                        title={showAll ? "Mostrar apenas Top 3" : "Ver todos os criativos (ativos e desativados)"}
+                      >
+                        {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        {showAll ? "Top 3" : "Ver todos"}
+                      </button>
+                      <Select value={selectedCreativeMetric} onValueChange={(v) => setSelectedCreativeMetric(v as any)}>
+                        <SelectTrigger className="w-[180px] h-8 text-xs">
+                          <SelectValue placeholder="Métrica" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Métrica da Campanha</SelectItem>
+                          <SelectItem value="conversions">Conversões (Resultados)</SelectItem>
+                          <SelectItem value="clicks">Cliques (no Link)</SelectItem>
+                          <SelectItem value="impressions">Impressões</SelectItem>
+                          <SelectItem value="spend">Investimento</SelectItem>
+                          <SelectItem value="roas">ROAS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   {captacao.length > 0 && (
                     <AggregatedCreativeGrid
@@ -226,15 +241,16 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                       currencySymbol={currencySymbol}
                       readOnly={isPublicView}
                       selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric}
+                      showAll={showAll}
                     />
                   )}
                   {others.map(c => (
-                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric} />
+                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric} showAll={showAll} />
                   ))}
                 </>
               );
             })()}
-            {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0).length === 0 && (
+            {campaigns.filter(c => (c.status === "active" || showAll || c.spend > 0) && c.creatives && c.creatives.length > 0).length === 0 && (
               <div className="text-center py-16 text-muted-foreground text-sm">
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>

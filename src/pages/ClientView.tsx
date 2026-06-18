@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, BarChart3, Eye, Trophy, FileText } from "lucide-react";
+import { Loader2, BarChart3, Eye, Trophy, FileText, EyeOff } from "lucide-react";
 import { useMetaAds } from "@/hooks/useMetaAds";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ export default function ClientView() {
   const { slug } = useParams<{ slug: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
   const [openDiag, setOpenDiag] = useState<any>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -76,7 +77,7 @@ export default function ClientView() {
   const campaigns = metaData?.campaigns || [];
   const dailyMetrics = metaData?.dailyMetrics || [];
   const currencySymbol = client.currency_symbol || "R$";
-  const eligibleCreatives = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0);
+  const eligibleCreatives = campaigns.filter(c => (c.status === "active" || showAll || c.spend > 0) && c.creatives && c.creatives.length > 0);
   const captacao = eligibleCreatives.filter(c => isCaptacaoSeguidores(c.name));
   const others = eligibleCreatives.filter(c => !isCaptacaoSeguidores(c.name));
 
@@ -165,6 +166,25 @@ export default function ClientView() {
             </TabsContent>
 
             <TabsContent value="creatives" className="space-y-6">
+              <div className="flex items-center justify-between bg-card border border-border p-3 rounded-lg">
+                <div>
+                  <h3 className="text-sm font-semibold text-card-foreground">Pódio de Criativos</h3>
+                  <p className="text-[11px] text-muted-foreground">Avalie o desempenho dos criativos no período</p>
+                </div>
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    showAll
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent"
+                  }`}
+                  title={showAll ? "Mostrar apenas Top 3" : "Ver todos os criativos (ativos e desativados)"}
+                >
+                  {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showAll ? "Top 3" : "Ver todos"}
+                </button>
+              </div>
+
               {captacao.length > 0 && (
                 <AggregatedCreativeGrid
                   campaigns={captacao}
@@ -172,14 +192,15 @@ export default function ClientView() {
                   clientId={clientId}
                   currencySymbol={currencySymbol}
                   readOnly
+                  showAll={showAll}
                 />
               )}
               {others.map(c => (
-                <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly />
+                <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly showAll={showAll} />
               ))}
               {eligibleCreatives.length === 0 && (
                 <div className="text-center py-16 text-muted-foreground text-sm">
-                  Nenhum criativo encontrado no período.
+                  {showAll ? "Nenhum criativo encontrado no período." : "Nenhum criativo encontrado para campanhas ativas no período."}
                 </div>
               )}
             </TabsContent>
