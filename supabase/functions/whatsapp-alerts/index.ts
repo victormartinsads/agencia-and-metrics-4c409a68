@@ -91,9 +91,9 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("client_id", clientId)
         .gte("sent_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .maybeSingle();
+        .limit(1);
 
-      if (existingLog) {
+      if (existingLog && existingLog.length > 0) {
         return new Response(JSON.stringify({ status: "skipped", reason: "already_notified_within_24h" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
