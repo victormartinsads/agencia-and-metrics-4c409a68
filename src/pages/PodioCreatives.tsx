@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Loader2, Trophy, RefreshCw, Layers } from "lucide-react";
+import { Loader2, Trophy, RefreshCw, Layers, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Client } from "@/hooks/useClients";
 import { useMetaAds, useRefreshMetaAds } from "@/hooks/useMetaAds";
@@ -30,6 +30,7 @@ export default function PodioCreatives() {
   const [datePreset, setDatePreset] = useState("last_7d");
   const [refreshing, setRefreshing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -79,7 +80,7 @@ export default function PodioCreatives() {
 
   const campaigns = metaData?.campaigns || [];
   const campaignsWithCreatives = campaigns
-    .filter((c) => c.creatives && c.creatives.length > 0 && c.spend > 0)
+    .filter((c) => c.creatives && c.creatives.length > 0 && (showAll || c.spend > 0))
     .sort((a, b) => b.spend - a.spend);
 
   return (
@@ -96,6 +97,18 @@ export default function PodioCreatives() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className={`h-9 px-3 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                showAll
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary text-secondary-foreground hover:bg-accent"
+              }`}
+              title={showAll ? "Mostrar apenas Top 3" : "Ver todos os criativos (ativos e desativados)"}
+            >
+              {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showAll ? "Top 3" : "Ver todos"}
+            </button>
             <button
               onClick={() => setHistoryOpen(true)}
               className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
@@ -164,7 +177,7 @@ export default function PodioCreatives() {
 
         {!metaLoading && !metaError && campaignsWithCreatives.length === 0 && (!metaData?.accountErrors || metaData.accountErrors.length === 0) && (
           <div className="text-center py-20 text-muted-foreground text-sm">
-            Nenhum criativo encontrado para campanhas ativas no período
+            {showAll ? "Nenhum criativo encontrado no período" : "Nenhum criativo encontrado para campanhas ativas no período"}
           </div>
         )}
 
@@ -181,6 +194,7 @@ export default function PodioCreatives() {
                       funnelLabel={g.key}
                       clientId={client.id}
                       currencySymbol={client.currency_symbol || "R$"}
+                      showAll={showAll}
                     />
                   );
                 }
@@ -191,6 +205,7 @@ export default function PodioCreatives() {
                     campaign={campaign}
                     clientId={client.id}
                     currencySymbol={client.currency_symbol || "R$"}
+                    showAll={showAll}
                   />
                 );
               })}

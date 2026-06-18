@@ -50,9 +50,10 @@ interface Props {
   currencySymbol?: string;
   readOnly?: boolean;
   selectedMetricKey?: CreativeMetricKey;
+  showAll?: boolean;
 }
 
-export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
+export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
   
@@ -101,7 +102,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       : (cr.clicks / campaignClicks) * campaignTotal;
   };
 
-  const sorted = [...campaign.creatives]
+  const sortedAll = [...campaign.creatives]
     .map((cr) => {
       const computedConv = Math.round(getComputedConversions(cr));
       const baseConversions = localMetric === "auto" ? (cr.primaryResult ?? cr.conversions) : computedConv;
@@ -118,6 +119,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
     // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
     .filter((cr) => {
+      if (showAll) return true;
       const hasDelivery =
         (cr._ov.impressions || 0) > 0 ||
         (cr._ov.clicks || 0) > 0 ||
@@ -137,10 +139,11 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       if (aCpa !== bCpa) return aCpa - bCpa;
       if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
       return b._ov.clicks - a._ov.clicks;
-    })
-    .slice(0, 3);
+    });
 
-  const top3Total = sorted.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
+  const displayCreatives = showAll ? sortedAll : sortedAll.slice(0, 3);
+
+  const top3Total = displayCreatives.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
   const totalMetric = campaign.creatives.reduce((sum, cr) => {
     const computedConv = Math.round(getComputedConversions(cr));
     const baseConversions = localMetric === "auto" ? (cr.primaryResult ?? cr.conversions) : computedConv;
@@ -152,9 +155,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
   }, 0);
   const remainingResults = Math.max(totalMetric - top3Total, 0);
 
-  if (sorted.length === 0) return null;
+  if (displayCreatives.length === 0) return null;
 
-  const editCreative = sorted.find(s => s.id === editingCreative);
+  const editCreative = displayCreatives.find(s => s.id === editingCreative);
 
   return (
     <>
@@ -170,8 +173,8 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
               {getFunnelLabel(campaign.name)}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Top 3 somam {activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
-              {remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
+              {showAll ? `${displayCreatives.length} criativos` : `Top 3 somam ${activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de ${activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} ${resultLabel.toLowerCase()}`}
+              {!showAll && remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
             </p>
           </div>
           <Select 
@@ -197,12 +200,12 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
             </SelectContent>
           </Select>
         </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {sorted.map((cr, i) => {
+        <div className={`p-5 grid gap-4 ${showAll ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+          {displayCreatives.map((cr, i) => {
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
             const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
-            const badge = rankBadge[i];
+            const badge = i < 3 ? rankBadge[i] : null;
             const hasOverride = overrides.some(o => o.creative_id === cr.id);
 
             return (
@@ -243,9 +246,16 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                       target.src = `https://picsum.photos/seed/${cr.id}/600/600`;
                     }}
                   />
-                  <div className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.className}`}>
-                    {badge.label}
-                  </div>
+                  {badge && (
+                    <div className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.className}`}>
+                      {badge.label}
+                    </div>
+                  )}
+                  {!badge && (
+                    <div className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      #{i + 1}
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 bg-card/80 backdrop-blur-sm rounded-md p-1">
                     <Icon className="h-3.5 w-3.5 text-card-foreground/70" />
                   </div>

@@ -23,6 +23,7 @@ interface Props {
   currencySymbol?: string;
   readOnly?: boolean;
   selectedMetricKey?: CreativeMetricKey;
+  showAll?: boolean;
 }
 
 /**
@@ -30,7 +31,7 @@ interface Props {
  * (ex: 4 campanhas de Captação de Seguidores -> 1 pódio com top 3 dentre todos os criativos).
  * Mesma lógica de ranking em cascata do CreativeGrid (resultado -> CPA -> impressões -> cliques).
  */
-export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey }: Props) {
+export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
   
@@ -110,6 +111,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return { ...cr, _ov: ov };
     })
     .filter((cr) => {
+      if (showAll) return true;
       const hasDelivery =
         (cr._ov.impressions || 0) > 0 ||
         (cr._ov.clicks || 0) > 0 ||
@@ -129,7 +131,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
       return b._ov.clicks - a._ov.clicks;
     })
-    .slice(0, 3);
+    .slice(0, showAll ? undefined : 3);
 
   const totalMetric = allCreatives.reduce((sum, cr) => {
     const baseline = { ...cr, conversions: (cr as any)._computedConversions };
@@ -161,8 +163,10 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
               Funil: {funnelLabel}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {campaigns.length} campanhas agrupadas • Top 3 somam {activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de {activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} {resultLabel.toLowerCase()}
-              {remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}
+              {showAll
+                ? `${campaigns.length} campanhas agrupadas • ${sorted.length} criativos`
+                : `${campaigns.length} campanhas agrupadas • Top 3 somam ${activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de ${activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} ${resultLabel.toLowerCase()}${remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}`
+              }
             </p>
           </div>
           <Select 
@@ -188,12 +192,12 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
             </SelectContent>
           </Select>
         </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className={`p-5 grid gap-4 ${showAll ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
           {sorted.map((cr, i) => {
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
             const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
-            const badge = rankBadge[i];
+            const badge = i < 3 ? rankBadge[i] : null;
             const hasOverride = overrides.some(o => o.creative_id === cr.id);
 
             return (
@@ -234,9 +238,16 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                       target.src = `https://picsum.photos/seed/${cr.id}/600/600`;
                     }}
                   />
-                  <div className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.className}`}>
-                    {badge.label}
-                  </div>
+                  {badge && (
+                    <div className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.className}`}>
+                      {badge.label}
+                    </div>
+                  )}
+                  {!badge && (
+                    <div className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      #{i + 1}
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 bg-card/80 backdrop-blur-sm rounded-md p-1">
                     <Icon className="h-3.5 w-3.5 text-card-foreground/70" />
                   </div>

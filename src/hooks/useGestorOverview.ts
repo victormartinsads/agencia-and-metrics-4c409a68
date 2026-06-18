@@ -97,38 +97,53 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
     });
 
     // Dispatch alerts webhook in background sequentially to avoid race conditions and respect daily limits
-    (async () => {
-      for (const a of alerts) {
-        let alertKey = "generic";
-        if (a.message.includes("usou")) {
-          alertKey = `budget_limit:${client.id}:${a.message.split(" ")[0]}`;
-        } else if (a.message.includes("CPA alto")) {
-          alertKey = `high_cpa:${client.id}:${a.message.split(" — ")[0]}`;
-        } else if (a.message.includes("Saldo negativo")) {
-          alertKey = `negative_balance:${client.id}`;
-        } else {
-          alertKey = `account_status:${client.id}`;
-        }
+    // Front-end dedup: only dispatch once per client per calendar day (UTC-3 / BRT)
+    if (alerts.length > 0) {
+      const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const dedupKey = `alert_sent:${client.id}:${todayKey}`;
+      const alreadySentToday = localStorage.getItem(dedupKey);
 
-        try {
-          const { data } = await supabase.functions.invoke("whatsapp-alerts", {
-            body: {
-              clientId: client.id,
-              clientName: client.name || "Cliente",
-              alertKey,
-              message: a.message,
+      if (!alreadySentToday) {
+        (async () => {
+          for (const a of alerts) {
+            let alertKey = "generic";
+            if (a.message.includes("usou")) {
+              alertKey = `budget_limit:${client.id}:${a.message.split(" ")[0]}`;
+            } else if (a.message.includes("CPA alto")) {
+              alertKey = `high_cpa:${client.id}:${a.message.split(" — ")[0]}`;
+            } else if (a.message.includes("Saldo negativo")) {
+              alertKey = `negative_balance:${client.id}`;
+            } else {
+              alertKey = `account_status:${client.id}`;
             }
-          });
-          
-          // If the alert was sent successfully, we stop sending other alerts for this client in this run
-          if (data && data.status === "sent") {
-            break;
+
+            try {
+              const { data } = await supabase.functions.invoke("whatsapp-alerts", {
+                body: {
+                  clientId: client.id,
+                  clientName: client.name || "Cliente",
+                  alertKey,
+                  message: a.message,
+                }
+              });
+              
+              // If the alert was sent successfully, mark this client as notified today and stop
+              if (data && data.status === "sent") {
+                localStorage.setItem(dedupKey, "1");
+                break;
+              }
+              // If skipped (already notified server-side), also mark locally to avoid future calls
+              if (data && data.status === "skipped") {
+                localStorage.setItem(dedupKey, "1");
+                break;
+              }
+            } catch (err) {
+              console.error("Error sending whatsapp alert:", err);
+            }
           }
-        } catch (err) {
-          console.error("Error sending whatsapp alert:", err);
-        }
+        })();
       }
-    })();
+    }
 
     return {
       clientId: client.id,
