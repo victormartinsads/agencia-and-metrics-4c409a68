@@ -228,7 +228,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                   <img
                     src={cr.thumbnail}
                     alt={cr.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                      cr.status === "paused" ? "grayscale opacity-75 contrast-[0.95]" : ""
+                    }`}
                     loading="lazy"
                     referrerPolicy="no-referrer"
                     onError={(e) => {
@@ -248,8 +250,15 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                       #{i + 1}
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 bg-card/80 backdrop-blur-sm rounded-md p-1">
-                    <Icon className="h-3.5 w-3.5 text-card-foreground/70" />
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    {cr.status === "paused" && (
+                      <span className="text-[8px] bg-red-600/90 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm select-none">
+                        Pausado
+                      </span>
+                    )}
+                    <div className="bg-card/80 backdrop-blur-sm rounded-md p-1">
+                      <Icon className="h-3.5 w-3.5 text-card-foreground/70" />
+                    </div>
                   </div>
                 </div>
                 <div className="p-3 space-y-2">

@@ -70,6 +70,7 @@ export interface Creative {
   roas: number;
   primaryResult?: number;
   permalinkUrl?: string;
+  status?: "active" | "paused";
 }
 
 export interface DailyMetric {
