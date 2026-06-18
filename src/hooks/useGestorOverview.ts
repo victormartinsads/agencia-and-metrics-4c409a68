@@ -96,28 +96,39 @@ async function fetchOne(client: ClientCfg, period: string): Promise<ClientOvervi
       });
     });
 
-    // Dispatch alerts webhook in background
-    alerts.forEach((a) => {
-      let alertKey = "generic";
-      if (a.message.includes("usou")) {
-        alertKey = `budget_limit:${client.id}:${a.message.split(" ")[0]}`;
-      } else if (a.message.includes("CPA alto")) {
-        alertKey = `high_cpa:${client.id}:${a.message.split(" — ")[0]}`;
-      } else if (a.message.includes("Saldo negativo")) {
-        alertKey = `negative_balance:${client.id}`;
-      } else {
-        alertKey = `account_status:${client.id}`;
-      }
-
-      supabase.functions.invoke("whatsapp-alerts", {
-        body: {
-          clientId: client.id,
-          clientName: client.name || "Cliente",
-          alertKey,
-          message: a.message,
+    // Dispatch alerts webhook in background sequentially to avoid race conditions and respect daily limits
+    (async () => {
+      for (const a of alerts) {
+        let alertKey = "generic";
+        if (a.message.includes("usou")) {
+          alertKey = `budget_limit:${client.id}:${a.message.split(" ")[0]}`;
+        } else if (a.message.includes("CPA alto")) {
+          alertKey = `high_cpa:${client.id}:${a.message.split(" — ")[0]}`;
+        } else if (a.message.includes("Saldo negativo")) {
+          alertKey = `negative_balance:${client.id}`;
+        } else {
+          alertKey = `account_status:${client.id}`;
         }
-      }).catch((err) => console.error("Error sending whatsapp alert:", err));
-    });
+
+        try {
+          const { data } = await supabase.functions.invoke("whatsapp-alerts", {
+            body: {
+              clientId: client.id,
+              clientName: client.name || "Cliente",
+              alertKey,
+              message: a.message,
+            }
+          });
+          
+          // If the alert was sent successfully, we stop sending other alerts for this client in this run
+          if (data && data.status === "sent") {
+            break;
+          }
+        } catch (err) {
+          console.error("Error sending whatsapp alert:", err);
+        }
+      }
+    })();
 
     return {
       clientId: client.id,

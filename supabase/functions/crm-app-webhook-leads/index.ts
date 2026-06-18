@@ -24,6 +24,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!tk || !tk.active) return json({ error: "Token inválido" }, 401);
 
+    if (req.method === "GET") {
+      const { data: leads, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("organization_id", tk.organization_id)
+        .order("created_at", { ascending: false });
+      if (error) return json({ error: error.message }, 400);
+      return json({ success: true, leads });
+    }
+
     const rawBody = await req.json().catch(() => ({}));
     // Apply field mapping: { "<incoming key>": "<internal key>" }
     // Translate raw payload keys to internal CRM keys. Only the mapped/translated

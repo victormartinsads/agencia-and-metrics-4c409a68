@@ -85,12 +85,11 @@ Deno.serve(async (req) => {
     }
 
     if (!isTest) {
-      // Check if we already sent this alert in the last 24 hours
+      // Check if we already sent any alert for this client in the last 24 hours
       const { data: existingLog } = await supabase
         .from("sent_alerts_log")
         .select("id")
         .eq("client_id", clientId)
-        .eq("alert_key", alertKey)
         .gte("sent_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .maybeSingle();
 
