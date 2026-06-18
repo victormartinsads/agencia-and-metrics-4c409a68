@@ -76,7 +76,7 @@ export default function ClientView() {
   const campaigns = metaData?.campaigns || [];
   const dailyMetrics = metaData?.dailyMetrics || [];
   const currencySymbol = client.currency_symbol || "R$";
-  const eligibleCreatives = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0);
+  const eligibleCreatives = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0);
   const captacao = eligibleCreatives.filter(c => isCaptacaoSeguidores(c.name));
   const others = eligibleCreatives.filter(c => !isCaptacaoSeguidores(c.name));
 

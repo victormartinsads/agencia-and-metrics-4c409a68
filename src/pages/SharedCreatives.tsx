@@ -24,32 +24,33 @@ const DATE_PRESETS = [
 ];
 
 export default function SharedCreatives() {
-  const { clientId } = useParams<{ clientId: string }>();
+  const { clientId, slug } = useParams<{ clientId?: string; slug?: string }>();
+  const identifier = clientId || slug;
   const [datePreset, setDatePreset] = useState("last_7d");
   const [refreshing, setRefreshing] = useState(false);
   const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
-    queryKey: ["client", clientId],
+    queryKey: ["client", identifier],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name, currency_symbol, slug")
-        .eq("id", clientId!)
-        .single();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier || "");
+      const q = supabase.from("clients").select("id, name, currency_symbol, slug");
+      const { data, error } = isUuid
+        ? await q.eq("id", identifier!).single()
+        : await q.eq("slug", identifier!).single();
       if (error) throw error;
       return data as Pick<Client, "id" | "name" | "currency_symbol" | "slug">;
     },
-    enabled: !!clientId,
+    enabled: !!identifier,
   });
 
-  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(clientId, datePreset, client?.slug);
+  const { data: metaData, isLoading: metaLoading, error: metaError } = useMetaAds(client?.id, datePreset, client?.slug);
 
   const handleRefresh = async () => {
-    if (!clientId || refreshing) return;
+    if (!client?.id || refreshing) return;
     setRefreshing(true);
     try {
-      await refreshMetaAds(clientId, datePreset);
+      await refreshMetaAds(client.id, datePreset);
       toast.success("Dados atualizados!");
     } catch (e: any) {
       toast.error("Erro ao atualizar", { description: friendlyError(e) });
@@ -166,12 +167,12 @@ export default function SharedCreatives() {
                 <AggregatedCreativeGrid
                   campaigns={captacao}
                   funnelLabel="Captação de Seguidores"
-                  clientId={clientId}
+                  clientId={client?.id}
                   currencySymbol={client.currency_symbol || "R$"}
                 />
               )}
               {others.map((campaign) => (
-                <CreativeGrid key={campaign.id} campaign={campaign} clientId={clientId} currencySymbol={client.currency_symbol || "R$"} />
+                <CreativeGrid key={campaign.id} campaign={campaign} clientId={client?.id} currencySymbol={client.currency_symbol || "R$"} />
               ))}
             </>
           );

@@ -194,7 +194,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
 
           {showTab("creatives") && <TabsContent value="creatives" className="space-y-6">
             {(() => {
-              const eligible = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0);
+              const eligible = campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0);
               const captacao = eligible.filter(c => isCaptacaoSeguidores(c.name));
               const others = eligible.filter(c => !isCaptacaoSeguidores(c.name));
               return (
@@ -234,7 +234,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                 </>
               );
             })()}
-            {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives.length > 0).length === 0 && (
+            {campaigns.filter(c => (c.status === "active" || c.spend > 0) && c.creatives && c.creatives.length > 0).length === 0 && (
               <div className="text-center py-16 text-muted-foreground text-sm">
                 Nenhum criativo encontrado para campanhas ativas ou com gasto no período
               </div>
