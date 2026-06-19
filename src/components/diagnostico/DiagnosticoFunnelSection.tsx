@@ -30,6 +30,7 @@ import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
 import { CampaignDrillDown } from "@/components/gestor/CampaignDrillDown";
+import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 
 
 interface Props {
@@ -420,6 +421,16 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             />
           ))}
       </div>
+
+      {clientId && (
+        <div className="pt-3 border-t border-border/40">
+          <FunnelHealthDiagnosticPanel
+            clientId={clientId}
+            funnelCode={sectionCode}
+            readOnly={false}
+          />
+        </div>
+      )}
 
       {/* Quando é funil agrupando várias campanhas, lista as campanhas */}
       {group.isFunnel && adaptedCampaigns.length > 1 && (

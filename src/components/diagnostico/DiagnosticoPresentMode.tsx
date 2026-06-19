@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useDiagnosticMetricsConfig";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
+import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 
 interface Props {
   clientName: string;
@@ -46,6 +47,8 @@ interface Props {
   googleAnalyticsData?: any;
   /** Dados estáticos do Google Ads para visualização pública offline */
   googleAdsCampaigns?: any[];
+  /** Snapshot de diagnósticos e saúde por código de funil / campanha */
+  funnelDiagnostics?: Record<string, any>;
 }
 
 type Slide =
@@ -68,7 +71,7 @@ function fmtMoney(v: number, sym: string) {
  * Layout grande pra gravar vídeo lendo o conteúdo.
  */
 export function DiagnosticoPresentMode({
-  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels, googleAnalyticsData, googleAdsCampaigns,
+  clientName, datePreset, periodRange, groups, manualFunnels, blocks, whatWeDid, nextActions, currencySymbol = "R$", onClose, clientId, datePresetKey, publicMode, groupConfigs, funnelLabels, googleAnalyticsData, googleAdsCampaigns, funnelDiagnostics,
 }: Props) {
   const { data: liveLabelMap } = useFunnelLabels(clientId);
   const resolvedLabels = funnelLabels || liveLabelMap || {};
@@ -193,6 +196,7 @@ export function DiagnosticoPresentMode({
                 datePreset={datePresetKey || datePreset}
                 overrideConfig={groupConfigs?.[slide.group.key]}
                 resolvedLabels={resolvedLabels}
+                snapshotData={funnelDiagnostics?.[slide.group.isFunnel ? (extractFunnelCode(slide.group.campaigns[0]?.name) || slide.group.key) : (slide.group.campaigns[0]?.id || slide.group.key)]}
               />
             )}
 
@@ -284,6 +288,7 @@ function GroupSlide({
   datePreset,
   overrideConfig,
   resolvedLabels = {},
+  snapshotData,
 }: {
   group: FunnelGroup;
   currencySymbol: string;
@@ -291,6 +296,7 @@ function GroupSlide({
   datePreset: string;
   overrideConfig?: MetricsConfig;
   resolvedLabels?: Record<string, string>;
+  snapshotData?: any;
 }) {
   const totals = aggregateCampaignMetrics(group.campaigns);
   const resultLabel =
@@ -371,6 +377,17 @@ function GroupSlide({
             />
           ))}
       </div>
+
+      {(clientId || snapshotData) && (
+        <div className="pt-4 border-t border-border/40">
+          <FunnelHealthDiagnosticPanel
+            clientId={clientId || ""}
+            funnelCode={group.isFunnel ? (extractFunnelCode(group.campaigns[0]?.name) || group.key) : (group.campaigns[0]?.id || group.key)}
+            readOnly={true}
+            snapshotData={snapshotData}
+          />
+        </div>
+      )}
 
       {top.length > 0 && (
         <div>

@@ -143,6 +143,20 @@ export function DiagnosticoSemanal({
           custom_metrics: Array.isArray(row.custom_metrics) ? row.custom_metrics : [],
         };
       }
+
+      // Busca os diagnósticos de saúde de funil para o snapshot
+      const { data: diagRows } = await supabase
+        .from("funnel_diagnostics")
+        .select("funnel_code, health_score, diagnostics")
+        .eq("client_id", clientId);
+      const funnelDiagnostics: Record<string, any> = {};
+      for (const row of (diagRows || []) as any[]) {
+        funnelDiagnostics[row.funnel_code] = {
+          health_score: row.health_score,
+          diagnostics: row.diagnostics,
+        };
+      }
+
       await saveDiag.mutateAsync({
         client_id: clientId,
         title: saveTitle.trim(),
@@ -161,6 +175,7 @@ export function DiagnosticoSemanal({
           funnelLabels: labelMap || {},
           googleAnalytics: isGoogleConnected ? gaData : null,
           googleAdsCampaigns: isGoogleConnected ? gaAdsData?.campaigns || [] : null,
+          funnelDiagnostics,
         },
       });
       toast.success("Diagnóstico salvo!");

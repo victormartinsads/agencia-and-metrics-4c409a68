@@ -13,6 +13,7 @@ import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { DiagnosticoGoogleFunnelSection } from "@/components/diagnostico/DiagnosticoGoogleFunnelSection";
 import { DiagnosticoGoogleCampaignsSection } from "@/components/diagnostico/DiagnosticoGoogleCampaignsSection";
+import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 
 export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any } = {}) {
   const { id } = useParams<{ id: string }>();
@@ -171,6 +172,16 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
                       <Mini label="CTR" value={getMetricValueAndOverride("ctr").value} />
                     </div>
                   )}
+
+                  {/* Funnel Health & Diagnostics */}
+                  <div className="mt-4 pt-4 border-t border-border/40">
+                    <FunnelHealthDiagnosticPanel
+                      clientId=""
+                      funnelCode={g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)}
+                      readOnly={true}
+                      snapshotData={snap.funnelDiagnostics?.[g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)]}
+                    />
+                  </div>
                 </div>
               );
             })}
