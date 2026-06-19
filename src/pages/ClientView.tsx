@@ -11,12 +11,14 @@ import { CreativeGrid, isCaptacaoSeguidores } from "@/components/dashboard/Creat
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { useSavedDiagnostics } from "@/hooks/useSavedDiagnostics";
 import SavedDiagnosticPublic from "./SavedDiagnosticPublic";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ClientView() {
   const { slug } = useParams<{ slug: string }>();
   const [datePreset, setDatePreset] = useState("last_7d");
   const [openDiag, setOpenDiag] = useState<any>(null);
   const [showAll, setShowAll] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
 
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -171,18 +173,32 @@ export default function ClientView() {
                   <h3 className="text-sm font-semibold text-card-foreground">Pódio de Criativos</h3>
                   <p className="text-[11px] text-muted-foreground">Avalie o desempenho dos criativos no período</p>
                 </div>
-                <button
-                  onClick={() => setShowAll(!showAll)}
-                  className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                    showAll
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "bg-secondary text-secondary-foreground hover:bg-accent"
-                  }`}
-                  title={showAll ? "Mostrar apenas Top 3" : "Ver todos os criativos (ativos e desativados)"}
-                >
-                  {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {showAll ? "Top 3" : "Ver todos"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAll(!showAll)}
+                    className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                      showAll
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "bg-secondary text-secondary-foreground hover:bg-accent"
+                    }`}
+                    title={showAll ? "Mostrar apenas Top 3" : "Ver todos os criativos (ativos e desativados)"}
+                  >
+                    {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showAll ? "Top 3" : "Ver todos"}
+                  </button>
+                  {showAll && (
+                    <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                      <SelectTrigger className="h-8 w-[100px] text-xs bg-secondary text-secondary-foreground border-border hover:bg-accent py-0">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                        <SelectItem value="active" className="text-xs">Ativos</SelectItem>
+                        <SelectItem value="paused" className="text-xs">Pausados</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
 
               {captacao.length > 0 && (
@@ -193,14 +209,15 @@ export default function ClientView() {
                   currencySymbol={currencySymbol}
                   readOnly
                   showAll={showAll}
+                  statusFilter={statusFilter}
                 />
               )}
               {others.map(c => (
-                <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly showAll={showAll} />
+                <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly showAll={showAll} statusFilter={statusFilter} />
               ))}
               {eligibleCreatives.length === 0 && (
                 <div className="text-center py-16 text-muted-foreground text-sm">
-                  {showAll ? "Nenhum criativo encontrado no período." : "Nenhum criativo encontrado para campanhas ativas no período."}
+                  {showAll ? "Nenhum criativo encontrado com este filtro no período." : "Nenhum criativo encontrado para campanhas ativas no período."}
                 </div>
               )}
             </TabsContent>

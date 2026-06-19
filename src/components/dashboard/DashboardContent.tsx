@@ -39,6 +39,7 @@ interface Props {
 export function DashboardContent({ clientId, datePreset, metaData, metaLoading, metaError, currencySymbol = "R$", hideDiagnostico = false, visibleTabs, activeTab, onActiveTabChange, hideTabList = false, isPublicView = false }: Props) {
   const [selectedCreativeMetric, setSelectedCreativeMetric] = useState<CreativeMetricKey | "auto">("auto");
   const [showAll, setShowAll] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const [localActiveTab, setLocalActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
@@ -218,6 +219,18 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                         {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         {showAll ? "Top 3" : "Ver todos"}
                       </button>
+                      {showAll && (
+                        <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                          <SelectTrigger className="h-8 w-[100px] text-xs bg-secondary text-secondary-foreground border-border hover:bg-accent py-0">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                            <SelectItem value="active" className="text-xs">Ativos</SelectItem>
+                            <SelectItem value="paused" className="text-xs">Pausados</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Select value={selectedCreativeMetric} onValueChange={(v) => setSelectedCreativeMetric(v as any)}>
                         <SelectTrigger className="w-[180px] h-8 text-xs">
                           <SelectValue placeholder="Métrica" />
@@ -242,17 +255,18 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
                       readOnly={isPublicView}
                       selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric}
                       showAll={showAll}
+                      statusFilter={statusFilter}
                     />
                   )}
                   {others.map(c => (
-                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric} showAll={showAll} />
+                    <CreativeGrid key={c.id} campaign={c} clientId={clientId} currencySymbol={currencySymbol} readOnly={isPublicView} selectedMetricKey={selectedCreativeMetric === "auto" ? undefined : selectedCreativeMetric} showAll={showAll} statusFilter={statusFilter} />
                   ))}
                 </>
               );
             })()}
             {campaigns.filter(c => (c.status === "active" || showAll || c.spend > 0) && c.creatives && c.creatives.length > 0).length === 0 && (
               <div className="text-center py-16 text-muted-foreground text-sm">
-                Nenhum criativo encontrado para campanhas ativas ou com gasto no período
+                {showAll ? "Nenhum criativo encontrado com este filtro no período" : "Nenhum criativo encontrado para campanhas ativas ou com gasto no período"}
               </div>
             )}
           </TabsContent>}

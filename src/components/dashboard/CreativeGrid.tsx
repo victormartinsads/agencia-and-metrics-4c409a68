@@ -51,9 +51,10 @@ interface Props {
   readOnly?: boolean;
   selectedMetricKey?: CreativeMetricKey;
   showAll?: boolean;
+  statusFilter?: "all" | "active" | "paused";
 }
 
-export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false }: Props) {
+export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false, statusFilter = "all" }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
   
@@ -119,13 +120,21 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
     // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
     .filter((cr) => {
-      if (showAll) return true;
-      const hasDelivery =
-        (cr._ov.impressions || 0) > 0 ||
-        (cr._ov.clicks || 0) > 0 ||
-        (cr._ov.conversions || 0) > 0 ||
-        (cr._ov.spend || 0) > 0;
-      return hasDelivery;
+      if (!showAll) {
+        const hasDelivery =
+          (cr._ov.impressions || 0) > 0 ||
+          (cr._ov.clicks || 0) > 0 ||
+          (cr._ov.conversions || 0) > 0 ||
+          (cr._ov.spend || 0) > 0;
+        return hasDelivery;
+      }
+      if (statusFilter === "active") {
+        return cr.status !== "paused";
+      }
+      if (statusFilter === "paused") {
+        return cr.status === "paused";
+      }
+      return true;
     })
     .sort((a, b) => {
       const valA = getMetricValue(a._ov);

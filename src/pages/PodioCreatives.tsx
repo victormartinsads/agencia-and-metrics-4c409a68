@@ -31,6 +31,7 @@ export default function PodioCreatives() {
   const [refreshing, setRefreshing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -109,6 +110,18 @@ export default function PodioCreatives() {
               {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               {showAll ? "Top 3" : "Ver todos"}
             </button>
+            {showAll && (
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="h-9 w-[120px] text-xs bg-secondary text-secondary-foreground border-border hover:bg-accent">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="paused">Pausados</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <button
               onClick={() => setHistoryOpen(true)}
               className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
@@ -177,7 +190,7 @@ export default function PodioCreatives() {
 
         {!metaLoading && !metaError && campaignsWithCreatives.length === 0 && (!metaData?.accountErrors || metaData.accountErrors.length === 0) && (
           <div className="text-center py-20 text-muted-foreground text-sm">
-            {showAll ? "Nenhum criativo encontrado no período" : "Nenhum criativo encontrado para campanhas ativas no período"}
+            {showAll ? "Nenhum criativo encontrado com este filtro no período" : "Nenhum criativo encontrado para campanhas ativas no período"}
           </div>
         )}
 
@@ -195,6 +208,7 @@ export default function PodioCreatives() {
                       clientId={client.id}
                       currencySymbol={client.currency_symbol || "R$"}
                       showAll={showAll}
+                      statusFilter={statusFilter}
                     />
                   );
                 }
@@ -206,6 +220,7 @@ export default function PodioCreatives() {
                     clientId={client.id}
                     currencySymbol={client.currency_symbol || "R$"}
                     showAll={showAll}
+                    statusFilter={statusFilter}
                   />
                 );
               })}

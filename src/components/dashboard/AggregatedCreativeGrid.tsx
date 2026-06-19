@@ -24,6 +24,7 @@ interface Props {
   readOnly?: boolean;
   selectedMetricKey?: CreativeMetricKey;
   showAll?: boolean;
+  statusFilter?: "all" | "active" | "paused";
 }
 
 /**
@@ -31,7 +32,7 @@ interface Props {
  * (ex: 4 campanhas de Captação de Seguidores -> 1 pódio com top 3 dentre todos os criativos).
  * Mesma lógica de ranking em cascata do CreativeGrid (resultado -> CPA -> impressões -> cliques).
  */
-export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false }: Props) {
+export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false, statusFilter = "all" }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
   
@@ -111,13 +112,21 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return { ...cr, _ov: ov };
     })
     .filter((cr) => {
-      if (showAll) return true;
-      const hasDelivery =
-        (cr._ov.impressions || 0) > 0 ||
-        (cr._ov.clicks || 0) > 0 ||
-        (cr._ov.conversions || 0) > 0 ||
-        (cr._ov.spend || 0) > 0;
-      return hasDelivery;
+      if (!showAll) {
+        const hasDelivery =
+          (cr._ov.impressions || 0) > 0 ||
+          (cr._ov.clicks || 0) > 0 ||
+          (cr._ov.conversions || 0) > 0 ||
+          (cr._ov.spend || 0) > 0;
+        return hasDelivery;
+      }
+      if (statusFilter === "active") {
+        return cr.status !== "paused";
+      }
+      if (statusFilter === "paused") {
+        return cr.status === "paused";
+      }
+      return true;
     })
     .sort((a, b) => {
       const valA = getMetricValue(a._ov);

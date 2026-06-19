@@ -29,6 +29,7 @@ export default function SharedCreatives() {
   const [datePreset, setDatePreset] = useState("last_7d");
   const [refreshing, setRefreshing] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const refreshMetaAds = useRefreshMetaAds();
 
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -107,6 +108,18 @@ export default function SharedCreatives() {
               {showAll ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               {showAll ? "Top 3" : "Ver todos"}
             </button>
+            {showAll && (
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="h-9 w-[120px] text-xs bg-secondary text-secondary-foreground border-border hover:bg-accent">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="paused">Pausados</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <button
               onClick={handleRefresh}
               disabled={refreshing || metaLoading}
@@ -167,7 +180,7 @@ export default function SharedCreatives() {
 
         {!metaLoading && !metaError && campaignsWithCreatives.length === 0 && (!metaData?.accountErrors || metaData.accountErrors.length === 0) && (
           <div className="text-center py-20 text-muted-foreground text-sm">
-            {showAll ? "Nenhum criativo encontrado no período" : "Nenhum criativo encontrado para campanhas ativas no período"}
+            {showAll ? "Nenhum criativo encontrado com este filtro no período" : "Nenhum criativo encontrado para campanhas ativas no período"}
           </div>
         )}
 
@@ -183,10 +196,11 @@ export default function SharedCreatives() {
                   clientId={client?.id}
                   currencySymbol={client.currency_symbol || "R$"}
                   showAll={showAll}
+                  statusFilter={statusFilter}
                 />
               )}
               {others.map((campaign) => (
-                <CreativeGrid key={campaign.id} campaign={campaign} clientId={client?.id} currencySymbol={client.currency_symbol || "R$"} showAll={showAll} />
+                <CreativeGrid key={campaign.id} campaign={campaign} clientId={client?.id} currencySymbol={client.currency_symbol || "R$"} showAll={showAll} statusFilter={statusFilter} />
               ))}
             </>
           );
