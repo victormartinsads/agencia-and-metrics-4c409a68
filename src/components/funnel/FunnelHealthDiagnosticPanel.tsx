@@ -19,6 +19,13 @@ interface Props {
     diagnostics: any;
     curve_data?: any;
   };
+  liveCampaignMetrics?: {
+    hookRate?: number;
+    holdRate?: number;
+    linkCtr?: number;
+    avgVideoTime?: number;
+    costPerPlay?: number;
+  };
 }
 
 export function getFunnelActiveDiagnostics(funnelCode: string | undefined) {
@@ -99,7 +106,7 @@ export function getFunnelActiveDiagnostics(funnelCode: string | undefined) {
   return allEnabled;
 }
 
-export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = false, currencySymbol = "R$", snapshotData }: Props) {
+export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = false, currencySymbol = "R$", snapshotData, liveCampaignMetrics }: Props) {
   // Live query hook
   const { data: funnelDiag, isLoading } = useFunnelDiagnostics(
     snapshotData ? undefined : clientId,
@@ -206,9 +213,18 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   };
 
   // Video watch time graph calculations (matches the brand style)
-  const hookRate = curve?.hook_rate ?? 94.5;
-  const holdRate = curve?.hold_rate ?? 17.5;
-  const avgVideoTime = curve?.avgVideoTime ?? 3.0;
+  const isSnapshot = !!snapshotData;
+  const isMockHook = !isSnapshot && (!curve || curve.hook_rate === 94.5);
+  const isMockHold = !isSnapshot && (!curve || curve.hold_rate === 17.5);
+  const isMockCtr = !isSnapshot && (!curve || curve.ctr_link === 2.74);
+  const isMockAvgTime = !isSnapshot && (!curve || curve.avgVideoTime === 5.4 || curve.avgVideoTime === 3.0);
+  const isMockCostPlay = !isSnapshot && (!curve || curve.cost_per_play === 0.05);
+
+  const hookRate = isMockHook ? (liveCampaignMetrics?.hookRate ?? curve?.hook_rate ?? 94.5) : (curve?.hook_rate ?? 94.5);
+  const holdRate = isMockHold ? (liveCampaignMetrics?.holdRate ?? curve?.hold_rate ?? 17.5) : (curve?.hold_rate ?? 17.5);
+  const ctrLink = isMockCtr ? (liveCampaignMetrics?.linkCtr ?? curve?.ctr_link ?? 2.74) : (curve?.ctr_link ?? 2.74);
+  const avgVideoTime = isMockAvgTime ? (liveCampaignMetrics?.avgVideoTime ?? curve?.avgVideoTime ?? 3.0) : (curve?.avgVideoTime ?? 3.0);
+  const costPerPlay = isMockCostPlay ? (liveCampaignMetrics?.costPerPlay ?? curve?.cost_per_play ?? 0.05) : (curve?.cost_per_play ?? 0.05);
 
   // Let's assume the full width of the graph represents 15s (standard duration for Instagram story/reel).
   const maxVideoTime = 15.0;
@@ -540,12 +556,32 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
       </div>
 
       {/* Box 2: Qualidade de Criativo */}
-      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-lg">
-        <div>
-          <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5 mb-1 font-display">
-            🎬 Qualidade de Criativo
-          </h3>
-          <p className="text-[10px] text-muted-foreground">Retenção de vídeos e nível de atenção.</p>
+      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-lg relative group/box2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5 mb-1 font-display">
+              🎬 Qualidade de Criativo
+            </h3>
+            <p className="text-[10px] text-muted-foreground">Retenção de vídeos e nível de atenção.</p>
+          </div>
+          <div 
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-border bg-[#0c0c0e] transition-all duration-300 ${
+              readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
+            }`}
+            onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
+          >
+            <div className={`h-2 w-2 rounded-full ${
+              diags.criativos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+              diags.criativos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+              diags.criativos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+              "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+            }`} />
+            <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Nota:</span>
+            <span className="text-xs font-black text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
+            {!readOnly && (
+              <Pencil className="h-2 w-2 text-muted-foreground/60 ml-0.5" />
+            )}
+          </div>
         </div>
 
         {/* Retention curve SVG */}
@@ -721,10 +757,10 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] ${
               readOnly ? "" : "cursor-pointer"
             }`}
-            onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", curve?.ctr_link)}
+            onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", ctrLink)}
           >
             <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">CTR Link</span>
-            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{(curve?.ctr_link ?? 0).toFixed(2)}%</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{ctrLink.toFixed(2)}%</span>
             {!readOnly && (
               <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                 <Pencil className="h-2.5 w-2.5" />
@@ -753,10 +789,10 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] col-span-2 ${
               readOnly ? "" : "cursor-pointer"
             }`}
-            onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", curve?.cost_per_play)}
+            onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", costPerPlay)}
           >
             <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">Custo por Play</span>
-            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{currencySymbol} {(curve?.cost_per_play ?? 0).toFixed(2)}</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{currencySymbol} {costPerPlay.toFixed(2)}</span>
             {!readOnly && (
               <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                 <Pencil className="h-2.5 w-2.5" />

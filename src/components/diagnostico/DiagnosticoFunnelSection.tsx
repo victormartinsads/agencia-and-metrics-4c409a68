@@ -428,6 +428,15 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             clientId={clientId}
             funnelCode={sectionCode}
             readOnly={false}
+            liveCampaignMetrics={{
+              hookRate: getCurrentRawValue("hookRate"),
+              holdRate: getCurrentRawValue("holdRate"),
+              linkCtr: getCurrentRawValue("linkCtr"),
+              avgVideoTime: getCurrentRawValue("avgVideoTime"),
+              costPerPlay: (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays")) > 0
+                ? getCurrentRawValue("spend") / (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays"))
+                : 0,
+            }}
           />
         </div>
       )}

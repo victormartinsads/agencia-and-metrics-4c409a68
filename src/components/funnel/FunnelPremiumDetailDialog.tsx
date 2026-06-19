@@ -278,12 +278,37 @@ export function FunnelPremiumDetailDialog({
   const videoP75 = getMetricValueAndOverride("videoP75");
   const videoP100 = getMetricValueAndOverride("videoP100");
 
-  const p25Rate = videoPlays > 0 ? (videoP25 / videoPlays) * 100 : (curve.hook_rate || 60);
-  const p50Rate = videoPlays > 0 ? (videoP50 / videoPlays) * 100 : (curve.hold_rate || 40);
+  const liveImpressions = getMetricValueAndOverride("impressions");
+  const liveVideoView3s = sumMetric("videoView3s") || sumMetric("video_view") || sumMetric("video_3s");
+  const liveVideoP95 = sumMetric("videoP95") || sumMetric("video_p95_watched_actions");
+  const liveThruplays = sumMetric("thruplays") || sumMetric("video_thruplay_watched_actions");
+  const liveVideoPlays = sumMetric("videoPlays") || sumMetric("video_play");
+  const liveSpend = getMetricValueAndOverride("spend");
+
+  const liveHookRate = liveImpressions > 0 ? (liveVideoView3s / liveImpressions) * 100 : 0;
+  const liveHoldRate = liveVideoView3s > 0 ? (liveVideoP95 / liveVideoView3s) * 100 : 0;
+  const liveLinkCtr = liveImpressions > 0 ? (sumMetric("linkClicks") / liveImpressions) * 100 : 0;
+  const liveAvgVideoTime = getMetricValueAndOverride("avgVideoTime") || 0;
+  const liveCostPerPlay = liveVideoPlays > 0 ? liveSpend / liveVideoPlays : (liveThruplays > 0 ? liveSpend / liveThruplays : 0);
+
+  const isMockHook = !curve || curve.hook_rate === 94.5;
+  const isMockHold = !curve || curve.hold_rate === 17.5;
+  const isMockCtr = !curve || curve.ctr_link === 2.74;
+  const isMockAvgTime = !curve || curve.avgVideoTime === 5.4 || curve.avgVideoTime === 3.0;
+  const isMockCostPlay = !curve || curve.cost_per_play === 0.05;
+
+  const hookRateVal = isMockHook ? (liveHookRate || curve?.hook_rate || 94.5) : (curve?.hook_rate ?? 94.5);
+  const holdRateVal = isMockHold ? (liveHoldRate || curve?.hold_rate || 17.5) : (curve?.hold_rate ?? 17.5);
+  const ctrLinkVal = isMockCtr ? (liveLinkCtr || curve?.ctr_link || 2.74) : (curve?.ctr_link ?? 2.74);
+  const avgVideoTimeVal = isMockAvgTime ? (liveAvgVideoTime || curve?.avgVideoTime || 5.4) : (curve?.avgVideoTime ?? 5.4);
+  const costPerPlayVal = isMockCostPlay ? (liveCostPerPlay || curve?.cost_per_play || 0.05) : (curve?.cost_per_play ?? 0.05);
+
+  const p25Rate = videoPlays > 0 ? (videoP25 / videoPlays) * 100 : hookRateVal;
+  const p50Rate = videoPlays > 0 ? (videoP50 / videoPlays) * 100 : holdRateVal;
   const p75Rate = videoPlays > 0 ? (videoP75 / videoPlays) * 100 : 25;
   const p100Rate = videoPlays > 0 ? (videoP100 / videoPlays) * 100 : 12;
 
-  const avgVideoTime = funnelDiag?.curve_data?.avgVideoTime ?? getMetricValueAndOverride("avgVideoTime") ?? 5.4;
+  const avgVideoTime = avgVideoTimeVal;
 
   const xPos = Math.min(95, Math.max(5, (avgVideoTime / 15) * 100));
   let yRate = 100;
@@ -615,12 +640,32 @@ export function FunnelPremiumDetailDialog({
             </div>
 
             {/* 2. Qualidade de Criativo */}
-            <div className="border border-border bg-[#0f0f12] rounded-2xl p-5 flex flex-col justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em]">
-                  🎬 Qualidade de Criativo
-                </h3>
-                <p className="text-[10px] text-muted-foreground mt-1">Retenção de vídeos e atenção</p>
+            <div className="border border-border bg-[#0f0f12] rounded-2xl p-5 flex flex-col justify-between relative group/box2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5">
+                    🎬 Qualidade de Criativo
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground mt-1">Retenção de vídeos e atenção</p>
+                </div>
+                <div 
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-border bg-[#0c0c0e] transition-all duration-300 ${
+                    readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#10b981]/[0.01]"
+                  }`}
+                  onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
+                >
+                  <div className={`h-1.5 w-1.5 rounded-full ${
+                    diags.criativos.score >= 8.5 ? "bg-emerald-500" :
+                    diags.criativos.score >= 7.0 ? "bg-green-500" :
+                    diags.criativos.score >= 5.0 ? "bg-amber-500" :
+                    "bg-red-500"
+                  }`} />
+                  <span className="text-[8px] uppercase font-bold text-muted-foreground">Nota:</span>
+                  <span className="text-xs font-black text-primary font-display">{diags.criativos.score.toFixed(1)}</span>
+                  {!readOnly && (
+                    <Pencil className="h-2 w-2 text-muted-foreground/60 ml-0.5" />
+                  )}
+                </div>
               </div>
 
               {/* Retention curve SVG */}
@@ -666,26 +711,26 @@ export function FunnelPremiumDetailDialog({
               <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border/60">
                 <div 
                   className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20"
-                  onClick={() => handleStartEdit("curve", "hook_rate", "Hook Rate (3s)", curve.hook_rate)}
+                  onClick={() => handleStartEdit("curve", "hook_rate", "Hook Rate (3s)", hookRateVal)}
                 >
                   <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Hook Rate (3s)</span>
-                  <span className="text-sm font-bold text-primary mt-1">{curve.hook_rate.toFixed(1)}%</span>
+                  <span className="text-sm font-bold text-primary mt-1">{hookRateVal.toFixed(1)}%</span>
                 </div>
                 
                 <div 
                   className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20"
-                  onClick={() => handleStartEdit("curve", "hold_rate", "Hold Rate", curve.hold_rate)}
+                  onClick={() => handleStartEdit("curve", "hold_rate", "Hold Rate", holdRateVal)}
                 >
                   <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Hold Rate</span>
-                  <span className="text-sm font-bold text-primary mt-1">{curve.hold_rate.toFixed(1)}%</span>
+                  <span className="text-sm font-bold text-primary mt-1">{holdRateVal.toFixed(1)}%</span>
                 </div>
 
                 <div 
                   className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20"
-                  onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", curve.ctr_link)}
+                  onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", ctrLinkVal)}
                 >
                   <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">CTR Link</span>
-                  <span className="text-sm font-bold text-primary mt-1">{curve.ctr_link.toFixed(2)}%</span>
+                  <span className="text-sm font-bold text-primary mt-1">{ctrLinkVal.toFixed(2)}%</span>
                 </div>
 
                 <div 
@@ -698,10 +743,10 @@ export function FunnelPremiumDetailDialog({
 
                 <div 
                   className="hover:bg-muted/10 p-2.5 rounded-xl cursor-pointer flex flex-col justify-between border border-border/20 col-span-2"
-                  onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", curve.cost_per_play)}
+                  onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", costPerPlayVal)}
                 >
                   <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Custo por Play</span>
-                  <span className="text-sm font-bold text-primary mt-1">{currencySymbol} {curve.cost_per_play.toFixed(2)}</span>
+                  <span className="text-sm font-bold text-primary mt-1">{currencySymbol} {costPerPlayVal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

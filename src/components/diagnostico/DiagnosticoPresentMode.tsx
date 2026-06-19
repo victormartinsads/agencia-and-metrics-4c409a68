@@ -316,6 +316,15 @@ function GroupSlide({
     return { value, isOverridden };
   };
 
+  const getCurrentRawValue = (key: string): number => {
+    if (!config) return getMetricValue(totals, key);
+    const override = config.custom_metrics.find((m) => m.id === key);
+    if (override) {
+      return Number(String(override.value).replace(",", "."));
+    }
+    return getMetricValue(totals, key);
+  };
+
   const metricLabel = (key: string) =>
     key === "conversions"
       ? resultLabel
@@ -385,6 +394,15 @@ function GroupSlide({
             funnelCode={group.isFunnel ? (extractFunnelCode(group.campaigns[0]?.name) || group.key) : (group.campaigns[0]?.id || group.key)}
             readOnly={true}
             snapshotData={snapshotData}
+            liveCampaignMetrics={{
+              hookRate: getCurrentRawValue("hookRate"),
+              holdRate: getCurrentRawValue("holdRate"),
+              linkCtr: getCurrentRawValue("linkCtr"),
+              avgVideoTime: getCurrentRawValue("avgVideoTime"),
+              costPerPlay: (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays")) > 0
+                ? getCurrentRawValue("spend") / (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays"))
+                : 0,
+            }}
           />
         </div>
       )}
