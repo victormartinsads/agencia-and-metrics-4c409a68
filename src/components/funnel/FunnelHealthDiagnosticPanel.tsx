@@ -239,10 +239,10 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   const pillX = Math.min(85, Math.max(15, xPos));
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
       
       {/* Box 1: Saúde Geral do Funil & Diagnóstico */}
-      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-lg">
+      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col h-full shadow-lg">
         <div>
           <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5 mb-1 font-display">
             <span>🌟 Saúde Geral do Funil</span>
@@ -250,35 +250,36 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
           <p className="text-[10px] text-muted-foreground">Avaliação média do funil baseada nos indicadores ativos.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-5 mt-5 items-stretch">
           {/* Circular Gauge */}
           <div 
-            className={`col-span-1 relative group border border-border/50 bg-[#0c0c0e] rounded-2xl p-4 flex flex-col items-center justify-center space-y-3 select-none transition-all duration-300 hover:border-primary/20 ${
+            className={`md:col-span-5 relative group border border-border/50 bg-[#0c0c0e] rounded-xl p-5 flex flex-col items-center justify-center space-y-4 select-none transition-all duration-300 hover:border-primary/20 h-full min-h-[180px] ${
               readOnly ? "" : "cursor-pointer"
             }`}
             onClick={() => handleStartEdit("health", "health_score", "Saúde Geral", healthScore)}
           >
-            <div className="relative flex items-center justify-center h-32 w-32">
+            <div className="relative flex items-center justify-center h-28 w-28">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="64" cy="64" r="52" fill="transparent" stroke="#141416" strokeWidth="6" />
+                <circle cx="56" cy="56" r="46" fill="transparent" stroke="#141416" strokeWidth="6" />
                 <circle 
-                  cx="64" 
-                  cy="64" 
-                  r="52" 
+                  cx="56" 
+                  cy="56" 
+                  r="46" 
                   fill="transparent" 
                   stroke={healthScore >= 8.5 ? "#10b981" : healthScore >= 7.0 ? "#22c55e" : healthScore >= 5.0 ? "#f59e0b" : "#ef4444"} 
                   strokeWidth="6" 
-                  strokeDasharray="326" 
-                  strokeDashoffset={326 - (326 * (healthScore / 10))} 
+                  strokeDasharray="289" 
+                  strokeDashoffset={289 - (289 * (healthScore / 10))} 
                   strokeLinecap="round"
                   className="transition-all duration-500 ease-out"
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-3.5xl font-black text-card-foreground tracking-tight font-display">{healthScore.toFixed(1)}</span>
-                <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${healthColor}`}>{healthLabel}</span>
+                <span className="text-3xl font-black text-card-foreground tracking-tight font-display">{healthScore.toFixed(1)}</span>
+                <span className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${healthColor}`}>{healthLabel}</span>
               </div>
             </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">Saúde do Funil</span>
             {!readOnly && (
               <span className="absolute top-2.5 right-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                 <Pencil className="h-2.5 w-2.5" />
@@ -287,30 +288,42 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
           </div>
 
           {/* Diagnostics Cards Grid */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="md:col-span-7 flex flex-col gap-2.5 justify-center h-full">
             
             {/* Criativos */}
             {activeDiagnostics.criativos && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Criativos</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.criativos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.criativos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.criativos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Criativos</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.criativos.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.criativos.text}</p>
                 </div>
+
                 {diags.criativos.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.criativos.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.criativos.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
@@ -320,25 +333,37 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Público */}
             {activeDiagnostics.publico && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Público</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.publico.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.publico.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.publico.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.publico.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Público</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.publico.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.publico.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.publico.text}</p>
                 </div>
+
                 {diags.publico.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.publico.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.publico.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
@@ -348,25 +373,37 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Conversão LP */}
             {activeDiagnostics.conversao_lp && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Conversão LP</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.conversao_lp.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.conversao_lp.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.conversao_lp.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.conversao_lp.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Conversão LP</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.conversao_lp.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.conversao_lp.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.conversao_lp.text}</p>
                 </div>
+
                 {diags.conversao_lp.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.conversao_lp.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.conversao_lp.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
@@ -376,25 +413,37 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Checkouts */}
             {activeDiagnostics.checkouts && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Checkouts</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.checkouts.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.checkouts.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.checkouts.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.checkouts.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Checkouts</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.checkouts.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.checkouts.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.checkouts.text}</p>
                 </div>
+
                 {diags.checkouts.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.checkouts.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.checkouts.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
@@ -404,25 +453,37 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Custos */}
             {activeDiagnostics.custos && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Custos</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.custos.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.custos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.custos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.custos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Custos</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.custos.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.custos.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.custos.text}</p>
                 </div>
+
                 {diags.custos.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.custos.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.custos.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
@@ -432,25 +493,37 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Oferta */}
             {activeDiagnostics.oferta && (
               <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
                   readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
               >
-                <div>
-                  <div className="flex items-center justify-between font-bold text-[11px]">
-                    <span className="text-card-foreground">Oferta</span>
-                    <span className="text-[#c5ff1a] font-display">{diags.oferta.score.toFixed(1)}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                    diags.oferta.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
+                    diags.oferta.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
+                    diags.oferta.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-card-foreground">Oferta</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.oferta.score.toFixed(1)}</span>
+                    </div>
+                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.oferta.text}</p>
                   </div>
-                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.oferta.text}</p>
                 </div>
+
                 {diags.oferta.suggestion && (
-                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
-                    {diags.oferta.suggestion}
-                  </Button>
+                  <div className="ml-2.5 flex-shrink-0">
+                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                      {diags.oferta.suggestion}
+                    </span>
+                  </div>
                 )}
                 {!readOnly && (
-                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                     <Pencil className="h-2 w-2" />
                   </span>
                 )}
