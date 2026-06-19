@@ -135,6 +135,11 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   const [editSuggestion, setEditSuggestion] = useState("");
   const [editValue, setEditValue] = useState("");
 
+  // Hover states for the retention curve interactivity
+  const [hoveredPct, setHoveredPct] = useState<number | null>(null);
+  const [hoveredTime, setHoveredTime] = useState<number>(0);
+  const [hoveredRate, setHoveredRate] = useState<number>(0);
+
   if (!snapshotData && isLoading) {
     return (
       <div className="flex items-center justify-center p-8 gap-2 bg-[#0f0f12]/50 border border-border/50 rounded-2xl">
@@ -544,20 +549,38 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
         </div>
 
         {/* Retention curve SVG */}
-        <div className="h-36 w-full relative border border-border bg-[#030304] rounded-xl p-3 overflow-hidden select-none">
+        <div 
+          className="h-36 w-full relative border border-border bg-[#030304] rounded-xl p-3 select-none cursor-crosshair overflow-visible"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            // 12px padding left/right
+            const paddingX = 12;
+            const contentWidth = rect.width - paddingX * 2;
+            const mouseX = e.clientX - rect.left - paddingX;
+            const pct = Math.min(100, Math.max(0, (mouseX / contentWidth) * 100));
+            
+            const time = (pct / 100) * maxVideoTime;
+            let rate = 100;
+            if (pct < 20) {
+              rate = 100 - ((100 - hookRate) * pct) / 20;
+            } else {
+              rate = hookRate - ((hookRate - holdRate) * (pct - 20)) / 80;
+            }
+            
+            setHoveredPct(pct);
+            setHoveredTime(time);
+            setHoveredRate(rate);
+          }}
+          onMouseLeave={() => {
+            setHoveredPct(null);
+          }}
+        >
           <svg className="w-full h-full overflow-visible" viewBox="0 0 100 50" preserveAspectRatio="none">
             <defs>
               <linearGradient id="curve-grad-lime" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#c5ff1a" stopOpacity="0.25" />
+                <stop offset="0%" stopColor="#c5ff1a" stopOpacity="0.12" />
                 <stop offset="100%" stopColor="#c5ff1a" stopOpacity="0.0" />
               </linearGradient>
-              <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="1.2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
 
             {/* Horizontal Grid lines */}
@@ -568,11 +591,18 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             {/* Area under curve */}
             <path d={dArea} fill="url(#curve-grad-lime)" />
 
-            {/* Curve line */}
-            <path d={dPath} fill="none" stroke="#c5ff1a" strokeWidth="2" strokeLinecap="round" filter="url(#neon-glow)" />
+            {/* Curve line (Sharp, thin, non-scaling stroke to avoid coarseness) */}
+            <path 
+              d={dPath} 
+              fill="none" 
+              stroke="#c5ff1a" 
+              strokeWidth="1.5" 
+              strokeLinecap="round" 
+              vectorEffect="non-scaling-stroke" 
+            />
 
-            {/* Average time dashed line */}
-            {avgVideoTime > 0 && (
+            {/* Average time dashed line (visible when not hovering) */}
+            {avgVideoTime > 0 && hoveredPct === null && (
               <g>
                 <line
                   x1={xPos}
@@ -584,23 +614,69 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                   strokeDasharray="2,2"
                 />
                 {/* Intersection dot */}
-                <circle cx={xPos} cy={yValAtAvgTime} r="5" fill="#3b82f6" fillOpacity="0.3" />
-                <circle cx={xPos} cy={yValAtAvgTime} r="2.5" fill="#3b82f6" />
+                <circle cx={xPos} cy={yValAtAvgTime} r="5" fill="#3b82f6" fillOpacity="0.25" />
+                <circle cx={xPos} cy={yValAtAvgTime} r="2" fill="#3b82f6" />
+              </g>
+            )}
+
+            {/* Interactive hover line and dot */}
+            {hoveredPct !== null && (
+              <g>
+                <line
+                  x1={hoveredPct}
+                  y1="0"
+                  x2={hoveredPct}
+                  y2="50"
+                  stroke="rgba(255, 255, 255, 0.25)"
+                  strokeWidth="0.75"
+                  strokeDasharray="2,2"
+                />
+                {/* Intersection dot */}
+                {(() => {
+                  const yVal = yMin + yHeight * (100 - hoveredRate) / 100;
+                  return (
+                    <g>
+                      <circle cx={hoveredPct} cy={yVal} r="5" fill="#c5ff1a" fillOpacity="0.25" />
+                      <circle cx={hoveredPct} cy={yVal} r="2" fill="#c5ff1a" />
+                    </g>
+                  );
+                })()}
               </g>
             )}
           </svg>
 
           {/* Curve text labels */}
-          <span className="absolute top-2 left-3 text-[9px] font-semibold text-muted-foreground/40 font-mono">0s</span>
-          <span className="absolute bottom-2 right-3 text-[9px] font-semibold text-muted-foreground/40 font-mono">100%</span>
+          <span className="absolute top-2 left-3 text-[9px] font-semibold text-muted-foreground/30 font-mono">0s</span>
+          <span className="absolute bottom-2 right-3 text-[9px] font-semibold text-muted-foreground/30 font-mono">100%</span>
 
-          {/* Average time pill */}
-          {avgVideoTime > 0 && (
+          {/* Average time pill (visible when not hovering) */}
+          {avgVideoTime > 0 && hoveredPct === null && (
             <div 
               className="absolute top-2 bg-[#2563eb] text-white font-sans text-[8px] font-extrabold px-2 py-0.5 rounded shadow border border-blue-400/20 transition-all select-none whitespace-nowrap"
               style={{ left: `${pillX}%`, transform: 'translateX(-50%)' }}
             >
               Média: {avgVideoTime.toFixed(1)}s
+            </div>
+          )}
+
+          {/* Interactive Hover Tooltip Pill */}
+          {hoveredPct !== null && (
+            <div 
+              className="absolute bg-[#09090b]/95 border border-border text-card-foreground font-sans text-[9px] p-2 rounded shadow-2xl pointer-events-none transition-all duration-75 flex flex-col gap-0.5 z-10"
+              style={{ 
+                left: `${Math.min(82, Math.max(18, hoveredPct))}%`, 
+                top: '25%', 
+                transform: 'translate(-50%, -50%)' 
+              }}
+            >
+              <div className="flex items-center justify-between gap-3 font-semibold">
+                <span className="text-muted-foreground">Tempo:</span>
+                <span className="text-card-foreground font-mono">{hoveredTime.toFixed(1)}s</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 font-semibold">
+                <span className="text-muted-foreground">Retenção:</span>
+                <span className="text-[#c5ff1a] font-mono">{hoveredRate.toFixed(1)}%</span>
+              </div>
             </div>
           )}
         </div>
