@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, FunnelDiagnosticData } from "@/hooks/useFunnelDiagnostics";
+import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS } from "@/hooks/useFunnelDiagnostics";
 import { extractFunnelCode } from "@/lib/funnelGrouping";
 
 interface Props {
@@ -200,249 +200,258 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
     }
   };
 
-  // Videowatch time graph calculations
-  const hookRate = curve?.hook_rate ?? 60;
-  const holdRate = curve?.hold_rate ?? 40;
-  const p75Rate = 25;
-  const p100Rate = 12;
-  const avgVideoTime = curve?.avgVideoTime ?? 5.4;
+  // Video watch time graph calculations (matches the brand style)
+  const hookRate = curve?.hook_rate ?? 94.5;
+  const holdRate = curve?.hold_rate ?? 17.5;
+  const avgVideoTime = curve?.avgVideoTime ?? 3.0;
 
-  const xPos = Math.min(95, Math.max(5, (avgVideoTime / 15) * 100));
-  let yRate = 100;
-  if (xPos < 25) {
-    yRate = 100 - ((100 - hookRate) * xPos) / 25;
-  } else if (xPos < 50) {
-    yRate = hookRate - ((hookRate - holdRate) * (xPos - 25)) / 25;
-  } else if (xPos < 75) {
-    yRate = holdRate - ((holdRate - p75Rate) * (xPos - 50)) / 25;
-  } else {
-    yRate = p75Rate - ((p75Rate - p100Rate) * (xPos - 75)) / 25;
-  }
-  const yValAtAvgTime = 45 - (yRate / 100) * 40;
+  // Let's assume the full width of the graph represents 15s (standard duration for Instagram story/reel).
+  const maxVideoTime = 15.0;
+  // X position of the average video time indicator
+  const xPos = Math.min(95, Math.max(5, (avgVideoTime / maxVideoTime) * 100));
 
-  const y0 = 5;
-  const y1 = 45 - (hookRate / 100) * 40;
-  const y2 = 45 - (holdRate / 100) * 40;
-  const y3 = 45 - (p75Rate / 100) * 40;
-  const y4 = 45 - (p100Rate / 100) * 40;
-  
-  const dPath = `M 0 ${y0} L 25 ${y1} L 50 ${y2} L 75 ${y3} L 100 ${y4}`;
+  // Visual SVG coordinates (viewBox 0 0 100 50)
+  // Retention goes from 0% (y = 44) to 100% (y = 6)
+  const yMin = 6;
+  const yMax = 44;
+  const yHeight = yMax - yMin;
+
+  const y0 = yMin; // At 0s, retention is 100% (so y = yMin)
+  const y1 = yMin + yHeight * (100 - hookRate) / 100; // At 3s (which is at 20% of 15s), retention is hookRate
+  const y2 = yMin + yHeight * (100 - holdRate) / 100; // At 15s (100% of graph), retention is holdRate
+
+  // Piecewise linear path representing the retention curve (starts at 100% -> drops to hookRate at 3s -> drops to holdRate at 15s)
+  // 3s is at x = 20% (since 3 / 15 * 100 = 20)
+  const dPath = `M 0 ${y0} L 20 ${y1} L 100 ${y2}`;
   const dArea = `${dPath} L 100 50 L 0 50 Z`;
 
+  // Interpolated y-coordinate for the average time dot
+  let yValAtAvgTime = y1;
+  if (xPos < 20) {
+    // interpolation between 0s and 3s
+    yValAtAvgTime = y0 + (y1 - y0) * (xPos / 20);
+  } else {
+    // interpolation between 3s and 15s
+    yValAtAvgTime = y1 + (y2 - y1) * ((xPos - 20) / 80);
+  }
+
+  // Safe horizontal positioning for the pill to prevent boundary clipping
+  const pillX = Math.min(85, Math.max(15, xPos));
+
   return (
-    <div className="space-y-6">
-      {/* Saúde Geral do Funil & Diagnóstico */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Circular Gauge */}
-        <div 
-          className={`relative group border border-border bg-[#0f0f12] rounded-2xl p-5 flex flex-col items-center justify-center space-y-4 ${
-            readOnly ? "" : "cursor-pointer hover:border-primary/20 transition-colors"
-          }`}
-          onClick={() => handleStartEdit("health", "health_score", "Saúde Geral", healthScore)}
-        >
-          <h3 className="text-sm font-bold text-card-foreground self-start tracking-[0.03em] flex items-center gap-1.5">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      {/* Box 1: Saúde Geral do Funil & Diagnóstico */}
+      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-lg">
+        <div>
+          <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5 mb-1 font-display">
             <span>🌟 Saúde Geral do Funil</span>
           </h3>
-          
-          <div className="relative flex items-center justify-center h-40 w-40 mt-4 select-none">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle cx="80" cy="80" r="65" fill="transparent" stroke="#1c1c22" strokeWidth="8" />
-              <circle 
-                cx="80" 
-                cy="80" 
-                r="65" 
-                fill="transparent" 
-                stroke={healthScore >= 8.5 ? "#10b981" : healthScore >= 7.0 ? "#22c55e" : healthScore >= 5.0 ? "#f59e0b" : "#ef4444"} 
-                strokeWidth="8" 
-                strokeDasharray="408" 
-                strokeDashoffset={408 - (408 * (healthScore / 10))} 
-                className="transition-all duration-500 ease-out"
-              />
-            </svg>
-            <div className="absolute flex flex-col items-center justify-center">
-              <span className="text-4xl font-black text-card-foreground tracking-tight">{healthScore.toFixed(1)}</span>
-              <span className={`text-[10px] font-black uppercase tracking-widest mt-1 ${healthColor}`}>{healthLabel}</span>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground text-center max-w-[200px]">
-            Avaliação média do funil baseada nos indicadores principais.
-          </p>
-          {!readOnly && (
-            <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-              <Pencil className="h-3 w-3" />
-            </span>
-          )}
+          <p className="text-[10px] text-muted-foreground">Avaliação média do funil baseada nos indicadores ativos.</p>
         </div>
 
-        {/* Diagnostics Cards Grid */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider">Diagnóstico</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
+          {/* Circular Gauge */}
+          <div 
+            className={`col-span-1 relative group border border-border/50 bg-[#0c0c0e] rounded-2xl p-4 flex flex-col items-center justify-center space-y-3 select-none transition-all duration-300 hover:border-primary/20 ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("health", "health_score", "Saúde Geral", healthScore)}
+          >
+            <div className="relative flex items-center justify-center h-32 w-32">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="64" cy="64" r="52" fill="transparent" stroke="#141416" strokeWidth="6" />
+                <circle 
+                  cx="64" 
+                  cy="64" 
+                  r="52" 
+                  fill="transparent" 
+                  stroke={healthScore >= 8.5 ? "#10b981" : healthScore >= 7.0 ? "#22c55e" : healthScore >= 5.0 ? "#f59e0b" : "#ef4444"} 
+                  strokeWidth="6" 
+                  strokeDasharray="326" 
+                  strokeDashoffset={326 - (326 * (healthScore / 10))} 
+                  strokeLinecap="round"
+                  className="transition-all duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-3.5xl font-black text-card-foreground tracking-tight font-display">{healthScore.toFixed(1)}</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${healthColor}`}>{healthLabel}</span>
+              </div>
+            </div>
+            {!readOnly && (
+              <span className="absolute top-2.5 right-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+
+          {/* Diagnostics Cards Grid */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
             
-            {/* 1. Criativos */}
+            {/* Criativos */}
             {activeDiagnostics.criativos && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
+                  <div className="flex items-center justify-between font-bold text-[11px]">
                     <span className="text-card-foreground">Criativos</span>
-                    <span className="text-primary">{diags.criativos.score.toFixed(1)}</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.criativos.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.criativos.text}</p>
                 </div>
                 {diags.criativos.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.criativos.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
             )}
 
-            {/* 2. Público */}
+            {/* Público */}
             {activeDiagnostics.publico && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
+                  <div className="flex items-center justify-between font-bold text-[11px]">
                     <span className="text-card-foreground">Público</span>
-                    <span className="text-primary">{diags.publico.score.toFixed(1)}</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.publico.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.publico.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.publico.text}</p>
                 </div>
                 {diags.publico.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.publico.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
             )}
 
-            {/* 3. Conversão LP */}
+            {/* Conversão LP */}
             {activeDiagnostics.conversao_lp && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
+                  <div className="flex items-center justify-between font-bold text-[11px]">
                     <span className="text-card-foreground">Conversão LP</span>
-                    <span className="text-primary">{diags.conversao_lp.score.toFixed(1)}</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.conversao_lp.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.conversao_lp.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.conversao_lp.text}</p>
                 </div>
                 {diags.conversao_lp.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.conversao_lp.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
             )}
 
-            {/* 4. Checkouts */}
+            {/* Checkouts */}
             {activeDiagnostics.checkouts && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
+                  <div className="flex items-center justify-between font-bold text-[11px]">
                     <span className="text-card-foreground">Checkouts</span>
-                    <span className="text-primary">{diags.checkouts.score.toFixed(1)}</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.checkouts.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.checkouts.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.checkouts.text}</p>
                 </div>
                 {diags.checkouts.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.checkouts.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
             )}
 
-            {/* 5. Custos */}
+            {/* Custos */}
             {activeDiagnostics.custos && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
-                    <span className="text-card-foreground">Custos (CPA / CPL)</span>
-                    <span className="text-primary">{diags.custos.score.toFixed(1)}</span>
+                  <div className="flex items-center justify-between font-bold text-[11px]">
+                    <span className="text-card-foreground">Custos</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.custos.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.custos.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.custos.text}</p>
                 </div>
                 {diags.custos.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.custos.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
             )}
 
-            {/* 6. Oferta */}
+            {/* Oferta */}
             {activeDiagnostics.oferta && (
               <div 
-                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                className={`relative group border border-border/50 bg-[#0c0c0e] p-3.5 rounded-xl flex flex-col justify-between transition-all duration-300 min-h-[95px] ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
                 }`}
                 onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-xs">
+                  <div className="flex items-center justify-between font-bold text-[11px]">
                     <span className="text-card-foreground">Oferta</span>
-                    <span className="text-primary">{diags.oferta.score.toFixed(1)}</span>
+                    <span className="text-[#c5ff1a] font-display">{diags.oferta.score.toFixed(1)}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.oferta.text}</p>
+                  <p className="text-[9.5px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{diags.oferta.text}</p>
                 </div>
                 {diags.oferta.suggestion && (
-                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                  <Button size="sm" variant="outline" className="h-5 text-[8px] uppercase tracking-wide border-amber-500/20 text-amber-500 bg-amber-500/5 hover:bg-amber-500/15 mt-2.5 w-full cursor-pointer select-none">
                     {diags.oferta.suggestion}
                   </Button>
                 )}
                 {!readOnly && (
                   <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2.5 w-2.5" />
+                    <Pencil className="h-2 w-2" />
                   </span>
                 )}
               </div>
@@ -450,145 +459,162 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
 
           </div>
         </div>
-
       </div>
 
-      {/* Qualidade de Criativo */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-t border-border/40 pt-5">
-        {/* Left: Retention Curve */}
-        <div className="border border-border bg-[#0f0f12] rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em]">
-              🎬 Qualidade de Criativo
-            </h3>
-            <p className="text-[10px] text-muted-foreground mt-1">Retenção de vídeos e atenção</p>
-          </div>
-
-          <div className="h-36 w-full relative mt-6 border border-border/30 rounded-xl bg-black/20 p-2 overflow-hidden select-none">
-            <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="curve-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d={dArea} fill="url(#curve-grad)" />
-              <path d={dPath} fill="none" stroke="#10b981" strokeWidth="2" />
-
-              {avgVideoTime > 0 && (
-                <g>
-                  <line
-                    x1={xPos}
-                    y1="0"
-                    x2={xPos}
-                    y2="50"
-                    stroke="#3b82f6"
-                    strokeWidth="1"
-                    strokeDasharray="2,2"
-                  />
-                  <circle cx={xPos} cy={yValAtAvgTime} r="3" fill="#3b82f6" className="animate-pulse" />
-                </g>
-              )}
-            </svg>
-            <span className="absolute top-2 left-2 text-[9px] font-mono text-muted-foreground/60">0s</span>
-            <span className="absolute bottom-2 right-2 text-[9px] font-mono text-muted-foreground/60">100%</span>
-            {avgVideoTime > 0 && (
-              <div 
-                className="absolute top-2 bg-blue-600/95 text-white font-mono text-[9px] px-1.5 py-0.5 rounded shadow border border-blue-400/30 transition-all"
-                style={{ left: `calc(${xPos}% - 35px)` }}
-              >
-                Média: {avgVideoTime.toFixed(1)}s
-              </div>
-            )}
-          </div>
+      {/* Box 2: Qualidade de Criativo */}
+      <div className="border border-border/50 bg-[#09090b] rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-lg">
+        <div>
+          <h3 className="text-sm font-bold text-card-foreground tracking-[0.03em] flex items-center gap-1.5 mb-1 font-display">
+            🎬 Qualidade de Criativo
+          </h3>
+          <p className="text-[10px] text-muted-foreground">Retenção de vídeos e nível de atenção.</p>
         </div>
 
-        {/* Right: Retention metrics grid */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider">Métricas do Vídeo</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            
-            {/* Hook Rate */}
-            <div 
-              className={`hover:bg-muted/10 p-2.5 rounded-xl flex flex-col justify-between border border-border/20 relative group transition-colors ${
-                readOnly ? "" : "cursor-pointer hover:border-primary/20"
-              }`}
-              onClick={() => handleStartEdit("curve", "hook_rate", "Hook Rate (3s)", hookRate)}
-            >
-              <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Hook Rate (3s)</span>
-              <span className="text-sm font-bold text-primary mt-1">{hookRate.toFixed(1)}%</span>
-              {!readOnly && (
-                <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2 w-2" />
-                </span>
-              )}
-            </div>
+        {/* Retention curve SVG */}
+        <div className="h-36 w-full relative border border-border bg-[#030304] rounded-xl p-3 overflow-hidden select-none">
+          <svg className="w-full h-full overflow-visible" viewBox="0 0 100 50" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="curve-grad-lime" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#c5ff1a" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#c5ff1a" stopOpacity="0.0" />
+              </linearGradient>
+              <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1.2" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-            {/* Hold Rate */}
-            <div 
-              className={`hover:bg-muted/10 p-2.5 rounded-xl flex flex-col justify-between border border-border/20 relative group transition-colors ${
-                readOnly ? "" : "cursor-pointer hover:border-primary/20"
-              }`}
-              onClick={() => handleStartEdit("curve", "hold_rate", "Hold Rate", holdRate)}
-            >
-              <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Hold Rate</span>
-              <span className="text-sm font-bold text-primary mt-1">{holdRate.toFixed(1)}%</span>
-              {!readOnly && (
-                <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2 w-2" />
-                </span>
-              )}
-            </div>
+            {/* Horizontal Grid lines */}
+            <line x1="0" y1="15.5" x2="100" y2="15.5" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="0.5" strokeDasharray="1,2" />
+            <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="0.5" strokeDasharray="1,2" />
+            <line x1="0" y1="34.5" x2="100" y2="34.5" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="0.5" strokeDasharray="1,2" />
 
-            {/* CTR Link */}
-            <div 
-              className={`hover:bg-muted/10 p-2.5 rounded-xl flex flex-col justify-between border border-border/20 relative group transition-colors ${
-                readOnly ? "" : "cursor-pointer hover:border-primary/20"
-              }`}
-              onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", curve?.ctr_link)}
-            >
-              <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">CTR Link</span>
-              <span className="text-sm font-bold text-primary mt-1">{(curve?.ctr_link ?? 0).toFixed(2)}%</span>
-              {!readOnly && (
-                <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2 w-2" />
-                </span>
-              )}
-            </div>
+            {/* Area under curve */}
+            <path d={dArea} fill="url(#curve-grad-lime)" />
 
-            {/* Tempo Médio */}
-            <div 
-              className={`hover:bg-muted/10 p-2.5 rounded-xl flex flex-col justify-between border border-border/20 relative group transition-colors ${
-                readOnly ? "" : "cursor-pointer hover:border-primary/20"
-              }`}
-              onClick={() => handleStartEdit("curve", "avgVideoTime", "Tempo Médio", avgVideoTime)}
-            >
-              <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Tempo Médio</span>
-              <span className="text-sm font-bold text-primary mt-1">{avgVideoTime.toFixed(1)}s</span>
-              {!readOnly && (
-                <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2 w-2" />
-                </span>
-              )}
-            </div>
+            {/* Curve line */}
+            <path d={dPath} fill="none" stroke="#c5ff1a" strokeWidth="2" strokeLinecap="round" filter="url(#neon-glow)" />
 
-            {/* Custo por Play */}
-            <div 
-              className={`hover:bg-muted/10 p-2.5 rounded-xl flex flex-col justify-between border border-border/20 relative group transition-colors ${
-                readOnly ? "" : "cursor-pointer hover:border-primary/20"
-              }`}
-              onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", curve?.cost_per_play)}
-            >
-              <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Custo por Play</span>
-              <span className="text-sm font-bold text-primary mt-1">{currencySymbol} {(curve?.cost_per_play ?? 0).toFixed(2)}</span>
-              {!readOnly && (
-                <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2 w-2" />
-                </span>
-              )}
-            </div>
+            {/* Average time dashed line */}
+            {avgVideoTime > 0 && (
+              <g>
+                <line
+                  x1={xPos}
+                  y1="0"
+                  x2={xPos}
+                  y2="50"
+                  stroke="#3b82f6"
+                  strokeWidth="0.75"
+                  strokeDasharray="2,2"
+                />
+                {/* Intersection dot */}
+                <circle cx={xPos} cy={yValAtAvgTime} r="5" fill="#3b82f6" fillOpacity="0.3" />
+                <circle cx={xPos} cy={yValAtAvgTime} r="2.5" fill="#3b82f6" />
+              </g>
+            )}
+          </svg>
 
+          {/* Curve text labels */}
+          <span className="absolute top-2 left-3 text-[9px] font-semibold text-muted-foreground/40 font-mono">0s</span>
+          <span className="absolute bottom-2 right-3 text-[9px] font-semibold text-muted-foreground/40 font-mono">100%</span>
+
+          {/* Average time pill */}
+          {avgVideoTime > 0 && (
+            <div 
+              className="absolute top-2 bg-[#2563eb] text-white font-sans text-[8px] font-extrabold px-2 py-0.5 rounded shadow border border-blue-400/20 transition-all select-none whitespace-nowrap"
+              style={{ left: `${pillX}%`, transform: 'translateX(-50%)' }}
+            >
+              Média: {avgVideoTime.toFixed(1)}s
+            </div>
+          )}
+        </div>
+
+        {/* Creative Stats grid */}
+        <div className="grid grid-cols-2 gap-3">
+          
+          {/* Hook Rate */}
+          <div 
+            className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("curve", "hook_rate", "Hook Rate (3s)", hookRate)}
+          >
+            <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">Hook Rate (3s)</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{hookRate.toFixed(1)}%</span>
+            {!readOnly && (
+              <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
           </div>
+
+          {/* Hold Rate */}
+          <div 
+            className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("curve", "hold_rate", "Hold Rate", holdRate)}
+          >
+            <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">Hold Rate</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{holdRate.toFixed(1)}%</span>
+            {!readOnly && (
+              <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+
+          {/* CTR Link */}
+          <div 
+            className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("curve", "ctr_link", "CTR Link", curve?.ctr_link)}
+          >
+            <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">CTR Link</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{(curve?.ctr_link ?? 0).toFixed(2)}%</span>
+            {!readOnly && (
+              <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+
+          {/* Tempo Médio */}
+          <div 
+            className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("curve", "avgVideoTime", "Tempo Médio", avgVideoTime)}
+          >
+            <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">Tempo Médio</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{avgVideoTime.toFixed(1)}s</span>
+            {!readOnly && (
+              <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+
+          {/* Custo por Play */}
+          <div 
+            className={`bg-[#0c0c0e] p-3.5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:bg-[#c5ff1a]/[0.02] flex flex-col justify-between min-h-[60px] col-span-2 ${
+              readOnly ? "" : "cursor-pointer"
+            }`}
+            onClick={() => handleStartEdit("curve", "cost_per_play", "Custo por Play", curve?.cost_per_play)}
+          >
+            <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider">Custo por Play</span>
+            <span className="text-2xl font-extrabold text-[#c5ff1a] font-display tracking-tight mt-1">{currencySymbol} {(curve?.cost_per_play ?? 0).toFixed(2)}</span>
+            {!readOnly && (
+              <span className="absolute top-1.5 right-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+
         </div>
       </div>
 
