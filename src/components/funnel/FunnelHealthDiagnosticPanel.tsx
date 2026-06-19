@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, FunnelDiagnosticData } from "@/hooks/useFunnelDiagnostics";
+import { extractFunnelCode } from "@/lib/funnelGrouping";
 
 interface Props {
   clientId: string;
@@ -16,6 +17,84 @@ interface Props {
     health_score: number;
     diagnostics: any;
   };
+}
+
+export function getFunnelActiveDiagnostics(funnelCode: string | undefined) {
+  const allEnabled = {
+    criativos: true,
+    publico: true,
+    conversao_lp: true,
+    checkouts: true,
+    custos: true,
+    oferta: true,
+  };
+  
+  if (!funnelCode) return allEnabled;
+  
+  const cleanCode = funnelCode.replace(/^(GADS-|CAMP-)/i, "");
+  const extracted = extractFunnelCode(cleanCode) || cleanCode;
+  
+  if (extracted === "F1") {
+    // F1 - Captação de Seguidores
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  if (extracted === "F3" || extracted === "F7") {
+    // F3 - Call de Vendas | Mensagens, F7 - Serviços | Mensagens
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: true,
+    };
+  }
+
+  if (extracted === "F10") {
+    // F10 - Formulário Nativo
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+
+  if (extracted === "F15") {
+    // F15 - Engajamento / Interação
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+
+  if (extracted === "F4" || extracted === "F5" || extracted === "F6" || extracted === "F12" || extracted === "F13") {
+    // Página de captura, iscas, workshops gratuitos
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: true,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  return allEnabled;
 }
 
 export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = false, snapshotData }: Props) {
@@ -35,6 +114,8 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   const diags = snapshotData
     ? snapshotData.diagnostics || DEFAULT_DIAGNOSTICS.diagnostics
     : funnelDiag?.diagnostics ?? DEFAULT_DIAGNOSTICS.diagnostics;
+
+  const activeDiagnostics = getFunnelActiveDiagnostics(funnelCode);
 
   // Edit states
   const [editingItem, setEditingItem] = useState<{
@@ -153,160 +234,172 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             
             {/* 1. Criativos */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Criativos</span>
-                  <span className="text-primary">{diags.criativos.score.toFixed(1)}</span>
+            {activeDiagnostics.criativos && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Criativos</span>
+                    <span className="text-primary">{diags.criativos.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.criativos.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.criativos.text}</p>
+                {diags.criativos.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.criativos.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.criativos.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.criativos.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
             {/* 2. Público */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Público</span>
-                  <span className="text-primary">{diags.publico.score.toFixed(1)}</span>
+            {activeDiagnostics.publico && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Público</span>
+                    <span className="text-primary">{diags.publico.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.publico.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.publico.text}</p>
+                {diags.publico.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.publico.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.publico.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.publico.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
             {/* 3. Conversão LP */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Conversão LP</span>
-                  <span className="text-primary">{diags.conversao_lp.score.toFixed(1)}</span>
+            {activeDiagnostics.conversao_lp && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Conversão LP</span>
+                    <span className="text-primary">{diags.conversao_lp.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.conversao_lp.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.conversao_lp.text}</p>
+                {diags.conversao_lp.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.conversao_lp.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.conversao_lp.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.conversao_lp.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
             {/* 4. Checkouts */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Checkouts</span>
-                  <span className="text-primary">{diags.checkouts.score.toFixed(1)}</span>
+            {activeDiagnostics.checkouts && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Checkouts</span>
+                    <span className="text-primary">{diags.checkouts.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.checkouts.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.checkouts.text}</p>
+                {diags.checkouts.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.checkouts.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.checkouts.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.checkouts.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
             {/* 5. Custos */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Custos (CPA / CPL)</span>
-                  <span className="text-primary">{diags.custos.score.toFixed(1)}</span>
+            {activeDiagnostics.custos && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Custos (CPA / CPL)</span>
+                    <span className="text-primary">{diags.custos.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.custos.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.custos.text}</p>
+                {diags.custos.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.custos.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.custos.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.custos.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
             {/* 6. Oferta */}
-            <div 
-              className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
-                readOnly ? "" : "hover:border-primary/30 cursor-pointer"
-              }`}
-              onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
-            >
-              <div>
-                <div className="flex items-center justify-between font-bold text-xs">
-                  <span className="text-card-foreground">Oferta</span>
-                  <span className="text-primary">{diags.oferta.score.toFixed(1)}</span>
+            {activeDiagnostics.oferta && (
+              <div 
+                className={`relative group border border-border/60 bg-card/50 p-4 rounded-xl flex flex-col justify-between transition-colors ${
+                  readOnly ? "" : "hover:border-primary/30 cursor-pointer"
+                }`}
+                onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-xs">
+                    <span className="text-card-foreground">Oferta</span>
+                    <span className="text-primary">{diags.oferta.score.toFixed(1)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.oferta.text}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.oferta.text}</p>
+                {diags.oferta.suggestion && (
+                  <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
+                    {diags.oferta.suggestion}
+                  </Button>
+                )}
+                {!readOnly && (
+                  <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Pencil className="h-2.5 w-2.5" />
+                  </span>
+                )}
               </div>
-              {diags.oferta.suggestion && (
-                <Button size="sm" variant="outline" className="h-6 text-[9px] uppercase tracking-wide border-amber-500/30 text-amber-500 hover:bg-amber-500/10 mt-3 w-full cursor-pointer select-none">
-                  {diags.oferta.suggestion}
-                </Button>
-              )}
-              {!readOnly && (
-                <span className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil className="h-2.5 w-2.5" />
-                </span>
-              )}
-            </div>
+            )}
 
           </div>
         </div>
