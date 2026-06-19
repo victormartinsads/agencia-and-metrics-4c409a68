@@ -147,13 +147,14 @@ export function DiagnosticoSemanal({
       // Busca os diagnósticos de saúde de funil para o snapshot
       const { data: diagRows } = await supabase
         .from("funnel_diagnostics")
-        .select("funnel_code, health_score, diagnostics")
+        .select("funnel_code, health_score, diagnostics, curve_data")
         .eq("client_id", clientId);
       const funnelDiagnostics: Record<string, any> = {};
       for (const row of (diagRows || []) as any[]) {
         funnelDiagnostics[row.funnel_code] = {
           health_score: row.health_score,
           diagnostics: row.diagnostics,
+          curve_data: row.curve_data,
         };
       }
 
