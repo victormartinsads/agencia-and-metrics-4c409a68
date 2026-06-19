@@ -35,11 +35,21 @@ interface Props {
 export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, currencySymbol = "R$", readOnly = false, selectedMetricKey, showAll = false, statusFilter = "all" }: Props) {
   const { data: overrides = [] } = useCreativeOverrides(clientId);
   const [editingCreative, setEditingCreative] = useState<string | null>(null);
-  
-  const storageKey = `aggregated-grid-metric-${clientId}-${funnelLabel}`;
+  const [localShowAll, setLocalShowAll] = useState(showAll);
+  const [localStatusFilter, setLocalStatusFilter] = useState<"all" | "active" | "paused">(statusFilter);
+
+  const storageKey = `creative-grid-metric-${clientId}-${campaigns.map(c => c.id).join("-")}`;
   const [localMetric, setLocalMetric] = useState<string>(() => {
     return localStorage.getItem(storageKey) || "auto";
   });
+
+  useEffect(() => {
+    setLocalShowAll(showAll);
+  }, [showAll]);
+
+  useEffect(() => {
+    setLocalStatusFilter(statusFilter);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (selectedMetricKey && localMetric === "auto") {
@@ -101,7 +111,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
   const totalFunnelLinkClicks = campaigns.reduce((sum, c) => sum + (c.linkClicks || c.clicks || 0), 0);
   const funnelLinkRatio = totalFunnelClicks > 0 ? totalFunnelLinkClicks / totalFunnelClicks : 0.74;
 
-  const sorted = allCreatives
+  const sortedAll = allCreatives
     .map((cr) => {
       const baseline = { ...cr, conversions: (cr as any)._computedConversions };
       const baseConversions = localMetric === "auto" ? (baseline.primaryResult ?? baseline.conversions) : baseline.conversions;
@@ -127,19 +137,21 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return { ...cr, _ov: ov };
     })
     .filter((cr) => {
-      if (!showAll) {
+      // 1. Filtro de status ativo/pausado
+      if (localStatusFilter === "active" && cr.status === "paused") {
+        return false;
+      }
+      if (localStatusFilter === "paused" && cr.status !== "paused") {
+        return false;
+      }
+      // 2. Se exibindo apenas o Top 3, exige entrega real
+      if (!localShowAll) {
         const hasDelivery =
           (cr._ov.impressions || 0) > 0 ||
           (cr._ov.clicks || 0) > 0 ||
           (cr._ov.conversions || 0) > 0 ||
           (cr._ov.spend || 0) > 0;
         return hasDelivery;
-      }
-      if (statusFilter === "active") {
-        return cr.status !== "paused";
-      }
-      if (statusFilter === "paused") {
-        return cr.status === "paused";
       }
       return true;
     })
@@ -154,8 +166,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       if (aCpa !== bCpa) return aCpa - bCpa;
       if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
       return b._ov.clicks - a._ov.clicks;
-    })
-    .slice(0, showAll ? undefined : 3);
+    });
+
+  const displayCreatives = localShowAll ? sortedAll : sortedAll.slice(0, 3);
 
   const totalMetric = allCreatives.reduce((sum, cr) => {
     const baseline = { ...cr, conversions: (cr as any)._computedConversions };
@@ -166,12 +179,12 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
     }, overrides);
     return sum + getMetricValue(ov);
   }, 0);
-  const top3Total = sorted.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
+  const top3Total = displayCreatives.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
   const remainingResults = Math.max(totalMetric - top3Total, 0);
 
-  if (sorted.length === 0) return null;
+  if (displayCreatives.length === 0) return null;
 
-  const editCreative = sorted.find(s => s.id === editingCreative);
+  const editCreative = displayCreatives.find(s => s.id === editingCreative);
 
   return (
     <>
@@ -181,43 +194,81 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
         transition={{ duration: 0.4 }}
         className="rounded-xl border border-border bg-card shadow-sm"
       >
-        <div className="p-5 border-b border-border flex items-center justify-between">
+        <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-card-foreground">
               Funil: {funnelLabel}
             </h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {showAll
-                ? `${campaigns.length} campanhas agrupadas • ${sorted.length} criativos`
+              {localShowAll
+                ? `${campaigns.length} campanhas agrupadas • ${displayCreatives.length} criativos`
                 : `${campaigns.length} campanhas agrupadas • Top 3 somam ${activeMetric === "spend" || activeMetric === "roas" ? "" : top3Total.toLocaleString("pt-BR")} de ${activeMetric === "spend" || activeMetric === "roas" ? "" : totalMetric.toLocaleString("pt-BR")} ${resultLabel.toLowerCase()}${remainingResults > 0 && activeMetric !== "spend" && activeMetric !== "roas" ? ` • outros criativos: ${remainingResults.toLocaleString("pt-BR")}` : ""}`
               }
             </p>
           </div>
-          <Select 
-            value={localMetric} 
-            onValueChange={(v) => {
-              setLocalMetric(v);
-              localStorage.setItem(storageKey, v);
-            }}
-          >
-            <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
-              <SelectValue placeholder="Métrica" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border border-border">
-              <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaigns[0]?.primaryResultLabel || "Conversões"})</SelectItem>
-              <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
-              <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
-              <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
-              {PRIMARY_METRIC_OPTIONS.map(opt => (
-                <SelectItem key={opt.key} value={opt.key} className="text-xs">
-                  Métrica: {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro de Status Ativo/Pausado */}
+            <div className="flex items-center gap-0.5 bg-muted/40 p-0.5 rounded-lg border border-border">
+              <button 
+                onClick={() => setLocalStatusFilter("all")} 
+                className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition-all ${localStatusFilter === "all" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Todos
+              </button>
+              <button 
+                onClick={() => setLocalStatusFilter("active")} 
+                className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition-all ${localStatusFilter === "active" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Ativos
+              </button>
+              <button 
+                onClick={() => setLocalStatusFilter("paused")} 
+                className={`px-2.5 py-0.5 text-[10px] font-medium rounded transition-all ${localStatusFilter === "paused" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Pausados
+              </button>
+            </div>
+
+            {/* Alternador Ver Todos / Ver Top 3 */}
+            <button
+              onClick={() => setLocalShowAll(prev => !prev)}
+              className={`h-6 px-2.5 py-0 text-[10px] font-medium rounded-full transition-all border flex items-center justify-center cursor-pointer select-none ${
+                localShowAll 
+                  ? "bg-primary/15 text-primary border-primary/30 hover:bg-primary/20" 
+                  : "bg-background text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              {localShowAll ? "Ver Top 3" : "Ver Todos"}
+            </button>
+
+            {/* Seletor de Métrica */}
+            <Select 
+              value={localMetric} 
+              onValueChange={(v) => {
+                setLocalMetric(v);
+                localStorage.setItem(storageKey, v);
+              }}
+            >
+              <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
+                <SelectValue placeholder="Métrica" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border">
+                <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaigns[0]?.primaryResultLabel || "Conversões"})</SelectItem>
+                <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+                <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
+                <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
+                {PRIMARY_METRIC_OPTIONS.map(opt => (
+                  <SelectItem key={opt.key} value={opt.key} className="text-xs">
+                    Métrica: {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className={`p-5 grid gap-4 ${showAll ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
-          {sorted.map((cr, i) => {
+        <div className={`p-5 grid gap-4 ${localShowAll ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+          {displayCreatives.map((cr, i) => {
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
             const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
