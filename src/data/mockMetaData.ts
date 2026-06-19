@@ -71,6 +71,8 @@ export interface Creative {
   primaryResult?: number;
   permalinkUrl?: string;
   status?: "active" | "paused";
+  linkClicks?: number;
+  linkCtr?: number;
 }
 
 export interface DailyMetric {
@@ -106,6 +108,9 @@ function generateCreatives(count: number): Creative[] {
     const clicks = Math.floor(impressions * (Math.random() * 0.04 + 0.01));
     const spend = Math.floor(Math.random() * 200) + 50;
     const conversions = Math.floor(clicks * (Math.random() * 0.05 + 0.01));
+    const linkClicks = Math.floor(clicks * (Math.random() * 0.3 + 0.6)); // 60% to 90% of total clicks are link clicks
+    const linkCtr = Number(((linkClicks / impressions) * 100).toFixed(2));
+
     return {
       id: `cr-${Math.random().toString(36).slice(2, 8)}`,
       name: creativeNames[i % creativeNames.length],
@@ -117,6 +122,8 @@ function generateCreatives(count: number): Creative[] {
       spend,
       conversions,
       roas: Number(((conversions * 45) / spend).toFixed(2)),
+      linkClicks,
+      linkCtr,
     };
   });
 }

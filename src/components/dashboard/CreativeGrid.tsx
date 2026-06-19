@@ -103,10 +103,23 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       : (cr.clicks / campaignClicks) * campaignTotal;
   };
 
+  const campaignClicksForRatio = campaign.clicks || 1;
+  const campaignLinkClicks = (campaign as any).linkClicks || campaign.clicks || 0;
+  const linkRatio = campaign.clicks > 0 ? campaignLinkClicks / campaignClicksForRatio : 0.74;
+
   const sortedAll = [...campaign.creatives]
     .map((cr) => {
       const computedConv = Math.round(getComputedConversions(cr));
       const baseConversions = localMetric === "auto" ? (cr.primaryResult ?? cr.conversions) : computedConv;
+      
+      const crLinkClicks = (cr as any).linkClicks !== undefined 
+        ? (cr as any).linkClicks 
+        : Math.round((cr.clicks || 0) * linkRatio);
+      
+      const crLinkCtr = (cr as any).linkCtr !== undefined 
+        ? (cr as any).linkCtr 
+        : (cr.impressions > 0 ? (crLinkClicks / cr.impressions) * 100 : 0);
+
       const ov = applyOverrides(cr.id, {
         conversions: baseConversions,
         spend: cr.spend,
@@ -114,6 +127,8 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
         impressions: cr.impressions,
         clicks: cr.clicks,
         roas: cr.roas,
+        linkClicks: crLinkClicks,
+        linkCtr: crLinkCtr,
       }, overrides);
       return { ...cr, _ov: ov, _computedConversions: computedConv };
     })
@@ -311,14 +326,18 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                         {currencySymbol} {cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5 text-xs">
-                      <div className="bg-muted/30 rounded p-1.5">
-                        <span className="text-muted-foreground">Invest.</span>
-                        <p className="font-semibold text-card-foreground">{currencySymbol} {ov.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">Invest.</span>
+                        <p className="font-semibold text-card-foreground truncate">{currencySymbol} {ov.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
-                      <div className="bg-muted/30 rounded p-1.5">
-                        <span className="text-muted-foreground">CTR</span>
-                        <p className="font-semibold text-card-foreground">{ov.ctr}%</p>
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">CTR (todos)</span>
+                        <p className="font-semibold text-card-foreground truncate">{ov.ctr}%</p>
+                      </div>
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">CTR (link)</span>
+                        <p className="font-semibold text-card-foreground truncate">{(ov.linkCtr ?? 0).toFixed(2)}%</p>
                       </div>
                     </div>
                     {/* Gráfico de proporção Impressões vs Cliques */}
@@ -339,7 +358,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                         />
                       </div>
                       <div className="flex justify-between text-[9px] text-muted-foreground/80">
-                        <span>CTR: {ov.ctr}%</span>
+                        <span>CTR (todos): {ov.ctr}% • CTR (link): {(ov.linkCtr ?? 0).toFixed(2)}%</span>
                         <span>Proporção Cliques/Imp. (x20)</span>
                       </div>
                     </div>

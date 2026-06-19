@@ -1027,6 +1027,11 @@ Deno.serve(async (req) => {
           || (storyId && storyPermalinks[storyId])
           || `https://www.facebook.com/ads/library/?id=${ad.id}`;
 
+        const adLinkClicks = getActionValue(adInsight?.actions, "link_click") || 0;
+        const adLinkCtr = Number(adInsight?.impressions || 0) > 0 
+          ? Number(((adLinkClicks / Number(adInsight.impressions)) * 100).toFixed(2))
+          : 0;
+
         return {
           id: ad.id,
           name: ad.name,
@@ -1043,6 +1048,8 @@ Deno.serve(async (req) => {
           conversions: adPrimary.value,
           primaryResult: adPrimary.value,
           roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
+          linkClicks: adLinkClicks,
+          linkCtr: adLinkCtr,
         };
       });
 

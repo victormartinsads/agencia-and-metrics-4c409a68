@@ -97,10 +97,23 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
     );
   }, [campaigns, activeMetric]);
 
+  const totalFunnelClicks = campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
+  const totalFunnelLinkClicks = campaigns.reduce((sum, c) => sum + (c.linkClicks || c.clicks || 0), 0);
+  const funnelLinkRatio = totalFunnelClicks > 0 ? totalFunnelLinkClicks / totalFunnelClicks : 0.74;
+
   const sorted = allCreatives
     .map((cr) => {
       const baseline = { ...cr, conversions: (cr as any)._computedConversions };
       const baseConversions = localMetric === "auto" ? (baseline.primaryResult ?? baseline.conversions) : baseline.conversions;
+      
+      const crLinkClicks = (cr as any).linkClicks !== undefined 
+        ? (cr as any).linkClicks 
+        : Math.round((cr.clicks || 0) * funnelLinkRatio);
+      
+      const crLinkCtr = (cr as any).linkCtr !== undefined 
+        ? (cr as any).linkCtr 
+        : (cr.impressions > 0 ? (crLinkClicks / cr.impressions) * 100 : 0);
+
       const ov = applyOverrides(cr.id, {
         conversions: baseConversions,
         spend: cr.spend,
@@ -108,6 +121,8 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
         impressions: cr.impressions,
         clicks: cr.clicks,
         roas: cr.roas,
+        linkClicks: crLinkClicks,
+        linkCtr: crLinkCtr,
       }, overrides);
       return { ...cr, _ov: ov };
     })
@@ -306,14 +321,18 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                         {currencySymbol} {cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5 text-xs">
-                      <div className="bg-muted/30 rounded p-1.5">
-                        <span className="text-muted-foreground">Invest.</span>
-                        <p className="font-semibold text-card-foreground">{currencySymbol} {ov.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">Invest.</span>
+                        <p className="font-semibold text-card-foreground truncate">{currencySymbol} {ov.spend.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
-                      <div className="bg-muted/30 rounded p-1.5">
-                        <span className="text-muted-foreground">CTR</span>
-                        <p className="font-semibold text-card-foreground">{ov.ctr}%</p>
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">CTR (todos)</span>
+                        <p className="font-semibold text-card-foreground truncate">{ov.ctr}%</p>
+                      </div>
+                      <div className="bg-muted/30 rounded p-1">
+                        <span className="text-muted-foreground block truncate">CTR (link)</span>
+                        <p className="font-semibold text-card-foreground truncate">{(ov.linkCtr ?? 0).toFixed(2)}%</p>
                       </div>
                     </div>
                     {/* Gráfico de proporção Impressões vs Cliques */}
@@ -334,7 +353,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                         />
                       </div>
                       <div className="flex justify-between text-[9px] text-muted-foreground/80">
-                        <span>CTR: {ov.ctr}%</span>
+                        <span>CTR (todos): {ov.ctr}% • CTR (link): {(ov.linkCtr ?? 0).toFixed(2)}%</span>
                         <span>Proporção Cliques/Imp. (x20)</span>
                       </div>
                     </div>
