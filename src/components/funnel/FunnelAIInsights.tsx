@@ -1,7 +1,10 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { Button } from "@/components/ui/button";
 import { Brain, Loader2, Sparkles, Send } from "lucide-react";
 import { FunnelMetrics, FunnelCampaign } from "@/hooks/useFunnelAnalysis";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   campaigns: FunnelCampaign[];
@@ -307,95 +310,73 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
       const summary = formatSummary();
       setSummaryData(summary);
 
-      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
-      if (!geminiKey) throw new Error("Chave API não configurada. Verifique o arquivo .env.");
-
       const fullPrompt = SYSTEM_PROMPT + "\n\n📋 DADOS REAIS DO FUNIL PARA ANÁLISE:\n" + JSON.stringify(summary, null, 2);
 
-      // Usando o OpenAI proxy que funciona perfeitamente com "Authorization: Bearer"
-      // E passando o prompt gigante dentro de uma mensagem "user" para evitar o Erro 500 do "system".
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${geminiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gemini-1.5-pro",
-          messages: [{ role: "user", content: fullPrompt }],
-          temperature: 0.5,
-        }),
+      // Chama a Edge Function do Supabase que usa GEMINI_API_KEY dos secrets
+      const { data, error } = await supabase.functions.invoke("funnel-insights", {
+        body: { prompt: fullPrompt },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Falha na API (${response.status}): ${errorText}`);
-      }
-      
-      const data = await response.json();
-      const aiReply = data.choices?.[0]?.message?.content;
-      
-      if (aiReply) {
-        setInsightsText(aiReply);
-      } else {
-        throw new Error("Resposta da IA veio vazia.");
-      }
+      if (error) throw new Error(error.message);
+
+      const aiReply = data?.text || data?.insights;
+      if (!aiReply) throw new Error(`Resposta inesperada da Edge Function: ${JSON.stringify(data)}`);
+
+      setInsightsText(typeof aiReply === "string" ? aiReply : JSON.stringify(aiReply, null, 2));
     } catch (e: any) {
       console.error("AI insights error:", e);
-      setInsightsText(`⚠️ Erro ao gerar insights: ${e.message}`);
+      setInsightsText(`⚠️ Erro ao gerar insights:\n\n${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+
   const sendChatMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const userMsg = chatInput.trim();
     setChatInput("");
-    
+
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
     setMessages(newMessages);
     setChatLoading(true);
 
     try {
-      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
-      if (!geminiKey) throw new Error("Chave API não configurada.");
+      // Monta contexto com dados do funil e diagnóstico anterior
+      const contextMsg = `${SYSTEM_PROMPT}\n\nDados do Funil Analisado:\n${JSON.stringify(summaryData)}\n\nDiagnóstico Anterior:\n${insightsText}\n---`;
 
-      const chatContext = SYSTEM_PROMPT + "\n\nDados do Funil Analisado:\n" + JSON.stringify(summaryData) + "\n\nDiagnóstico Anterior que você gerou:\n" + insightsText + "\n\n---\nPERGUNTA DO USUÁRIO AGORA:\n";
-
-      // Para o chat, mantemos o histórico, mas garantimos que a PRIMEIRA mensagem contenha as regras
-      const payload = newMessages.map((msg, idx) => {
-        if (idx === 0 && msg.role === "user") {
-          return { role: "user", content: chatContext + msg.content };
-        }
-        return msg;
-      });
-
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${geminiKey}`,
+      // Usa a Edge Function funnel-chat (chave nos secrets do Supabase)
+      const { data, error } = await supabase.functions.invoke("funnel-chat", {
+        body: {
+          messages: newMessages.map((msg, idx) => ({
+            role: msg.role === "assistant" ? "assistant" : "user",
+            content: idx === 0 ? contextMsg + "\n" + msg.content : msg.content,
+          })),
         },
-        body: JSON.stringify({
-          model: "gemini-1.5-pro",
-          messages: payload,
-          temperature: 0.6,
-        }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Falha na API (${response.status}): ${errorText}`);
-      }
-      
-      const data = await response.json();
-      const aiReply = data.choices?.[0]?.message?.content || "Erro ao gerar resposta.";
+      if (error) throw new Error(error.message);
 
+      // funnel-chat retorna SSE (stream); lemos o texto acumulado se vier como json ou texto
+      let aiReply = "";
+      if (typeof data === "string") {
+        // Parse SSE lines
+        const lines = data.split("\n").filter(l => l.startsWith("data:"));
+        for (const line of lines) {
+          try {
+            const parsed = JSON.parse(line.replace("data: ", ""));
+            aiReply += parsed.choices?.[0]?.delta?.content || "";
+          } catch {}
+        }
+      } else {
+        aiReply = data?.text || data?.content || JSON.stringify(data);
+      }
+
+      if (!aiReply) aiReply = "Não obtive uma resposta. Tente novamente.";
       setMessages([...newMessages, { role: "assistant", content: aiReply }]);
     } catch (e: any) {
       console.error("Chat error:", e);
-      setMessages([...newMessages, { role: "assistant", content: `⚠️ Desculpe, não consegui processar a resposta agora.\nDetalhe: ${e.message}` }]);
+      setMessages([...newMessages, { role: "assistant", content: `⚠️ Não consegui processar.\nDetalhe: ${e.message}` }]);
     } finally {
       setChatLoading(false);
     }
@@ -433,8 +414,15 @@ export function FunnelAIInsights({ campaigns, metrics, totalSpend, totalPurchase
 
         {insightsText && !loading && (
           <div className="space-y-6">
-            <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap pl-1 bg-muted/10 p-5 rounded-md border border-border/50 font-medium">
-              {insightsText}
+            <div className="bg-muted/10 p-5 rounded-md border border-border/50">
+              <div className="prose prose-sm dark:prose-invert max-w-none
+                            text-card-foreground
+                            prose-headings:text-card-foreground prose-headings:font-bold
+                            prose-strong:text-card-foreground
+                            prose-p:my-2 prose-li:my-1
+                            prose-h1:text-xl prose-h2:text-lg prose-h3:text-base">
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>{insightsText}</ReactMarkdown>
+              </div>
             </div>
 
             {/* Chat Section Híbrido */}

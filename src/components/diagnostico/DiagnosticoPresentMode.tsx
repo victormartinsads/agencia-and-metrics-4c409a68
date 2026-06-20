@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause, Search, Image as ImageIcon, Video } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause, Search, Image as ImageIcon, Video, ChevronDown, Activity, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGoogleConnectionStatus, useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import { useGoogleAds, type GoogleAdsKeyword, type GoogleAdsCreative } from "@/hooks/useGoogleAds";
@@ -348,6 +348,26 @@ function GroupSlide({
     .sort((a, b) => (b.primaryResult ?? b.conversions) - (a.primaryResult ?? a.conversions))
     .slice(0, 3);
 
+  // Accordion state — persisted per funnel in localStorage
+  const funnelCode = group.isFunnel
+    ? (extractFunnelCode(group.campaigns[0]?.name) || group.key)
+    : (group.campaigns[0]?.id || group.key);
+  const sectionsKey = `present-sections-${clientId}-${funnelCode}`;
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(sectionsKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { health: true, creatives: true };
+  });
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(sectionsKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -388,7 +408,12 @@ function GroupSlide({
       </div>
 
       {(clientId || snapshotData) && (
-        <div className="pt-4 border-t border-border/40">
+        <PresentSectionAccordion
+          icon={<Activity className="h-4 w-4" />}
+          title="Saúde do Funil"
+          isOpen={!!openSections.health}
+          onToggle={() => toggleSection("health")}
+        >
           <FunnelHealthDiagnosticPanel
             clientId={clientId || ""}
             funnelCode={group.isFunnel ? (extractFunnelCode(group.campaigns[0]?.name) || group.key) : (group.campaigns[0]?.id || group.key)}
@@ -404,12 +429,17 @@ function GroupSlide({
                 : 0,
             }}
           />
-        </div>
+        </PresentSectionAccordion>
       )}
 
       {top.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-card-foreground mb-3">🏆 Top criativos</h3>
+        <PresentSectionAccordion
+          icon={<Film className="h-4 w-4" />}
+          title="Criativos"
+          badge={top.length}
+          isOpen={!!openSections.creatives}
+          onToggle={() => toggleSection("creatives")}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {top.map((cr, i) => {
               const r = cr.primaryResult ?? cr.conversions;
@@ -449,7 +479,7 @@ function GroupSlide({
               );
             })}
           </div>
-        </div>
+        </PresentSectionAccordion>
       )}
     </div>
   );
@@ -481,6 +511,56 @@ function BigKpi({
       <div className={`mt-1 text-2xl font-bold ${
         custom ? "text-amber-500" : highlight ? "text-primary" : "text-card-foreground"
       }`}>{value}</div>
+    </div>
+  );
+}
+
+// ── Accordion colapsável para o modo apresentação ───────────────────────
+function PresentSectionAccordion({
+  icon,
+  title,
+  badge,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  badge?: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-primary">{icon}</span>
+          <span className="text-sm font-semibold text-card-foreground">{title}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+              {badge}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+            isOpen ? "rotate-180" : "rotate-0"
+          }`}
+        />
+      </button>
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: isOpen ? "9999px" : "0px" }}
+      >
+        <div className="p-4 space-y-4 border-t border-border/50">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

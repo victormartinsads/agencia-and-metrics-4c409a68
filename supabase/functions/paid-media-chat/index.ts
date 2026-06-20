@@ -49,7 +49,7 @@ ${context ? JSON.stringify(context, null, 2) : "Sem dados carregados ainda."}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         stream: true,
       }),

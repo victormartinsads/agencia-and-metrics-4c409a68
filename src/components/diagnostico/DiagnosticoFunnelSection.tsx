@@ -3,7 +3,7 @@ import { Campaign } from "@/data/mockMetaData";
 import { FunnelGroup, extractFunnelCode } from "@/lib/funnelGrouping";
 import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
 import { CreativeGrid, CreativeMetricKey } from "@/components/dashboard/CreativeGrid";
-import { Layers, Target, Eye, EyeOff, Pencil, Check, X, Settings2 } from "lucide-react";
+import { Layers, Target, Eye, EyeOff, Pencil, Check, X, Settings2, Activity, Film, BarChart2, Sparkles, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MetricsCustomizer } from "./MetricsCustomizer";
@@ -96,6 +96,24 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
   const totals = useMemo(() => aggregateCampaignMetrics(adaptedCampaigns), [adaptedCampaigns]);
   const adsets = useMemo(() => aggregateAdsets(adaptedCampaigns), [adaptedCampaigns]);
   const [showAdsets, setShowAdsets] = useState(false);
+
+  // Accordion sections — persisted per funnel in localStorage
+  const sectionsStorageKey = `funnel-sections-${clientId}-${group.key}`;
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(sectionsStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { health: true, creatives: true, campaigns: false, insights: false };
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(sectionsStorageKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const resultLabel =
     adaptedCampaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
@@ -422,8 +440,15 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
           ))}
       </div>
 
+      {/* ── Saúde do Funil ── */}
       {clientId && (
-        <div className="pt-3 border-t border-border/40">
+        <SectionAccordion
+          sectionKey="health"
+          icon={<Activity className="h-4 w-4" />}
+          title="Saúde do Funil"
+          isOpen={!!openSections.health}
+          onToggle={() => toggleSection("health")}
+        >
           <FunnelHealthDiagnosticPanel
             clientId={clientId}
             funnelCode={sectionCode}
@@ -438,157 +463,18 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
                 : 0,
             }}
           />
-        </div>
+        </SectionAccordion>
       )}
 
-      {/* Quando é funil agrupando várias campanhas, lista as campanhas */}
-      {group.isFunnel && adaptedCampaigns.length > 1 && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground">
-            Campanhas deste funil
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/20 text-muted-foreground">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Campanha</th>
-                  <th className="text-right px-3 py-2 font-medium">Invest.</th>
-                  <th className="text-right px-3 py-2 font-medium">{resultLabel}</th>
-                  <th className="text-right px-3 py-2 font-medium">CPA</th>
-                  <th className="text-right px-3 py-2 font-medium">CTR</th>
-                  <th className="text-right px-3 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adaptedCampaigns
-                  .slice()
-                  .sort((a, b) => b.spend - a.spend)
-                  .map(c => {
-                    const customCampName = labelMap?.[c.id] || c.name;
-                    const isEditingCamp = editingCampaignId === c.id;
-
-                    return (
-                      <tr key={c.id} className="border-t border-border hover:bg-muted/10">
-                        <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={c.name}>
-                          {isEditingCamp ? (
-                            <div className="flex items-center gap-1.5 max-w-full">
-                              <Input
-                                value={campaignDraft}
-                                onChange={(e) => setCampaignDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveCampaign(c.id);
-                                  if (e.key === "Escape") setEditingCampaignId(null);
-                                }}
-                                className="h-7 text-xs py-1 px-2 flex-1 bg-background border-primary/50 focus:border-primary"
-                                autoFocus
-                              />
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 text-primary hover:bg-primary/10"
-                                onClick={() => handleSaveCampaign(c.id)}
-                                disabled={saveLabelMutation.isPending}
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 text-muted-foreground hover:bg-muted"
-                                onClick={() => setEditingCampaignId(null)}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 group/camp">
-                              <span className="truncate max-w-[230px] block">{customCampName}</span>
-                              {clientId && (
-                                <>
-                                  <button
-                                    onClick={() => handleStartEditCampaign(c.id, customCampName)}
-                                    className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
-                                    title="Editar nome"
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => setDrillDownCampaign({ id: c.id, name: customCampName })}
-                                    className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5"
-                                    title="Gerenciar Campanha"
-                                  >
-                                    <Settings2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(c.spend, currencySymbol)}</td>
-                        <td className="px-3 py-2 text-right text-card-foreground font-semibold">{c.conversions}</td>
-                        <td className="px-3 py-2 text-right text-card-foreground">
-                          {c.conversions > 0 ? formatMoney(c.spend / c.conversions, currencySymbol) : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right text-card-foreground">{c.ctr.toFixed(2)}%</td>
-                        <td className="px-3 py-2 text-right">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            c.status === "active" ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"
-                          }`}>{c.status}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Conjuntos (adsets) consolidados */}
-      {adsets.length > 0 && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground flex items-center justify-between">
-            <span>Conjuntos de anúncios ({adsets.length})</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-[11px] gap-1"
-              onClick={() => setShowAdsets(s => !s)}
-            >
-              {showAdsets ? <><EyeOff className="h-3 w-3" /> Ocultar</> : <><Eye className="h-3 w-3" /> Exibir</>}
-            </Button>
-          </div>
-          {showAdsets && <div className="overflow-x-auto max-h-72">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/20 text-muted-foreground sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Conjunto</th>
-                  <th className="text-right px-3 py-2 font-medium">Invest.</th>
-                  <th className="text-right px-3 py-2 font-medium">{resultLabel}</th>
-                  <th className="text-right px-3 py-2 font-medium">CPA</th>
-                  <th className="text-right px-3 py-2 font-medium">CTR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adsets.slice(0, 10).map(a => (
-                  <tr key={a.name} className="border-t border-border">
-                    <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={a.name}>{a.name}</td>
-                    <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(a.spend, currencySymbol)}</td>
-                    <td className="px-3 py-2 text-right text-card-foreground font-semibold">{a.conversions}</td>
-                    <td className="px-3 py-2 text-right text-card-foreground">
-                      {a.conversions > 0 ? formatMoney(a.cpa, currencySymbol) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right text-card-foreground">{a.ctr.toFixed(2)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>}
-        </div>
-      )}
-
-      {/* Pódio de criativos: agregado quando funil, individual quando campanha solta */}
-      <div>
+      {/* ── Criativos ── */}
+      <SectionAccordion
+        sectionKey="creatives"
+        icon={<Film className="h-4 w-4" />}
+        title="Criativos"
+        badge={adaptedCampaigns.reduce((sum, c) => sum + c.creatives.length, 0)}
+        isOpen={!!openSections.creatives}
+        onToggle={() => toggleSection("creatives")}
+      >
         {group.isFunnel ? (
           <AggregatedCreativeGrid
             campaigns={adaptedCampaigns}
@@ -598,18 +484,160 @@ export function DiagnosticoFunnelSection({ group, clientId, currencySymbol = "R$
             selectedMetricKey={selectedMetricKey}
           />
         ) : (
-          <CreativeGrid campaign={adaptedCampaigns[0]} clientId={clientId} currencySymbol={currencySymbol} selectedMetricKey={selectedMetricKey} />
+          <CreativeGrid
+            campaign={adaptedCampaigns[0]}
+            clientId={clientId}
+            currencySymbol={currencySymbol}
+            selectedMetricKey={selectedMetricKey}
+          />
         )}
-      </div>
+      </SectionAccordion>
 
-      <div className="print:hidden mt-6">
-        <FunnelAIInsights 
+      {/* ── Campanhas & Conjuntos ── */}
+      {(group.isFunnel && adaptedCampaigns.length > 1) || adsets.length > 0 ? (
+        <SectionAccordion
+          sectionKey="campaigns"
+          icon={<BarChart2 className="h-4 w-4" />}
+          title="Campanhas & Conjuntos"
+          badge={adaptedCampaigns.length}
+          isOpen={!!openSections.campaigns}
+          onToggle={() => toggleSection("campaigns")}
+        >
+          {/* Tabela de Campanhas */}
+          {group.isFunnel && adaptedCampaigns.length > 1 && (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground">
+                Campanhas deste funil
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/20 text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Campanha</th>
+                      <th className="text-right px-3 py-2 font-medium">Invest.</th>
+                      <th className="text-right px-3 py-2 font-medium">{resultLabel}</th>
+                      <th className="text-right px-3 py-2 font-medium">CPA</th>
+                      <th className="text-right px-3 py-2 font-medium">CTR</th>
+                      <th className="text-right px-3 py-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adaptedCampaigns
+                      .slice()
+                      .sort((a, b) => b.spend - a.spend)
+                      .map(c => {
+                        const customCampName = labelMap?.[c.id] || c.name;
+                        const isEditingCamp = editingCampaignId === c.id;
+                        return (
+                          <tr key={c.id} className="border-t border-border hover:bg-muted/10">
+                            <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={c.name}>
+                              {isEditingCamp ? (
+                                <div className="flex items-center gap-1.5 max-w-full">
+                                  <Input
+                                    value={campaignDraft}
+                                    onChange={(e) => setCampaignDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSaveCampaign(c.id);
+                                      if (e.key === "Escape") setEditingCampaignId(null);
+                                    }}
+                                    className="h-7 text-xs py-1 px-2 flex-1 bg-background border-primary/50 focus:border-primary"
+                                    autoFocus
+                                  />
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={() => handleSaveCampaign(c.id)} disabled={saveLabelMutation.isPending}>
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:bg-muted" onClick={() => setEditingCampaignId(null)}>
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 group/camp">
+                                  <span className="truncate max-w-[230px] block">{customCampName}</span>
+                                  {clientId && (
+                                    <>
+                                      <button onClick={() => handleStartEditCampaign(c.id, customCampName)} className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5" title="Editar nome">
+                                        <Pencil className="h-3 w-3" />
+                                      </button>
+                                      <button onClick={() => setDrillDownCampaign({ id: c.id, name: customCampName })} className="opacity-0 group-hover/camp:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-0.5" title="Gerenciar Campanha">
+                                        <Settings2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(c.spend, currencySymbol)}</td>
+                            <td className="px-3 py-2 text-right text-card-foreground font-semibold">{c.conversions}</td>
+                            <td className="px-3 py-2 text-right text-card-foreground">{c.conversions > 0 ? formatMoney(c.spend / c.conversions, currencySymbol) : "—"}</td>
+                            <td className="px-3 py-2 text-right text-card-foreground">{c.ctr.toFixed(2)}%</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.status === "active" ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"}`}>{c.status}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Conjuntos */}
+          {adsets.length > 0 && (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-card-foreground flex items-center justify-between">
+                <span>Conjuntos de anúncios ({adsets.length})</span>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] gap-1" onClick={() => setShowAdsets(s => !s)}>
+                  {showAdsets ? <><EyeOff className="h-3 w-3" /> Ocultar</> : <><Eye className="h-3 w-3" /> Exibir</>}
+                </Button>
+              </div>
+              {showAdsets && (
+                <div className="overflow-x-auto max-h-72">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/20 text-muted-foreground sticky top-0">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Conjunto</th>
+                        <th className="text-right px-3 py-2 font-medium">Invest.</th>
+                        <th className="text-right px-3 py-2 font-medium">{resultLabel}</th>
+                        <th className="text-right px-3 py-2 font-medium">CPA</th>
+                        <th className="text-right px-3 py-2 font-medium">CTR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adsets.slice(0, 10).map(a => (
+                        <tr key={a.name} className="border-t border-border">
+                          <td className="px-3 py-2 text-card-foreground truncate max-w-[280px]" title={a.name}>{a.name}</td>
+                          <td className="px-3 py-2 text-right text-card-foreground">{formatMoney(a.spend, currencySymbol)}</td>
+                          <td className="px-3 py-2 text-right text-card-foreground font-semibold">{a.conversions}</td>
+                          <td className="px-3 py-2 text-right text-card-foreground">{a.conversions > 0 ? formatMoney(a.cpa, currencySymbol) : "—"}</td>
+                          <td className="px-3 py-2 text-right text-card-foreground">{a.ctr.toFixed(2)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </SectionAccordion>
+      ) : null}
+
+      {/* ── Insights IA ── */}
+      <SectionAccordion
+        sectionKey="insights"
+        icon={<Sparkles className="h-4 w-4" />}
+        title="Insights de IA"
+        isOpen={!!openSections.insights}
+        onToggle={() => toggleSection("insights")}
+        className="print:hidden"
+      >
+        <FunnelAIInsights
           campaigns={classified}
           metrics={metrics}
           totalSpend={totalSpend}
           totalPurchaseValue={totalPurchaseValue}
         />
-      </div>
+      </SectionAccordion>
 
       {drillDownCampaign && clientId && (
         <CampaignDrillDown
@@ -642,6 +670,56 @@ function Kpi({ label, value, highlight, custom }: { label: string; value: string
       <div className={`mt-1 text-base font-bold ${
         custom ? "text-amber-500" : highlight ? "text-primary" : "text-card-foreground"
       }`}>{value}</div>
+    </div>
+  );
+}
+
+// ── Accordion colapsável reutilizável ───────────────────────────────────────
+interface SectionAccordionProps {
+  sectionKey: string;
+  icon: React.ReactNode;
+  title: string;
+  badge?: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function SectionAccordion({ icon, title, badge, isOpen, onToggle, children, className = "" }: SectionAccordionProps) {
+  return (
+    <div className={`rounded-xl border border-border overflow-hidden ${className}`}>
+      {/* Cabeçalho clicável */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left group"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-primary">{icon}</span>
+          <span className="text-sm font-semibold text-card-foreground">{title}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+              {badge}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+            isOpen ? "rotate-180" : "rotate-0"
+          }`}
+        />
+      </button>
+
+      {/* Conteúdo colapsável com animação suave */}
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: isOpen ? "9999px" : "0px" }}
+      >
+        <div className="p-4 space-y-4 border-t border-border/50">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

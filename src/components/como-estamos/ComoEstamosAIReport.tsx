@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Loader2, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { ComoEstamosMetrics, ClassifiedCampaign } from "@/hooks/useComoEstamos";
@@ -61,36 +63,15 @@ Estruture o relatório com:
 
 Formato: linguagem clara e profissional, com emojis e bullet points.`;
 
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        setReport("Chave da API do Gemini (VITE_GEMINI_API_KEY) não encontrada. Configure no arquivo .env.");
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000,
-          }
-        })
+      const { data, error } = await supabase.functions.invoke("funnel-insights", {
+        body: { prompt },
       });
 
-      if (!response.ok) {
-        throw new Error("Falha na API do Gemini");
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
+      const text = data?.text || data?.insights;
       setReport(text || "Não foi possível gerar o relatório.");
     } catch (e: any) {
       console.error(e);
@@ -113,8 +94,10 @@ Formato: linguagem clara e profissional, com emojis e bullet points.`;
       </div>
       {report && (
         <div className="rounded-xl border border-primary/20 bg-card p-6">
-          <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap text-sm text-card-foreground">
-            {report}
+          <div className="prose prose-sm dark:prose-invert max-w-none text-card-foreground
+                        prose-headings:text-card-foreground prose-strong:text-card-foreground
+                        prose-p:my-2 prose-li:my-1 text-sm">
+            <ReactMarkdown remarkPlugins={[remarkBreaks]}>{report}</ReactMarkdown>
           </div>
         </div>
       )}

@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gemini-1.5-flash",
+          model: "gemini-2.0-flash",
           messages: [
             { role: "system", content: "Você é um especialista em marketing digital e Meta Ads. Responda em português brasileiro de forma clara e acionável." },
             { role: "user", content: prompt },
@@ -92,7 +92,7 @@ Seja direto e prático. Use números dos dados.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Dados do funil:\n${JSON.stringify(summary, null, 2)}` },
