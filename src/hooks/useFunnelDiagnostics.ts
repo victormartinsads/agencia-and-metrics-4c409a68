@@ -29,7 +29,7 @@ export interface FunnelDiagnosticData {
 }
 
 export const DEFAULT_DIAGNOSTICS: FunnelDiagnosticData = {
-  health_score: 7.6,
+  health_score: 0.0,
   curve_data: {
     hook_rate: 94.5,
     hold_rate: 17.5,
@@ -39,34 +39,34 @@ export const DEFAULT_DIAGNOSTICS: FunnelDiagnosticData = {
   },
   diagnostics: {
     criativos: {
-      score: 9.0,
-      text: "Excelente gancho inicial e roteiro premium.",
+      score: 0,
+      text: "Sem diagnóstico de criativos salvo. Clique para avaliar.",
       suggestion: "",
     },
     publico: {
-      score: 8.5,
-      text: "Segmentações alinhadas e público quente.",
+      score: 0,
+      text: "Sem diagnóstico de público alvo salvo. Clique para avaliar.",
       suggestion: "",
     },
     conversao_lp: {
-      score: 6.2,
-      text: "Taxa ideal mas há lentidão na página.",
-      suggestion: "SUGESTÃO: OTIMIZAR",
+      score: 0,
+      text: "Sem diagnóstico de conversão de LP salvo. Clique para avaliar.",
+      suggestion: "",
     },
     checkouts: {
-      score: 5.5,
-      text: "Muitas desistências no início do checkout.",
+      score: 0,
+      text: "Sem diagnóstico de checkout salvo. Clique para avaliar.",
       suggestion: "",
     },
     custos: {
-      score: 5.1,
-      text: "CPA acima da média esperada.",
-      suggestion: "SUGESTÃO: OTIMIZAR",
+      score: 0,
+      text: "Sem diagnóstico de custos salvo. Clique para avaliar.",
+      suggestion: "",
     },
     oferta: {
-      score: 7.9,
-      text: "Ticket atrativo com bônus de conversão.",
-      suggestion: "SUGESTÃO: OTIMIZAR",
+      score: 0,
+      text: "Sem diagnóstico de oferta salvo. Clique para avaliar.",
+      suggestion: "",
     },
   },
 };

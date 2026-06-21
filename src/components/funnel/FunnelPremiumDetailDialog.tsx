@@ -264,12 +264,25 @@ export function FunnelPremiumDetailDialog({
   const secondaryKeys = metricsConfig?.visible_metrics?.slice(9) || [];
 
   // Setup diagnostic values
-  const healthScore = funnelDiag?.health_score ?? 7.6;
-  const healthLabel = healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
-  const healthColor = healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
+  const healthScore = funnelDiag?.health_score ?? 0.0;
+  const healthLabel = healthScore === 0 ? "Não Avaliado" : healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
+  const healthColor = healthScore === 0 ? "text-muted-foreground/80 fill-muted-foreground/30" : healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
 
   const diags = funnelDiag?.diagnostics || DEFAULT_DIAGNOSTICS.diagnostics;
   const curve = funnelDiag?.curve_data || DEFAULT_DIAGNOSTICS.curve_data;
+
+  const getScoreDotClass = (score: number) => {
+    if (score === 0) return "bg-muted-foreground/30 border border-muted-foreground/20";
+    if (score >= 8.5) return "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]";
+    if (score >= 7.0) return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]";
+    if (score >= 5.0) return "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]";
+    return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]";
+  };
+
+  const getScoreText = (score: number) => {
+    if (score === 0) return "—";
+    return score.toFixed(1);
+  };
 
   // Video watch time and retention rates calculation
   const videoPlays = getMetricValueAndOverride("videoPlays");
@@ -654,14 +667,9 @@ export function FunnelPremiumDetailDialog({
                   }`}
                   onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
                 >
-                  <div className={`h-1.5 w-1.5 rounded-full ${
-                    diags.criativos.score >= 8.5 ? "bg-emerald-500" :
-                    diags.criativos.score >= 7.0 ? "bg-green-500" :
-                    diags.criativos.score >= 5.0 ? "bg-amber-500" :
-                    "bg-red-500"
-                  }`} />
+                  <div className={`h-1.5 w-1.5 rounded-full ${getScoreDotClass(diags.criativos.score)}`} />
                   <span className="text-[8px] uppercase font-bold text-muted-foreground">Nota:</span>
-                  <span className="text-xs font-black text-primary font-display">{diags.criativos.score.toFixed(1)}</span>
+                  <span className="text-xs font-black text-primary font-display">{getScoreText(diags.criativos.score)}</span>
                   {!readOnly && (
                     <Pencil className="h-2 w-2 text-muted-foreground/60 ml-0.5" />
                   )}
@@ -893,7 +901,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Criativos</span>
-                      <span className="text-primary">{diags.criativos.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.criativos.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.criativos.text}</p>
                   </div>
@@ -913,7 +921,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Público</span>
-                      <span className="text-primary">{diags.publico.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.publico.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.publico.text}</p>
                   </div>
@@ -933,7 +941,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Conversão LP</span>
-                      <span className="text-primary">{diags.conversao_lp.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.conversao_lp.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.conversao_lp.text}</p>
                   </div>
@@ -953,7 +961,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Checkouts</span>
-                      <span className="text-primary">{diags.checkouts.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.checkouts.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.checkouts.text}</p>
                   </div>
@@ -973,7 +981,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Custos (CPA / CPL)</span>
-                      <span className="text-primary">{diags.custos.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.custos.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.custos.text}</p>
                   </div>
@@ -993,7 +1001,7 @@ export function FunnelPremiumDetailDialog({
                   <div>
                     <div className="flex items-center justify-between font-bold text-xs">
                       <span className="text-card-foreground">Oferta</span>
-                      <span className="text-primary">{diags.oferta.score.toFixed(1)}</span>
+                      <span className="text-primary">{getScoreText(diags.oferta.score)}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-2 line-clamp-3 leading-relaxed">{diags.oferta.text}</p>
                   </div>

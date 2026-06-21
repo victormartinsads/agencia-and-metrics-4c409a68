@@ -156,8 +156,21 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
     );
   }
 
-  const healthLabel = healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
-  const healthColor = healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
+  const healthLabel = healthScore === 0 ? "Não Avaliado" : healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
+  const healthColor = healthScore === 0 ? "text-muted-foreground/80 fill-muted-foreground/30" : healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
+
+  const getScoreDotClass = (score: number) => {
+    if (score === 0) return "bg-muted-foreground/30 border border-muted-foreground/20";
+    if (score >= 8.5) return "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]";
+    if (score >= 7.0) return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]";
+    if (score >= 5.0) return "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]";
+    return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]";
+  };
+
+  const getScoreText = (score: number) => {
+    if (score === 0) return "—";
+    return score.toFixed(1);
+  };
 
   const handleStartEdit = (type: "health" | "diagnostic" | "curve", key: string, label: string, currentVal: any) => {
     if (readOnly) return;
@@ -287,7 +300,7 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                   cy="56" 
                   r="46" 
                   fill="transparent" 
-                  stroke={healthScore >= 8.5 ? "#10b981" : healthScore >= 7.0 ? "#22c55e" : healthScore >= 5.0 ? "#f59e0b" : "#ef4444"} 
+                  stroke={healthScore === 0 ? "#27272a" : healthScore >= 8.5 ? "#10b981" : healthScore >= 7.0 ? "#22c55e" : healthScore >= 5.0 ? "#f59e0b" : "#ef4444"} 
                   strokeWidth="6" 
                   strokeDasharray="289" 
                   strokeDashoffset={289 - (289 * (healthScore / 10))} 
@@ -296,7 +309,7 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-card-foreground tracking-tight font-display">{healthScore.toFixed(1)}</span>
+                <span className="text-3xl font-black text-card-foreground tracking-tight font-display">{healthScore === 0 ? "—" : healthScore.toFixed(1)}</span>
                 <span className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${healthColor}`}>{healthLabel}</span>
               </div>
             </div>
@@ -320,17 +333,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.criativos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.criativos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.criativos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.criativos.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Criativos</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.criativos.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.criativos.text}</p>
                   </div>
@@ -360,17 +368,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.publico.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.publico.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.publico.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.publico.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Público</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.publico.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.publico.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.publico.text}</p>
                   </div>
@@ -400,17 +403,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.conversao_lp.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.conversao_lp.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.conversao_lp.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.conversao_lp.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Conversão LP</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.conversao_lp.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.conversao_lp.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.conversao_lp.text}</p>
                   </div>
@@ -440,17 +438,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.checkouts.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.checkouts.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.checkouts.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.checkouts.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Checkouts</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.checkouts.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.checkouts.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.checkouts.text}</p>
                   </div>
@@ -480,17 +473,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.custos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.custos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.custos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.custos.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Custos</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.custos.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.custos.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.custos.text}</p>
                   </div>
@@ -520,17 +508,12 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                    diags.oferta.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-                    diags.oferta.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                    diags.oferta.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  }`} />
+                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.oferta.score)}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-card-foreground">Oferta</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{diags.oferta.score.toFixed(1)}</span>
+                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.oferta.score)}</span>
                     </div>
                     <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.oferta.text}</p>
                   </div>
@@ -570,14 +553,9 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
             }`}
             onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
           >
-            <div className={`h-2 w-2 rounded-full ${
-              diags.criativos.score >= 8.5 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" :
-              diags.criativos.score >= 7.0 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-              diags.criativos.score >= 5.0 ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-              "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-            }`} />
+            <div className={`h-2 w-2 rounded-full ${getScoreDotClass(diags.criativos.score)}`} />
             <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Nota:</span>
-            <span className="text-xs font-black text-[#c5ff1a] font-display">{diags.criativos.score.toFixed(1)}</span>
+            <span className="text-xs font-black text-[#c5ff1a] font-display">{getScoreText(diags.criativos.score)}</span>
             {!readOnly && (
               <Pencil className="h-2 w-2 text-muted-foreground/60 ml-0.5" />
             )}
