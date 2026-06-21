@@ -5,7 +5,7 @@ import { useFunnelLabels } from "@/hooks/useFunnelLabels";
 import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
 import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
 import { useFunnelMetricOverrides, useSaveFunnelMetricOverride } from "@/hooks/useFunnelMetricOverrides";
-import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS } from "@/hooks/useFunnelDiagnostics";
+import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, getFunnelActiveDiagnostics } from "@/hooks/useFunnelDiagnostics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -263,13 +263,34 @@ export function FunnelPremiumDetailDialog({
   const primaryKeys = metricsConfig?.visible_metrics?.slice(0, 9) || [];
   const secondaryKeys = metricsConfig?.visible_metrics?.slice(9) || [];
 
-  // Setup diagnostic values
-  const healthScore = funnelDiag?.health_score ?? DEFAULT_DIAGNOSTICS.health_score;
-  const healthLabel = healthScore === 0 ? "Não Avaliado" : healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
-  const healthColor = healthScore === 0 ? "text-muted-foreground/80 fill-muted-foreground/30" : healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
-
   const diags = funnelDiag?.diagnostics || DEFAULT_DIAGNOSTICS.diagnostics;
   const curve = funnelDiag?.curve_data || DEFAULT_DIAGNOSTICS.curve_data;
+
+  // Calculate dynamic health score based on active diagnostics average
+  const activeDiagnostics = getFunnelActiveDiagnostics(funnelCode);
+  const calculatedHealthScore = (() => {
+    const scores: number[] = [];
+    Object.entries(activeDiagnostics).forEach(([key, isActive]) => {
+      if (isActive) {
+        const diagBlock = diags[key as keyof typeof diags];
+        if (diagBlock && typeof diagBlock.score === 'number' && diagBlock.score > 0) {
+          scores.push(diagBlock.score);
+        }
+      }
+    });
+    if (scores.length > 0) {
+      const sum = scores.reduce((a, b) => a + b, 0);
+      return Math.round((sum / scores.length) * 10) / 10;
+    }
+    return DEFAULT_DIAGNOSTICS.health_score;
+  })();
+
+  // Setup diagnostic values
+  const healthScore = (funnelDiag?.health_score !== undefined && funnelDiag.health_score !== 7.5 && funnelDiag.health_score !== 0)
+    ? funnelDiag.health_score
+    : calculatedHealthScore;
+  const healthLabel = healthScore === 0 ? "Não Avaliado" : healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
+  const healthColor = healthScore === 0 ? "text-muted-foreground/80 fill-muted-foreground/30" : healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
 
   const getScoreDotClass = (score: number) => {
     if (score === 0) return "bg-muted-foreground/30 border border-muted-foreground/20";

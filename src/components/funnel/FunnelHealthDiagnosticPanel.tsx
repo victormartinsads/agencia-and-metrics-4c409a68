@@ -37,11 +37,6 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
 
   const saveFunnelDiag = useSaveFunnelDiagnostics();
 
-  // Selected values (either from snapshot, live query, or default fallback)
-  const healthScore = snapshotData
-    ? snapshotData.health_score
-    : funnelDiag?.health_score ?? DEFAULT_DIAGNOSTICS.health_score;
-
   const diags = snapshotData
     ? snapshotData.diagnostics || DEFAULT_DIAGNOSTICS.diagnostics
     : funnelDiag?.diagnostics ?? DEFAULT_DIAGNOSTICS.diagnostics;
@@ -51,6 +46,31 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
     : funnelDiag?.curve_data ?? DEFAULT_DIAGNOSTICS.curve_data;
 
   const activeDiagnostics = getFunnelActiveDiagnostics(funnelCode);
+
+  // Calculate dynamic health score based on active diagnostics average
+  const calculatedHealthScore = (() => {
+    const scores: number[] = [];
+    Object.entries(activeDiagnostics).forEach(([key, isActive]) => {
+      if (isActive) {
+        const diagBlock = diags[key as keyof typeof diags];
+        if (diagBlock && typeof diagBlock.score === 'number' && diagBlock.score > 0) {
+          scores.push(diagBlock.score);
+        }
+      }
+    });
+    if (scores.length > 0) {
+      const sum = scores.reduce((a, b) => a + b, 0);
+      return Math.round((sum / scores.length) * 10) / 10;
+    }
+    return DEFAULT_DIAGNOSTICS.health_score;
+  })();
+
+  // Selected values (either from snapshot, live query, or default fallback)
+  const healthScore = snapshotData
+    ? snapshotData.health_score
+    : (funnelDiag?.health_score !== undefined && funnelDiag.health_score !== 7.5 && funnelDiag.health_score !== 0)
+      ? funnelDiag.health_score
+      : calculatedHealthScore;
 
   // Edit states
   const [editingItem, setEditingItem] = useState<{
