@@ -29,7 +29,7 @@ export interface FunnelDiagnosticData {
 }
 
 export const DEFAULT_DIAGNOSTICS: FunnelDiagnosticData = {
-  health_score: 0.0,
+  health_score: 7.5,
   curve_data: {
     hook_rate: 94.5,
     hold_rate: 17.5,

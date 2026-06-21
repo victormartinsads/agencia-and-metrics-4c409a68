@@ -264,7 +264,7 @@ export function FunnelPremiumDetailDialog({
   const secondaryKeys = metricsConfig?.visible_metrics?.slice(9) || [];
 
   // Setup diagnostic values
-  const healthScore = funnelDiag?.health_score ?? 0.0;
+  const healthScore = funnelDiag?.health_score ?? DEFAULT_DIAGNOSTICS.health_score;
   const healthLabel = healthScore === 0 ? "Não Avaliado" : healthScore >= 8.5 ? "Excelente" : healthScore >= 7.0 ? "Saudável" : healthScore >= 5.0 ? "Atenção" : "Crítico";
   const healthColor = healthScore === 0 ? "text-muted-foreground/80 fill-muted-foreground/30" : healthScore >= 8.5 ? "text-emerald-400 fill-emerald-500" : healthScore >= 7.0 ? "text-green-400 fill-green-500" : healthScore >= 5.0 ? "text-amber-400 fill-amber-500" : "text-red-400 fill-red-500";
 
