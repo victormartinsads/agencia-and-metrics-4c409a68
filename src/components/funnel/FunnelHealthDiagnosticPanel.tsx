@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS } from "@/hooks/useFunnelDiagnostics";
-import { extractFunnelCode } from "@/lib/funnelGrouping";
+import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, getFunnelActiveDiagnostics } from "@/hooks/useFunnelDiagnostics";
+
 
 interface Props {
   clientId: string;
@@ -26,84 +26,6 @@ interface Props {
     avgVideoTime?: number;
     costPerPlay?: number;
   };
-}
-
-export function getFunnelActiveDiagnostics(funnelCode: string | undefined) {
-  const allEnabled = {
-    criativos: true,
-    publico: true,
-    conversao_lp: true,
-    checkouts: true,
-    custos: true,
-    oferta: true,
-  };
-  
-  if (!funnelCode) return allEnabled;
-  
-  const cleanCode = funnelCode.replace(/^(GADS-|CAMP-)/i, "");
-  const extracted = extractFunnelCode(cleanCode) || cleanCode;
-  
-  if (extracted === "F1") {
-    // F1 - Captação de Seguidores
-    return {
-      criativos: true,
-      publico: true,
-      conversao_lp: false,
-      checkouts: false,
-      custos: true,
-      oferta: false,
-    };
-  }
-  
-  if (extracted === "F3" || extracted === "F7") {
-    // F3 - Call de Vendas | Mensagens, F7 - Serviços | Mensagens
-    return {
-      criativos: true,
-      publico: true,
-      conversao_lp: false,
-      checkouts: false,
-      custos: true,
-      oferta: true,
-    };
-  }
-
-  if (extracted === "F10") {
-    // F10 - Formulário Nativo
-    return {
-      criativos: true,
-      publico: true,
-      conversao_lp: false,
-      checkouts: false,
-      custos: true,
-      oferta: false,
-    };
-  }
-
-  if (extracted === "F15") {
-    // F15 - Engajamento / Interação
-    return {
-      criativos: true,
-      publico: true,
-      conversao_lp: false,
-      checkouts: false,
-      custos: true,
-      oferta: false,
-    };
-  }
-
-  if (extracted === "F4" || extracted === "F5" || extracted === "F6" || extracted === "F12" || extracted === "F13") {
-    // Página de captura, iscas, workshops gratuitos
-    return {
-      criativos: true,
-      publico: true,
-      conversao_lp: true,
-      checkouts: false,
-      custos: true,
-      oferta: false,
-    };
-  }
-  
-  return allEnabled;
 }
 
 export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = false, currencySymbol = "R$", snapshotData, liveCampaignMetrics }: Props) {

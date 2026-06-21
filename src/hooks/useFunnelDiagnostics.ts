@@ -1,5 +1,79 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { extractFunnelCode } from "@/lib/funnelGrouping";
+
+export function getFunnelActiveDiagnostics(funnelCode: string | undefined) {
+  const allEnabled = {
+    criativos: true,
+    publico: true,
+    conversao_lp: true,
+    checkouts: true,
+    custos: true,
+    oferta: true,
+  };
+  
+  if (!funnelCode) return allEnabled;
+  
+  const cleanCode = funnelCode.replace(/^(GADS-|CAMP-)/i, "");
+  const extracted = extractFunnelCode(cleanCode) || cleanCode;
+  
+  if (extracted === "F1") {
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  if (extracted === "F3" || extracted === "F7") {
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: true,
+    };
+  }
+  
+  if (extracted === "F10") {
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  if (extracted === "F15") {
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: false,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  if (extracted === "F4" || extracted === "F5" || extracted === "F6" || extracted === "F12" || extracted === "F13") {
+    return {
+      criativos: true,
+      publico: true,
+      conversao_lp: true,
+      checkouts: false,
+      custos: true,
+      oferta: false,
+    };
+  }
+  
+  return allEnabled;
+}
 
 const KEY = "funnel-diagnostics";
 
@@ -115,10 +189,31 @@ export function useSaveFunnelDiagnostics() {
         .eq("funnel_code", funnelCode)
         .maybeSingle();
 
+      // Calculate automated health score if diagnostics are updated
+      let healthScore = patch.health_score;
+      if (healthScore === undefined && patch.diagnostics !== undefined) {
+        const active = getFunnelActiveDiagnostics(funnelCode);
+        const scores: number[] = [];
+        Object.entries(active).forEach(([key, isActive]) => {
+          if (isActive) {
+            const diagBlock = (patch.diagnostics as any)[key];
+            if (diagBlock && typeof diagBlock.score === 'number' && diagBlock.score > 0) {
+              scores.push(diagBlock.score);
+            }
+          }
+        });
+        if (scores.length > 0) {
+          const sum = scores.reduce((a, b) => a + b, 0);
+          healthScore = Math.round((sum / scores.length) * 10) / 10;
+        } else {
+          healthScore = 7.5;
+        }
+      }
+
       const nextPayload = {
         client_id: clientId,
         funnel_code: funnelCode,
-        health_score: patch.health_score !== undefined ? patch.health_score : (existing?.health_score ?? DEFAULT_DIAGNOSTICS.health_score),
+        health_score: healthScore !== undefined ? healthScore : (existing?.health_score ?? DEFAULT_DIAGNOSTICS.health_score),
         curve_data: (patch.curve_data !== undefined ? patch.curve_data : (existing?.curve_data ?? DEFAULT_DIAGNOSTICS.curve_data)) as any,
         diagnostics: (patch.diagnostics !== undefined ? patch.diagnostics : (existing?.diagnostics ?? DEFAULT_DIAGNOSTICS.diagnostics)) as any,
         updated_at: new Date().toISOString(),
