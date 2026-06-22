@@ -211,6 +211,7 @@ export default function SavedDiagnosticPublic({ savedItem }: { savedItem?: any }
           googleAnalyticsData={snap.googleAnalytics}
           googleAdsCampaigns={snap.googleAdsCampaigns}
           publicMode
+          funnelDiagnostics={snap.funnelDiagnostics}
         />
       )}
     </div>

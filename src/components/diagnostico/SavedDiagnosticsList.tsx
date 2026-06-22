@@ -324,6 +324,7 @@ function SavedDiagnosticViewer({
           funnelLabels={funnelLabels}
           googleAnalyticsData={snap.googleAnalytics}
           googleAdsCampaigns={snap.googleAdsCampaigns}
+          funnelDiagnostics={snap.funnelDiagnostics}
         />
       )}
     </div>
