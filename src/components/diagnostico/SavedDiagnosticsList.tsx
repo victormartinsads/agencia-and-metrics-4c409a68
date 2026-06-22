@@ -17,6 +17,7 @@ import { formatMetricValue, aggregateCampaignMetrics } from "@/lib/metaMetrics";
 import { getMetricValue } from "@/lib/metaMetricCatalog";
 import { useFunnelAnalysis } from "@/hooks/useFunnelAnalysis";
 import { FunnelAIInsights } from "@/components/funnel/FunnelAIInsights";
+import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 
 interface Props {
   clientId: string;
@@ -275,6 +276,16 @@ function SavedDiagnosticViewer({
                       <Mini label="CTR" value={getMetricValueAndOverride("ctr").value} />
                     </div>
                   )}
+
+                  {/* Funnel Health & Diagnostics */}
+                  <div className="mt-4 pt-4 border-t border-border/40">
+                    <FunnelHealthDiagnosticPanel
+                      clientId=""
+                      funnelCode={g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)}
+                      readOnly={true}
+                      snapshotData={snap.funnelDiagnostics?.[g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)]}
+                    />
+                  </div>
 
                   <div className="print:hidden mt-6">
                     <FunnelAIInsights 
