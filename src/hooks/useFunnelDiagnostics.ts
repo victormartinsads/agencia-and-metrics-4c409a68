@@ -81,6 +81,67 @@ export interface DiagnosticBlock {
   score: number;
   text: string;
   suggestion: string;
+  title?: string;
+  placeholder?: string;
+  enabled?: boolean;
+  isCustom?: boolean;
+  order?: number;
+}
+
+export function getSortedDiagnosticKeys(diags: any) {
+  const defaultOrder = ["criativos", "publico", "conversao_lp", "checkouts", "custos", "oferta"];
+  return Object.keys(diags || {}).sort((a, b) => {
+    const idxA = defaultOrder.indexOf(a);
+    const idxB = defaultOrder.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+}
+
+export function getDiagnosticBlockMetadata(key: string, diagBlock?: any) {
+  const defaults: Record<string, { title: string; placeholder: string }> = {
+    criativos: {
+      title: "Criativos",
+      placeholder: "Sem diagnóstico de criativos salvo. Clique para avaliar."
+    },
+    publico: {
+      title: "Público",
+      placeholder: "Sem diagnóstico de público alvo salvo. Clique para avaliar."
+    },
+    conversao_lp: {
+      title: "Conversão LP",
+      placeholder: "Sem diagnóstico de conversão de LP salvo. Clique para avaliar."
+    },
+    checkouts: {
+      title: "Checkouts",
+      placeholder: "Sem diagnóstico de checkout salvo. Clique para avaliar."
+    },
+    custos: {
+      title: "Custos",
+      placeholder: "Sem diagnóstico de custos salvo. Clique para avaliar."
+    },
+    oferta: {
+      title: "Oferta",
+      placeholder: "Sem diagnóstico de oferta salvo. Clique para avaliar."
+    }
+  };
+
+  const dbTitle = diagBlock?.title || diagBlock?.label;
+  const dbPlaceholder = diagBlock?.placeholder;
+
+  if (defaults[key]) {
+    return {
+      title: dbTitle || defaults[key].title,
+      placeholder: dbPlaceholder || defaults[key].placeholder
+    };
+  }
+
+  return {
+    title: dbTitle || key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+    placeholder: dbPlaceholder || "Sem diagnóstico salvo. Clique para avaliar."
+  };
 }
 
 export interface FunnelDiagnosticData {
@@ -194,9 +255,12 @@ export function useSaveFunnelDiagnostics() {
       if (healthScore === undefined && patch.diagnostics !== undefined) {
         const active = getFunnelActiveDiagnostics(funnelCode);
         const scores: number[] = [];
-        Object.entries(active).forEach(([key, isActive]) => {
-          if (isActive) {
-            const diagBlock = (patch.diagnostics as any)[key];
+        Object.entries(patch.diagnostics).forEach(([key, diagBlock]: [string, any]) => {
+          const isEnabled = diagBlock?.enabled !== false && (
+            diagBlock?.enabled === true || 
+            (active as any)[key] !== false
+          );
+          if (isEnabled) {
             if (diagBlock && typeof diagBlock.score === 'number' && diagBlock.score > 0) {
               scores.push(diagBlock.score);
             }

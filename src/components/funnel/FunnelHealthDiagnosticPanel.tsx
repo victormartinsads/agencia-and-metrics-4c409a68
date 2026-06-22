@@ -4,11 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Loader2 } from "lucide-react";
+import { Pencil, Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, getFunnelActiveDiagnostics } from "@/hooks/useFunnelDiagnostics";
-
-
+import { useFunnelDiagnostics, useSaveFunnelDiagnostics, DEFAULT_DIAGNOSTICS, getFunnelActiveDiagnostics, getSortedDiagnosticKeys, getDiagnosticBlockMetadata } from "@/hooks/useFunnelDiagnostics";
+import { extractFunnelCode } from "@/lib/funnelGrouping";
 interface Props {
   clientId: string;
   funnelCode: string;
@@ -50,9 +49,13 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   // Calculate dynamic health score based on active diagnostics average
   const calculatedHealthScore = (() => {
     const scores: number[] = [];
-    Object.entries(activeDiagnostics).forEach(([key, isActive]) => {
-      if (isActive) {
-        const diagBlock = diags[key as keyof typeof diags];
+    getSortedDiagnosticKeys(diags).forEach((key) => {
+      const diagBlock = diags[key];
+      const isEnabled = diagBlock?.enabled !== false && (
+        diagBlock?.enabled === true || 
+        (activeDiagnostics as any)[key] !== false
+      );
+      if (isEnabled) {
         if (diagBlock && typeof diagBlock.score === 'number' && diagBlock.score > 0) {
           scores.push(diagBlock.score);
         }
@@ -83,6 +86,13 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
   const [editText, setEditText] = useState("");
   const [editSuggestion, setEditSuggestion] = useState("");
   const [editValue, setEditValue] = useState("");
+
+  // Dynamic Indicator management states
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [newIndicatorTitle, setNewIndicatorTitle] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editPlaceholder, setEditPlaceholder] = useState("");
+  const [editEnabled, setEditEnabled] = useState(true);
 
   // Hover states for the retention curve interactivity
   const [hoveredPct, setHoveredPct] = useState<number | null>(null);
@@ -118,13 +128,35 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
     if (readOnly) return;
     setEditingItem({ type, key, label });
     if (type === "diagnostic") {
-      setEditScore(currentVal.score);
-      setEditText(currentVal.text);
-      setEditSuggestion(currentVal.suggestion);
+      setEditScore(currentVal?.score ?? 0);
+      setEditText(currentVal?.text ?? "");
+      setEditSuggestion(currentVal?.suggestion ?? "");
+      
+      const metadata = getDiagnosticBlockMetadata(key, currentVal);
+      setEditTitle(metadata.title);
+      setEditPlaceholder(metadata.placeholder);
+      setEditEnabled(currentVal?.enabled !== false);
     } else if (type === "health") {
       setEditScore(currentVal);
     } else {
       setEditValue(String(currentVal ?? ""));
+    }
+  };
+
+  const handleDeleteDiagnostic = async () => {
+    if (!editingItem || editingItem.type !== "diagnostic" || !clientId || !funnelCode) return;
+    try {
+      const currentDiags = { ...diags };
+      delete currentDiags[editingItem.key];
+      await saveFunnelDiag.mutateAsync({
+        clientId,
+        funnelCode,
+        patch: { diagnostics: currentDiags },
+      });
+      toast.success("Indicador removido!");
+      setEditingItem(null);
+    } catch (err) {
+      toast.error("Erro ao remover indicador");
     }
   };
 
@@ -137,6 +169,10 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
           score: Number(editScore),
           text: editText,
           suggestion: editSuggestion,
+          title: editTitle,
+          placeholder: editPlaceholder,
+          enabled: editEnabled,
+          isCustom: diags[editingItem.key]?.isCustom || editingItem.key.startsWith("custom_"),
         };
         await saveFunnelDiag.mutateAsync({
           clientId,
@@ -265,217 +301,89 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
 
           {/* Diagnostics Cards Grid */}
           <div className="md:col-span-7 flex flex-col gap-2.5 justify-center h-full">
-            
-            {/* Criativos */}
-            {activeDiagnostics.criativos && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "criativos", "Criativos", diags.criativos)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.criativos.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Criativos</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.criativos.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.criativos.text}</p>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">Indicadores</span>
+              {!readOnly && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-[9px] uppercase font-bold text-primary hover:text-primary/80 hover:bg-primary/10 gap-1 px-2 border border-primary/20 rounded-lg"
+                  onClick={() => setIsManageModalOpen(true)}
+                >
+                  Gerenciar
+                </Button>
+              )}
+            </div>
 
-                {diags.criativos.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.criativos.suggestion}
-                    </span>
+            {getSortedDiagnosticKeys(diags).map((key) => {
+              const diagBlock = diags[key];
+              const isEnabled = diagBlock?.enabled !== false && (
+                diagBlock?.enabled === true || 
+                (activeDiagnostics as any)[key] !== false
+              );
+              
+              if (!isEnabled) return null;
+              
+              const { title, placeholder } = getDiagnosticBlockMetadata(key, diagBlock);
+              const displayText = diagBlock.text || placeholder;
+              
+              return (
+                <div 
+                  key={key}
+                  className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
+                    readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
+                  }`}
+                  onClick={() => handleStartEdit("diagnostic", key, title, diagBlock)}
+                >
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diagBlock.score)}`} />
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-card-foreground">{title}</span>
+                        <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diagBlock.score)}</span>
+                      </div>
+                      <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{displayText}</p>
+                    </div>
                   </div>
-                )}
+
+                  {diagBlock.suggestion && (
+                    <div className="ml-2.5 flex-shrink-0">
+                      <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
+                        {diagBlock.suggestion}
+                      </span>
+                    </div>
+                  )}
+                  {!readOnly && (
+                    <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Pencil className="h-2 w-2" />
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+
+            {getSortedDiagnosticKeys(diags).filter((key) => {
+              const diagBlock = diags[key];
+              return diagBlock?.enabled !== false && (
+                diagBlock?.enabled === true || 
+                (activeDiagnostics as any)[key] !== false
+              );
+            }).length === 0 && (
+              <div className="text-center py-6 border border-dashed border-border/50 rounded-xl bg-black/10">
+                <p className="text-xs text-muted-foreground">Nenhum indicador ativo.</p>
                 {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-xs text-primary font-bold mt-1"
+                    onClick={() => setIsManageModalOpen(true)}
+                  >
+                    Ativar Indicadores
+                  </Button>
                 )}
               </div>
             )}
-
-            {/* Público */}
-            {activeDiagnostics.publico && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "publico", "Público", diags.publico)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.publico.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Público</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.publico.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.publico.text}</p>
-                  </div>
-                </div>
-
-                {diags.publico.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.publico.suggestion}
-                    </span>
-                  </div>
-                )}
-                {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Conversão LP */}
-            {activeDiagnostics.conversao_lp && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "conversao_lp", "Conversão LP", diags.conversao_lp)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.conversao_lp.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Conversão LP</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.conversao_lp.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.conversao_lp.text}</p>
-                  </div>
-                </div>
-
-                {diags.conversao_lp.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.conversao_lp.suggestion}
-                    </span>
-                  </div>
-                )}
-                {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Checkouts */}
-            {activeDiagnostics.checkouts && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "checkouts", "Checkouts", diags.checkouts)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.checkouts.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Checkouts</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.checkouts.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.checkouts.text}</p>
-                  </div>
-                </div>
-
-                {diags.checkouts.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.checkouts.suggestion}
-                    </span>
-                  </div>
-                )}
-                {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Custos */}
-            {activeDiagnostics.custos && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "custos", "Custos (CPA / CPL)", diags.custos)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.custos.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Custos</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.custos.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.custos.text}</p>
-                  </div>
-                </div>
-
-                {diags.custos.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.custos.suggestion}
-                    </span>
-                  </div>
-                )}
-                {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Oferta */}
-            {activeDiagnostics.oferta && (
-              <div 
-                className={`relative group border border-border/50 bg-[#0c0c0e] p-3 rounded-xl flex items-center justify-between transition-all duration-300 ${
-                  readOnly ? "" : "hover:border-primary/30 cursor-pointer hover:bg-[#c5ff1a]/[0.01]"
-                }`}
-                onClick={() => handleStartEdit("diagnostic", "oferta", "Oferta", diags.oferta)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${getScoreDotClass(diags.oferta.score)}`} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-card-foreground">Oferta</span>
-                      <span className="text-[11px] font-black text-[#c5ff1a] font-display">{getScoreText(diags.oferta.score)}</span>
-                    </div>
-                    <p className="text-[9.5px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{diags.oferta.text}</p>
-                  </div>
-                </div>
-
-                {diags.oferta.suggestion && (
-                  <div className="ml-2.5 flex-shrink-0">
-                    <span className="text-[8px] font-black text-amber-500 uppercase bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
-                      {diags.oferta.suggestion}
-                    </span>
-                  </div>
-                )}
-                {!readOnly && (
-                  <span className="absolute top-1 right-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Pencil className="h-2 w-2" />
-                  </span>
-                )}
-              </div>
-            )}
-
           </div>
         </div>
       </div>
@@ -763,6 +671,38 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                       className="h-9 text-sm"
                     />
                   </div>
+
+                  <div className="border-t border-border/40 my-3 pt-3 space-y-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Configurações do Indicador</span>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nome / Título</Label>
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="h-8 text-xs bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Placeholder (quando vazio)</Label>
+                      <Input
+                        value={editPlaceholder}
+                        onChange={(e) => setEditPlaceholder(e.target.value)}
+                        className="h-8 text-xs bg-background"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input 
+                        type="checkbox"
+                        checked={editEnabled}
+                        onChange={(e) => setEditEnabled(e.target.checked)}
+                        className="rounded border-border/80 text-primary focus:ring-primary h-3.5 w-3.5"
+                        id="edit-enabled-cb"
+                      />
+                      <label htmlFor="edit-enabled-cb" className="text-xs text-muted-foreground cursor-pointer select-none">
+                        Exibir indicador no painel
+                      </label>
+                    </div>
+                  </div>
                 </>
               ) : editingItem?.type === "health" ? (
                 <div className="space-y-1">
@@ -790,17 +730,166 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
                 </div>
               )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingItem(null)} className="h-9 text-xs">
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveEdit} className="h-9 text-xs">
-                Salvar
-              </Button>
+            <DialogFooter className="flex justify-between items-center w-full gap-2">
+              {editingItem?.type === "diagnostic" && (editingItem.key.startsWith("custom_") || diags[editingItem.key]?.isCustom) && (
+                <Button variant="ghost" onClick={handleDeleteDiagnostic} className="h-9 text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10 mr-auto">
+                  Excluir Indicador
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => setEditingItem(null)} className="h-9 text-xs">
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveEdit} className="h-9 text-xs">
+                  Salvar
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Gerenciar Indicadores Modal */}
+      <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
+        <DialogContent className="max-w-md bg-[#0f0f12] border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider font-display flex items-center gap-1.5 text-card-foreground">
+              🔧 Gerenciar Indicadores do Funil
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-[11px] text-muted-foreground">
+              Ative, desative ou gerencie indicadores personalizados para este funil.
+            </p>
+            
+            {/* List of current indicators */}
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {getSortedDiagnosticKeys(diags).map((key) => {
+                const diagBlock = diags[key];
+                const isEnabled = diagBlock?.enabled !== false && (
+                  diagBlock?.enabled === true || 
+                  (activeDiagnostics as any)[key] !== false
+                );
+                const { title } = getDiagnosticBlockMetadata(key, diagBlock);
+                const isCustom = diagBlock?.isCustom || key.startsWith("custom_");
+                
+                return (
+                  <div key={key} className="flex items-center justify-between bg-black/20 p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-2.5">
+                      <input 
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={async (e) => {
+                          const currentDiags = { ...diags };
+                          currentDiags[key] = {
+                            ...(currentDiags[key] || {}),
+                            enabled: e.target.checked
+                          };
+                          await saveFunnelDiag.mutateAsync({
+                            clientId,
+                            funnelCode,
+                            patch: { diagnostics: currentDiags },
+                          });
+                          toast.success(`${title} ${e.target.checked ? "ativado" : "desativado"}!`);
+                        }}
+                        className="rounded border-border/80 text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-xs font-semibold">{title}</span>
+                      {isCustom && (
+                        <span className="text-[8px] bg-primary/25 border border-primary/40 text-primary font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          Pers.
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setIsManageModalOpen(false);
+                          handleStartEdit("diagnostic", key, title, diagBlock);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      
+                      {isCustom && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-red-400 hover:text-red-500"
+                          onClick={async () => {
+                            const currentDiags = { ...diags };
+                            delete currentDiags[key];
+                            await saveFunnelDiag.mutateAsync({
+                              clientId,
+                              funnelCode,
+                              patch: { diagnostics: currentDiags },
+                            });
+                            toast.success("Indicador personalizado excluído!");
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Add Custom Indicator Form */}
+            <div className="border-t border-border/50 pt-3 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Novo Indicador Personalizado</span>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Ex: Taxa de Conversão da LP"
+                  value={newIndicatorTitle}
+                  onChange={(e) => setNewIndicatorTitle(e.target.value)}
+                  className="h-8 text-xs flex-1 bg-background"
+                />
+                <Button 
+                  size="sm" 
+                  className="h-8 text-xs font-semibold"
+                  onClick={async () => {
+                    if (!newIndicatorTitle.trim()) {
+                      toast.error("Insira o nome do indicador");
+                      return;
+                    }
+                    const key = `custom_${Date.now()}`;
+                    const currentDiags = { ...diags };
+                    currentDiags[key] = {
+                      score: 0,
+                      text: "",
+                      suggestion: "",
+                      title: newIndicatorTitle.trim(),
+                      placeholder: `Sem diagnóstico de ${newIndicatorTitle.trim().toLowerCase()} salvo. Clique para avaliar.`,
+                      enabled: true,
+                      isCustom: true
+                    };
+                    await saveFunnelDiag.mutateAsync({
+                      clientId,
+                      funnelCode,
+                      patch: { diagnostics: currentDiags },
+                    });
+                    toast.success("Indicador personalizado criado!");
+                    setNewIndicatorTitle("");
+                  }}
+                >
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setIsManageModalOpen(false)} className="h-8 text-xs font-semibold">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
