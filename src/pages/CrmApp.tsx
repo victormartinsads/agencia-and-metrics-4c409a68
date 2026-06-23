@@ -27,6 +27,15 @@ export default function CrmAppPage() {
   const [orgId, setOrgId] = useState<string | null>(() => queryOrg || localStorage.getItem("crm-app:orgId"));
   const [pipelineId, setPipelineId] = useState<string | null>(() => localStorage.getItem("crm-app:pipelineId"));
 
+  // Safety: after 5s stop showing the loading state even if query is stuck
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const showLoading = orgsLoading && !loadingTimedOut;
+
   useEffect(() => {
     if (queryOrg && queryOrg !== orgId) {
       setOrgId(queryOrg);
@@ -64,10 +73,8 @@ export default function CrmAppPage() {
     const todayCount = leads.filter(l => {
       const created = l.created_at ? new Date(l.created_at) : null;
       const updated = l.updated_at ? new Date(l.updated_at) : null;
-      
       const createdMatch = created && !isNaN(created.getTime()) && created.toDateString() === todayStr;
       const updatedMatch = updated && !isNaN(updated.getTime()) && updated.toDateString() === todayStr;
-      
       return createdMatch || updatedMatch;
     }).length;
 
@@ -78,13 +85,10 @@ export default function CrmAppPage() {
     const overdueCount = leads.filter(l => {
       const created = l.created_at ? new Date(l.created_at) : null;
       const updated = l.updated_at ? new Date(l.updated_at) : null;
-      
       const hasCreated = created && !isNaN(created.getTime());
       const hasUpdated = updated && !isNaN(updated.getTime());
-      
       const createdVal = hasCreated ? created : new Date();
       const updatedVal = hasUpdated ? updated : createdVal;
-      
       return createdVal < sevenDaysAgo && updatedVal < sevenDaysAgo && l.status !== "closed" && l.status !== "lost";
     }).length;
 
@@ -100,6 +104,7 @@ export default function CrmAppPage() {
       }
     }
   }, [activeOrgId, pipelines, pipelineId]);
+
   const [selected, setSelected] = useState<Lead | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
@@ -145,21 +150,27 @@ export default function CrmAppPage() {
     </div>
   );
 
-  if (orgsLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <AppShell currentPage="crm" header={header} noContainer>
       <main className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">
-        {!activeOrgId ? (
-          <Card className="p-8 text-center">
-            <h2 className="text-lg font-semibold mb-2">Crie sua primeira organização</h2>
-            <p className="text-sm text-muted-foreground">Use o botão "Nova" no topo para começar.</p>
+        {showLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : !activeOrgId ? (
+          <Card className="p-8 text-center border-border/60 bg-card">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <KanbanSquare className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold mb-2 text-foreground">Crie sua primeira organização</h2>
+                <p className="text-sm text-muted-foreground">Use o botão <strong className="text-foreground">"Nova"</strong> no topo para começar.</p>
+              </div>
+              <Button onClick={() => {}} variant="outline" className="gap-2 mt-2">
+                <Plus className="h-4 w-4" /> Nova Organização
+              </Button>
+            </div>
           </Card>
         ) : (
           <Tabs defaultValue="board">
@@ -173,7 +184,7 @@ export default function CrmAppPage() {
                 <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
               </TabsList>
 
-              {/* Flowlu Activity Status Badges */}
+              {/* Activity Status Badges */}
               <div className="flex items-center gap-3 flex-wrap bg-card/40 p-3 rounded-2xl border border-border/50">
                 <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Status das Tarefas:</span>
                 <div className="flex items-center gap-2">
