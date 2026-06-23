@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Lead, LeadStatus, STATUS_CONFIG } from "@/lib/crm-app";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,20 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   const { data: stages = [] } = usePipelineStages(lead?.pipeline_id);
   const [form, setForm] = useState<Partial<Lead>>({});
   const [showRawData, setShowRawData] = useState(false);
+
+  const parsedRawData = useMemo(() => {
+    const rawData = lead.raw_data;
+    if (!rawData) return {};
+    if (typeof rawData === 'string') {
+      try {
+        const parsed = JSON.parse(rawData);
+        return typeof parsed === 'object' && parsed !== null ? parsed : {};
+      } catch {
+        return { raw_content: rawData };
+      }
+    }
+    return typeof rawData === 'object' ? (rawData as Record<string, any>) : {};
+  }, [lead.raw_data]);
 
   useEffect(() => {
     if (lead) setForm(lead);
@@ -140,7 +154,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
           <div><Label>Produto</Label><Input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value })} /></div>
           <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.value ?? ""} onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })} /></div>
           <div className="col-span-2"><Label>Mensagem</Label><Textarea readOnly value={form.message || lead.message || ""} className="bg-muted/40" /></div>
-          {lead.raw_data && Object.keys(lead.raw_data).length > 0 && (
+          {Object.keys(parsedRawData).length > 0 && (
             <div className="col-span-2 flex items-center justify-between bg-muted/20 border border-border/60 p-2.5 rounded-xl mt-1">
               <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                 <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -260,7 +274,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
               Abaixo estão listados todos os campos e valores recebidos na requisição original do webhook.
             </p>
             <div className="border border-border/40 rounded-xl bg-black/40 overflow-hidden divide-y divide-border/20 max-h-[60vh] overflow-y-auto">
-              {Object.entries(lead.raw_data || {}).map(([key, val]) => {
+              {Object.entries(parsedRawData).map(([key, val]) => {
                 const displayValue = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
                 return (
                   <div key={key} className="p-3 text-xs space-y-1">
