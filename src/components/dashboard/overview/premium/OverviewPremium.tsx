@@ -1041,7 +1041,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
       )}
 
       {!hasSheets && (
-        <div className="rounded-2xl border border-primary/20 bg-card p-4 flex items-start gap-3">
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-xl p-4 flex items-start gap-3 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
           <AlertCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold">Configure suas planilhas</p>
@@ -1056,7 +1056,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
         </div>
       )}
       {hasSheets && !hasData && (
-        <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-center">
+        <div className="rounded-xl border border-white/5 bg-black/20 backdrop-blur-md p-3 text-center">
           <p className="text-xs text-muted-foreground">
             Planilha configurada mas ainda sem dados.{" "}
             <Link to={`/dashboard/${clientId}/sheets`} className="text-primary underline font-medium">
@@ -1122,7 +1122,7 @@ export function OverviewPremium({ clientId, datePreset, metaData, currencySymbol
               return (
                 <div
                   key={i}
-                  className="rounded-2xl bg-card border border-border/60 px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/30"
+                  className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] px-4 py-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]"
                 >
                   <Icon className="h-4 w-4 text-primary mb-2" />
                   <div className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">

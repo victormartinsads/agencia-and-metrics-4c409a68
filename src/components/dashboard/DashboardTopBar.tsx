@@ -69,7 +69,7 @@ export function DashboardTopBar({
   const currentChipLabel = fmtPreset(datePreset);
 
   return (
-    <div className="bg-background border-b border-border/60">
+    <div className="bg-background/80 backdrop-blur-2xl border-b border-white/5 relative z-10">
       {/* Row 1 — logo + nav + actions */}
       <div className="h-[68px] flex items-center gap-6 px-5">
         {/* Client identity */}
@@ -119,7 +119,7 @@ export function DashboardTopBar({
               >
                 {t.label}
                 {active && (
-                  <span className="absolute left-3 right-3 bottom-0 h-[3px] rounded-t-full bg-primary shadow-[0_0_16px_hsl(var(--primary)/0.7)]" />
+                  <span className="absolute left-3 right-3 bottom-0 h-[3px] rounded-t-full bg-gradient-to-r from-primary/80 to-emerald-400 shadow-[0_0_16px_hsl(var(--primary)/0.7)]" />
                 )}
               </button>
             );
@@ -130,8 +130,8 @@ export function DashboardTopBar({
       </div>
 
       {/* Row 2 — período chips */}
-      <div className="h-12 flex items-center gap-2 px-5 border-t border-border/60">
-        <span className="text-[10px] tracking-[0.2em] font-semibold text-muted-foreground/80 uppercase mr-1">
+      <div className="h-12 flex items-center gap-3 px-5 border-t border-white/5 bg-black/20">
+        <span className="text-[10px] tracking-[0.2em] font-semibold text-muted-foreground/60 uppercase mr-1">
           Período
         </span>
 
@@ -139,8 +139,8 @@ export function DashboardTopBar({
         <button
           onClick={() => { /* no-op when already active */ }}
           className={cn(
-            "h-8 px-3 rounded-md text-[12px] font-semibold transition-colors border",
-            "border-primary/60 bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]"
+            "h-8 px-4 rounded-full text-[12px] font-bold transition-all border shadow-sm",
+            "border-primary/50 bg-primary/10 text-primary shadow-[inset_0_0_12px_rgba(var(--primary-rgb),0.2)]"
           )}
         >
           {currentChipLabel}
@@ -149,10 +149,10 @@ export function DashboardTopBar({
         <button
           onClick={() => onDatePresetChange("last_7d")}
           className={cn(
-            "h-8 px-3 rounded-md text-[12px] font-medium border transition-colors",
+            "h-8 px-4 rounded-full text-[12px] font-medium border transition-all",
             presetIsWeek && !presetIsCustom
-              ? "border-primary/40 text-primary"
-              : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+              ? "border-primary/40 text-primary bg-primary/5"
+              : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/10"
           )}
         >
           Semana
@@ -160,10 +160,10 @@ export function DashboardTopBar({
         <button
           onClick={() => onDatePresetChange("this_month")}
           className={cn(
-            "h-8 px-3 rounded-md text-[12px] font-medium border transition-colors",
+            "h-8 px-4 rounded-full text-[12px] font-medium border transition-all",
             presetIsMonth
-              ? "border-primary/40 text-primary"
-              : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+              ? "border-primary/40 text-primary bg-primary/5"
+              : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/10"
           )}
         >
           Mês
@@ -173,10 +173,10 @@ export function DashboardTopBar({
           <button
             onClick={() => setCustomOpen((o) => !o)}
             className={cn(
-              "h-8 px-3 rounded-md text-[12px] font-medium border transition-colors flex items-center gap-1.5",
+              "h-8 px-4 rounded-full text-[12px] font-medium border transition-all flex items-center gap-2",
               datePreset.startsWith("custom:")
-                ? "border-primary/40 text-primary"
-                : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+                ? "border-primary/40 text-primary bg-primary/5"
+                : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/10"
             )}
           >
             <CalendarRange className="h-3.5 w-3.5" /> Personalizado

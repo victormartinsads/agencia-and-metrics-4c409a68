@@ -71,9 +71,9 @@ export function ConversionFunnelPremium({ steps, summary }: Props) {
       </div>
 
       {summary && summary.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/40 mt-1">
+        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/5 mt-1">
           {summary.map((s) => (
-            <div key={s.label} className="rounded-xl bg-muted/20 border border-border/40 px-3 py-1 text-center">
+            <div key={s.label} className="rounded-xl bg-black/20 backdrop-blur-md border border-white/5 px-3 py-1 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
               <div className="text-[8px] uppercase tracking-[0.08em] text-muted-foreground font-semibold mb-0.5">
                 {s.label}
               </div>

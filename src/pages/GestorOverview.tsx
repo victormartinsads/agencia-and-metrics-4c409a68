@@ -55,7 +55,7 @@ function SpreadsheetRow({ client, initialGoal, onSaveGoal, onSaveRevenue }: any)
   };
 
   return (
-    <TableRow key={client.id} className="hover:bg-accent/10 border-b border-border/40 text-xs">
+    <TableRow key={client.id} className="hover:bg-accent/10 border-b border-white/5 text-xs">
       <TableCell className="font-extrabold select-none uppercase tracking-tight text-foreground">{client.name}</TableCell>
       <TableCell>
         <input
@@ -65,7 +65,7 @@ function SpreadsheetRow({ client, initialGoal, onSaveGoal, onSaveRevenue }: any)
           onBlur={handleBlurRev}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           placeholder="0"
-          className="bg-accent/20 border border-border/60 rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
+          className="bg-accent/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
         />
       </TableCell>
       <TableCell>
@@ -76,7 +76,7 @@ function SpreadsheetRow({ client, initialGoal, onSaveGoal, onSaveRevenue }: any)
           onBlur={handleBlurGoal}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           placeholder="0"
-          className="bg-accent/20 border border-border/60 rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
+          className="bg-accent/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary/40 outline-none w-full max-w-[140px] font-mono text-[13px] font-bold"
         />
       </TableCell>
     </TableRow>
@@ -313,7 +313,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
           size="sm"
           variant="outline"
           onClick={() => setIsSpreadsheetOpen(true)}
-          className="h-9 gap-1.5 text-xs font-bold bg-card border-border/60 hover:bg-accent/40"
+          className="h-9 gap-1.5 text-xs font-bold bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:bg-accent/40"
         >
           <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
           Faturamento
@@ -329,7 +329,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
         {filteredClients.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Saúde Média */}
-            <Card className="relative overflow-hidden p-4 bg-card/40 backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
+            <Card className="relative overflow-hidden p-4 bg-black/40 backdrop-blur-xl backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-bl-full pointer-events-none" />
               <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-300">
                 <Heart className="h-5 w-5 fill-current" />
@@ -343,7 +343,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
             </Card>
 
             {/* Investimento Total */}
-            <Card className="relative overflow-hidden p-4 bg-card/40 backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
+            <Card className="relative overflow-hidden p-4 bg-black/40 backdrop-blur-xl backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
               <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                 <DollarSign className="h-5 w-5" />
@@ -357,7 +357,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
             </Card>
 
             {/* Conversões */}
-            <Card className="relative overflow-hidden p-4 bg-card/40 backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
+            <Card className="relative overflow-hidden p-4 bg-black/40 backdrop-blur-xl backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-bl-full pointer-events-none" />
               <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-300">
                 <TrendingUp className="h-5 w-5" />
@@ -371,7 +371,7 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
             </Card>
 
             {/* Alertas Ativos */}
-            <Card className="relative overflow-hidden p-4 bg-card/40 backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
+            <Card className="relative overflow-hidden p-4 bg-black/40 backdrop-blur-xl backdrop-blur-md border-border/50 shadow-[var(--shadow-card)] flex items-center gap-4 group hover:border-primary/30 transition-all duration-300">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-500/10 to-transparent rounded-bl-full pointer-events-none" />
               <div className="h-10 w-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform duration-300">
                 <AlertTriangle className="h-5 w-5" />
@@ -414,17 +414,17 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
 
       {/* Spreadsheet Dialog Modal for Monthly Revenue and Goals */}
       <Dialog open={isSpreadsheetOpen} onOpenChange={setIsSpreadsheetOpen}>
-        <DialogContent className="max-w-4xl bg-card border-border/80">
-          <DialogHeader className="border-b border-border/40 pb-3">
+        <DialogContent className="max-w-4xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg-white/5 shadow-2xl">
+          <DialogHeader className="border-b border-white/5 pb-3">
             <DialogTitle className="uppercase tracking-wider flex items-center gap-2 text-sm font-bold text-foreground select-none">
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
               Faturamento Mensal por Cliente
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[60vh] mt-4 border border-border/60 rounded-xl shadow-[var(--shadow-card)]">
+          <div className="overflow-y-auto max-h-[60vh] mt-4 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl shadow-[var(--shadow-card)]">
             <Table>
               <TableHeader className="bg-muted/30">
-                <TableRow className="border-b border-border/60">
+                <TableRow className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                   <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Cliente</TableHead>
                   <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Faturamento Atual (R$)</TableHead>
                   <TableHead className="font-extrabold uppercase text-[10px] text-muted-foreground select-none">Meta de Faturamento (R$)</TableHead>

@@ -81,7 +81,7 @@ export default function DiretorOverview() {
             variant="outline"
             size="sm"
             onClick={() => handleResetPDIs()}
-            className="h-9 gap-1.5 text-xs font-bold border-border/60 hover:bg-accent/40"
+            className="h-9 gap-1.5 text-xs font-bold border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:bg-accent/40"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Redefinir PDIs
@@ -922,7 +922,7 @@ export default function DiretorOverview() {
         </div>
 
         {/* Navigation Tabs switch */}
-        <div className="flex border-b border-border/40 gap-2 overflow-x-auto pb-px">
+        <div className="flex border-b border-white/5 gap-2 overflow-x-auto pb-px">
           <button
             onClick={() => setActiveTab("gestores")}
             className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 px-4 whitespace-nowrap ${
@@ -978,7 +978,7 @@ export default function DiretorOverview() {
                         <span className="text-xs font-black text-foreground mb-2 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                           {g.overallAverage.toFixed(1).replace(".", ",")}
                         </span>
-                        <div className="w-full sm:w-16 bg-muted/40 border border-border/60 rounded-t-xl overflow-hidden h-[130px] flex items-end">
+                        <div className="w-full sm:w-16 bg-muted/40 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-t-xl overflow-hidden h-[130px] flex items-end">
                           <div
                             style={{ height: `${percent}%` }}
                             className="w-full bg-[image:var(--gradient-hero)] rounded-t-sm transition-all duration-1000 ease-out shadow-[var(--shadow-elevated)]"
@@ -992,7 +992,7 @@ export default function DiretorOverview() {
                   })}
                 </div>
 
-                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border/40">
+                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-white/5">
                   <div className="h-3 w-3 rounded-full bg-primary shadow-elevated"></div>
                   <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                     Média Ponderada: 60% Hard (Traf/Track/Dados/Copy/Comercial/Qualidade) e 40% Soft (Comun/Proat/Organiz)
@@ -1011,7 +1011,7 @@ export default function DiretorOverview() {
                   </div>
 
                   <div className="space-y-4 text-xs font-medium">
-                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-white/5">
                       <span className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 font-bold border border-yellow-500/20">🏆</span>
                       <div>
                         <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Melhor média ponderada</p>
@@ -1019,7 +1019,7 @@ export default function DiretorOverview() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-white/5">
                       <span className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/20">⚖️</span>
                       <div>
                         <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Sustentação Soft-Skills</p>
@@ -1027,7 +1027,7 @@ export default function DiretorOverview() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-white/5">
                       <span className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-bold border border-rose-500/20">🎯</span>
                       <div>
                         <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Foco estratégico (Menores Notas)</p>
@@ -1035,7 +1035,7 @@ export default function DiretorOverview() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40">
+                    <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-xl border border-white/5">
                       <span className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">👤</span>
                       <div>
                         <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Equipe operacional</p>
@@ -1068,7 +1068,7 @@ export default function DiretorOverview() {
                   placeholder="Adicionar nova tarefa diária de liderança..."
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="bg-muted/20 border-border/60 text-foreground text-xs"
+                  className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground text-xs"
                 />
                 <Button type="submit" size="sm" className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-4">
                   <Plus className="h-4 w-4 mr-1" /> Adicionar
@@ -1079,7 +1079,7 @@ export default function DiretorOverview() {
                   <p className="text-xs text-muted-foreground italic py-2">Nenhuma tarefa criada para hoje.</p>
                 ) : (
                   directorTasks.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between p-2.5 bg-muted/20 border border-border/40 rounded-xl">
+                    <div key={t.id} className="flex items-center justify-between p-2.5 bg-muted/20 border border-white/5 rounded-xl">
                       <button
                         type="button"
                         onClick={() => handleToggleTask(t)}
@@ -1117,7 +1117,7 @@ export default function DiretorOverview() {
                 >
                   <div>
                     {/* Card Header */}
-                    <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-4 mb-4">
+                    <div className="flex items-start justify-between gap-2 border-b border-white/5 pb-4 mb-4">
                       <div className="flex items-center gap-3">
                         {g.avatar ? (
                           <img src={g.avatar} alt={g.name} className="h-10 w-10 rounded-full object-cover ring-2 ring-primary/20" />
@@ -1152,7 +1152,7 @@ export default function DiretorOverview() {
                     </div>
 
                     {/* Main Score & Edit Pencil */}
-                    <div className="flex justify-between items-center bg-muted/30 p-2.5 rounded-xl border border-border/40 mb-2">
+                    <div className="flex justify-between items-center bg-muted/30 p-2.5 rounded-xl border border-white/5 mb-2">
                       <div>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Nota Final do Gestor</p>
                         <p className="text-2xl font-black text-foreground mt-0.5">
@@ -1175,7 +1175,7 @@ export default function DiretorOverview() {
                     </div>
 
                     {/* Forces and Improvements */}
-                    <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4 mt-2 text-xs">
+                    <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2 text-xs">
                       <div>
                         <div className="flex items-center gap-1.5 text-emerald-400 font-bold mb-2">
                           <span>💪</span>
@@ -1204,7 +1204,7 @@ export default function DiretorOverview() {
                     </div>
 
                     {/* Courses & Deadlines */}
-                    <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4 mt-4 text-xs">
+                    <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-4 text-xs">
                       <div>
                         <div className="flex items-center gap-1.5 text-primary font-bold mb-2">
                           <span>📚</span>
@@ -1254,10 +1254,10 @@ export default function DiretorOverview() {
                 </p>
               </div>
 
-              <div className="overflow-x-auto border border-border/40 rounded-xl">
+              <div className="overflow-x-auto border border-white/5 rounded-xl">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-muted/10 border-b border-border/40 text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
+                    <tr className="bg-muted/10 border-b border-white/5 text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-3 px-4">Cliente</th>
                       <th className="py-3 px-4">Gestor Responsável</th>
                       <th className="py-3 px-4">Nota de Saúde (0 a 10)</th>
@@ -1294,7 +1294,7 @@ export default function DiretorOverview() {
 
                       return (
                         <>
-                          <tr key={client.id} className="border-b border-border/40 hover:bg-muted/10 transition-colors">
+                          <tr key={client.id} className="border-b border-white/5 hover:bg-muted/10 transition-colors">
                             <td className="py-4 px-4 font-bold text-foreground">
                               <div className="flex items-center gap-2.5">
                                 {client.logo_url ? (
@@ -1311,7 +1311,7 @@ export default function DiretorOverview() {
                               {assignedGestores.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {assignedGestores.map((name, idx) => (
-                                    <Badge key={idx} variant="secondary" className="text-[9px] bg-muted/40 font-bold border-border/60">
+                                    <Badge key={idx} variant="secondary" className="text-[9px] bg-muted/40 font-bold border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                                       {name}
                                     </Badge>
                                   ))}
@@ -1324,7 +1324,7 @@ export default function DiretorOverview() {
                               <select
                                 value={health}
                                 onChange={(e) => updateClientHealthMutation.mutate({ client_id: client.id, health_score: Number(e.target.value) })}
-                                className="bg-muted/30 border border-border/60 rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-black w-24"
+                                className="bg-muted/30 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-black w-24"
                               >
                                 {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                                   <option key={score} value={score}>
@@ -1348,7 +1348,7 @@ export default function DiretorOverview() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => toggleClientExpansion(client.id)}
-                                className="h-8 gap-1 font-bold text-[11px] border-border/60 hover:bg-accent/40"
+                                className="h-8 gap-1 font-bold text-[11px] border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:bg-accent/40"
                               >
                                 {isExpanded ? (
                                   <>
@@ -1365,9 +1365,9 @@ export default function DiretorOverview() {
 
                           {isExpanded && (
                             <tr className="bg-muted/5">
-                              <td colSpan={6} className="px-6 py-4 border-b border-border/40">
+                              <td colSpan={6} className="px-6 py-4 border-b border-white/5">
                                 <div className="space-y-4 max-w-4xl border-l-2 border-primary/40 pl-4 py-1">
-                                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
                                     <h4 className="font-black text-[11px] uppercase tracking-wider text-foreground flex items-center gap-2">
                                       <ListTodo className="h-4 w-4 text-primary" /> Pendências Operacionais: {client.name}
                                     </h4>
@@ -1378,7 +1378,7 @@ export default function DiretorOverview() {
                                       <p className="text-[10px] text-muted-foreground italic py-1">Nenhuma pendência operacional cadastrada para este cliente.</p>
                                     ) : (
                                       tasks.map((task) => (
-                                        <div key={task.id} className="flex items-center justify-between p-2.5 bg-background/50 border border-border/40 rounded-xl">
+                                        <div key={task.id} className="flex items-center justify-between p-2.5 bg-background/50 border border-white/5 rounded-xl">
                                           <button
                                             type="button"
                                             onClick={() => handleToggleClientTask(task)}
@@ -1417,7 +1417,7 @@ export default function DiretorOverview() {
                                           handleAddClientTask(client.id);
                                         }
                                       }}
-                                      className="bg-background border-border/60 text-xs h-9"
+                                      className="bg-background border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-xs h-9"
                                     />
                                     <Button
                                       size="sm"
@@ -1462,10 +1462,10 @@ export default function DiretorOverview() {
                 </Button>
               </div>
 
-              <div className="overflow-x-auto border border-border/40 rounded-xl">
+              <div className="overflow-x-auto border border-white/5 rounded-xl">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-muted/10 border-b border-border/40 text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
+                    <tr className="bg-muted/10 border-b border-white/5 text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-3 px-4">Cliente</th>
                       <th className="py-3 px-4">Título do Guia</th>
                       <th className="py-3 px-4">Status de Produção</th>
@@ -1506,7 +1506,7 @@ export default function DiretorOverview() {
                           : "Sem prazo";
 
                         return (
-                          <tr key={guide.id} className="border-b border-border/40 hover:bg-muted/10 transition-colors">
+                          <tr key={guide.id} className="border-b border-white/5 hover:bg-muted/10 transition-colors">
                             <td className="py-4 px-4 font-bold text-foreground">
                               {client?.name || "Cliente desconhecido"}
                             </td>
@@ -1559,7 +1559,7 @@ export default function DiretorOverview() {
 
       {/* Edit PDI Modal */}
       <Dialog open={editingGestor !== null} onOpenChange={(open) => !open && setEditingGestor(null)}>
-        <DialogContent className="max-w-2xl bg-card border border-border text-foreground max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <DialogContent className="max-w-2xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg text-foreground max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold uppercase tracking-wider text-foreground">
               Editar PDI de {editingGestor?.name}
@@ -1575,7 +1575,7 @@ export default function DiretorOverview() {
                   id="gestorName"
                   value={editForm.name}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="bg-muted/20 border-border/60 text-foreground"
+                  className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                 />
               </div>
 
@@ -1585,11 +1585,11 @@ export default function DiretorOverview() {
                   id="gestorRole"
                   value={editForm.role}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
-                  className="bg-muted/20 border-border/60 text-foreground"
+                  className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                 />
               </div>
 
-              <div className="border-t border-border/40 pt-4 mt-2">
+              <div className="border-t border-white/5 pt-4 mt-2">
                 <h4 className="text-xs uppercase font-extrabold tracking-wider text-primary mb-3">
                   Competências Manuais (0 a 10)
                 </h4>
@@ -1604,7 +1604,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.trafego}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, trafego: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1617,7 +1617,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.traqueamento}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, traqueamento: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1630,7 +1630,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.analise_dados}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, analise_dados: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1643,7 +1643,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.copy}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, copy: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1656,7 +1656,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.comercial}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, comercial: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1669,7 +1669,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.comunicacao}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, comunicacao: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1682,7 +1682,7 @@ export default function DiretorOverview() {
                       step="0.1"
                       value={editForm.proatividade}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, proatividade: Number(e.target.value) }))}
-                      className="bg-muted/20 border-border/60 text-foreground"
+                      className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
                     />
                   </div>
                 </div>
@@ -1698,7 +1698,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.forces}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, forces: e.target.value }))}
-                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Comunicação 9,5&#10;Proatividade 9"
                 />
               </div>
@@ -1710,7 +1710,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.improvements}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, improvements: e.target.value }))}
-                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Organização de Tarefas&#10;Técnica no Tráfego"
                 />
               </div>
@@ -1722,7 +1722,7 @@ export default function DiretorOverview() {
                   rows={3}
                   value={editForm.courses}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, courses: e.target.value }))}
-                  className="w-full bg-muted/20 border border-border/60 rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Ads Avançado&#10;GA4 + GTM"
                 />
               </div>
@@ -1730,10 +1730,10 @@ export default function DiretorOverview() {
           </div>
 
           {/* Deadlines Section */}
-          <div className="border-t border-border/40 pt-4 text-xs font-semibold text-muted-foreground">
+          <div className="border-t border-white/5 pt-4 text-xs font-semibold text-muted-foreground">
             <div className="flex justify-between items-center mb-3">
               <Label>⏰ Plano de Prazos (timeframes)</Label>
-              <Button type="button" size="sm" onClick={handleAddDeadline} className="bg-muted/20 border border-border/60 text-primary font-bold text-[10px] hover:bg-accent/40 h-7">
+              <Button type="button" size="sm" onClick={handleAddDeadline} className="bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-primary font-bold text-[10px] hover:bg-accent/40 h-7">
                 <Plus className="h-3 w-3 mr-1" /> Adicionar Prazo
               </Button>
             </div>
@@ -1750,7 +1750,7 @@ export default function DiretorOverview() {
                         return { ...prev, deadlines: next };
                       })
                     }
-                    className="bg-muted/20 border-border/60 text-foreground text-xs"
+                    className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground text-xs"
                   />
                   <Input
                     placeholder="Ex: 4-6 sem"
@@ -1762,7 +1762,7 @@ export default function DiretorOverview() {
                         return { ...prev, deadlines: next };
                       })
                     }
-                    className="bg-muted/20 border-border/60 text-foreground text-xs w-[140px]"
+                    className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground text-xs w-[140px]"
                   />
                   <Button
                     type="button"
@@ -1781,7 +1781,7 @@ export default function DiretorOverview() {
             </div>
           </div>
 
-          <DialogFooter className="mt-6 border-t border-border/40 pt-4">
+          <DialogFooter className="mt-6 border-t border-white/5 pt-4">
             <Button variant="ghost" onClick={() => setEditingGestor(null)} className="text-xs">
               Cancelar
             </Button>
@@ -1794,7 +1794,7 @@ export default function DiretorOverview() {
 
       {/* Creative Guide Dialog */}
       <Dialog open={isGuideModalOpen} onOpenChange={setIsGuideModalOpen}>
-        <DialogContent className="max-w-md bg-card border border-border text-foreground">
+        <DialogContent className="max-w-md bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg text-foreground">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold uppercase tracking-wider text-foreground">
               {selectedGuideForEdit ? "Editar Guia de Criativos" : "Novo Guia de Criativos"}
@@ -1807,7 +1807,7 @@ export default function DiretorOverview() {
               <select
                 value={guideForm.client_id}
                 onChange={(e) => setGuideForm((prev) => ({ ...prev, client_id: e.target.value }))}
-                className="w-full bg-muted/20 border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
               >
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -1824,7 +1824,7 @@ export default function DiretorOverview() {
                 value={guideForm.title}
                 onChange={(e) => setGuideForm((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder="Ex: Guia de Criativos - Reels de Lançamento"
-                className="bg-muted/20 border-border/60 text-foreground"
+                className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
               />
             </div>
 
@@ -1833,7 +1833,7 @@ export default function DiretorOverview() {
               <select
                 value={guideForm.status}
                 onChange={(e) => setGuideForm((prev) => ({ ...prev, status: e.target.value }))}
-                className="w-full bg-muted/20 border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
               >
                 <option value="planning">Planejamento</option>
                 <option value="writing">Em Redação</option>
@@ -1850,7 +1850,7 @@ export default function DiretorOverview() {
                 type="date"
                 value={guideForm.due_date}
                 onChange={(e) => setGuideForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                className="bg-muted/20 border-border/60 text-foreground"
+                className="bg-muted/20 border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] text-foreground"
               />
             </div>
 
@@ -1861,13 +1861,13 @@ export default function DiretorOverview() {
                 rows={4}
                 value={guideForm.notes}
                 onChange={(e) => setGuideForm((prev) => ({ ...prev, notes: e.target.value }))}
-                className="w-full bg-muted/20 border border-border/60 rounded-xl p-2.5 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-muted/20 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-xl p-2.5 text-foreground text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder="Insira detalhes de roteiro, referências visuais e briefing..."
               />
             </div>
           </div>
 
-          <DialogFooter className="mt-4 pt-3 border-t border-border/40">
+          <DialogFooter className="mt-4 pt-3 border-t border-white/5">
             <Button variant="ghost" onClick={() => setIsGuideModalOpen(false)} className="text-xs">
               Cancelar
             </Button>
@@ -1880,7 +1880,7 @@ export default function DiretorOverview() {
 
       {/* Active Alerts Detailed Modal */}
       <Dialog open={isAlertsModalOpen} onOpenChange={setIsAlertsModalOpen}>
-        <DialogContent className="max-w-lg bg-card border border-border text-foreground max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-lg bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg text-foreground max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" /> Painel de Alertas Operacionais
@@ -1904,7 +1904,7 @@ export default function DiretorOverview() {
                 }
 
                 return (
-                  <div key={alert.id} className="p-3 bg-muted/20 border border-border/40 rounded-xl flex items-start gap-3">
+                  <div key={alert.id} className="p-3 bg-muted/20 border border-white/5 rounded-xl flex items-start gap-3">
                     <span className={`px-2 py-0.5 rounded-lg border text-[9px] uppercase font-bold shrink-0 mt-0.5 ${badgeColor}`}>
                       {alert.type === "health" ? "saúde" : alert.type === "task" ? "pendência" : "atraso"}
                     </span>
@@ -1918,7 +1918,7 @@ export default function DiretorOverview() {
             )}
           </div>
 
-          <DialogFooter className="mt-4 pt-3 border-t border-border/40">
+          <DialogFooter className="mt-4 pt-3 border-t border-white/5">
             <Button onClick={() => setIsAlertsModalOpen(false)} className="bg-primary hover:bg-primary/85 text-primary-foreground font-bold text-xs uppercase px-5">
               Fechar
             </Button>

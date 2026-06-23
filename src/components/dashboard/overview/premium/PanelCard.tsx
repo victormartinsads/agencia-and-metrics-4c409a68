@@ -23,13 +23,13 @@ export function PanelCard({
   panelId, editMode, onHide, onConfigureSource, sourceBadge,
 }: Props) {
   return (
-    <section className={`rounded-2xl bg-card border ${editMode ? "border-primary/40 ring-1 ring-primary/20" : "border-border/60"} overflow-hidden flex flex-col h-full ${className || ""}`}>
-      <header className={`flex items-center justify-between px-5 py-3 border-b border-border/60 ${editMode ? "rgl-drag-handle cursor-move" : ""}`}>
+    <section className={`rounded-2xl bg-black/40 backdrop-blur-xl border ${editMode ? "border-primary/50 shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] ring-1 ring-primary/30" : "border-white/5"} shadow-[0_4px_24px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col h-full transition-all duration-300 ${className || ""}`}>
+      <header className={`flex items-center justify-between px-5 py-3 border-b border-white/5 bg-white/[0.02] ${editMode ? "rgl-drag-handle cursor-move" : ""}`}>
         <div className="flex items-center gap-2">
           {editMode && <GripVertical className="h-3.5 w-3.5 text-muted-foreground/70" />}
           <h3
-            className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary"
-            style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+            className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground/90"
+            style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
           >
             {title}
           </h3>

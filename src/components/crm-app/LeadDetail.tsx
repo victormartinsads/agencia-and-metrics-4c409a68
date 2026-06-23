@@ -104,95 +104,115 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
           <DialogHeader>
             <DialogTitle>Detalhes do lead</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Label>Status</Label>
-              <Select
-                value={currentStatus}
-                onValueChange={(v) => setForm({ ...form, status: v as LeadStatus })}
-              >
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_CONFIG).map(([k, c]) => (
-                    <SelectItem key={k} value={k}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Seção Principal */}
+            <div className="col-span-2 grid grid-cols-2 gap-3 pb-4 border-b border-border/40">
+              <div className="col-span-2">
+                <Label htmlFor="lead-status">Status</Label>
+                <Select
+                  value={currentStatus}
+                  onValueChange={(v) => setForm({ ...form, status: v as LeadStatus })}
+                >
+                  <SelectTrigger id="lead-status" className="h-9"><SelectValue aria-label={currentStatus} /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_CONFIG).map(([k, c]) => (
+                      <SelectItem key={k} value={k}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div><Label htmlFor="lead-name">Nome</Label><Input id="lead-name" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-label="Nome do lead" /></div>
+              <div><Label htmlFor="lead-company">Empresa</Label><Input id="lead-company" value={form.company || ""} onChange={(e) => setForm({ ...form, company: e.target.value })} aria-label="Empresa do lead" /></div>
             </div>
 
-            <div><Label>Nome</Label><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Empresa</Label><Input value={form.company || ""} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
-            <div><Label>Email</Label><Input value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            {/* Contato */}
+            <div className="col-span-2 grid grid-cols-2 gap-3 pb-4 border-b border-border/40">
+              <h4 className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contato</h4>
+              <div className="col-span-2 sm:col-span-1"><Label htmlFor="lead-email">Email</Label><Input id="lead-email" type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} aria-label="Email do lead" /></div>
+              
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="lead-phone">Telefone</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="lead-phone"
+                    value={form.phone || ""}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    aria-label="Telefone do lead"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    disabled={!form.phone}
+                    onClick={() => {
+                      const cleaned = (form.phone || "").replace(/\D/g, "");
+                      if (cleaned) {
+                        const link =
+                          cleaned.length <= 11 && !cleaned.startsWith("55")
+                            ? `https://wa.me/55${cleaned}`
+                            : `https://wa.me/${cleaned}`;
+                        window.open(link, "_blank");
+                      }
+                    }}
+                    title="Abrir WhatsApp"
+                    aria-label="Abrir WhatsApp"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
 
-            <div>
-              <Label>Telefone</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={form.phone || ""}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  disabled={!form.phone}
-                  onClick={() => {
-                    const cleaned = (form.phone || "").replace(/\D/g, "");
-                    if (cleaned) {
-                      const link =
-                        cleaned.length <= 11 && !cleaned.startsWith("55")
-                          ? `https://wa.me/55${cleaned}`
-                          : `https://wa.me/${cleaned}`;
-                      window.open(link, "_blank");
-                    }
-                  }}
-                  title="Abrir WhatsApp"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="lead-instagram">Instagram</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="lead-instagram"
+                    value={form.instagram || ""}
+                    onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                    aria-label="Instagram do lead"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    disabled={!form.instagram}
+                    onClick={() => {
+                      const cleaned = (form.instagram || "").trim().replace(/^@/, "").toLowerCase();
+                      if (cleaned) window.open(`https://instagram.com/${cleaned}`, "_blank");
+                    }}
+                    title="Abrir Instagram"
+                    aria-label="Abrir Instagram"
+                  >
+                    <Instagram className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div>
-              <Label>Instagram</Label>
-              <div className="flex gap-2">
+            {/* Negócio */}
+            <div className="col-span-2 grid grid-cols-2 gap-3 pb-4 border-b border-border/40">
+              <h4 className="col-span-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Negócio</h4>
+              <div className="col-span-2 sm:col-span-1"><Label htmlFor="lead-source">Origem</Label><Input id="lead-source" value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} aria-label="Origem do lead" /></div>
+              <div className="col-span-2 sm:col-span-1"><Label htmlFor="lead-product">Produto</Label><Input id="lead-product" value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value })} aria-label="Produto de interesse" /></div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="lead-value">Valor (R$)</Label>
                 <Input
-                  value={form.instagram || ""}
-                  onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                  id="lead-value"
+                  type="number"
+                  step="0.01"
+                  value={form.value ?? ""}
+                  onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })}
+                  aria-label="Valor estimado"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  disabled={!form.instagram}
-                  onClick={() => {
-                    const cleaned = (form.instagram || "").trim().replace(/^@/, "").toLowerCase();
-                    if (cleaned) window.open(`https://instagram.com/${cleaned}`, "_blank");
-                  }}
-                  title="Abrir Instagram"
-                >
-                  <Instagram className="h-4 w-4" />
-                </Button>
               </div>
             </div>
 
-            <div><Label>Origem</Label><Input value={form.source || ""} onChange={(e) => setForm({ ...form, source: e.target.value })} /></div>
-            <div><Label>Produto</Label><Input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value })} /></div>
-            <div>
-              <Label>Valor (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.value ?? ""}
-                onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-
             <div className="col-span-2">
-              <Label>Mensagem</Label>
-              <Textarea readOnly value={form.message || lead.message || ""} className="bg-muted/40" />
+              <Label htmlFor="lead-message">Mensagem Inicial</Label>
+              <Textarea id="lead-message" readOnly value={form.message || lead.message || ""} className="bg-muted/40 min-h-[80px]" aria-label="Mensagem inicial do lead" />
             </div>
 
             {Object.keys(parsedRawData).length > 0 && (
@@ -214,8 +234,8 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
             )}
 
             <div className="col-span-2">
-              <Label>Notas</Label>
-              <Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={4} />
+              <Label htmlFor="lead-notes">Notas</Label>
+              <Textarea id="lead-notes" value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={4} aria-label="Notas do lead" />
             </div>
 
             {defs.length > 0 && (
@@ -227,13 +247,15 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
                     const val = cf[d.key] ?? "";
                     return (
                       <div key={d.id}>
-                        <Label>{d.label}</Label>
+                        <Label htmlFor={`cf-${d.key}`}>{d.label}</Label>
                         <Input
+                          id={`cf-${d.key}`}
                           type={d.field_type === "number" ? "number" : d.field_type === "date" ? "date" : "text"}
                           value={val}
                           onChange={(e) =>
                             setForm({ ...form, custom_fields: { ...cf, [d.key]: e.target.value } })
                           }
+                          aria-label={`Campo personalizado: ${d.label}`}
                         />
                       </div>
                     );

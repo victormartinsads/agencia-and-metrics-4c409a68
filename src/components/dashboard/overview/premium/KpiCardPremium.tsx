@@ -24,7 +24,7 @@ export function KpiCardPremium({ label, value, delta, sub, emphasis, icon }: Omi
   const progressColor = tone === "dn" ? "bg-destructive" : "bg-primary";
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 flex flex-col justify-between">
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.2)] p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] flex flex-col justify-between">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
           {label}
@@ -42,9 +42,9 @@ export function KpiCardPremium({ label, value, delta, sub, emphasis, icon }: Omi
 
       <div
         className={`text-2xl font-bold tracking-tight mb-2 ${
-          emphasis ? "text-primary" : "text-foreground"
+          emphasis ? "text-primary drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" : "text-foreground"
         }`}
-        style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+        style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
       >
         {value}
       </div>

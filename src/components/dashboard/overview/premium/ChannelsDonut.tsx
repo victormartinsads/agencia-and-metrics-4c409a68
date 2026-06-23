@@ -63,7 +63,7 @@ export function ChannelsDonut({ rows = [], centerValue, centerLabel, extraStats 
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="font-bold text-lg text-foreground" style={{ fontFamily: "'Syne',sans-serif" }}>{centerValue}</div>
+            <div className="font-bold text-lg text-foreground drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" style={{ fontFamily: "'Outfit',sans-serif" }}>{centerValue}</div>
             <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{centerLabel}</div>
           </div>
         </div>
@@ -75,7 +75,7 @@ export function ChannelsDonut({ rows = [], centerValue, centerLabel, extraStats 
                 <span className="h-2 w-2 rounded-full" style={{ background: PALETTE[i] || PALETTE[PALETTE.length - 1] }} />
                 <span className="text-[11px] text-muted-foreground">{d.label}</span>
               </div>
-              <span className="text-[11px] font-bold text-foreground tabular-nums" style={{ fontFamily: "'Syne',sans-serif" }}>
+              <span className="text-[11px] font-bold text-foreground tabular-nums" style={{ fontFamily: "'Outfit',sans-serif" }}>
                 {d.pct.toFixed(1)}%
               </span>
             </div>
@@ -83,13 +83,13 @@ export function ChannelsDonut({ rows = [], centerValue, centerLabel, extraStats 
         </div>
       </div>
       {extraStats && extraStats.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-border/60 grid grid-cols-3 gap-2">
+        <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-2">
           {extraStats.map((s, i) => (
-            <div key={i} className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2 text-center">
+            <div key={i} className="rounded-xl bg-black/20 backdrop-blur-md border border-white/5 px-3 py-2 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
               <div className="text-[8px] uppercase tracking-wider text-muted-foreground mb-0.5">{s.label}</div>
               <div
-                className={`text-[15px] font-bold ${s.emphasis ? "text-primary" : "text-foreground"}`}
-                style={{ fontFamily: "'Syne',sans-serif" }}
+                className={`text-[15px] font-bold ${s.emphasis ? "text-primary drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" : "text-foreground"}`}
+                style={{ fontFamily: "'Outfit',sans-serif" }}
               >
                 {s.value}
               </div>

@@ -821,7 +821,7 @@ export default function GestorView() {
       <div className="flex h-[calc(100vh-56px)] overflow-hidden bg-background">
         
         {/* SIDEBAR PLATFORMA */}
-        <aside className="w-56 border-r border-border/40 bg-card/45 flex flex-col justify-between shrink-0 p-3">
+        <aside className="w-56 border-r border-white/5 bg-black/40 backdrop-blur-xl flex flex-col justify-between shrink-0 p-3">
           <div className="space-y-4">
             <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground px-2">Menu Central</div>
             <nav className="space-y-1">
@@ -835,7 +835,7 @@ export default function GestorView() {
           </div>
 
           {healthScore.score > 0 && (
-            <div className="p-3 bg-accent/20 border border-border/40 rounded-xl space-y-2 text-center">
+            <div className="p-3 bg-accent/20 border border-white/5 rounded-xl space-y-2 text-center">
               <div className="text-[9px] uppercase font-extrabold tracking-wider text-muted-foreground">Score de Saúde da Conta</div>
               <div className="flex items-center justify-center gap-1.5">
                 <div className="text-2xl font-black text-primary font-mono">{healthScore.score}</div>
@@ -852,14 +852,14 @@ export default function GestorView() {
         <main className="flex-1 overflow-y-auto p-6 bg-background/95">
           {!clientId ? (
             <div className="space-y-6">
-              <div className="flex flex-col space-y-1.5 border-b border-border/40 pb-4">
+              <div className="flex flex-col space-y-1.5 border-b border-white/5 pb-4">
                 <h2 className="text-2xl font-bold tracking-tight">Meus Clientes</h2>
                 <p className="text-sm text-muted-foreground">Selecione um cliente para acessar o dashboard ou gerenciar o tráfego.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {clients?.map((client) => (
                   <Link key={client.id} to={`/dashboard/${client.id}`}>
-                    <Card className="p-6 flex flex-col items-center text-center space-y-4 hover:border-primary/50 hover:shadow-md transition-all duration-300 group cursor-pointer bg-card/40 hover:bg-card/80">
+                    <Card className="p-6 flex flex-col items-center text-center space-y-4 hover:border-primary/50 hover:shadow-md transition-all duration-300 group cursor-pointer bg-black/40 backdrop-blur-xl hover:bg-black/40 backdrop-blur-xl">
                       <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <span className="text-xl font-bold text-primary">{client.name.charAt(0).toUpperCase()}</span>
                       </div>
@@ -888,21 +888,21 @@ export default function GestorView() {
               {activeMenuTab === "dashboard" && (
                 <div className="space-y-6">
                   {/* Dashboard Header Mode Toggles */}
-                  <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold tracking-tight">Análise Executiva & Operacional</h2>
                       <p className="text-xs text-muted-foreground">Dados agregados em tempo real de todas as campanhas ativas</p>
                     </div>
-                    <div className="flex bg-accent/40 rounded-lg p-0.5 border border-border/40">
+                    <div className="flex bg-accent/40 rounded-lg p-0.5 border border-white/5">
                       <button
                         onClick={() => setDashboardMode("executive")}
-                        className={`text-xs px-3 py-1.5 rounded-md font-semibold transition ${dashboardMode === "executive" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-3 py-1.5 rounded-md font-semibold transition ${dashboardMode === "executive" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Visão Executiva
                       </button>
                       <button
                         onClick={() => setDashboardMode("operational")}
-                        className={`text-xs px-3 py-1.5 rounded-md font-semibold transition ${dashboardMode === "operational" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-3 py-1.5 rounded-md font-semibold transition ${dashboardMode === "operational" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Visão Operacional
                       </button>
@@ -921,7 +921,7 @@ export default function GestorView() {
 
                       {/* Health Score detail */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <Card className="lg:col-span-1 p-5 rounded-2xl border-border/60 bg-card/50 flex flex-col justify-between">
+                        <Card className="lg:col-span-1 p-5 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl flex flex-col justify-between">
                           <div className="space-y-1">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Algoritmo Health Score</h4>
                             <p className="text-[10px] text-muted-foreground">Análise ponderada de saturação e qualidade</p>
@@ -938,7 +938,7 @@ export default function GestorView() {
                             </div>
                           </div>
 
-                          <div className="space-y-2 border-t border-border/40 pt-3">
+                          <div className="space-y-2 border-t border-white/5 pt-3">
                             <HealthBar label="Eficiência de CTR" val={healthScore.criteria.performance || 80} />
                             <HealthBar label="Retenção de Audiência" val={healthScore.criteria.qualidadeCriativos || 70} />
                             <HealthBar label="Frequência & Saturação" val={healthScore.criteria.escalabilidade || 85} />
@@ -946,7 +946,7 @@ export default function GestorView() {
                         </Card>
 
                         {/* Gráficos de Evolução */}
-                        <Card className="lg:col-span-2 p-5 rounded-2xl border-border/60 bg-card/50">
+                        <Card className="lg:col-span-2 p-5 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl">
                           <div className="flex items-center justify-between mb-4">
                             <div className="space-y-1">
                               <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Evolução do Investimento & Faturamento</h4>
@@ -974,7 +974,7 @@ export default function GestorView() {
 
                       {/* operational performance indicators */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <Card className="p-4 rounded-2xl border-border/60 bg-card/40 lg:col-span-1 space-y-3">
+                        <Card className="p-4 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl lg:col-span-1 space-y-3">
                           <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5"><Activity className="h-4 w-4 text-yellow-400" /> Saúde do Pixel & Rastreamento</h4>
                           <div className="space-y-2 text-xs">
                             <div className="flex justify-between items-center p-2 rounded-lg bg-accent/20">
@@ -991,7 +991,7 @@ export default function GestorView() {
                             </div>
                           </div>
                         </Card>
-                        <Card className="p-4 rounded-2xl border-border/60 bg-card/40 lg:col-span-2 space-y-3">
+                        <Card className="p-4 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl lg:col-span-2 space-y-3">
                           <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Evolução Diária do CPA</h4>
                           <LineChartSvg data={[38, 42, 35, 31, 29, 32, 28]} color="rgb(244 63 94)" />
                         </Card>
@@ -1005,23 +1005,23 @@ export default function GestorView() {
               {activeMenuTab === "gerenciador" && (
                 <div className="space-y-4">
                   {/* Meta style navigation tabs */}
-                  <div className="flex items-center justify-between border-b border-border/40 bg-card/30 p-2 rounded-xl flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5 bg-accent/40 p-0.5 rounded-lg border border-border/40">
+                  <div className="flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-xl p-2 rounded-xl flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 bg-accent/40 p-0.5 rounded-lg border border-white/5">
                       <button
                         onClick={() => setManagerTab("campanhas")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "campanhas" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "campanhas" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Campanhas
                       </button>
                       <button
                         onClick={() => setManagerTab("conjuntos")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "conjuntos" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "conjuntos" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Conjuntos de Anúncios
                       </button>
                       <button
                         onClick={() => setManagerTab("anuncios")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "anuncios" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "anuncios" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Anúncios
                       </button>
@@ -1081,11 +1081,11 @@ export default function GestorView() {
                     {managerTab === "campanhas" && showCampaignsDash && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-2">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-2">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-3">Curva de CPA vs Spend</h4>
                             <LineChartSvg data={filteredCampaignsList.slice(0, 7).map(c => c.costPerConversion || 20)} color="var(--primary)" />
                           </Card>
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-1 space-y-2">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-1 space-y-2">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Recomendações IA de Escala</h4>
                             <ScrollArea className="h-28 text-xs">
                               {optimizationAlerts.filter(a => a.type === "scale").map((a, i) => (
@@ -1105,11 +1105,11 @@ export default function GestorView() {
                     {managerTab === "conjuntos" && showAdsetsDash && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-2">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-2">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-3">Performance de Conversão dos Conjuntos</h4>
                             <LineChartSvg data={filteredAdsetsList.slice(0, 7).map(a => a.conversions || 5)} color="rgb(52, 211, 153)" />
                           </Card>
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-1 space-y-2">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-1 space-y-2">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Fadiga de Públicos</h4>
                             <ScrollArea className="h-28 text-xs">
                               {filteredAdsetsList.filter(a => a.frequency > 2.8).map((a, i) => (
@@ -1130,7 +1130,7 @@ export default function GestorView() {
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           {/* Creative decision engine: Keep vs Disable */}
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-2 flex flex-col justify-between">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-2 flex flex-col justify-between">
                             <div>
                               <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-400 mb-2 flex items-center gap-1">🟢 Manver/Escalar (Performance Excelente)</h4>
                               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
@@ -1142,7 +1142,7 @@ export default function GestorView() {
                                 ))}
                               </div>
                             </div>
-                            <div className="border-t border-border/40 pt-2">
+                            <div className="border-t border-white/5 pt-2">
                               <h4 className="text-xs uppercase font-bold tracking-wider text-rose-400 mb-2 flex items-center gap-1">🔴 Desativar Recomendados (Fadiga/Custo Alto)</h4>
                               <div className="grid grid-cols-2 gap-2 text-xs">
                                 {adRecommendations.disable.map((ad: any) => (
@@ -1166,7 +1166,7 @@ export default function GestorView() {
                             </div>
                           </Card>
                           
-                          <Card className="p-4 rounded-xl border border-border/60 bg-card/50 md:col-span-1 space-y-2">
+                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-1 space-y-2">
                             <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">CTR vs Hook Rate</h4>
                             <LineChartSvg data={filteredAdsList.slice(0, 7).map(ad => ad.hookRate || 10)} color="var(--primary)" />
                           </Card>
@@ -1177,11 +1177,11 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE CAMPANHAS === */}
                   {managerTab === "campanhas" && (
-                    <Card className="rounded-xl overflow-hidden border-border/60 shadow-lg relative">
+                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-border/60">
+                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                               <th className="py-2.5 px-3 w-10 text-center">
                                 <input
                                   type="checkbox"
@@ -1205,7 +1205,7 @@ export default function GestorView() {
                             {filteredCampaignsList.map((c) => (
                               <tr
                                 key={c.id}
-                                className={`border-b border-border/40 hover:bg-accent/20 cursor-pointer transition ${selectedCampaignIds.includes(c.id) ? "bg-primary/5" : ""}`}
+                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedCampaignIds.includes(c.id) ? "bg-primary/5" : ""}`}
                                 onClick={() => {
                                   setSelectedCampaignFilter({ id: c.id, name: c.name });
                                   setManagerTab("conjuntos");
@@ -1305,11 +1305,11 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE CONJUNTOS DE ANÚNCIOS === */}
                   {managerTab === "conjuntos" && (
-                    <Card className="rounded-xl overflow-hidden border-border/60 shadow-lg relative">
+                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-border/60">
+                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                               <th className="py-2.5 px-3 w-10 text-center">
                                 <input
                                   type="checkbox"
@@ -1333,7 +1333,7 @@ export default function GestorView() {
                             {filteredAdsetsList.map((a) => (
                               <tr
                                 key={a.id}
-                                className={`border-b border-border/40 hover:bg-accent/20 cursor-pointer transition ${selectedAdsetIds.includes(a.id) ? "bg-primary/5" : ""}`}
+                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedAdsetIds.includes(a.id) ? "bg-primary/5" : ""}`}
                                 onClick={() => {
                                   setSelectedAdsetFilter({ id: a.id, name: a.name });
                                   setManagerTab("anuncios");
@@ -1397,11 +1397,11 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE ANÚNCIOS (CRIATIVOS + POST IDS) === */}
                   {managerTab === "anuncios" && (
-                    <Card className="rounded-xl overflow-hidden border-border/60 shadow-lg relative">
+                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-border/60">
+                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                               <th className="py-2.5 px-3 w-10 text-center">
                                 <input
                                   type="checkbox"
@@ -1426,7 +1426,7 @@ export default function GestorView() {
                             {filteredAdsList.map((ad) => (
                               <tr
                                 key={ad.id}
-                                className={`border-b border-border/40 hover:bg-accent/20 cursor-pointer transition ${selectedAdIds.includes(ad.id) ? "bg-primary/5" : ""}`}
+                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedAdIds.includes(ad.id) ? "bg-primary/5" : ""}`}
                               >
                                 <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input
@@ -1450,7 +1450,7 @@ export default function GestorView() {
 
                                 {/* Copyable Post ID */}
                                 <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-1 font-mono text-[10px] bg-accent/40 px-1.5 py-0.5 rounded border border-border/40 max-w-[140px] justify-between">
+                                  <div className="flex items-center gap-1 font-mono text-[10px] bg-accent/40 px-1.5 py-0.5 rounded border border-white/5 max-w-[140px] justify-between">
                                     <span className="truncate">{ad.postId}</span>
                                     <button onClick={() => handleCopyPostId(ad.postId)} className="hover:text-primary transition shrink-0" title="Copiar Post ID">
                                       <Copy className="h-3 w-3" />
@@ -1500,7 +1500,7 @@ export default function GestorView() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 30 }}
-                        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border/80 p-3 rounded-2xl shadow-2xl flex items-center gap-4 z-40"
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-white/5 shadow-2xl p-3 rounded-2xl shadow-2xl flex items-center gap-4 z-40"
                       >
                         <div className="text-xs font-semibold px-2">
                           <span className="text-primary font-bold">
@@ -1521,14 +1521,14 @@ export default function GestorView() {
               {/* === ABA: CONSTRUTOR EM MASSA === */}
               {activeMenuTab === "construtor" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-border/40">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold tracking-tight">Construtor de Campanhas em Massa</h2>
                       <p className="text-xs text-muted-foreground">Criação exponencial: Combine múltiplos públicos e criativos em segundos</p>
                     </div>
                   </div>
 
-                  <Card className="p-6 rounded-2xl border-border/60 bg-card/40 space-y-6">
+                  <Card className="p-6 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl space-y-6">
                     {/* Bulk builder steps indicator */}
                     <div className="flex items-center justify-center gap-3">
                       <BulkStepIndicator step={1} current={bulkStep} label="Definições" />
@@ -1572,7 +1572,7 @@ export default function GestorView() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <Label>Distribuição do Orçamento</Label>
-                            <div className="flex bg-accent/40 rounded-lg p-0.5 border border-border/40">
+                            <div className="flex bg-accent/40 rounded-lg p-0.5 border border-white/5">
                               <button onClick={() => setBulkBudgetMode("CBO")} type="button" className={`flex-1 text-[11px] py-1.5 rounded font-semibold transition ${bulkBudgetMode === "CBO" ? "bg-card text-foreground shadow font-bold" : "text-muted-foreground"}`}>CBO (Advantage+)</button>
                               <button onClick={() => setBulkBudgetMode("ABO")} type="button" className={`flex-1 text-[11px] py-1.5 rounded font-semibold transition ${bulkBudgetMode === "ABO" ? "bg-card text-foreground shadow font-bold" : "text-muted-foreground"}`}>ABO (Por Público)</button>
                             </div>
@@ -1685,7 +1685,7 @@ export default function GestorView() {
               {/* === ABA: AUTOMACAO & REGRAS === */}
               {activeMenuTab === "automacao" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-border/40">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold tracking-tight">Regras de Automação de Campanha</h2>
                       <p className="text-xs text-muted-foreground">Otimize a conta 24/7 sem intervenção manual baseando-se em métricas críticas</p>
@@ -1694,7 +1694,7 @@ export default function GestorView() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Add new Rule form */}
-                    <Card className="p-5 rounded-2xl border-border/60 bg-card/40 lg:col-span-1 space-y-4">
+                    <Card className="p-5 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl lg:col-span-1 space-y-4">
                       <h3 className="text-xs uppercase font-extrabold tracking-wider text-muted-foreground flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Nova Regra</h3>
                       
                       <div className="space-y-1.5">
@@ -1751,11 +1751,11 @@ export default function GestorView() {
                     </Card>
 
                     {/* Rules listing */}
-                    <Card className="p-5 rounded-2xl border-border/60 bg-card/40 lg:col-span-2 space-y-4">
+                    <Card className="p-5 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl lg:col-span-2 space-y-4">
                       <h3 className="text-xs uppercase font-extrabold tracking-wider text-muted-foreground">Regras Ativas ({rules.length})</h3>
                       <div className="space-y-3">
                         {rules.map((r) => (
-                          <div key={r.id} className="p-3 rounded-xl border border-border/40 bg-accent/10 flex items-center justify-between gap-4">
+                          <div key={r.id} className="p-3 rounded-xl border border-white/5 bg-accent/10 flex items-center justify-between gap-4">
                             <div className="space-y-1">
                               <h4 className="text-xs font-bold text-foreground">{r.name}</h4>
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -1779,14 +1779,14 @@ export default function GestorView() {
               {/* === ABA: ALERTAS === */}
               {activeMenuTab === "alertas" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-border/40">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold tracking-tight">Alertas & Diagnóstico da Conta</h2>
                       <p className="text-xs text-muted-foreground">Monitoramento inteligente de comportamento de pixel, orçamento e saturação</p>
                     </div>
                   </div>
 
-                  <Card className="p-5 rounded-2xl border-border/60 bg-card/40">
+                  <Card className="p-5 rounded-2xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl">
                     <ScrollArea className="max-h-[500px] pr-2">
                       <div className="space-y-3">
                         {optimizationAlerts.map((a, idx) => {
@@ -1797,7 +1797,7 @@ export default function GestorView() {
                               ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
                               : "bg-primary/10 text-primary border-primary/20";
                           return (
-                            <div key={idx} className="p-4 rounded-xl border border-border/40 bg-accent/10 flex items-center justify-between gap-4">
+                            <div key={idx} className="p-4 rounded-xl border border-white/5 bg-accent/10 flex items-center justify-between gap-4">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
                                   <Badge className={`text-[9px] font-semibold ${badgeColor}`} variant="outline">{a.title}</Badge>
@@ -1821,7 +1821,7 @@ export default function GestorView() {
               {/* === ABA: RELATORIOS === */}
               {activeMenuTab === "relatorios" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-border/40">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold tracking-tight">Relatórios de Performance</h2>
                       <p className="text-xs text-muted-foreground">Exportações rápidas de snapshots executivos e comparativos</p>
@@ -1851,7 +1851,7 @@ export default function GestorView() {
 
       {/* Performance AI chat sidebar drawer */}
       <Sheet open={chatOpen} onOpenChange={setChatOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-card/95 backdrop-blur-xl">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-black/40 backdrop-blur-xl backdrop-blur-xl">
           <div className="p-4 border-b border-border bg-primary/10 flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
@@ -1865,7 +1865,7 @@ export default function GestorView() {
           <ScrollArea className="flex-1 p-4">
             {messages.length === 0 ? (
               <div className="space-y-4">
-                <div className="p-3 bg-accent/20 border border-border/40 rounded-xl space-y-1">
+                <div className="p-3 bg-accent/20 border border-white/5 rounded-xl space-y-1">
                   <h4 className="text-xs font-bold text-primary flex items-center gap-1.5"><Brain className="h-3.5 w-3.5" /> Olá, Gestor!</h4>
                   <p className="text-[11px] text-muted-foreground">Sou seu copiloto de tráfego pago. Analiso ganchos de vídeo, taxas de fuga, CPAs e ROAS de forma integrada para sugerir as melhores otimizações.</p>
                 </div>
@@ -2023,9 +2023,9 @@ export default function GestorView() {
               </div>
 
               {/* Raw JSON Meta response (mimicking the screenshot) */}
-              <div className="border-t border-border/40 pt-4 space-y-2">
+              <div className="border-t border-white/5 pt-4 space-y-2">
                 <Label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Dados Brutos (Meta)</Label>
-                <pre className="text-[9px] font-mono p-3 bg-accent/30 border border-border/40 rounded-lg max-h-48 overflow-y-auto whitespace-pre text-muted-foreground">
+                <pre className="text-[9px] font-mono p-3 bg-accent/30 border border-white/5 rounded-lg max-h-48 overflow-y-auto whitespace-pre text-muted-foreground">
                   {JSON.stringify(editingAdset || {}, null, 2)}
                 </pre>
               </div>
@@ -2091,7 +2091,7 @@ function SidebarItem({
 function KpiTile({ label, value, accent }: { label: string; value: string; accent?: "good" | "bad" | "warn" }) {
   const color = accent === "good" ? "text-primary" : accent === "bad" ? "text-red-400" : accent === "warn" ? "text-yellow-400" : "text-foreground";
   return (
-    <Card className="p-4 rounded-xl border-border/60 bg-card/40 hover:border-primary/20 transition shadow-sm">
+    <Card className="p-4 rounded-xl border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl hover:border-primary/20 transition shadow-sm">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-semibold">{label}</p>
       <p className={`text-lg font-black tabular-nums ${color}`}>{value}</p>
     </Card>

@@ -141,7 +141,7 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
           onValueChange={handleTabChange}
           className="space-y-6"
         >
-          {!hideTabList && <TabsList className="bg-card border border-border flex-wrap h-auto">
+          {!hideTabList && <TabsList className="bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-1.5 flex-wrap h-auto shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
             {showTab("overview") && <TabsTrigger value="overview">Visão Geral</TabsTrigger>}
             {!hideDiagnostico && showTab("diagnostico") && <TabsTrigger value="diagnostico">Como Estamos</TabsTrigger>}
             {showTab("funnel") && <TabsTrigger value="funnel">Análise de Funis</TabsTrigger>}
@@ -201,10 +201,10 @@ export function DashboardContent({ clientId, datePreset, metaData, metaLoading, 
               const others = eligible.filter(c => !isCaptacaoSeguidores(c.name));
               return (
                 <>
-                  <div className="flex items-center justify-between mb-4 bg-card border border-border p-3 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 bg-black/40 border border-white/5 p-4 rounded-2xl backdrop-blur-xl shadow-lg gap-4">
                     <div>
-                      <h3 className="text-sm font-semibold text-card-foreground">Pódio de Criativos</h3>
-                      <p className="text-[11px] text-muted-foreground">Avalie o desempenho dos criativos por métrica</p>
+                      <h3 className="text-base font-bold text-foreground">Pódio de Criativos</h3>
+                      <p className="text-[11px] text-muted-foreground/80 mt-0.5">Avalie o desempenho dos criativos por métrica</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button

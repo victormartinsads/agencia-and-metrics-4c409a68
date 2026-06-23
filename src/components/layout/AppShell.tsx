@@ -210,27 +210,27 @@ export default function AppShell({
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shrink-0",
+          "bg-sidebar/80 backdrop-blur-2xl text-sidebar-foreground border-r border-sidebar-border/40 flex flex-col transition-all duration-300 ease-in-out shrink-0 relative z-30 shadow-[4px_0_24px_-10px_rgba(0,0,0,0.8)]",
           open ? "w-64" : "w-[72px]",
         )}
       >
         {/* Brand */}
-        <div className="border-b border-sidebar-border px-2 py-3">
+        <div className="border-b border-sidebar-border/40 px-3 py-4">
           <Link
             to="/"
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-sidebar-accent/40 transition-colors"
+            className="flex items-center gap-3 px-2 py-1.5 min-h-[44px] rounded-xl hover:bg-sidebar-accent/40 transition-colors cursor-pointer group"
             aria-label="Ir para CENTRAL AND"
           >
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-black overflow-hidden">
-              <img src={andLogo} alt="AND" className="h-7 w-7 object-contain" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-black/50 border border-white/10 overflow-hidden shadow-inner group-hover:border-primary/50 transition-colors">
+              <img src={andLogo} alt="AND" className="h-6 w-6 object-contain" />
             </span>
             {open && (
-              <div className="flex flex-col leading-tight min-w-0">
-                <span className="text-sm font-bold tracking-[0.18em] truncate text-primary">
+              <div className="flex flex-col leading-none min-w-0">
+                <span className="text-sm font-display font-black tracking-widest truncate bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">
                   CENTRAL AND
                 </span>
-                <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Mídia · Criativos · CRM
+                <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/80 mt-1 font-bold">
+                  Mídia · CRM
                 </span>
               </div>
             )}
@@ -255,13 +255,14 @@ export default function AppShell({
                     to={item.href}
                     title={!open ? item.label : undefined}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors relative",
+                      "flex items-center gap-3 rounded-xl px-3 py-2 min-h-[44px] text-sm transition-all duration-300 relative cursor-pointer overflow-hidden group",
                       active
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-[inset_2px_0_0_0_hsl(var(--primary))]"
-                        : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
+                        ? "bg-primary/10 text-primary font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-primary/20"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground border border-transparent",
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    {active && <div className="absolute inset-y-0 left-0 w-1 bg-primary rounded-r-full shadow-[0_0_12px_hsl(var(--primary))]" />}
+                    <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", active ? "scale-110" : "group-hover:scale-110")} />
                     {open && <span className="truncate">{item.label}</span>}
                   </Link>
                 );
@@ -325,7 +326,7 @@ export default function AppShell({
             size="sm"
             onClick={() => setPwdOpen(true)}
             className={cn(
-              "w-full text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
+              "w-full min-h-[44px] text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground cursor-pointer",
               open ? "justify-start" : "justify-center px-0",
             )}
             title="Alterar senha"
@@ -338,7 +339,7 @@ export default function AppShell({
             size="sm"
             onClick={() => signOut()}
             className={cn(
-              "w-full text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
+              "w-full min-h-[44px] text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground cursor-pointer",
               open ? "justify-start" : "justify-center px-0",
             )}
             title="Sair"
@@ -352,21 +353,21 @@ export default function AppShell({
       {/* Main area */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Topbar with breadcrumbs + search + avatar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-white/5 bg-background/60 px-6 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition-all cursor-pointer border border-white/5 hover:border-white/10"
             aria-label={open ? "Recolher menu" : "Expandir menu"}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm min-w-0 overflow-hidden">
-            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+          <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm min-w-0 overflow-hidden font-medium">
+            <Link to="/" className="text-muted-foreground hover:text-primary transition-colors shrink-0">
               Home
             </Link>
             {breadcrumbs.map((label, i) => (
@@ -378,16 +379,16 @@ export default function AppShell({
               </span>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-4">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="Busca global"
-              className="group hidden md:flex h-9 items-center gap-2 rounded-md border border-border/60 bg-surface px-2.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground sm:w-64"
+              className="group hidden md:flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs text-muted-foreground transition-all hover:border-primary/50 hover:bg-white/10 hover:text-foreground sm:w-72 cursor-pointer shadow-inner"
             >
-              <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Buscar clientes, leads, criativos…</span>
-              <span className="ml-auto hidden items-center gap-0.5 rounded border border-border/60 px-1.5 py-0.5 font-mono text-[10px] sm:flex">
+              <Search className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="hidden sm:inline">Buscar clientes, campanhas…</span>
+              <span className="ml-auto hidden items-center gap-0.5 rounded-full border border-white/20 bg-black/40 px-2 py-0.5 font-mono text-[10px] font-bold sm:flex">
                 <Command className="h-3 w-3" />K
               </span>
             </button>
@@ -419,7 +420,7 @@ export default function AppShell({
           {noContainer ? (
             children
           ) : (
-            <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-6">{children}</div>
+            <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">{children}</div>
           )}
         </div>
       </main>

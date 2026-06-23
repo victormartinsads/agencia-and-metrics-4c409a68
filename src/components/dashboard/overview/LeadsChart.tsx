@@ -37,15 +37,19 @@ export function LeadsChart({ data }: Props) {
     <div className="h-40 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 15, right: 5, left: -20, bottom: 0 }}>
-          <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
           <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: 8,
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: 12,
               fontSize: 12,
+              boxShadow: "0 4px 24px rgba(0, 0, 0, 0.4)",
+              color: "#fff",
             }}
           />
           <Line dataKey="leads" name="Leads" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }}>

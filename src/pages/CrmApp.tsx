@@ -158,30 +158,27 @@ export default function CrmAppPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !activeOrgId ? (
-          <Card className="p-8 text-center border-border/60 bg-card">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <KanbanSquare className="h-8 w-8 text-primary" />
+          <Card className="p-12 text-center border-border/60 bg-card shadow-lg max-w-2xl mx-auto mt-12">
+            <div className="flex flex-col items-center gap-5">
+              <div className="h-20 w-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <KanbanSquare className="h-10 w-10 text-primary" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold mb-2 text-foreground">Crie sua primeira organização</h2>
-                <p className="text-sm text-muted-foreground">Use o botão <strong className="text-foreground">"Nova"</strong> no topo para começar.</p>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Nenhuma organização encontrada</h2>
+                <p className="text-base text-muted-foreground max-w-md mx-auto">Você precisa criar ou selecionar uma organização no topo da página para começar a usar o CRM.</p>
               </div>
-              <Button onClick={() => {}} variant="outline" className="gap-2 mt-2">
-                <Plus className="h-4 w-4" /> Nova Organização
-              </Button>
             </div>
           </Card>
         ) : (
           <Tabs defaultValue="board">
             <div className="flex flex-col gap-4">
-              <TabsList className="flex-wrap h-auto bg-muted/20 border border-border/40 p-1 rounded-xl w-fit">
-                <TabsTrigger value="board" className="gap-1.5"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
-                <TabsTrigger value="active" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Ativos</TabsTrigger>
-                <TabsTrigger value="archived" className="gap-1.5"><Archive className="h-3.5 w-3.5" /> Arquivados</TabsTrigger>
-                <TabsTrigger value="all" className="gap-1.5"><ListIcon className="h-3.5 w-3.5" /> Todos</TabsTrigger>
-                <TabsTrigger value="dashboard" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Indicadores</TabsTrigger>
-                <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
+              <TabsList className="flex-wrap h-auto bg-muted/20 border border-border/40 p-1.5 rounded-xl w-fit gap-1">
+                <TabsTrigger value="board" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><KanbanSquare className="h-4 w-4" /> Kanban</TabsTrigger>
+                <TabsTrigger value="active" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><Activity className="h-4 w-4" /> Ativos</TabsTrigger>
+                <TabsTrigger value="archived" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><Archive className="h-4 w-4" /> Arquivados</TabsTrigger>
+                <TabsTrigger value="all" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><ListIcon className="h-4 w-4" /> Todos</TabsTrigger>
+                <TabsTrigger value="dashboard" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><LayoutDashboard className="h-4 w-4" /> Indicadores</TabsTrigger>
+                <TabsTrigger value="webhooks" className="gap-1.5 min-h-[44px] px-4 cursor-pointer text-sm"><Webhook className="h-4 w-4" /> Webhooks</TabsTrigger>
               </TabsList>
 
               {/* Activity Status Badges */}
@@ -206,13 +203,21 @@ export default function CrmAppPage() {
 
             <TabsContent value="dashboard" className="mt-4">
               {isLoading ? (
-                <div className="text-sm text-muted-foreground">Carregando...</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+                  {[1, 2, 3, 4].map(i => <div key={i} className="h-32 rounded-xl bg-card border border-border/50" />)}
+                </div>
               ) : (
                 <CrmDashboard leads={leads} pipelines={pipelines} isAllPipelines={!pipelineId} />
               )}
             </TabsContent>
             <TabsContent value="board" className="mt-4">
-              {isLoading ? <div className="text-sm text-muted-foreground">Carregando...</div> : (
+              {isLoading ? (
+                <div className="flex gap-4 overflow-hidden animate-pulse mt-8">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="w-[320px] shrink-0 h-[600px] rounded-xl bg-card border border-border/50" />
+                  ))}
+                </div>
+              ) : (
                 <>
                   <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
                   <KanbanBoard

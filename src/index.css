@@ -2,120 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 95%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 95%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 75 100% 55%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 75 100% 55%; /* Lime Green Central AND */
+    --primary-foreground: 240 5.9% 10%;
 
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 0 0% 8%;
-    --accent-foreground: 75 100% 55%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 75 100% 55%; /* Changed to primary for neon hover accents */
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
     --ring: 75 100% 55%;
 
-    --radius: 0.85rem;
+    --radius: 0.75rem;
 
-    /* Surfaces (template-aligned) */
-    --surface: 0 0% 5%;
-    --surface-elevated: 0 0% 8%;
+    /* Surfaces */
+    --surface: 240 10% 3.9%;
+    --surface-elevated: 240 3.7% 15.9%;
     --success: 152 69% 45%;
     --warning: 38 92% 55%;
 
-    --meta-blue: 75 100% 55%;
-    --meta-blue-dark: 75 100% 42%;
+    /* Data Viz / Meta Palette */
+    --meta-blue: 217 91% 60%;
+    --meta-blue-dark: 217 91% 42%;
     --meta-green: 152 69% 41%;
     --meta-orange: 25 95% 53%;
     --meta-red: 0 72% 51%;
     --meta-purple: 262 83% 58%;
 
-    /* CRM-App: Lead status palette */
+    /* CRM-App: Sleek Lead status palette */
     --status-new: 217 91% 60%;
-    --status-new-bg: 217 91% 60% / 0.15;
+    --status-new-bg: 217 91% 60% / 0.1;
     --status-contacted: 38 92% 55%;
-    --status-contacted-bg: 38 92% 55% / 0.15;
+    --status-contacted-bg: 38 92% 55% / 0.1;
     --status-qualified: 152 60% 50%;
-    --status-qualified-bg: 152 60% 50% / 0.15;
+    --status-qualified-bg: 152 60% 50% / 0.1;
     --status-proposal: 271 81% 60%;
-    --status-proposal-bg: 271 81% 60% / 0.15;
+    --status-proposal-bg: 271 81% 60% / 0.1;
     --status-closed: 220 9% 60%;
-    --status-closed-bg: 220 9% 60% / 0.15;
+    --status-closed-bg: 220 9% 60% / 0.1;
     --status-lost: 0 84% 60%;
-    --status-lost-bg: 0 84% 60% / 0.15;
+    --status-lost-bg: 0 84% 60% / 0.1;
 
-    /* CRM-App: gradients & shadows */
-    --gradient-hero: linear-gradient(135deg, hsl(75 100% 55%) 0%, hsl(75 100% 55%) 100%);
-    --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
-    --shadow-elevated: 0 4px 20px -4px hsl(75 100% 55% / 0.18), 0 1px 3px 0 hsl(0 0% 0% / 0.4);
+    /* Gradients & Shadows */
+    --gradient-hero: linear-gradient(135deg, hsl(75 100% 55%) 0%, hsl(152 69% 45%) 100%);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 10px 40px -10px hsl(75 100% 55% / 0.15), 0 2px 4px 0 hsl(0 0% 0% / 0.6);
 
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 85%;
+    /* Sidebar - Match the deep dark theme */
+    --sidebar-background: 240 10% 2.5%;
+    --sidebar-foreground: 240 5% 85%;
     --sidebar-primary: 75 100% 55%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 8%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 8%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 75 100% 55%;
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 95%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 95%;
-
+    /* Identical to :root since we are forcing a Dark Premium aesthetic */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
     --primary: 75 100% 55%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 90%;
-
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 60%;
-
-    --accent: 0 0% 8%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
     --accent-foreground: 75 100% 55%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
     --ring: 75 100% 55%;
     
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 85%;
+    --sidebar-background: 240 10% 2.5%;
+    --sidebar-foreground: 240 5% 85%;
     --sidebar-primary: 75 100% 55%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 8%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 8%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 75 100% 55%;
   }
 }
@@ -125,10 +116,19 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: "Inter", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Subtle radial gradient to break the solid black */
+    background-image: 
+      radial-gradient(ellipse at 50% -20%, hsl(var(--primary) / 0.05), transparent 60%),
+      radial-gradient(ellipse at 100% 100%, hsl(var(--primary) / 0.03), transparent 50%);
+    background-attachment: fixed;
   }
   
   h1, h2, h3, h4, h5, h6, .font-display {
@@ -139,118 +139,70 @@ All colors MUST be HSL.
     font-family: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   }
   
-  /* Custom scrollbar matching landing page */
+  /* Sleek Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 4px;
-    transition: background 0.2s ease;
+    background: hsl(var(--muted));
+    border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary));
-  }
-
-  /* Ambient background glow matching landing page style */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: -1;
-    background:
-      radial-gradient(700px circle at 80% 20%, hsl(var(--primary) / 0.08), transparent 70%),
-      radial-gradient(900px circle at 15% 85%, rgba(125, 255, 76, 0.04), transparent 70%);
+    background: hsl(var(--primary) / 0.5);
   }
 }
 
-/* ───────────────────────────── Overview redesign tokens ───────────────────────────── */
 @layer utilities {
   .glass-card {
-    background: rgba(20, 20, 20, 0.7);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid rgba(197, 255, 26, 0.12);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-  }
-  .glass-card-hover {
-    transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+    background: rgba(20, 20, 25, 0.4);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .glass-card-hover:hover {
-    border-color: rgba(197, 255, 26, 0.35);
-    transform: translateY(-4px);
+    background: rgba(30, 30, 35, 0.5);
+    border-color: rgba(197, 255, 26, 0.2); /* Neon glow hint on hover */
     box-shadow: 
-      0 12px 30px rgba(197, 255, 26, 0.08), 
-      0 10px 30px rgba(0, 0, 0, 0.6);
+      0 12px 40px rgba(197, 255, 26, 0.06), 
+      0 8px 32px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
   }
   .neon-glow {
-    box-shadow: 0 0 24px -6px hsl(var(--primary) / 0.45);
+    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.4);
   }
   .neon-text {
     color: hsl(var(--primary));
-    text-shadow: 0 0 18px hsl(var(--primary) / 0.35);
+    text-shadow: 0 0 12px hsl(var(--primary) / 0.4);
   }
-  .grid-fade {
-    mask-image: linear-gradient(180deg, hsl(0 0% 0% / 1), hsl(0 0% 0% / 0.6));
-  }
-  .ring-edit {
-    box-shadow:
-      0 0 0 1px hsl(var(--primary) / 0.55),
-      0 0 32px -10px hsl(var(--primary) / 0.5);
-  }
-  /* CRM-App utilities */
   .gradient-hero {
     background: var(--gradient-hero);
   }
-  .shadow-card {
+  .data-card {
+    background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--background)));
+    border: 1px solid hsl(var(--border));
     box-shadow: var(--shadow-card);
-  }
-  .shadow-elevated {
-    box-shadow: var(--shadow-elevated);
   }
 }
 
-/* react-grid-layout overrides — match design system */
+/* react-grid-layout overrides */
 .react-grid-item.react-grid-placeholder {
-  background: hsl(var(--primary) / 0.18) !important;
-  border: 1px dashed hsl(var(--primary) / 0.6);
-  border-radius: 1rem;
+  background: hsl(var(--primary) / 0.1) !important;
+  border: 1px dashed hsl(var(--primary) / 0.4);
+  border-radius: var(--radius);
   opacity: 1 !important;
-}
-.react-grid-item > .react-resizable-handle::after {
-  border-right-color: hsl(var(--primary) / 0.7) !important;
-  border-bottom-color: hsl(var(--primary) / 0.7) !important;
 }
 .react-grid-item.react-draggable-dragging {
   z-index: 50;
-  box-shadow: 0 16px 40px -8px hsl(var(--primary) / 0.45);
-}
-.react-resizable {
-  position: relative;
-}
-.react-resizable-handle {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  right: 0;
-  bottom: 0;
-  padding: 0 3px 3px 0;
-  box-sizing: border-box;
-  cursor: se-resize;
+  box-shadow: 0 20px 40px -10px hsl(var(--primary) / 0.2);
+  border: 1px solid hsl(var(--primary) / 0.3);
 }
 .react-resizable-handle::after {
-  content: "";
-  position: absolute;
-  inset: auto 4px 4px auto;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid hsl(var(--primary) / 0.7);
-  border-bottom: 2px solid hsl(var(--primary) / 0.7);
-  opacity: 0.9;
+  border-right: 2px solid hsl(var(--primary) / 0.5) !important;
+  border-bottom: 2px solid hsl(var(--primary) / 0.5) !important;
 }

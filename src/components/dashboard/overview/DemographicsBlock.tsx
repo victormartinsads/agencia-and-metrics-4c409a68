@@ -22,7 +22,7 @@ function Bar({ value, max }: { value: number; max: number }) {
 
 function Row({ row, max, currencySymbol }: { row: DemographicsRow; max: number; currencySymbol: string }) {
   return (
-    <div className="grid grid-cols-12 gap-2 items-center text-xs py-1.5 border-b border-border/40">
+    <div className="grid grid-cols-12 gap-2 items-center text-xs py-1.5 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
       <div className="col-span-4 truncate font-medium text-card-foreground">{row.label}</div>
       <div className="col-span-4"><Bar value={row.spend} max={max} /></div>
       <div className="col-span-2 text-right tabular-nums text-muted-foreground">{formatCurrency(row.spend, currencySymbol)}</div>
@@ -59,10 +59,10 @@ export function DemographicsBlock({ clientId, datePreset, currencySymbol }: Prop
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-300 ${
                 active
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "text-muted-foreground hover:text-foreground border border-border/40"
+                  ? "bg-primary/20 text-primary border border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]"
+                  : "text-muted-foreground hover:text-foreground border border-white/5 bg-black/20 hover:bg-black/40"
               }`}
             >
               <Icon className="h-3 w-3" />
@@ -72,7 +72,7 @@ export function DemographicsBlock({ clientId, datePreset, currencySymbol }: Prop
         })}
       </div>
 
-      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border pb-1">
+      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-white/5 pb-1">
         <div className="col-span-4">Segmento</div>
         <div className="col-span-4">Distribuição (gasto)</div>
         <div className="col-span-2 text-right">Gasto</div>

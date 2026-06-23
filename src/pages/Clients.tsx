@@ -383,7 +383,7 @@ export default function ClientsPage() {
                         )}
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+                      <div className="mt-4 flex items-center justify-between border-t border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] pt-3 text-[11px] text-muted-foreground">
                         <span>{c.ad_account_ids.length} conta{c.ad_account_ids.length !== 1 ? "s" : ""}</span>
                         <div className="flex items-center gap-0.5">
                           <Link to={`/tracking/${c.id}`} aria-label="TrackingHub" className="rounded p-1.5 hover:bg-background hover:text-foreground" title="TrackingHub CAPI">
@@ -435,7 +435,7 @@ export default function ClientsPage() {
           <Card className="mt-6 overflow-hidden border-0 bg-surface">
             <Table>
               <TableHeader>
-                <TableRow className="border-border/60 hover:bg-transparent">
+                <TableRow className="border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:bg-transparent">
                   <TableHead className="text-muted-foreground">Cliente</TableHead>
                   <TableHead className="text-muted-foreground">Integrações</TableHead>
                   <TableHead className="text-right text-muted-foreground">Contas</TableHead>
@@ -448,7 +448,7 @@ export default function ClientsPage() {
                   const hasCrm = !!clientOrgs?.[c.id];
                   const isFav = favoriteIds.has(c.id);
                   return (
-                    <TableRow key={c.id} className="border-border/60 transition-colors hover:bg-surface-elevated">
+                    <TableRow key={c.id} className="border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] transition-colors hover:bg-surface-elevated">
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <button onClick={() => handleToggleFav(c)} className="text-muted-foreground hover:text-warning">

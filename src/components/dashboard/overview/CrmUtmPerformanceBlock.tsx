@@ -42,19 +42,19 @@ export function CrmUtmPerformanceBlock({ clientId, datePreset, currencySymbol = 
   return (
     <div className="h-full w-full overflow-auto">
       <table className="w-full text-left text-sm whitespace-nowrap">
-        <thead className="sticky top-0 bg-card z-10 shadow-sm">
-          <tr className="border-b border-border/40 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        <thead className="sticky top-0 bg-black/40 backdrop-blur-md z-10 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+          <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
             <th className="px-4 py-3">Origem / Campanha</th>
             <th className="px-4 py-3 text-right">MQLs</th>
             <th className="px-4 py-3 text-right">Vendas</th>
             <th className="px-4 py-3 text-right">Faturamento</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/20">
+        <tbody className="divide-y divide-white/5">
           {utms.map((row: CrmUtmRow, i: number) => {
             const hasRevenue = row.revenue > 0;
             return (
-              <tr key={i} className="hover:bg-muted/30 transition-colors group">
+              <tr key={i} className="hover:bg-white/5 transition-colors group">
                 <td className="px-4 py-3 max-w-[180px] truncate">
                   <div className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
                     {row.campaign !== "Desconhecida" ? row.campaign : row.source}

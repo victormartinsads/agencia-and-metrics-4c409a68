@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, Check, X, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export function KanbanBoard({
   leads,
@@ -32,6 +33,7 @@ export function KanbanBoard({
   const deleteStage = useDeletePipelineStage(pipelineId);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [isDraggingOverId, setIsDraggingOverId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
@@ -178,11 +180,15 @@ export function KanbanBoard({
           <div
             key={s.id}
             className="min-w-[280px] w-[280px] shrink-0"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(s.id)}
+            onDragOver={(e) => { e.preventDefault(); setIsDraggingOverId(s.id); }}
+            onDragLeave={() => setIsDraggingOverId(null)}
+            onDrop={() => { setIsDraggingOverId(null); handleDrop(s.id); }}
           >
             <div 
-              className="rounded-xl bg-card border border-border/60 p-3 h-full flex flex-col group/column shadow-sm overflow-hidden relative"
+              className={cn(
+                "rounded-xl bg-card border p-3 h-full flex flex-col group/column shadow-sm overflow-hidden relative transition-colors duration-200",
+                isDraggingOverId === s.id ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20" : "border-border/60"
+              )}
               style={{ borderTop: `4px solid ${s.color || '#94a3b8'}` }}
             >
               <div className="flex flex-col gap-1.5 mb-3 px-0.5">
