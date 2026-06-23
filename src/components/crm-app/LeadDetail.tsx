@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUpdateLead, useDeleteLead, useUpdateLeadStatus } from "@/hooks/useCrmAppLeads";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
 import { usePipelineStages } from "@/hooks/usePipelineStages";
-import { Trash2, MessageSquare, Instagram } from "lucide-react";
+import { Trash2, MessageSquare, Instagram, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -26,6 +26,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   const { data: defs = [] } = useLeadCustomFieldDefs(orgId);
   const { data: stages = [] } = usePipelineStages(lead?.pipeline_id);
   const [form, setForm] = useState<Partial<Lead>>({});
+  const [showRawData, setShowRawData] = useState(false);
 
   useEffect(() => {
     if (lead) setForm(lead);
@@ -57,7 +58,8 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes do lead</DialogTitle>
@@ -138,6 +140,23 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
           <div><Label>Produto</Label><Input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value })} /></div>
           <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.value ?? ""} onChange={(e) => setForm({ ...form, value: e.target.value ? Number(e.target.value) : null })} /></div>
           <div className="col-span-2"><Label>Mensagem</Label><Textarea readOnly value={form.message || lead.message || ""} className="bg-muted/40" /></div>
+          {lead.raw_data && Object.keys(lead.raw_data).length > 0 && (
+            <div className="col-span-2 flex items-center justify-between bg-muted/20 border border-border/60 p-2.5 rounded-xl mt-1">
+              <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                Este lead contém dados brutos recebidos via Webhook.
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-semibold gap-1.5 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                onClick={() => setShowRawData(true)}
+              >
+                <Eye className="h-3.5 w-3.5" /> Ver Respostas
+              </Button>
+            </div>
+          )}
           <div className="col-span-2"><Label>Notas</Label><Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={4} /></div>
           {defs.length > 0 && (
             <div className="col-span-2 border-t border-border pt-3 mt-1">
@@ -227,5 +246,38 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+
+      {/* Dialog Ver Respostas Webhook */}
+      <Dialog open={showRawData} onOpenChange={setShowRawData}>
+        <DialogContent className="max-w-md bg-[#0f0f12] border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider font-display flex items-center gap-1.5 text-card-foreground">
+              📝 Respostas do Formulário (Webhook)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-[11px] text-muted-foreground">
+              Abaixo estão listados todos os campos e valores recebidos na requisição original do webhook.
+            </p>
+            <div className="border border-border/40 rounded-xl bg-black/40 overflow-hidden divide-y divide-border/20 max-h-[60vh] overflow-y-auto">
+              {Object.entries(lead.raw_data || {}).map(([key, val]) => {
+                const displayValue = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
+                return (
+                  <div key={key} className="p-3 text-xs space-y-1">
+                    <span className="font-bold text-primary block uppercase tracking-wider text-[9px]">{key}</span>
+                    <span className="text-foreground whitespace-pre-wrap break-all font-mono leading-relaxed">{displayValue}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setShowRawData(false)} className="h-8 text-xs font-semibold">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
