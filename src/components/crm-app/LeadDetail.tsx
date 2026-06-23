@@ -29,7 +29,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
   const [showRawData, setShowRawData] = useState(false);
 
   const parsedRawData = useMemo(() => {
-    const rawData = lead.raw_data;
+    const rawData = lead?.raw_data;
     if (!rawData) return {};
     if (typeof rawData === 'string') {
       try {
@@ -40,7 +40,7 @@ export function LeadDetail({ lead, orgId, open, onClose }: Props) {
       }
     }
     return typeof rawData === 'object' ? (rawData as Record<string, any>) : {};
-  }, [lead.raw_data]);
+  }, [lead?.raw_data]);
 
   useEffect(() => {
     if (lead) setForm(lead);
