@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLeadCustomFieldDefs } from "@/hooks/useLeadCustomFields";
@@ -46,31 +47,68 @@ export function AddLeadDialog({ orgId, pipelineId = null, open, onClose }: { org
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Novo lead</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div><Label>Telefone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div><Label>Empresa</Label><Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
-          <div><Label>Origem</Label><Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /></div>
-          <div className="col-span-2"><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></div>
-          <div className="col-span-2"><Label>Mensagem</Label><Textarea rows={3} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
-          {defs.map((d) => (
-            <div key={d.id} className="col-span-2 md:col-span-1">
-              <Label>{d.label}</Label>
-              <Input
-                type={d.field_type === "number" ? "number" : d.field_type === "date" ? "date" : "text"}
-                value={(form.custom_fields?.[d.key]) ?? ""}
-                onChange={(e) => setForm({
-                  ...form,
-                  custom_fields: { ...(form.custom_fields || {}), [d.key]: e.target.value },
-                })}
-              />
+      <DialogContent className="max-w-xl">
+        <DialogHeader><DialogTitle>Nova Oportunidade</DialogTitle></DialogHeader>
+        
+        <Tabs defaultValue="principal" className="w-full">
+          <TabsList className="grid grid-cols-2 bg-muted/40 p-1 rounded-xl w-full mb-4">
+            <TabsTrigger value="principal">Principal</TabsTrigger>
+            <TabsTrigger value="adicional">Adicionalmente</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="principal" className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Nome da Oportunidade *</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ex: Consultoria em TI" />
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Valor (R$)</Label>
+                <Input type="number" step="0.01" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder="0.00" />
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Origem</Label>
+                <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="ex: Publicidade" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Mensagem / Requisitos</Label>
+                <Textarea rows={3} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Descreva os detalhes da oportunidade..." />
+              </div>
+              {defs.map((d) => (
+                <div key={d.id} className="col-span-2 md:col-span-1">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">{d.label}</Label>
+                  <Input
+                    type={d.field_type === "number" ? "number" : d.field_type === "date" ? "date" : "text"}
+                    value={(form.custom_fields?.[d.key]) ?? ""}
+                    onChange={(e) => setForm({
+                      ...form,
+                      custom_fields: { ...(form.custom_fields || {}), [d.key]: e.target.value },
+                    })}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <DialogFooter>
+          </TabsContent>
+          
+          <TabsContent value="adicional" className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Nome da Empresa</Label>
+                <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Empresa S.A." />
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-muted-foreground uppercase">E-mail de Contato</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="exemplo@empresa.com" />
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-muted-foreground uppercase">Telefone / WhatsApp</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+55 (11) 99999-9999" />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={submit} disabled={saving}>Criar</Button>
         </DialogFooter>

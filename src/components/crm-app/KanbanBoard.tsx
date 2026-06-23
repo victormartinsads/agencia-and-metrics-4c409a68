@@ -35,32 +35,35 @@ export function KanbanBoard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
+  const safeStages = useMemo(() => Array.isArray(stages) ? stages : [], [stages]);
+  const safeLeads = useMemo(() => Array.isArray(leads) ? leads : [], [leads]);
+
   const grouped = useMemo(() => {
     const m = new Map<string, Lead[]>();
-    for (const s of stages) m.set(s.id, []);
+    for (const s of safeStages) m.set(s.id, []);
     
-    for (const l of leads) {
+    for (const l of safeLeads) {
       let sId = l.stage_id;
-      if (!sId || !stages.some((s) => s.id === sId)) {
-        sId = stages[0]?.id; // fallback to first stage if unassigned
+      if (!sId || !safeStages.some((s) => s.id === sId)) {
+        sId = safeStages[0]?.id; // fallback to first stage if unassigned
       }
       if (sId) {
         m.get(sId)?.push(l);
       }
     }
     return m;
-  }, [leads, stages]);
+  }, [safeLeads, safeStages]);
 
   const handleDrop = async (stageId: string) => {
     if (!draggingId) return;
-    const lead = leads.find((l) => l.id === draggingId);
+    const lead = safeLeads.find((l) => l.id === draggingId);
     setDraggingId(null);
     if (!lead) return;
 
-    const destStage = stages.find((s) => s.id === stageId);
+    const destStage = safeStages.find((s) => s.id === stageId);
     if (!destStage) return;
 
-    const currentStageId = lead.stage_id || stages[0]?.id;
+    const currentStageId = lead.stage_id || safeStages[0]?.id;
     if (currentStageId === stageId) return;
 
     const newStatus = destStage.is_won ? "closed" : destStage.is_lost ? "lost" : "new";
@@ -81,7 +84,7 @@ export function KanbanBoard({
   const handleAddStage = async () => {
     if (!pipelineId) return;
     try {
-      const nextSortOrder = stages.length > 0 ? Math.max(...stages.map((s) => s.sort_order)) + 1 : 0;
+      const nextSortOrder = safeStages.length > 0 ? Math.max(...safeStages.map((s) => s.sort_order)) + 1 : 0;
       await createStage.mutateAsync({
         name: "Nova Etapa",
         color: "#94a3b8",
@@ -178,11 +181,13 @@ export function KanbanBoard({
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(s.id)}
           >
-            <div className="rounded-lg bg-secondary/40 border border-border p-2 h-full flex flex-col group/column">
-              <div className="flex flex-col gap-1 mb-3 px-1">
+            <div 
+              className="rounded-xl bg-card border border-border/60 p-3 h-full flex flex-col group/column shadow-sm overflow-hidden relative"
+              style={{ borderTop: `4px solid ${s.color || '#94a3b8'}` }}
+            >
+              <div className="flex flex-col gap-1.5 mb-3 px-0.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                     {editingId === s.id ? (
                       <div className="flex items-center gap-1 w-full">
                         <Input
@@ -202,14 +207,13 @@ export function KanbanBoard({
                       </div>
                     ) : (
                       <span
-                        className="text-sm font-semibold text-foreground truncate cursor-pointer hover:underline"
+                        className="text-sm font-bold text-card-foreground truncate cursor-pointer hover:text-primary transition-colors"
                         onClick={() => startEdit(s)}
                         title="Clique para renomear"
                       >
                         {s.name}
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground shrink-0">({list.length})</span>
                   </div>
 
                   {editingId !== s.id && (
@@ -291,11 +295,20 @@ export function KanbanBoard({
                     </div>
                   )}
                 </div>
+
+                {/* Resumo da Coluna (Flowlu style) */}
+                <div className="flex items-center justify-between text-[10.5px] text-muted-foreground bg-muted/40 p-1.5 rounded-lg border border-border/30">
+                  <span className="font-medium">{list.length} {list.length === 1 ? "Oportunidade" : "Oportunidades"}</span>
+                  <span className="font-extrabold text-foreground">
+                    {list.reduce((sum, lead) => sum + Number(lead.value || 0), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+
                 {s.is_won && (
-                  <span className="text-[9px] bg-emerald-500/10 text-emerald-500 px-1 py-0.2 rounded font-semibold self-start uppercase">Ganho (Won)</span>
+                  <span className="text-[9px] bg-emerald-500/10 text-emerald-500 px-1 py-0.2 rounded font-semibold self-start uppercase mt-1">Ganho (Won)</span>
                 )}
                 {s.is_lost && (
-                  <span className="text-[9px] bg-rose-500/10 text-rose-500 px-1 py-0.2 rounded font-semibold self-start uppercase">Perdido (Lost)</span>
+                  <span className="text-[9px] bg-rose-500/10 text-rose-500 px-1 py-0.2 rounded font-semibold self-start uppercase mt-1">Perdido (Lost)</span>
                 )}
               </div>
 

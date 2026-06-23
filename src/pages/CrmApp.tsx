@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Webhook, Loader2 } from "lucide-react";
+import { KanbanSquare, LayoutDashboard, List as ListIcon, Plus, Webhook, Loader2, Archive, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,6 +55,41 @@ export default function CrmAppPage() {
   const leads = pipelineId
     ? allLeads.filter((l: any) => l.pipeline_id === pipelineId)
     : allLeads;
+
+  const activeLeads = useMemo(() => leads.filter((l: any) => l.status !== "closed" && l.status !== "lost"), [leads]);
+  const archivedLeads = useMemo(() => leads.filter((l: any) => l.status === "closed" || l.status === "lost"), [leads]);
+
+  const activityBadges = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const todayCount = leads.filter(l => {
+      const created = l.created_at ? new Date(l.created_at) : null;
+      const updated = l.updated_at ? new Date(l.updated_at) : null;
+      
+      const createdMatch = created && !isNaN(created.getTime()) && created.toDateString() === todayStr;
+      const updatedMatch = updated && !isNaN(updated.getTime()) && updated.toDateString() === todayStr;
+      
+      return createdMatch || updatedMatch;
+    }).length;
+
+    const noActivityCount = leads.filter(l => !l.notes && (!l.tags || l.tags.length === 0)).length;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const overdueCount = leads.filter(l => {
+      const created = l.created_at ? new Date(l.created_at) : null;
+      const updated = l.updated_at ? new Date(l.updated_at) : null;
+      
+      const hasCreated = created && !isNaN(created.getTime());
+      const hasUpdated = updated && !isNaN(updated.getTime());
+      
+      const createdVal = hasCreated ? created : new Date();
+      const updatedVal = hasUpdated ? updated : createdVal;
+      
+      return createdVal < sevenDaysAgo && updatedVal < sevenDaysAgo && l.status !== "closed" && l.status !== "lost";
+    }).length;
+
+    return { today: todayCount, none: noActivityCount, overdue: overdueCount };
+  }, [leads]);
 
   // Sync pipelineId with a valid pipeline of the active organization
   useEffect(() => {
@@ -127,13 +162,36 @@ export default function CrmAppPage() {
             <p className="text-sm text-muted-foreground">Use o botão "Nova" no topo para começar.</p>
           </Card>
         ) : (
-          <Tabs defaultValue="dashboard">
-            <TabsList className="flex-wrap h-auto">
-              <TabsTrigger value="dashboard" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Dashboard</TabsTrigger>
-              <TabsTrigger value="board" className="gap-1.5"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
-              <TabsTrigger value="list" className="gap-1.5"><ListIcon className="h-3.5 w-3.5" /> Lista</TabsTrigger>
-              <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="board">
+            <div className="flex flex-col gap-4">
+              <TabsList className="flex-wrap h-auto bg-muted/20 border border-border/40 p-1 rounded-xl w-fit">
+                <TabsTrigger value="board" className="gap-1.5"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
+                <TabsTrigger value="active" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Ativos</TabsTrigger>
+                <TabsTrigger value="archived" className="gap-1.5"><Archive className="h-3.5 w-3.5" /> Arquivados</TabsTrigger>
+                <TabsTrigger value="all" className="gap-1.5"><ListIcon className="h-3.5 w-3.5" /> Todos</TabsTrigger>
+                <TabsTrigger value="dashboard" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Indicadores</TabsTrigger>
+                <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" /> Webhooks</TabsTrigger>
+              </TabsList>
+
+              {/* Flowlu Activity Status Badges */}
+              <div className="flex items-center gap-3 flex-wrap bg-card/40 p-3 rounded-2xl border border-border/50">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Status das Tarefas:</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/25 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    Atividades de hoje: {activityBadges.today}
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 px-3 py-1 rounded-full text-xs font-semibold">
+                    <div className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                    Sem atividades: {activityBadges.none}
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/25 text-red-400 px-3 py-1 rounded-full text-xs font-semibold">
+                    <div className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+                    Atividades atrasadas: {activityBadges.overdue}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <TabsContent value="dashboard" className="mt-4">
               {isLoading ? (
@@ -158,7 +216,27 @@ export default function CrmAppPage() {
                 </>
               )}
             </TabsContent>
-            <TabsContent value="list" className="mt-4">
+            <TabsContent value="active" className="mt-4">
+              <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+              <LeadsList
+                leads={activeLeads}
+                onClick={(l) => { setSelected(l); setOpenDetail(true); }}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleAll={toggleAll}
+              />
+            </TabsContent>
+            <TabsContent value="archived" className="mt-4">
+              <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
+              <LeadsList
+                leads={archivedLeads}
+                onClick={(l) => { setSelected(l); setOpenDetail(true); }}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleAll={toggleAll}
+              />
+            </TabsContent>
+            <TabsContent value="all" className="mt-4">
               <BulkActionsBar orgId={activeOrgId} selectedIds={Array.from(selectedIds)} onClear={clearSelection} />
               <LeadsList
                 leads={leads}
