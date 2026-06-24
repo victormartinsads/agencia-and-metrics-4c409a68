@@ -22,6 +22,18 @@ export default {
       const rawText = await request.text();
       const body    = rawText ? JSON.parse(rawText) : {};
 
+      if (url.pathname === "/tracker.js") {
+        // Redirecionar ou fazer fetch do script hospedado no painel principal
+        // Substitua 'https://seu-painel.com' pela URL onde seu frontend está hospedado
+        const scriptRes = await fetch(`https://seudominio.com/tracker.js`);
+        return new Response(await scriptRes.text(), {
+          headers: {
+            "Content-Type": "application/javascript",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      }
+
       const parts    = url.pathname.split("/").filter(Boolean);
       const route    = parts[0];   // "collect" ou "webhook"
       const clientId = parts[1];
@@ -55,6 +67,7 @@ async function handleCollect(body, cfg, clientId, env, request) {
     fbclid, fbp, fbc,
     utm_source, utm_medium, utm_campaign, utm_content, utm_term,
     page_url, referrer, event_name = "PageView", event_id, ga4_client_id,
+    and_id, value
   } = body;
 
   const ip        = request.headers.get("CF-Connecting-IP") || "";
@@ -90,6 +103,22 @@ async function handleCollect(body, cfg, clientId, env, request) {
       last_seen_at: new Date().toISOString(),
     }, "client_id,email");
   }
+
+  // 1. Gravar Raw Event para o Novo Analytics
+  supabaseInsert(env, "tracking_raw_events", {
+    client_id: clientId,
+    event_name: event_name,
+    and_id: and_id || finalEventId,
+    session_id: ga4_client_id || `${ip}.${eventTime}`,
+    page_url: page_url || null,
+    referrer: referrer || null,
+    ip_address: ip,
+    user_agent: userAgent,
+    utm_source: utm_source || null,
+    utm_medium: utm_medium || null,
+    utm_campaign: utm_campaign || null,
+    value: value || null,
+  });
 
   // Meta CAPI
   let capiResult = null;

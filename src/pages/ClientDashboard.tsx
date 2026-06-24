@@ -12,6 +12,7 @@ import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { toast } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 
 export default function ClientDashboard() {
@@ -118,8 +119,23 @@ export default function ClientDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="min-h-screen bg-background flex flex-col p-6 gap-6">
+        <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-[400px] w-full rounded-2xl lg:col-span-2" />
+          <Skeleton className="h-[400px] w-full rounded-2xl" />
+        </div>
       </div>
     );
   }

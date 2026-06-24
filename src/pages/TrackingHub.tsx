@@ -17,6 +17,7 @@ import TrackingEvents from "@/components/tracking/TrackingEvents";
 import LiveEvents from "@/components/tracking/LiveEvents";
 import InboundWebhooksTab from "@/components/tracking/InboundWebhooks";
 import UserJourney from "@/components/tracking/UserJourney";
+import CustomAnalytics from "@/components/tracking/CustomAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -345,6 +346,10 @@ export default function TrackingHub() {
               <Users className="h-3.5 w-3.5" />
               Jornada CRM
             </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2 text-indigo-600 bg-indigo-50/50 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-900 border-indigo-200">
+              <Activity className="h-3.5 w-3.5" />
+              Analytics CDP
+            </TabsTrigger>
             <TabsTrigger value="live" className="gap-2 bg-blue-50/50 text-blue-700 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 border-blue-200">
               <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" />
               Ao Vivo
@@ -391,6 +396,10 @@ export default function TrackingHub() {
 
           <TabsContent value="journey">
             <UserJourney clientId={clientId!} />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <CustomAnalytics clientId={clientId!} />
           </TabsContent>
 
           <TabsContent value="live">

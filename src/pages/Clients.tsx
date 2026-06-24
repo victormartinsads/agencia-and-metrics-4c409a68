@@ -482,12 +482,16 @@ export default function ClientsPage() {
                       <TableCell className="text-right font-mono text-sm">{c.ad_account_ids.length}</TableCell>
                       <TableCell className="text-right font-mono text-sm text-muted-foreground">{c.currency_symbol || "R$"}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button aria-label="Mais ações" className="rounded p-1.5 text-muted-foreground hover:bg-background hover:text-foreground">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
-                          </DropdownMenuTrigger>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link to={`/tracking/${c.id}`} aria-label="TrackingHub" className="rounded p-1.5 text-muted-foreground hover:bg-background hover:text-foreground" title="TrackingHub CAPI">
+                            <Zap className="h-4 w-4" />
+                          </Link>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button aria-label="Mais ações" className="rounded p-1.5 text-muted-foreground hover:bg-background hover:text-foreground">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
                             <DropdownMenuItem onClick={() => openEdit(c)}>
                               <Pencil className="mr-2 h-3.5 w-3.5" /> Editar

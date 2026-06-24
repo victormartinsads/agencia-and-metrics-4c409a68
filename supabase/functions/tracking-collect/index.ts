@@ -75,11 +75,15 @@ Deno.serve(async (req) => {
     const body = rawText ? JSON.parse(rawText) : {};
 
     const {
+      client_id: bodyClientId,
       email, phone, first_name, last_name,
       fbclid, fbp, fbc,
       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-      page_url, referrer, event_name = "PageView", event_id, ga4_client_id, user_id,
+      page_url, referrer, event_name = "PageView", event_id, ga4_client_id, user_id, session_id,
+      event_data = {},
     } = body;
+
+    const actualClientId = bodyClientId || clientId;
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       ?? req.headers.get("cf-connecting-ip") ?? "";
@@ -105,7 +109,7 @@ Deno.serve(async (req) => {
 
     // Buscar config
     const cfg = await dbGet("tracking_config", {
-      "client_id": `eq.${clientId}`,
+      "client_id": `eq.${actualClientId}`,
       "select": "pixel_id,capi_token,test_event_code,ga4_measurement_id,ga4_api_secret,active",
     });
 
@@ -134,10 +138,11 @@ Deno.serve(async (req) => {
     const finalEventId = event_id || crypto.randomUUID();
     const eventTime = Math.floor(Date.now() / 1000);
 
-    // Upsert lead (com first_name, last_name)
+    // Upsert lead (com first_name, last_name e and_id)
+    let leadId = null;
     if (emailNorm) {
       await dbUpsert("tracking_leads", {
-        client_id: clientId,
+        client_id: actualClientId,
         email: emailNorm, email_hash: emailHash,
         phone: phoneNorm, phone_hash: phoneHash,
         first_name: fnNorm, first_name_hash: fnHash,
@@ -147,10 +152,28 @@ Deno.serve(async (req) => {
         utm_source: utm_source || null, utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null, utm_content: utm_content || null,
         utm_term: utm_term || null, page_url: page_url || null, referrer: referrer || null,
-        country, city, os, browser, user_id: user_id || null,
+        country, city, os, browser, user_id: user_id || null, and_id: user_id || null, session_id: session_id || null,
         last_seen_at: new Date().toISOString(),
       }, "client_id,email");
+      
+      // Buscar o ID recém inserido para atrelar ao raw event
+      const lead = await dbGet("tracking_leads", { "client_id": `eq.${actualClientId}`, "email": `eq.${emailNorm}`, "select": "id" });
+      if (lead) leadId = lead.id;
     }
+
+    // Gravar o Raw Event para o Custom Analytics
+    await dbInsert("tracking_raw_events", {
+      client_id: actualClientId,
+      and_id: user_id || crypto.randomUUID(),
+      session_id: session_id || crypto.randomUUID(),
+      lead_id: leadId,
+      event_name: event_name,
+      event_data: event_data,
+      url: page_url || null,
+      referrer: referrer || null,
+      user_agent: userAgent,
+      ip_address: ip
+    });
 
     // Meta CAPI
     let capiResult: any = null;
@@ -191,7 +214,7 @@ Deno.serve(async (req) => {
 
     // Registrar no Log CAPI (Sempre registra para aparecer no Ao Vivo, mesmo sem Token)
     await dbInsert("capi_events_log", {
-      client_id: clientId, event_name, event_id: finalEventId, platform: "meta_capi",
+      client_id: actualClientId, event_name, event_id: finalEventId, platform: "meta_capi",
       pixel_id: cfg.pixel_id || null, status: capiResult.status,
       meta_response: capiResult.response, error_message: capiResult.success ? null : JSON.stringify(capiResult.response),
       buyer_email_masked: emailNorm ? maskEmail(emailNorm) : null,

@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { useStaffMemberRole } from "@/hooks/useGestorDiary";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const periods = [
   { value: "today", label: "Hoje" },
@@ -262,8 +263,24 @@ export default function GestorOverview({ isHomePage = false }: { isHomePage?: bo
 
   if (roleLoading || (role?.isGestor && assignmentsLoading)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex flex-col p-6 gap-6">
+        <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 mt-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-[200px] w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }

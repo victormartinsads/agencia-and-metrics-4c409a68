@@ -37,6 +37,7 @@ import { useStaffMemberRole } from "@/hooks/useGestorDiary";
 import { cn } from "@/lib/utils";
 import andLogo from "@/assets/and-logo.png";
 import { useNavigate } from "react-router-dom";
+import { PageTransition } from "@/components/ui/page-transition";
 import {
   CommandDialog,
   CommandEmpty,
@@ -417,11 +418,13 @@ export default function AppShell({
         )}
 
         <div className="flex-1 overflow-auto">
-          {noContainer ? (
-            children
-          ) : (
-            <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">{children}</div>
-          )}
+          <PageTransition key={location.pathname}>
+            {noContainer ? (
+              children
+            ) : (
+              <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6">{children}</div>
+            )}
+          </PageTransition>
         </div>
       </main>
 
