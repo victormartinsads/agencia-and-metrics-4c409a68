@@ -17,8 +17,12 @@ export default function TrackingScript({ clientId, config }: Props) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://SEU_PROJETO.supabase.co";
   const scriptUrl = `${supabaseUrl}/functions/v1/tracking-script/${clientId}`;
 
-  const htmlTag = `<!-- TrackingHub: Cole antes do </head> -->
-<script src="${scriptUrl}" async></script>`;
+  const htmlTag = `<!-- TrackingHub -->
+<script>(function(w,d,s,u){
+var f=d.getElementsByTagName(s)[0],j=d.createElement(s);
+j.async=true;j.src=u;f.parentNode.insertBefore(j,f);
+})(window,document,'script','${scriptUrl}');</script>
+<!-- End TrackingHub -->`;
 
   const gtmSnippet = `<script>
   (function() {

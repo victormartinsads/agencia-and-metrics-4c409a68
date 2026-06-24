@@ -392,6 +392,37 @@ ${hasContact ? `
     fireEvent('Contact', { method: 'whatsapp' }, false);
   });
 ` : ''}
+    }
+  });
+
+  /* ── API pública ────────────────────────────────────────────────── */
+
+  TH.identify = function(email, phone, firstName, lastName) {
+    var stored = getStoredData();
+    if (email)     stored.email      = email.trim().toLowerCase();
+    if (phone)     stored.phone      = normalizePhone(phone);
+    if (firstName) stored.first_name = firstName.trim().toLowerCase();
+    if (lastName)  stored.last_name  = lastName.trim().toLowerCase();
+    saveStoredData(stored);
+    send('Lead', stored);
+  };
+
+  TH.track = function(eventName, params) { fireEvent(eventName, params, false); };
+
+  TH.viewContent = function(contentName, contentId, value, currency) {
+    fireEvent('ViewContent', {
+      content_name: contentName, content_ids: contentId ? [contentId] : [],
+      value: value, currency: currency || 'BRL'
+    }, true);
+  };
+
+  /* ── Inicialização ──────────────────────────────────────────────── */
+
+  captureParams();
+  if (TH.pixelId) initPixel(TH.pixelId);
+  if (d.readyState === 'loading') { d.addEventListener('DOMContentLoaded', injectLinks); }
+  else { injectLinks(); }
+
   /* ── Eventos configurados ───────────────────────────────────────── */
 
   TH.events = ${eventsJson};
@@ -437,34 +468,6 @@ ${hasContact ? `
         break;
     }
   });
-
-  /* ── API pública ────────────────────────────────────────────────── */
-
-  TH.identify = function(email, phone, firstName, lastName) {
-    var stored = getStoredData();
-    if (email)     stored.email      = email.trim().toLowerCase();
-    if (phone)     stored.phone      = normalizePhone(phone);
-    if (firstName) stored.first_name = firstName.trim().toLowerCase();
-    if (lastName)  stored.last_name  = lastName.trim().toLowerCase();
-    saveStoredData(stored);
-    send('Lead', stored);
-  };
-
-  TH.track = function(eventName, params) { fireEvent(eventName, params, false); };
-
-  TH.viewContent = function(contentName, contentId, value, currency) {
-    fireEvent('ViewContent', {
-      content_name: contentName, content_ids: contentId ? [contentId] : [],
-      value: value, currency: currency || 'BRL'
-    }, true);
-  };
-
-  /* ── Inicialização ──────────────────────────────────────────────── */
-
-  captureParams();
-  if (TH.pixelId) initPixel(TH.pixelId);
-  if (d.readyState === 'loading') { d.addEventListener('DOMContentLoaded', injectLinks); }
-  else { injectLinks(); }
 
   TH.ready = true;
 
