@@ -23,6 +23,7 @@ import {
   type GestorDiaryClient,
   type GestorDiaryCalendarEvent,
   useGestorProfileMeta,
+  useAllGestorProfileMeta,
   useSaveGestorProfileMeta,
 } from "@/hooks/useGestorDiary";
 import { useGestorAssignments } from "@/hooks/useGestorAssignments";
@@ -104,6 +105,9 @@ export default function DiarioDoGestor() {
     },
   });
 
+  // Load all gestor meta overrides (for better names in selector)
+  const { data: allMeta = [] } = useAllGestorProfileMeta();
+
   // Get active roles of staff to filter "Gestores"
   const { data: staffRoles = [] } = useStaffRoles();
 
@@ -113,14 +117,15 @@ export default function DiarioDoGestor() {
       .filter((r) => r.role === "gestor")
       .map((r) => {
         const p = profiles.find((prof) => prof.user_id === r.user_id);
+        const meta = allMeta.find((m) => m.gestor_id === r.user_id);
         return {
           id: r.user_id,
-          email: p?.email || "",
-          name: p?.full_name || p?.email?.split("@")[0] || "Gestor",
+          email: meta?.email_override || p?.email || "",
+          name: meta?.name_override || p?.full_name || p?.email?.split("@")[0] || "Gestor",
           avatar: p?.avatar_url || null,
         };
       });
-  }, [staffRoles, profiles]);
+  }, [staffRoles, profiles, allMeta]);
 
   // Selected gestor state
   const [selectedGestorId, setSelectedGestorId] = useState<string>("");
@@ -511,7 +516,7 @@ export default function DiarioDoGestor() {
               <SelectContent>
                 {gestoresList.map((g) => (
                   <SelectItem key={g.id} value={g.id}>
-                    {g.name.toUpperCase()}
+                    {g.name.toUpperCase()} {g.email ? `(${g.email.toLowerCase()})` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

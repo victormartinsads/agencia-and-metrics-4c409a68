@@ -9,7 +9,8 @@ import { CampaignHierarchyView } from './components/CampaignHierarchyView';
 import { useClients } from '../../hooks/useClients';
 import { useMetaAds } from '../../hooks/useMetaAds';
 import { transformMetaToOptimizer } from '../../utils/transformMetaToOptimizer';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Target, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function CampaignOptimizer() {
   const { data: clients, isLoading: loadingClients } = useClients({ includeArchived: false });
@@ -112,7 +113,23 @@ export default function CampaignOptimizer() {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-8 max-w-[1400px] mx-auto">
           
-          {/* Métricas Globais do Funil */}
+          {!selectedFunnel ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
+              <div className="bg-primary/10 p-6 rounded-full mb-6">
+                <Target className="w-12 h-12 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground mb-2">Nenhuma campanha encontrada</h2>
+              <p className="text-muted-foreground max-w-[500px] mb-8">
+                Não localizamos nenhuma campanha ativa para este cliente na Meta Ads. Verifique se o token está correto ou crie sua primeira campanha para começar a otimizar.
+              </p>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Criar Primeira Campanha
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Métricas Globais do Funil */}
           <section>
             <DashboardMetrics 
               creatives={funnelCreatives} 
@@ -160,6 +177,8 @@ export default function CampaignOptimizer() {
               />
             </section>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

@@ -4,8 +4,10 @@ import { CreativeDiagnostic } from '../../../utils/campaignRules';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, Ban, PartyPopper } from 'lucide-react';
+import { AlertCircle, Ban, PartyPopper, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+import { useToast } from "@/hooks/use-toast";
 
 interface DeactivationCenterProps {
   creatives: CreativeData[];
@@ -14,14 +16,28 @@ interface DeactivationCenterProps {
 
 export function DeactivationCenter({ creatives, diagnostics }: DeactivationCenterProps) {
   const [disabledCreatives, setDisabledCreatives] = useState<Set<string>>(new Set());
+  const [isDisabling, setIsDisabling] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   // Filter only dangerous diagnostics (bleeding cost)
   const dangerDiagnostics = diagnostics.filter(d => 
     d.level === 'danger' && !disabledCreatives.has(d.creativeId)
   );
 
-  const handleDisable = (id: string) => {
+  const handleDisable = async (id: string, name: string) => {
+    setIsDisabling(prev => ({ ...prev, [id]: true }));
+    
+    // Simula uma chamada à API (Meta Graph API)
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     setDisabledCreatives(prev => new Set(prev).add(id));
+    setIsDisabling(prev => ({ ...prev, [id]: false }));
+    
+    toast({
+      title: "Anúncio Pausado",
+      description: `"${name}" foi pausado com sucesso e o sangramento foi contido.`,
+      variant: "default",
+    });
   };
 
   if (dangerDiagnostics.length === 0) {
@@ -126,11 +142,16 @@ export function DeactivationCenter({ creatives, diagnostics }: DeactivationCente
 
                 <Button 
                   variant="destructive" 
-                  className="w-full shadow-sm font-semibold"
-                  onClick={() => handleDisable(creative.id)}
+                  className="w-full shadow-sm font-semibold transition-all"
+                  onClick={() => handleDisable(creative.id, creative.name)}
+                  disabled={isDisabling[creative.id]}
                 >
-                  <Ban className="mr-2 h-4 w-4" />
-                  Desativar Imediatamente
+                  {isDisabling[creative.id] ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Ban className="mr-2 h-4 w-4" />
+                  )}
+                  {isDisabling[creative.id] ? "Pausando..." : "Desativar Imediatamente"}
                 </Button>
               </div>
             </CardContent>

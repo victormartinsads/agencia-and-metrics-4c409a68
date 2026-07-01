@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AdSetData } from '../../../data/mockCampaigns';
 import { AdSetDiagnostic } from '../../../utils/campaignRules';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Copy, ArrowUpRight, Rocket } from 'lucide-react';
+import { TrendingUp, Copy, ArrowUpRight, Rocket, Loader2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScalingAssistantProps {
   adSets: AdSetData[];
@@ -12,6 +13,24 @@ interface ScalingAssistantProps {
 }
 
 export function ScalingAssistant({ adSets, diagnostics }: ScalingAssistantProps) {
+  const [isScaling, setIsScaling] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+
+  const handleScale = async (id: string, name: string) => {
+    setIsScaling(prev => ({ ...prev, [id]: true }));
+    
+    // Simula uma chamada à API (Meta Graph API) para aumentar a verba
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    setIsScaling(prev => ({ ...prev, [id]: false }));
+    
+    toast({
+      title: "Verba Aumentada",
+      description: `Verba de "${name}" foi aumentada em 20% com sucesso.`,
+      variant: "default",
+    });
+  };
+
   const scaleReadyDiagnostics = diagnostics.filter(d => d.level === 'success' && d.ruleName === 'Oportunidade de Escala');
 
   if (scaleReadyDiagnostics.length === 0) {
@@ -66,9 +85,18 @@ export function ScalingAssistant({ adSets, diagnostics }: ScalingAssistantProps)
                 </div>
                 
                 <div className="flex flex-col gap-2 pt-2">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" size="sm">
-                    <ArrowUpRight className="mr-2 h-4 w-4" />
-                    Aumentar Verba (+20%)
+                  <Button 
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all" 
+                    size="sm"
+                    onClick={() => handleScale(adSet.id, adSet.name)}
+                    disabled={isScaling[adSet.id]}
+                  >
+                    {isScaling[adSet.id] ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowUpRight className="mr-2 h-4 w-4" />
+                    )}
+                    {isScaling[adSet.id] ? "Aumentando Verba..." : "Aumentar Verba (+20%)"}
                   </Button>
                   <Button variant="outline" className="w-full shadow-sm" size="sm">
                     <Copy className="mr-2 h-4 w-4" />

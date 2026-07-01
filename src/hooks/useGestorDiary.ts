@@ -845,6 +845,36 @@ export interface GestorProfileMeta {
   banner_override?: string;
 }
 
+export function useAllGestorProfileMeta() {
+  return useQuery({
+    queryKey: ["all-gestor-profile-meta"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("gestor_profile_meta")
+          .select("*");
+
+        if (error) throw error;
+        return (data || []) as GestorProfileMeta[];
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const allMeta: GestorProfileMeta[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("profile_meta:")) {
+              try {
+                allMeta.push(JSON.parse(localStorage.getItem(key) || ""));
+              } catch {}
+            }
+          }
+          return allMeta;
+        }
+        throw err;
+      }
+    },
+  });
+}
+
 export function useGestorProfileMeta(gestorId: string) {
   return useQuery({
     queryKey: ["gestor-profile-meta", gestorId],

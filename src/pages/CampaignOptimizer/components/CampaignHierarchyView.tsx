@@ -6,8 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Pause, Play, DollarSign, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pause, Play, DollarSign, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
 interface CampaignHierarchyViewProps {
   adSets: AdSetData[];
@@ -18,6 +19,22 @@ interface CampaignHierarchyViewProps {
 export function CampaignHierarchyView({ adSets, creatives, diagnostics }: CampaignHierarchyViewProps) {
   const [expandedAdSets, setExpandedAdSets] = useState<Set<string>>(new Set(adSets.map(a => a.id)));
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isActing, setIsActing] = useState<Record<string, 'pausing' | 'scaling' | null>>({});
+  const { toast } = useToast();
+
+  const handleInlinePause = async (id: string, name: string) => {
+    setIsActing(prev => ({ ...prev, [id]: 'pausing' }));
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API
+    setIsActing(prev => ({ ...prev, [id]: null }));
+    toast({ title: "Pausado", description: `"${name}" foi pausado.` });
+  };
+
+  const handleInlineScale = async (id: string, name: string) => {
+    setIsActing(prev => ({ ...prev, [id]: 'scaling' }));
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API
+    setIsActing(prev => ({ ...prev, [id]: null }));
+    toast({ title: "Verba Aumentada", description: `Orçamento de "${name}" aumentado em 20%.` });
+  };
 
   const toggleAdSet = (id: string) => {
     const newSet = new Set(expandedAdSets);
@@ -88,7 +105,7 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                 <TableHead className="text-right">Gasto</TableHead>
                 <TableHead className="text-right">CPA (Compras)</TableHead>
                 <TableHead className="text-right">CPL (Leads)</TableHead>
-                <TableHead>Diagnóstico</TableHead>
+                <TableHead>Diagnóstico & Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,7 +123,7 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                 return (
                   <React.Fragment key={adSet.id}>
                     {/* Linha do Conjunto de Anúncios */}
-                    <TableRow className="bg-muted/10 hover:bg-muted/20 border-b-2">
+                    <TableRow className="bg-muted/10 hover:bg-muted/20 border-b-2 group">
                       <TableCell className="p-2 pl-4">
                         <div className="flex items-center gap-2">
                           <Checkbox 
@@ -136,7 +153,30 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                         <div>{cpl !== '-' ? `R$ ${cpl}` : '-'}</div>
                         <div className="text-xs text-muted-foreground">{adSet.leads} leads</div>
                       </TableCell>
-                      <TableCell></TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 px-2 text-xs" 
+                            onClick={() => handleInlinePause(adSet.id, adSet.name)}
+                            disabled={isActing[adSet.id] === 'pausing'}
+                          >
+                            {isActing[adSet.id] === 'pausing' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Pause className="h-3 w-3 mr-1" />}
+                            Pausar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="default" 
+                            className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700" 
+                            onClick={() => handleInlineScale(adSet.id, adSet.name)}
+                            disabled={isActing[adSet.id] === 'scaling'}
+                          >
+                            {isActing[adSet.id] === 'scaling' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <DollarSign className="h-3 w-3 mr-1" />}
+                            Escalar
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
 
                     {/* Linhas dos Criativos (Anúncios) */}
@@ -149,7 +189,7 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                       const worstDiag = creativeDiags.sort((a,b) => (a.level === 'danger' ? -1 : 1))[0];
 
                       return (
-                        <TableRow key={creative.id} className="hover:bg-muted/5">
+                        <TableRow key={creative.id} className={cn("hover:bg-muted/5 group", creative.frequencyWeekly > 3 ? "bg-red-50/30 dark:bg-red-950/10" : "")}>
                           <TableCell className="pl-12 py-2">
                             <Checkbox 
                               checked={selectedItems.has(creative.id)}
@@ -158,7 +198,12 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                           </TableCell>
                           <TableCell className="py-2">
                             <div className="flex items-center gap-3 pl-4">
-                              <div className="h-10 w-10 bg-muted rounded border overflow-hidden flex-shrink-0">
+                              <div className="h-10 w-10 bg-muted rounded border overflow-hidden flex-shrink-0 relative">
+                                {creative.frequencyWeekly > 3 && (
+                                  <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center backdrop-blur-[1px]" title="Fadiga Visual Detectada">
+                                    <AlertCircle className="h-5 w-5 text-destructive drop-shadow-md" />
+                                  </div>
+                                )}
                                 {creative.thumbnailUrl ? (
                                   <img src={creative.thumbnailUrl} className="w-full h-full object-cover" alt="thumb" />
                                 ) : (
@@ -184,19 +229,40 @@ export function CampaignHierarchyView({ adSets, creatives, diagnostics }: Campai
                             <div className="text-xs text-muted-foreground">{creative.leads} leads</div>
                           </TableCell>
                           <TableCell>
-                            {worstDiag && (
-                              <div className="flex items-center gap-1.5" title={worstDiag.message}>
-                                {worstDiag.level === 'danger' ? (
-                                  <Badge variant="destructive" className="flex items-center gap-1 text-[10px]">
-                                    <AlertCircle className="h-3 w-3" /> {worstDiag.ruleName}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400">
-                                    {worstDiag.ruleName}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                                {worstDiag && (
+                                  <div title={worstDiag.message}>
+                                    {worstDiag.level === 'danger' ? (
+                                      <Badge variant="destructive" className="flex items-center gap-1 text-[10px]">
+                                        <AlertCircle className="h-3 w-3" /> {worstDiag.ruleName}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400">
+                                        {worstDiag.ruleName}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                                {creative.frequencyWeekly > 3 && (
+                                  <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900" title={`Frequência: ${creative.frequencyWeekly.toFixed(1)}x`}>
+                                    Fadiga Visual
                                   </Badge>
                                 )}
                               </div>
-                            )}
+                              <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-7 px-2 text-xs" 
+                                  onClick={() => handleInlinePause(creative.id, creative.name)}
+                                  disabled={isActing[creative.id] === 'pausing'}
+                                >
+                                  {isActing[creative.id] === 'pausing' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Pause className="h-3 w-3 mr-1" />}
+                                  Pausar
+                                </Button>
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
