@@ -241,6 +241,12 @@ function SavedDiagnosticViewer({
                 return { value, isOverridden };
               };
 
+              const getCurrentRawValue = (key: string) => {
+                const override = cfg?.custom_metrics?.find((m) => m.id === key);
+                if (override) return Number(String(override.value).replace(",", "."));
+                return getMetricValue(totals, key);
+              };
+
               const labelOf = (key: string) => key === "conversions" ? resultLabel : (AVAILABLE_METRICS.find(m => m.key === key)?.label || key);
               const customGroupTitle = (() => {
                 if (g.isFunnel) {
@@ -284,6 +290,15 @@ function SavedDiagnosticViewer({
                       funnelCode={g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)}
                       readOnly={true}
                       snapshotData={snap.funnelDiagnostics?.[g.isFunnel ? (extractFunnelCode(g.campaigns[0]?.name) || g.key) : (g.campaigns[0]?.id || g.key)]}
+                      liveCampaignMetrics={{
+                        hookRate: getCurrentRawValue("hookRate"),
+                        holdRate: getCurrentRawValue("holdRate"),
+                        linkCtr: getCurrentRawValue("linkCtr"),
+                        avgVideoTime: getCurrentRawValue("avgVideoTime"),
+                        costPerPlay: (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays")) > 0
+                          ? getCurrentRawValue("spend") / (getCurrentRawValue("videoPlays") || getCurrentRawValue("thruplays"))
+                          : 0,
+                      }}
                     />
                   </div>
 

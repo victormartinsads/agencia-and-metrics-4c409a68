@@ -522,6 +522,7 @@ export default function ClientsPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

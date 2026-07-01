@@ -392,8 +392,7 @@ ${hasContact ? `
     fireEvent('Contact', { method: 'whatsapp' }, false);
   });
 ` : ''}
-    }
-  });
+
 
   /* ── API pública ────────────────────────────────────────────────── */
 

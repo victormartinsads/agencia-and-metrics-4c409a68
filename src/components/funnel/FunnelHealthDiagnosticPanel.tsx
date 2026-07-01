@@ -205,11 +205,11 @@ export function FunnelHealthDiagnosticPanel({ clientId, funnelCode, readOnly = f
 
   // Video watch time graph calculations (matches the brand style)
   const isSnapshot = !!snapshotData;
-  const isMockHook = !isSnapshot && (!curve || curve.hook_rate === 94.5);
-  const isMockHold = !isSnapshot && (!curve || curve.hold_rate === 17.5);
-  const isMockCtr = !isSnapshot && (!curve || curve.ctr_link === 2.74);
-  const isMockAvgTime = !isSnapshot && (!curve || curve.avgVideoTime === 5.4 || curve.avgVideoTime === 3.0);
-  const isMockCostPlay = !isSnapshot && (!curve || curve.cost_per_play === 0.05);
+  const isMockHook = (!curve || curve.hook_rate === 94.5 || curve.hook_rate == null);
+  const isMockHold = (!curve || curve.hold_rate === 17.5 || curve.hold_rate == null);
+  const isMockCtr = (!curve || curve.ctr_link === 2.74 || curve.ctr_link == null);
+  const isMockAvgTime = (!curve || curve.avgVideoTime === 5.4 || curve.avgVideoTime === 3.0 || curve.avgVideoTime == null);
+  const isMockCostPlay = (!curve || curve.cost_per_play === 0.05 || curve.cost_per_play == null);
 
   const hookRate = isMockHook ? (liveCampaignMetrics?.hookRate ?? curve?.hook_rate ?? 94.5) : (curve?.hook_rate ?? 94.5);
   const holdRate = isMockHold ? (liveCampaignMetrics?.holdRate ?? curve?.hold_rate ?? 17.5) : (curve?.hold_rate ?? 17.5);

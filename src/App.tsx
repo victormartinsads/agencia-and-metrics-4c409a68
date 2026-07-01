@@ -32,6 +32,7 @@ import DiarioDoGestor from "./pages/DiarioDoGestor.tsx";
 import TrackingHub from "./pages/TrackingHub.tsx";
 import Home from "./pages/Home.tsx";
 import RoboAnalista from "./pages/RoboAnalista.tsx";
+import CampaignOptimizer from "./pages/CampaignOptimizer";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/portal/dashboard" element={<ProtectedRoute><ClientPortalDashboardRedirect /></ProtectedRoute>} />
             <Route path="/crm-app" element={<ProtectedRoute><CrmAppPage /></ProtectedRoute>} />
             <Route path="/robo-analista" element={<ProtectedRoute><RoboAnalista /></ProtectedRoute>} />
+            <Route path="/campaign-optimizer" element={<ProtectedRoute><CampaignOptimizer /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
