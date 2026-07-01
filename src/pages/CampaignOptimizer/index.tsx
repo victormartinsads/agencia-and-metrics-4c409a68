@@ -1,39 +1,63 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { mockClients, mockFunnels, mockCreatives, mockAdSets } from '../../data/mockCampaigns';
 import { analyzeCreatives, analyzeAdSets } from '../../utils/campaignRules';
 import { DeactivationCenter } from './components/DeactivationCenter';
-import { DiagnosticCenter } from './components/DiagnosticCenter';
 import { ScalingAssistant } from './components/ScalingAssistant';
 import { DashboardMetrics } from './components/DashboardMetrics';
 import { FunnelSelector } from './components/FunnelSelector';
 import { FunnelHealth } from './components/FunnelHealth';
 import { CampaignHierarchyView } from './components/CampaignHierarchyView';
+import { useClients } from '../../hooks/useClients';
+import { useMetaAds } from '../../hooks/useMetaAds';
+import { transformMetaToOptimizer } from '../../utils/transformMetaToOptimizer';
+import { Loader2 } from 'lucide-react';
 
 export default function CampaignOptimizer() {
-  const [selectedClientId, setSelectedClientId] = useState(mockClients[0].id);
+  const { data: clients, isLoading: loadingClients } = useClients({ includeArchived: false });
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   
-  // Get funnels for selected client
-  const clientFunnels = mockFunnels.filter(f => f.clientId === selectedClientId);
-  const [selectedFunnelId, setSelectedFunnelId] = useState(clientFunnels[0]?.id);
+  // Set initial client
+  useEffect(() => {
+    if (clients && clients.length > 0 && !selectedClientId) {
+      setSelectedClientId(clients[0].id);
+    }
+  }, [clients, selectedClientId]);
+
+  const selectedClient = useMemo(() => 
+    clients?.find(c => c.id === selectedClientId),
+  [clients, selectedClientId]);
+
+  // Fetch real meta data
+  const { data: metaData, isLoading: loadingMeta, error: metaError } = useMetaAds(selectedClientId);
+
+  // Transform Meta campaigns to our Optimizer structure
+  const { funnels, adSets, creatives } = useMemo(() => {
+    if (!selectedClientId || !metaData?.campaigns) {
+      return { funnels: [], adSets: [], creatives: [] };
+    }
+    return transformMetaToOptimizer(selectedClientId, selectedClient, metaData.campaigns);
+  }, [selectedClientId, selectedClient, metaData]);
+
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>('');
 
   // When client changes, reset funnel
   useEffect(() => {
-    const newFunnels = mockFunnels.filter(f => f.clientId === selectedClientId);
-    if (newFunnels.length > 0) {
-      setSelectedFunnelId(newFunnels[0].id);
+    if (funnels.length > 0) {
+      setSelectedFunnelId(funnels[0].id);
+    } else {
+      setSelectedFunnelId('');
     }
-  }, [selectedClientId]);
+  }, [funnels]);
 
   // Derived state
-  const selectedFunnel = mockFunnels.find(f => f.id === selectedFunnelId);
+  const selectedFunnel = funnels.find(f => f.id === selectedFunnelId);
   
   const funnelCreatives = useMemo(() => 
-    mockCreatives.filter(c => c.funnelId === selectedFunnelId),
-  [selectedFunnelId]);
+    creatives.filter(c => c.funnelId === selectedFunnelId),
+  [selectedFunnelId, creatives]);
 
   const funnelAdSets = useMemo(() => 
-    mockAdSets.filter(a => a.funnelId === selectedFunnelId),
-  [selectedFunnelId]);
+    adSets.filter(a => a.funnelId === selectedFunnelId),
+  [selectedFunnelId, adSets]);
 
   const { creativeDiagnostics, adSetDiagnostics } = useMemo(() => {
     if (!selectedFunnel) return { creativeDiagnostics: [], adSetDiagnostics: [] };
@@ -42,6 +66,17 @@ export default function CampaignOptimizer() {
       adSetDiagnostics: analyzeAdSets(funnelAdSets, selectedFunnel)
     };
   }, [funnelCreatives, funnelAdSets, selectedFunnel]);
+
+  if (loadingClients || (selectedClientId && loadingMeta && funnels.length === 0)) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando dados das campanhas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -54,8 +89,8 @@ export default function CampaignOptimizer() {
           </div>
           
           <FunnelSelector 
-            clients={mockClients}
-            funnels={mockFunnels}
+            clients={clients || []}
+            funnels={funnels}
             selectedClientId={selectedClientId}
             selectedFunnelId={selectedFunnelId}
             onClientChange={setSelectedClientId}
@@ -63,6 +98,15 @@ export default function CampaignOptimizer() {
           />
         </div>
       </div>
+
+      {/* Error state */}
+      {metaError && (
+        <div className="p-6">
+          <div className="bg-destructive/10 text-destructive border border-destructive/20 p-4 rounded-md">
+            Erro ao carregar dados da Meta: {(metaError as Error).message}
+          </div>
+        </div>
+      )}
 
       {/* 2. Conteúdo Rolável */}
       <div className="flex-1 overflow-y-auto">

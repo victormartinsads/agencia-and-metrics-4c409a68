@@ -1,5 +1,6 @@
 import React from 'react';
-import { Client, Funnel } from '../../../data/mockCampaigns';
+import { Funnel } from '../../../data/mockCampaigns';
+import { Client } from '../../../hooks/useClients';
 import {
   Select,
   SelectContent,
