@@ -128,12 +128,14 @@ export function DiagnosticoPresentMode({
     try { await containerRef.current?.requestFullscreen?.(); } catch {}
   };
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalRoot(document.getElementById("root") || document.body);
+  }, []);
 
   const slide = slides[idx];
 
-  if (!mounted) return null;
+  if (!portalRoot) return null;
 
   return createPortal(
     <div
@@ -1116,6 +1118,6 @@ function GoogleAdsIndividualCampaignSlide({
         )}
       </div>
     </div>,
-    document.body
+    portalRoot
   );
 }
