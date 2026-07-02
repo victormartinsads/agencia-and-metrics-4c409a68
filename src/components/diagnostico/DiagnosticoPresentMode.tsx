@@ -20,6 +20,7 @@ import {
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
+import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
 
 interface Props {
   clientName: string;
@@ -308,7 +309,15 @@ function GroupSlide({
   const getMetricValueAndOverride = (key: string) => {
     const override = config.custom_metrics.find((m) => m.id === key);
     const isOverridden = !!override;
-    const originalRaw = getMetricValue(totals, key);
+    let originalRaw = getMetricValue(totals, key);
+    
+    // Auto-calculate cps (Custo por Seguidor) using manual followers input if available
+    if ((key === "cps" || key === "cpFollow") && !isOverridden) {
+      const fv = config.custom_metrics.find(m => m.id === "followers");
+      const follows = fv ? Number(String(fv.value).replace(",", ".")) : (getMetricValue(totals, "followers") || getMetricValue(totals, "follows"));
+      originalRaw = follows > 0 ? getMetricValue(totals, "spend") / follows : 0;
+    }
+
     const rawValue = isOverridden ? Number(String(override.value).replace(",", ".")) : originalRaw;
     const value = isOverridden
       ? (override.format === "text" ? override.value : formatMetricValue(key, rawValue, currencySymbol))
@@ -321,6 +330,11 @@ function GroupSlide({
     const override = config.custom_metrics.find((m) => m.id === key);
     if (override) {
       return Number(String(override.value).replace(",", "."));
+    }
+    if (key === "cps" || key === "cpFollow") {
+      const fv = config.custom_metrics.find(m => m.id === "followers");
+      const follows = fv ? Number(String(fv.value).replace(",", ".")) : (getMetricValue(totals, "followers") || getMetricValue(totals, "follows"));
+      return follows > 0 ? getMetricValue(totals, "spend") / follows : 0;
     }
     return getMetricValue(totals, key);
   };
@@ -369,14 +383,13 @@ function GroupSlide({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-primary font-semibold">
-          {group.isFunnel ? "Funil" : "Campanha"}
-        </p>
-        <h2 className="text-4xl font-bold text-card-foreground mt-1">{displayTitle}</h2>
-        {group.isFunnel && (
-          <p className="text-sm text-muted-foreground mt-1">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <h2 className="text-4xl font-bold text-card-foreground flex items-center gap-3">
+          {displayTitle}
+        </h2>
+        {!group.isFunnel && group.campaigns.length > 1 && (
+          <p className="text-sm font-semibold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
             {group.campaigns.length} campanhas agrupadas
           </p>
         )}
@@ -432,7 +445,7 @@ function GroupSlide({
         </PresentSectionAccordion>
       )}
 
-      {top.length > 0 && (
+      {group.campaigns.flatMap(c => c.creatives).filter(cr => cr.spend > 0 || cr.impressions > 0).length > 0 && (
         <PresentSectionAccordion
           icon={<Film className="h-4 w-4" />}
           title="Criativos"
@@ -440,44 +453,27 @@ function GroupSlide({
           isOpen={!!openSections.creatives}
           onToggle={() => toggleSection("creatives")}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {top.map((cr, i) => {
-              const r = cr.primaryResult ?? cr.conversions;
-              const cCpa = r > 0 ? cr.spend / r : 0;
-              return (
-                <div key={cr.id} className="rounded-xl border border-border bg-card overflow-hidden">
-                  <div className="aspect-square bg-muted overflow-hidden">
-                    <img
-                      src={cr.thumbnail}
-                      alt={cr.name}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        const t = e.currentTarget;
-                        if (t.dataset.fb === "1") return;
-                        t.dataset.fb = "1";
-                        t.src = `https://picsum.photos/seed/${cr.id}/600/600`;
-                      }}
-                    />
-                  </div>
-                  <div className="p-3 space-y-1">
-                    <div className="text-[10px] font-bold text-primary">TOP {i + 1}</div>
-                    <div className="text-sm font-medium text-card-foreground truncate">{cr.name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">Conjunto: {cr.adsetName || "—"}</div>
-                    <div className="flex justify-between text-xs pt-2">
-                      <span className="text-muted-foreground">{resultLabel}</span>
-                      <span className="font-bold text-primary">{r}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">CPA</span>
-                      <span className="font-semibold text-card-foreground">
-                        {r > 0 ? fmtMoney(cCpa, currencySymbol) : "—"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="bg-card">
+            <CreativeGrid 
+              campaign={{
+                id: group.key,
+                name: displayTitle,
+                primaryResultLabel: resultLabel,
+                conversions: group.campaigns.reduce((sum, c) => sum + c.conversions, 0),
+                clicks: group.campaigns.reduce((sum, c) => sum + c.clicks, 0),
+                impressions: group.campaigns.reduce((sum, c) => sum + c.impressions, 0),
+                spend: group.campaigns.reduce((sum, c) => sum + c.spend, 0),
+                roas: group.campaigns.reduce((sum, c) => sum + (c.roas || 0), 0),
+                revenue: group.campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0),
+                ctr: group.campaigns.reduce((sum, c) => sum + (c.ctr || 0), 0) / (group.campaigns.length || 1),
+                linkClicks: group.campaigns.reduce((sum, c) => sum + ((c as any).linkClicks || c.clicks), 0),
+                creatives: group.campaigns.flatMap(c => c.creatives.map(cr => ({ ...cr, _camp: resolvedLabels[c.id] || c.name }))),
+              } as any}
+              clientId={clientId || ""}
+              currencySymbol={currencySymbol}
+              readOnly={true}
+              showAll={false}
+            />
           </div>
         </PresentSectionAccordion>
       )}
