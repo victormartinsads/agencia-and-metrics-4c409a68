@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X, Maximize2, Globe, BarChart3, Sparkles, ArrowRight, Loader2, Target, Play, Pause, Search, Image as ImageIcon, Video, ChevronDown, Activity, Film } from "lucide-react";
@@ -129,7 +130,7 @@ export function DiagnosticoPresentMode({
 
   const slide = slides[idx];
 
-  return (
+  return createPortal(
     <div
       ref={containerRef}
       className="fixed inset-0 z-[100] bg-background flex flex-col"
@@ -1109,6 +1110,7 @@ function GoogleAdsIndividualCampaignSlide({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
