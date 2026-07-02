@@ -128,7 +128,12 @@ export function DiagnosticoPresentMode({
     try { await containerRef.current?.requestFullscreen?.(); } catch {}
   };
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const slide = slides[idx];
+
+  if (!mounted) return null;
 
   return createPortal(
     <div
