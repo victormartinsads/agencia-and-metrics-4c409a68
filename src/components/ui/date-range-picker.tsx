@@ -58,9 +58,10 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  trigger?: React.ReactNode;
 }
 
-export function DateRangePicker({ value, onChange, className }: Props) {
+export function DateRangePicker({ value, onChange, className, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const initial = useMemo(() => parseValue(value), [value]);
   const [range, setRange] = useState<DateRange | undefined>(initial.range);
@@ -94,16 +95,18 @@ export function DateRangePicker({ value, onChange, className }: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "h-9 justify-start gap-2 text-xs font-normal min-w-[180px]",
-            className,
-          )}
-        >
-          <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{labelForValue(value)}</span>
-        </Button>
+        {trigger || (
+          <Button
+            variant="outline"
+            className={cn(
+              "h-9 justify-start gap-2 text-xs font-normal min-w-[180px]",
+              className,
+            )}
+          >
+            <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{labelForValue(value)}</span>
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="end"

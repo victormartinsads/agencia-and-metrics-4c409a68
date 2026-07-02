@@ -60,8 +60,6 @@ export function DashboardTopBar({
   onEdit, onTemplate, onSources,
   clientName, clientLogoUrl, rightExtra,
 }: Props) {
-  const [customOpen, setCustomOpen] = useState(false);
-
   const presetIsWeek = datePreset === "last_7d";
   const presetIsMonth = datePreset === "this_month";
   const presetIsCustom = datePreset.startsWith("custom:") || (!presetIsWeek && !presetIsMonth);
@@ -170,25 +168,22 @@ export function DashboardTopBar({
         </button>
 
         <div className="relative">
-          <button
-            onClick={() => setCustomOpen((o) => !o)}
-            className={cn(
-              "h-8 px-4 rounded-full text-[12px] font-medium border transition-all flex items-center gap-2",
-              datePreset.startsWith("custom:")
-                ? "border-primary/40 text-primary bg-primary/5"
-                : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/10"
-            )}
-          >
-            <CalendarRange className="h-3.5 w-3.5" /> Personalizado
-          </button>
-          {customOpen && (
-            <div className="absolute left-0 top-10 z-30">
-              <DateRangePicker
-                value={datePreset}
-                onChange={(v) => { onDatePresetChange(v); setCustomOpen(false); }}
-              />
-            </div>
-          )}
+          <DateRangePicker
+            value={datePreset}
+            onChange={(v) => onDatePresetChange(v)}
+            trigger={
+              <button
+                className={cn(
+                  "h-8 px-4 rounded-full text-[12px] font-medium border transition-all flex items-center gap-2",
+                  datePreset.startsWith("custom:")
+                    ? "border-primary/40 text-primary bg-primary/5"
+                    : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/10"
+                )}
+              >
+                <CalendarRange className="h-3.5 w-3.5" /> Personalizado
+              </button>
+            }
+          />
         </div>
 
         <div className="ml-auto flex items-center gap-3">
