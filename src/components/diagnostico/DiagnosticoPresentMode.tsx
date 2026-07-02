@@ -386,7 +386,7 @@ function GroupSlide({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 h-full flex flex-col">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
         <h2 className="text-4xl font-bold text-card-foreground flex items-center gap-3">
           {displayTitle}
