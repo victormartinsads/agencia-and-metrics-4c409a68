@@ -61,21 +61,23 @@ export function ReportsTab({ selectedClient: initialSelectedClient, clients }: R
 
     const seed = activeClient.name.length;
 
-    // Meta Ads calculations
-    const metaSpent = metaData?.overviewMetrics?.totalSpend || (120 + seed * 14.5);
-    const metaClicks = metaData?.overviewMetrics?.totalClicks || Math.round(metaSpent * 1.6);
-    const metaCTR = metaData?.overviewMetrics?.avgCTR || (1.35 + (seed % 5) * 0.12);
-    const metaCPC = metaSpent / (metaClicks || 1);
-    const metaConversions = metaData?.overviewMetrics?.totalConversions || Math.round(metaSpent / (25 + (seed % 3) * 5));
+    // Check if real Meta data is available
+    const hasMeta = !!metaData && !("error" in metaData) && !!metaData.overviewMetrics;
+    const metaSpent = hasMeta ? (metaData.overviewMetrics.totalSpend ?? 0) : (120 + seed * 14.5);
+    const metaClicks = hasMeta ? (metaData.overviewMetrics.totalClicks ?? 0) : Math.round(metaSpent * 1.6);
+    const metaCTR = hasMeta ? (metaData.overviewMetrics.avgCTR ?? 0) : (1.35 + (seed % 5) * 0.12);
+    const metaCPC = hasMeta ? (metaData.overviewMetrics.avgCPC ?? 0) : (metaSpent / (metaClicks || 1));
+    const metaConversions = hasMeta ? (metaData.overviewMetrics.totalConversions ?? 0) : Math.round(metaSpent / (25 + (seed % 3) * 5));
     const metaCPA = metaConversions > 0 ? (metaSpent / metaConversions) : 0;
-    const metaROAS = metaData?.overviewMetrics?.avgROAS || (2.5 + (seed % 4) * 0.4);
+    const metaROAS = hasMeta ? (metaData.overviewMetrics.avgROAS ?? 0) : (2.5 + (seed % 4) * 0.4);
 
-    // Google Ads calculations
-    const googleSpent = googleData?.totals?.cost || (90 + seed * 11.2);
-    const googleClicks = googleData?.totals?.clicks || Math.round(googleSpent * 1.3);
-    const googleCTR = googleSpent > 0 ? (googleClicks / (googleSpent * 30)) * 100 : (2.75 + (seed % 3) * 0.25);
-    const googleCPC = googleSpent > 0 && googleClicks > 0 ? (googleSpent / googleClicks) : 0.72;
-    const googleConversions = googleData?.totals?.conversions || Math.round(googleSpent / (35 + (seed % 2) * 10));
+    // Check if real Google data is available
+    const hasGoogle = !!googleData && !("error" in googleData) && !!googleData.totals;
+    const googleSpent = hasGoogle ? (googleData.totals.cost ?? 0) : (90 + seed * 11.2);
+    const googleClicks = hasGoogle ? (googleData.totals.clicks ?? 0) : Math.round(googleSpent * 1.3);
+    const googleCTR = hasGoogle ? (googleData.totals.impressions > 0 ? (googleClicks / googleData.totals.impressions) * 100 : 0) : (googleSpent > 0 ? (googleClicks / (googleSpent * 30)) * 100 : (2.75 + (seed % 3) * 0.25));
+    const googleCPC = hasGoogle ? (googleClicks > 0 ? googleSpent / googleClicks : 0) : (googleSpent > 0 && googleClicks > 0 ? (googleSpent / googleClicks) : 0.72);
+    const googleConversions = hasGoogle ? (googleData.totals.conversions ?? 0) : Math.round(googleSpent / (35 + (seed % 2) * 10));
     const googleCPA = googleConversions > 0 ? (googleSpent / googleConversions) : 0;
     const googleROAS = 3.2 + (seed % 3) * 0.3;
 
