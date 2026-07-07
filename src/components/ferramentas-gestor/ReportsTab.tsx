@@ -196,18 +196,17 @@ export function ReportsTab({ selectedClient: initialSelectedClient, clients }: R
   }, [activePlatform, activeClient]);
 
   return (
-    <div className="space-y-6 text-slate-100 bg-background/30 p-1 rounded-2xl">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 text-slate-100 bg-background/30 p-1 rounded-2xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/40 border border-border/40 p-4 rounded-2xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-fit">
-          <TabsList className="bg-[#0f1117] border border-border/40 p-1 rounded-xl">
-            <TabsTrigger value="adsdaily" className="px-4 py-1.5 text-xs font-bold rounded-lg cursor-pointer data-[state=active]:bg-card">
-              ⚡ AdsDaily (Mensagem)
-            </TabsTrigger>
-            <TabsTrigger value="history" className="px-4 py-1.5 text-xs font-bold rounded-lg cursor-pointer data-[state=active]:bg-card">
-              📁 Histórico de PDFs
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <TabsList className="bg-[#0f1117] border border-border/40 p-1 rounded-xl">
+          <TabsTrigger value="adsdaily" className="px-4 py-1.5 text-xs font-bold rounded-lg cursor-pointer data-[state=active]:bg-card">
+            ⚡ AdsDaily (Mensagem)
+          </TabsTrigger>
+          <TabsTrigger value="history" className="px-4 py-1.5 text-xs font-bold rounded-lg cursor-pointer data-[state=active]:bg-card">
+            📁 Histórico de PDFs
+          </TabsTrigger>
+        </TabsList>
+
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Client Selector (only shown if not selected globally) */}
@@ -453,6 +452,6 @@ export function ReportsTab({ selectedClient: initialSelectedClient, clients }: R
           </div>
         </Card>
       </TabsContent>
-    </div>
+    </Tabs>
   );
 }
