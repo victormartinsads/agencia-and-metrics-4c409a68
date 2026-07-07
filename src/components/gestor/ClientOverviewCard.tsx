@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, AlertTriangle, AlertOctagon, Loader2, Pencil, Heart, ListChecks, BookOpen, LayoutDashboard, ExternalLink } from "lucide-react";
+import { Star, AlertTriangle, AlertOctagon, Loader2, Pencil, Heart, ListChecks, BookOpen, LayoutDashboard, ExternalLink, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -192,7 +192,7 @@ export function ClientOverviewCard({
         </>
       ) : null}
 
-      {/* Action Navigation Buttons: Diário, Dash, Gerenciador */}
+      {/* Action Navigation Buttons */}
       <div className="mt-auto flex items-center gap-1 bg-muted/25 border border-border/50 rounded-xl p-1">
         <Button asChild size="sm" variant="ghost" className="h-8 text-[11px] font-bold flex-1 gap-1 px-1 text-muted-foreground hover:text-foreground">
           <Link to={`/dashboard/${clientId}?tab=diario`}>
@@ -208,11 +208,17 @@ export function ClientOverviewCard({
           </Link>
         </Button>
         <div className="w-px h-4 bg-border/40 shrink-0" />
-        <Button asChild size="sm" variant="ghost" className="h-8 text-[11px] font-bold flex-1 gap-1 px-1 text-muted-foreground hover:text-foreground" title="Gerenciador de Anúncios (Meta)">
-          <a href={adsManagerUrl} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-3.5 w-3.5" />
-            Gerenc.
-          </a>
+        <Button
+          asChild
+          size="sm"
+          variant="ghost"
+          className="h-8 text-[11px] font-bold flex-1 gap-1 px-1 bg-[#b5f23d]/10 text-[#b5f23d] hover:bg-[#b5f23d]/20 hover:text-[#b5f23d]"
+          title="Abrir Visão Editor (Gerenciador Proprietário)"
+        >
+          <Link to={`/ferramentas-do-gestor?tab=meta-ads&editor=${clientId}`}>
+            <Eye className="h-3.5 w-3.5" />
+            Editor
+          </Link>
         </Button>
       </div>
 

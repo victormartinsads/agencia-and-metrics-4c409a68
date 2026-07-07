@@ -219,7 +219,7 @@ export default function GestorView() {
     }).sort((a, b) => b.spend - a.spend);
   }, [campaigns]);
 
-  // Generates Adsets and Ads lists dynamically for 100% operational performance & decision metrics
+  // Generates Adsets and Ads lists dynamically or extracts real ones from campaign creatives if available
   const { allAdsets, allAds } = useMemo(() => {
     if (!computedCampaigns.length) return { allAdsets: [], allAds: [] };
 
@@ -227,164 +227,255 @@ export default function GestorView() {
     const adsList: any[] = [];
 
     computedCampaigns.forEach((camp) => {
-      const adsetCount = 2 + (parseInt(camp.id.replace(/\D/g, "")) % 2 || 0);
-      for (let i = 0; i < adsetCount; i++) {
-        const adsetId = `${camp.id}-as-${i}`;
-        const adsetName = i === 0 ? `00. Remarketing Todos 30D` : i === 1 ? `01. Advantage+` : `02. Lookalike 1% - Leads`;
-        const adsetSpend = camp.spend / adsetCount;
-        const adsetImpressions = Math.round(camp.impressions / adsetCount);
-        const adsetClicks = Math.round(camp.clicks / adsetCount);
-        const adsetConversions = Math.round(camp.conversions / adsetCount);
-        
-        const videoPlays = Math.round((camp.videoPlays || (camp.impressions * 0.25)) / adsetCount);
-        const thruplays = Math.round((camp.videoP100 || (videoPlays * 0.3)) / adsetCount);
-        const landingPageViews = Math.round((camp.landingPageViews || (adsetClicks * 0.75)) / adsetCount);
-        const uniqueClicks = Math.round((camp.uniqueClicks || (adsetClicks * 0.85)) / adsetCount);
-        const initiateCheckout = Math.round((camp.initiateCheckout || (landingPageViews * 0.4)) / adsetCount);
-        const schedule = Math.round((camp.schedule || 0) / adsetCount);
-        const messaging_started = Math.round((camp.messaging_started || 0) / adsetCount);
+      // If we have real creatives (ads) returned from Meta API for this campaign
+      if (Array.isArray(camp.creatives) && camp.creatives.length > 0) {
+        // Group by adsetName to build adsets
+        const adsByAdset: Record<string, any[]> = {};
+        camp.creatives.forEach((cr: any) => {
+          const adsetName = cr.adsetName || "Conjunto Geral";
+          if (!adsByAdset[adsetName]) {
+            adsByAdset[adsetName] = [];
+          }
+          adsByAdset[adsetName].push(cr);
+        });
 
-        const hookRate = adsetImpressions > 0 ? (videoPlays / adsetImpressions) * 100 : 0;
-        const holdRate = videoPlays > 0 ? (thruplays / videoPlays) * 100 : 0;
-
-        const trafficUtilisationLp = adsetClicks > 0 ? (landingPageViews / adsetClicks) * 100 : 0;
-        const trafficLossLp = adsetClicks > 0 ? ((adsetClicks - landingPageViews) / adsetClicks) * 100 : 0;
-        const trafficUtilisationForm = adsetClicks > 0 ? (adsetConversions / adsetClicks) * 100 : 0;
-        const trafficLossForm = adsetClicks > 0 ? ((adsetClicks - adsetConversions) / adsetClicks) * 100 : 0;
-        const formSubmitRate = initiateCheckout > 0 ? (adsetConversions / initiateCheckout) * 100 : 0;
-        const scheduleRate = initiateCheckout > 0 ? (schedule / initiateCheckout) * 100 : 0;
-        const pageConversionRate = landingPageViews > 0 ? (Math.round(adsetConversions * 0.4) / landingPageViews) * 100 : 0;
-
-        const costPerInitiateCheckout = initiateCheckout > 0 ? adsetSpend / initiateCheckout : 0;
-        const costPerSchedule = schedule > 0 ? adsetSpend / schedule : 0;
-        const cost_per_message = messaging_started > 0 ? adsetSpend / messaging_started : 0;
-
-        const adset = {
-          id: adsetId,
-          name: `${i === 0 ? "00" : i === 1 ? "01" : "02"}. ${camp.name.replace(/[^a-zA-Z0-9\s]/g, "")} - ${adsetName}`,
-          status: camp.status,
-          campaignId: camp.id,
-          campaignName: camp.name,
-          spend: adsetSpend,
-          impressions: adsetImpressions,
-          reach: Math.round(camp.reach / adsetCount),
-          clicks: adsetClicks,
-          ctr: camp.ctr,
-          cpc: camp.cpc,
-          cpm: camp.cpm || 10,
-          conversions: adsetConversions,
-          costPerConversion: camp.costPerConversion,
-          roas: camp.roas,
-          frequency: camp.frequency,
-          dailyBudget: camp.dailyBudget ? Math.round(camp.dailyBudget / adsetCount) : 0,
-          // video
-          videoPlays,
-          thruplays,
-          videoP25: Math.round(videoPlays * 0.8),
-          videoP50: Math.round(videoPlays * 0.5),
-          videoP75: Math.round(videoPlays * 0.3),
-          videoP95: Math.round(videoPlays * 0.15),
-          videoP100: thruplays,
-          // custom
-          hookRate,
-          holdRate,
-          trafficUtilisationLp,
-          trafficLossLp,
-          trafficUtilisationForm,
-          trafficLossForm,
-          formSubmitRate,
-          scheduleRate,
-          pageConversionRate,
-          costPerInitiateCheckout,
-          costPerSchedule,
-          cost_per_message,
-          messaging_started,
-          profile_visits: Math.round(camp.profile_visits / adsetCount),
-          landingPageViews,
-          uniqueClicks,
-          initiateCheckout,
-          schedule,
-          purchases: Math.round(adsetConversions * 0.4),
-        };
-        adsetsList.push(adset);
-
-        // Create 2 ads per adset
-        for (let j = 0; j < 2; j++) {
-          const adId = `${adsetId}-ad-${j}`;
-          const adSpend = adsetSpend / 2;
-          const adImpressions = Math.round(adsetImpressions / 2);
-          const adClicks = Math.round(adsetClicks / 2);
-          const adConversions = Math.round(adsetConversions / 2);
+        Object.entries(adsByAdset).forEach(([adsetName, ads], idx) => {
+          const adsetId = `${camp.id}-as-${idx}`;
           
-          const adVideoPlays = Math.round(videoPlays / 2);
-          const adThruplays = Math.round(thruplays / 2);
-          const adLPV = Math.round(landingPageViews / 2);
-          const adUniqueClicks = Math.round(uniqueClicks / 2);
-          const adInitiateCheckout = Math.round(initiateCheckout / 2);
-          const adSchedule = Math.round(schedule / 2);
-          const adMessaging = Math.round(messaging_started / 2);
+          // Sum ad metrics to get adset metrics
+          const spend = ads.reduce((acc, a) => acc + (a.spend || 0), 0);
+          const impressions = ads.reduce((acc, a) => acc + (a.impressions || 0), 0);
+          const clicks = ads.reduce((acc, a) => acc + (a.clicks || 0), 0);
+          const conversions = ads.reduce((acc, a) => acc + (a.conversions || 0), 0);
+          const landingPageViews = Math.round(clicks * 0.75); // fallback estimate
+          const reach = Math.round(impressions * 0.85);
 
-          const adHookRate = adImpressions > 0 ? (adVideoPlays / adImpressions) * 100 : 0;
-          const adHoldRate = adVideoPlays > 0 ? (adThruplays / adVideoPlays) * 100 : 0;
+          const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+          const cpc = clicks > 0 ? spend / clicks : 0;
+          const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+          const costPerConversion = conversions > 0 ? spend / conversions : 0;
+          const roas = camp.roas || 0;
 
-          const adTrafficUtilisationLp = adClicks > 0 ? (adLPV / adClicks) * 100 : 0;
-          const adTrafficLossLp = adClicks > 0 ? ((adClicks - adLPV) / adClicks) * 100 : 0;
-          const adTrafficUtilisationForm = adClicks > 0 ? (adConversions / adClicks) * 100 : 0;
-          const adTrafficLossForm = adClicks > 0 ? ((adClicks - adConversions) / adClicks) * 100 : 0;
-          const adFormSubmitRate = adInitiateCheckout > 0 ? (adConversions / adInitiateCheckout) * 100 : 0;
-          const adScheduleRate = adInitiateCheckout > 0 ? (adSchedule / adInitiateCheckout) * 100 : 0;
-          const adPageConversionRate = adLPV > 0 ? (Math.round(adConversions * 0.4) / adLPV) * 100 : 0;
-
-          adsList.push({
-            id: adId,
-            name: `Anúncio ${j === 0 ? "Você paga para que — Cópia" : "Menos é mais — Estática"} [V${j + 1}]`,
-            postId: `12020894567890${j}${parseInt(camp.id.replace(/\D/g, "")) % 9}`,
-            thumbnail: `https://picsum.photos/seed/ad-${adId}/150/150`,
-            status: adset.status,
-            adsetId: adset.id,
-            adsetName: adset.name,
+          const adset = {
+            id: adsetId,
+            name: adsetName,
+            status: camp.status,
             campaignId: camp.id,
             campaignName: camp.name,
-            spend: adSpend,
-            impressions: adImpressions,
-            reach: Math.round(adset.reach / 2),
-            clicks: adClicks,
-            ctr: adset.ctr * (j === 0 ? 1.2 : 0.8),
-            cpc: adset.cpc * (j === 0 ? 0.85 : 1.15),
-            cpm: adset.cpm,
-            conversions: adConversions,
-            costPerConversion: adConversions > 0 ? adSpend / adConversions : 0,
-            roas: adset.roas * (j === 0 ? 1.3 : 0.7),
-            frequency: adset.frequency,
-            // video
-            videoPlays: adVideoPlays,
-            thruplays: adThruplays,
-            videoP25: Math.round(adVideoPlays * 0.8),
-            videoP50: Math.round(adVideoPlays * 0.5),
-            videoP75: Math.round(adVideoPlays * 0.3),
-            videoP95: Math.round(adVideoPlays * 0.15),
-            videoP100: adThruplays,
-            // custom
-            hookRate: adHookRate,
-            holdRate: adHoldRate,
-            trafficUtilisationLp: adTrafficUtilisationLp,
-            trafficLossLp: adTrafficLossLp,
-            trafficUtilisationForm: adTrafficUtilisationForm,
-            trafficLossForm: adTrafficLossForm,
-            formSubmitRate: adFormSubmitRate,
-            scheduleRate: adScheduleRate,
-            pageConversionRate: adPageConversionRate,
-            costPerInitiateCheckout: adInitiateCheckout > 0 ? adSpend / adInitiateCheckout : 0,
-            costPerSchedule: adSchedule > 0 ? adSpend / adSchedule : 0,
-            cost_per_message: adMessaging > 0 ? adSpend / adMessaging : 0,
-            messaging_started: adMessaging,
-            profile_visits: Math.round(adset.profile_visits / 2),
-            landingPageViews: adLPV,
-            uniqueClicks: adUniqueClicks,
-            initiateCheckout: adInitiateCheckout,
-            schedule: adSchedule,
-            purchases: Math.round(adConversions * 0.4),
+            spend,
+            impressions,
+            reach,
+            clicks,
+            ctr,
+            cpc,
+            cpm,
+            conversions,
+            costPerConversion,
+            roas,
+            frequency: camp.frequency || 1.1,
+            dailyBudget: camp.dailyBudget ? Math.round(camp.dailyBudget / Object.keys(adsByAdset).length) : 0,
+            videoPlays: ads.reduce((acc, a) => acc + (a.videoPlays || 0), 0),
+            thruplays: ads.reduce((acc, a) => acc + (a.thruplays || 0), 0),
+            hookRate: ads.reduce((acc, a) => acc + (a.hookRate || 0), 0) / ads.length,
+            holdRate: ads.reduce((acc, a) => acc + (a.holdRate || 0), 0) / ads.length,
+            trafficUtilisationLp: 75,
+            trafficLossLp: 25,
+            pageConversionRate: landingPageViews > 0 ? (conversions / landingPageViews) * 100 : 0,
+            profile_visits: Math.round((camp.profile_visits || 0) / Object.keys(adsByAdset).length),
+          };
+
+          adsetsList.push(adset);
+
+          // Add ads to list
+          ads.forEach((ad: any) => {
+            adsList.push({
+              id: ad.id,
+              name: ad.name,
+              postId: ad.creativeId || ad.id,
+              thumbnail: ad.thumbnail,
+              status: ad.status,
+              adsetId: adsetId,
+              adsetName: adsetName,
+              campaignId: camp.id,
+              campaignName: camp.name,
+              spend: ad.spend,
+              impressions: ad.impressions,
+              reach: Math.round(ad.impressions * 0.85),
+              clicks: ad.clicks,
+              ctr: ad.ctr,
+              cpc: ad.clicks > 0 ? ad.spend / ad.clicks : 0,
+              cpm: ad.impressions > 0 ? (ad.spend / ad.impressions) * 1000 : 0,
+              conversions: ad.conversions,
+              costPerConversion: ad.conversions > 0 ? ad.spend / ad.conversions : 0,
+              roas: ad.roas || roas,
+              frequency: camp.frequency || 1.1,
+              videoPlays: ad.videoPlays || 0,
+              thruplays: ad.thruplays || 0,
+              hookRate: ad.hookRate || 0,
+              holdRate: ad.holdRate || 0,
+              trafficUtilisationLp: 75,
+              trafficLossLp: 25,
+              pageConversionRate: 5,
+              profile_visits: Math.round((camp.profile_visits || 0) / (ads.length * Object.keys(adsByAdset).length)),
+            });
           });
+        });
+      } else {
+        // Fallback to mock data if there are no creatives
+        const adsetCount = 2 + (parseInt(camp.id.replace(/\D/g, "")) % 2 || 0);
+        for (let i = 0; i < adsetCount; i++) {
+          const adsetId = `${camp.id}-as-${i}`;
+          const adsetName = i === 0 ? `00. Remarketing Todos 30D` : i === 1 ? `01. Advantage+` : `02. Lookalike 1% - Leads`;
+          const adsetSpend = camp.spend / adsetCount;
+          const adsetImpressions = Math.round(camp.impressions / adsetCount);
+          const adsetClicks = Math.round(camp.clicks / adsetCount);
+          const adsetConversions = Math.round(camp.conversions / adsetCount);
+          
+          const videoPlays = Math.round((camp.videoPlays || (camp.impressions * 0.25)) / adsetCount);
+          const thruplays = Math.round((camp.videoP100 || (videoPlays * 0.3)) / adsetCount);
+          const landingPageViews = Math.round((camp.landingPageViews || (adsetClicks * 0.75)) / adsetCount);
+          const uniqueClicks = Math.round((camp.uniqueClicks || (adsetClicks * 0.85)) / adsetCount);
+          const initiateCheckout = Math.round((camp.initiateCheckout || (landingPageViews * 0.4)) / adsetCount);
+          const schedule = Math.round((camp.schedule || 0) / adsetCount);
+          const messaging_started = Math.round((camp.messaging_started || 0) / adsetCount);
+
+          const hookRate = adsetImpressions > 0 ? (videoPlays / adsetImpressions) * 100 : 0;
+          const holdRate = videoPlays > 0 ? (thruplays / videoPlays) * 100 : 0;
+
+          const trafficUtilisationLp = adsetClicks > 0 ? (landingPageViews / adsetClicks) * 100 : 0;
+          const trafficLossLp = adsetClicks > 0 ? ((adsetClicks - landingPageViews) / adsetClicks) * 100 : 0;
+          const trafficUtilisationForm = adsetClicks > 0 ? (adsetConversions / adsetClicks) * 100 : 0;
+          const trafficLossForm = adsetClicks > 0 ? ((adsetClicks - adsetConversions) / adsetClicks) * 100 : 0;
+          const formSubmitRate = initiateCheckout > 0 ? (adsetConversions / initiateCheckout) * 100 : 0;
+          const scheduleRate = initiateCheckout > 0 ? (schedule / initiateCheckout) * 100 : 0;
+          const pageConversionRate = landingPageViews > 0 ? (Math.round(adsetConversions * 0.4) / landingPageViews) * 100 : 0;
+
+          const costPerInitiateCheckout = initiateCheckout > 0 ? adsetSpend / initiateCheckout : 0;
+          const costPerSchedule = schedule > 0 ? adsetSpend / schedule : 0;
+          const cost_per_message = messaging_started > 0 ? adsetSpend / messaging_started : 0;
+
+          const adset = {
+            id: adsetId,
+            name: `${i === 0 ? "00" : i === 1 ? "01" : "02"}. ${camp.name.replace(/[^a-zA-Z0-9\s]/g, "")} - ${adsetName}`,
+            status: camp.status,
+            campaignId: camp.id,
+            campaignName: camp.name,
+            spend: adsetSpend,
+            impressions: adsetImpressions,
+            reach: Math.round(camp.reach / adsetCount),
+            clicks: adsetClicks,
+            ctr: camp.ctr,
+            cpc: camp.cpc,
+            cpm: camp.cpm || 10,
+            conversions: adsetConversions,
+            costPerConversion: camp.costPerConversion,
+            roas: camp.roas,
+            frequency: camp.frequency,
+            dailyBudget: camp.dailyBudget ? Math.round(camp.dailyBudget / adsetCount) : 0,
+            videoPlays,
+            thruplays,
+            videoP25: Math.round(videoPlays * 0.8),
+            videoP50: Math.round(videoPlays * 0.5),
+            videoP75: Math.round(videoPlays * 0.3),
+            videoP95: Math.round(videoPlays * 0.15),
+            videoP100: thruplays,
+            hookRate,
+            holdRate,
+            trafficUtilisationLp,
+            trafficLossLp,
+            trafficUtilisationForm,
+            trafficLossForm,
+            formSubmitRate,
+            scheduleRate,
+            pageConversionRate,
+            costPerInitiateCheckout,
+            costPerSchedule,
+            cost_per_message,
+            messaging_started,
+            profile_visits: Math.round(camp.profile_visits / adsetCount),
+            landingPageViews,
+            uniqueClicks,
+            initiateCheckout,
+            schedule,
+            purchases: Math.round(adsetConversions * 0.4),
+          };
+          adsetsList.push(adset);
+
+          for (let j = 0; j < 2; j++) {
+            const adId = `${adsetId}-ad-${j}`;
+            const adSpend = adsetSpend / 2;
+            const adImpressions = Math.round(adsetImpressions / 2);
+            const adClicks = Math.round(adsetClicks / 2);
+            const adConversions = Math.round(adsetConversions / 2);
+            
+            const adVideoPlays = Math.round(videoPlays / 2);
+            const adThruplays = Math.round(thruplays / 2);
+            const adLPV = Math.round(landingPageViews / 2);
+            const adUniqueClicks = Math.round(uniqueClicks / 2);
+            const adInitiateCheckout = Math.round(initiateCheckout / 2);
+            const adSchedule = Math.round(schedule / 2);
+            const adMessaging = Math.round(messaging_started / 2);
+
+            const adHookRate = adImpressions > 0 ? (adVideoPlays / adImpressions) * 100 : 0;
+            const adHoldRate = adVideoPlays > 0 ? (adThruplays / adVideoPlays) * 100 : 0;
+
+            const adTrafficUtilisationLp = adClicks > 0 ? (adLPV / adClicks) * 100 : 0;
+            const adTrafficLossLp = adClicks > 0 ? ((adClicks - adLPV) / adClicks) * 100 : 0;
+            const adTrafficUtilisationForm = adClicks > 0 ? (adConversions / adClicks) * 100 : 0;
+            const adTrafficLossForm = adClicks > 0 ? ((adClicks - adConversions) / adClicks) * 100 : 0;
+            const adFormSubmitRate = adInitiateCheckout > 0 ? (adConversions / adInitiateCheckout) * 100 : 0;
+            const adScheduleRate = adInitiateCheckout > 0 ? (adSchedule / adInitiateCheckout) * 100 : 0;
+            const adPageConversionRate = adLPV > 0 ? (Math.round(adConversions * 0.4) / adLPV) * 100 : 0;
+
+            adsList.push({
+              id: adId,
+              name: `Anúncio ${j === 0 ? "Você paga para que — Cópia" : "Menos é mais — Estática"} [V${j + 1}]`,
+              postId: `12020894567890${j}${parseInt(camp.id.replace(/\D/g, "")) % 9}`,
+              thumbnail: `https://picsum.photos/seed/ad-${adId}/150/150`,
+              status: adset.status,
+              adsetId: adset.id,
+              adsetName: adset.name,
+              campaignId: camp.id,
+              campaignName: camp.name,
+              spend: adSpend,
+              impressions: adImpressions,
+              reach: Math.round(adset.reach / 2),
+              clicks: adClicks,
+              ctr: adset.ctr * (j === 0 ? 1.2 : 0.8),
+              cpc: adset.cpc * (j === 0 ? 0.85 : 1.15),
+              cpm: adset.cpm,
+              conversions: adConversions,
+              costPerConversion: adConversions > 0 ? adSpend / adConversions : 0,
+              roas: adset.roas * (j === 0 ? 1.3 : 0.7),
+              frequency: adset.frequency,
+              videoPlays: adVideoPlays,
+              thruplays: adThruplays,
+              videoP25: Math.round(adVideoPlays * 0.8),
+              videoP50: Math.round(adVideoPlays * 0.5),
+              videoP75: Math.round(adVideoPlays * 0.3),
+              videoP95: Math.round(adVideoPlays * 0.15),
+              videoP100: adThruplays,
+              hookRate: adHookRate,
+              holdRate: adHoldRate,
+              trafficUtilisationLp: adTrafficUtilisationLp,
+              trafficLossLp: adTrafficLossLp,
+              trafficUtilisationForm: adTrafficUtilisationForm,
+              trafficLossForm: adTrafficLossForm,
+              formSubmitRate: adFormSubmitRate,
+              scheduleRate: adScheduleRate,
+              pageConversionRate: adPageConversionRate,
+              costPerInitiateCheckout: adInitiateCheckout > 0 ? adSpend / adInitiateCheckout : 0,
+              costPerSchedule: adSchedule > 0 ? adSpend / adSchedule : 0,
+              cost_per_message: adMessaging > 0 ? adSpend / adMessaging : 0,
+              messaging_started: adMessaging,
+              profile_visits: Math.round(adset.profile_visits / 2),
+              landingPageViews: adLPV,
+              uniqueClicks: adUniqueClicks,
+              initiateCheckout: adInitiateCheckout,
+              schedule: adSchedule,
+              purchases: Math.round(adConversions * 0.4),
+            });
+          }
         }
       }
     });
@@ -1020,23 +1111,24 @@ export default function GestorView() {
               {activeMenuTab === "gerenciador" && (
                 <div className="space-y-4">
                   {/* Meta style navigation tabs */}
-                  <div className="flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-xl p-2 rounded-xl flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5 bg-accent/40 p-0.5 rounded-lg border border-white/5">
+                  {/* Meta style navigation tabs */}
+                  <div className="flex items-center justify-between bg-black/40 backdrop-blur-xl p-2 rounded-xl flex-wrap gap-2 border border-white/[0.02]">
+                    <div className="flex items-center gap-1 bg-neutral-900/60 p-1 rounded-xl border border-white/[0.03]">
                       <button
                         onClick={() => setManagerTab("campanhas")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "campanhas" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-lg font-semibold transition ${managerTab === "campanhas" ? "bg-black text-white shadow-lg border border-white/5 font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"}`}
                       >
                         Campanhas
                       </button>
                       <button
                         onClick={() => setManagerTab("conjuntos")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "conjuntos" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-lg font-semibold transition ${managerTab === "conjuntos" ? "bg-black text-white shadow-lg border border-white/5 font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"}`}
                       >
                         Conjuntos de Anúncios
                       </button>
                       <button
                         onClick={() => setManagerTab("anuncios")}
-                        className={`text-xs px-4 py-1.5 rounded-md font-semibold transition ${managerTab === "anuncios" ? "bg-white/10 text-white shadow-md backdrop-blur-md" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`text-xs px-4 py-1.5 rounded-lg font-semibold transition ${managerTab === "anuncios" ? "bg-black text-white shadow-lg border border-white/5 font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"}`}
                       >
                         Anúncios
                       </button>
@@ -1054,41 +1146,39 @@ export default function GestorView() {
                   {(selectedCampaignFilter || selectedAdsetFilter) && (
                     <div className="flex gap-2 items-center flex-wrap text-xs">
                       {selectedCampaignFilter && (
-                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex gap-1.5 items-center">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/30 rounded-full px-3.5 py-1 flex gap-2 items-center text-[11px] font-bold shadow-sm hover:border-primary/50 transition-colors">
                           Campanha: {selectedCampaignFilter.name}
-                          <button onClick={() => { setSelectedCampaignFilter(null); setSelectedAdsetFilter(null); }} className="hover:text-red-400 font-bold ml-1">✕</button>
+                          <button onClick={() => { setSelectedCampaignFilter(null); setSelectedAdsetFilter(null); }} className="hover:text-red-400 text-primary font-bold ml-1">✕</button>
                         </Badge>
                       )}
                       {selectedAdsetFilter && (
-                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex gap-1.5 items-center">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/30 rounded-full px-3.5 py-1 flex gap-2 items-center text-[11px] font-bold shadow-sm hover:border-primary/50 transition-colors">
                           Conjunto: {selectedAdsetFilter.name}
-                          <button onClick={() => setSelectedAdsetFilter(null)} className="hover:text-red-400 font-bold ml-1">✕</button>
+                          <button onClick={() => setSelectedAdsetFilter(null)} className="hover:text-red-400 text-primary font-bold ml-1">✕</button>
                         </Badge>
                       )}
                     </div>
                   )}
 
                   {/* Table search toolbar */}
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-                      <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Filtrar por nome do objeto..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-8 text-xs h-8"
-                        />
-                      </div>
-                      <Button onClick={() => {
-                        if (managerTab === "campanhas") setShowCampaignsDash(!showCampaignsDash);
-                        else if (managerTab === "conjuntos") setShowAdsetsDash(!showAdsetsDash);
-                        else setShowAdsDash(!showAdsDash);
-                      }} size="sm" variant="outline" className="h-8 text-xs gap-1.5">
-                        <BarChart2 className="h-3.5 w-3.5" /> 
-                        {((managerTab === "campanhas" && showCampaignsDash) || (managerTab === "conjuntos" && showAdsetsDash) || (managerTab === "anuncios" && showAdsDash)) ? "Ocultar Gráficos" : "Ver Diagnóstico & Gráficos"}
-                      </Button>
+                  <div className="flex items-center justify-start gap-2 flex-wrap">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Filtrar por nome do objeto..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8 text-xs h-8 bg-neutral-900 border-white/5 focus-visible:ring-primary rounded-lg"
+                      />
                     </div>
+                    <Button onClick={() => {
+                      if (managerTab === "campanhas") setShowCampaignsDash(!showCampaignsDash);
+                      else if (managerTab === "conjuntos") setShowAdsetsDash(!showAdsetsDash);
+                      else setShowAdsDash(!showAdsDash);
+                    }} size="sm" className="h-8 text-xs gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg border border-white/10 px-3 font-semibold transition">
+                      <BarChart2 className="h-3.5 w-3.5" /> 
+                      {((managerTab === "campanhas" && showCampaignsDash) || (managerTab === "conjuntos" && showAdsetsDash) || (managerTab === "anuncios" && showAdsDash)) ? "Ocultar Gráficos" : "Ver Diagnóstico & Gráficos"}
+                    </Button>
                   </div>
 
                   {/* Collapsible Level-Specific Decision Dashboards */}
@@ -1145,33 +1235,38 @@ export default function GestorView() {
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           {/* Creative decision engine: Keep vs Disable */}
-                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-2 flex flex-col justify-between">
+                          <Card className="p-4 rounded-xl border border-white/5 bg-black/40 backdrop-blur-xl md:col-span-2 flex flex-col justify-between space-y-4">
                             <div>
-                              <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-400 mb-2 flex items-center gap-1">🟢 Manver/Escalar (Performance Excelente)</h4>
-                              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                              <div className="flex items-center gap-2 text-xs uppercase font-bold tracking-wider text-emerald-400 mb-3 select-none">
+                                <span className="text-[9px]">●</span>
+                                <span>MANVER/ESCALAR (PERFORMANCE EXCELENTE)</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs mb-1">
                                 {adRecommendations.keep.map((ad: any) => (
-                                  <div key={ad.id} className="p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                                    <p className="font-bold truncate">{ad.name}</p>
-                                    <p className="text-[10px] text-muted-foreground">ROAS: {ad.roas.toFixed(1)}x • CPA: {currencySymbol} {ad.costPerConversion.toFixed(2)}</p>
+                                  <div key={ad.id} className="p-3 rounded-lg bg-black border border-emerald-500/20 shadow-[0_2px_8px_rgba(16,185,129,0.05)]">
+                                    <p className="font-bold text-white text-xs truncate" title={ad.name}>{ad.name}</p>
+                                    <p className="text-[10px] text-emerald-400 mt-1.5 font-medium">ROAS: {ad.roas.toFixed(1)}x • CPA: {currencySymbol} {ad.costPerConversion.toFixed(2)}</p>
                                   </div>
                                 ))}
                               </div>
                             </div>
-                            <div className="border-t border-white/5 pt-2">
-                              <h4 className="text-xs uppercase font-bold tracking-wider text-rose-400 mb-2 flex items-center gap-1">🔴 Desativar Recomendados (Fadiga/Custo Alto)</h4>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="border-t border-white/5 pt-3">
+                              <div className="flex items-center gap-2 text-xs uppercase font-bold tracking-wider text-rose-500 mb-3 select-none">
+                                <span className="text-[9px]">●</span>
+                                <span>DESATIVAR RECOMENDADOS (FADIGA/CUSTO ALTO)</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                                 {adRecommendations.disable.map((ad: any) => (
-                                  <div key={ad.id} className="p-2 rounded-lg bg-rose-500/5 border border-rose-500/20 flex justify-between items-center">
-                                    <div className="min-w-0 flex-1 mr-1">
-                                      <p className="font-bold truncate">{ad.name}</p>
-                                      <p className="text-[10px] text-muted-foreground">CPA: {currencySymbol} {ad.costPerConversion.toFixed(2)}</p>
+                                  <div key={ad.id} className="p-3 rounded-lg bg-black border border-rose-500/20 flex justify-between items-center shadow-[0_2px_8px_rgba(244,63,94,0.05)]">
+                                    <div className="min-w-0 flex-1 mr-3">
+                                      <p className="font-bold text-white text-xs truncate" title={ad.name}>{ad.name}</p>
+                                      <p className="text-[10px] text-rose-400 mt-1.5 font-medium">CPA: {currencySymbol} {ad.costPerConversion.toFixed(2)}</p>
                                     </div>
                                     <Button
                                       size="sm"
-                                      variant="destructive"
                                       disabled={runningAction === `${ad.id}-pause`}
                                       onClick={() => handleCampaignAction(ad.id, "pause")}
-                                      className="h-6 text-[9px] px-1.5 shrink-0"
+                                      className="h-6 text-[10px] px-3.5 shrink-0 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold transition shadow-sm"
                                     >
                                       Pausar
                                     </Button>
@@ -1181,9 +1276,11 @@ export default function GestorView() {
                             </div>
                           </Card>
                           
-                          <Card className="p-4 rounded-xl border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] bg-black/40 backdrop-blur-xl md:col-span-1 space-y-2">
-                            <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground">CTR vs Hook Rate</h4>
-                            <LineChartSvg data={filteredAdsList.slice(0, 7).map(ad => ad.hookRate || 10)} color="var(--primary)" />
+                          <Card className="p-4 rounded-xl border border-white/5 bg-black/40 backdrop-blur-xl md:col-span-1 flex flex-col justify-between">
+                            <h4 className="text-xs uppercase font-bold tracking-wider text-white select-none">CTR VS HOOK RATE</h4>
+                            <div className="mt-4 flex-1 flex items-center">
+                              <LineChartSvg data={filteredAdsList.slice(0, 7).map(ad => ad.hookRate || 10)} color="var(--primary)" />
+                            </div>
                           </Card>
                         </div>
                       </motion.div>
@@ -1192,12 +1289,12 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE CAMPANHAS === */}
                   {managerTab === "campanhas" && (
-                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
+                    <Card className="rounded-2xl overflow-hidden border-white/5 shadow-2xl relative bg-card/60 backdrop-blur-xl">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
-                              <th className="py-2.5 px-3 w-10 text-center">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="text-muted-foreground bg-muted/20 border-b border-white/5">
+                            <tr className="shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+                              <th className="py-4 px-4 w-12 text-center">
                                 <input
                                   type="checkbox"
                                   checked={selectedCampaignIds.length === filteredCampaignsList.length && filteredCampaignsList.length > 0}
@@ -1205,28 +1302,28 @@ export default function GestorView() {
                                     if (e.target.checked) setSelectedCampaignIds(filteredCampaignsList.map((c) => c.id));
                                     else setSelectedCampaignIds([]);
                                   }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                  className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                 />
                               </th>
-                              <th className="text-left py-2.5 px-3 font-semibold">Nome da Campanha</th>
+                              <th className="py-4 px-4 font-extrabold uppercase tracking-wider text-[10px]">Nome da Campanha</th>
                               {columns.map((k) => {
                                 const col = ALL_METRIC_COLUMNS.find((c) => c.key === k);
-                                return <th key={k} className="text-right py-2.5 px-3 font-semibold whitespace-nowrap">{col?.label || k}</th>;
+                                return <th key={k} className="text-right py-4 px-4 font-extrabold uppercase tracking-wider text-[10px] whitespace-nowrap">{col?.label || k}</th>;
                               })}
-                              <th className="w-10"></th>
+                              <th className="w-12 py-4 px-4"></th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-white/[0.04]">
                             {filteredCampaignsList.map((c) => (
                               <tr
                                 key={c.id}
-                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedCampaignIds.includes(c.id) ? "bg-primary/5" : ""}`}
+                                className={`hover:bg-accent/20 cursor-pointer transition ${selectedCampaignIds.includes(c.id) ? "bg-primary/5" : ""}`}
                                 onClick={() => {
                                   setSelectedCampaignFilter({ id: c.id, name: c.name });
                                   setManagerTab("conjuntos");
                                 }}
                               >
-                                <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="checkbox"
                                     checked={selectedCampaignIds.includes(c.id)}
@@ -1234,10 +1331,10 @@ export default function GestorView() {
                                       if (e.target.checked) setSelectedCampaignIds([...selectedCampaignIds, c.id]);
                                       else setSelectedCampaignIds(selectedCampaignIds.filter((x) => x !== c.id));
                                     }}
-                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                    className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                   />
                                 </td>
-                                <td className="py-2.5 px-3 font-medium max-w-[280px] truncate text-primary hover:underline">{c.name}</td>
+                                <td className="py-4 px-4 text-[13px] font-bold max-w-[320px] truncate text-primary hover:underline">{c.name}</td>
                                 
                                 {columns.map((k) => {
                                   const col = ALL_METRIC_COLUMNS.find((x) => x.key === k);
@@ -1247,19 +1344,25 @@ export default function GestorView() {
                                     const active = c.status === "active";
                                     const loading = runningAction === `${c.id}-pause` || runningAction === `${c.id}-activate`;
                                     return (
-                                      <td key={k} className="text-right py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-center justify-end gap-1.5">
-                                          <Badge variant={active ? "default" : "secondary"} className="text-[9px] uppercase tracking-wider">
-                                            {c.status}
-                                          </Badge>
+                                      <td key={k} className="text-right py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-center justify-end gap-2">
+                                          {active ? (
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-primary text-black px-2.5 py-1 rounded-md shadow-sm">
+                                              ACTIVE
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-neutral-800 text-muted-foreground px-2.5 py-1 rounded-md">
+                                              PAUSED
+                                            </span>
+                                          )}
                                           <Button
                                             size="icon"
                                             variant="ghost"
                                             disabled={loading || !!runningAction}
                                             onClick={() => handleCampaignAction(c.id, active ? "pause" : "activate")}
-                                            className="h-6 w-6 rounded-full hover:bg-accent"
+                                            className="h-7 w-7 rounded-full hover:bg-accent"
                                           >
-                                            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : active ? <Pause className="h-3 w-3 text-yellow-400" /> : <Play className="h-3 w-3 text-primary" />}
+                                            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : active ? <Pause className="h-3.5 w-3.5 text-yellow-400" /> : <Play className="h-3.5 w-3.5 text-primary" />}
                                           </Button>
                                         </div>
                                       </td>
@@ -1273,23 +1376,23 @@ export default function GestorView() {
                                     if (budgetVal && budgetVal > 0) {
                                       const budgetFloat = budgetVal / 100;
                                       return (
-                                        <td key={k} className="text-right py-2.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            <span className="tabular-nums font-semibold">
+                                        <td key={k} className="text-right py-4 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                          <div className="flex items-center justify-end gap-2">
+                                            <span className="tabular-nums font-bold text-[13px] text-slate-200">
                                               {currencySymbol} {budgetFloat.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
-                                            <div className="flex gap-0.5">
+                                            <div className="flex gap-1">
                                               <button
                                                 disabled={!!runningAction}
                                                 onClick={() => handleCampaignAction(c.id, "reduce_budget", budgetVal)}
-                                                className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition animate-fade"
+                                                className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition duration-150"
                                               >
                                                 {loadingReduce ? <Loader2 className="h-2 w-2 animate-spin" /> : "-20%"}
                                               </button>
                                               <button
                                                 disabled={!!runningAction}
                                                 onClick={() => handleCampaignAction(c.id, "scale_budget", budgetVal)}
-                                                className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition animate-fade"
+                                                className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition duration-150"
                                               >
                                                 {loadingScale ? <Loader2 className="h-2 w-2 animate-spin" /> : "+20%"}
                                               </button>
@@ -1298,18 +1401,22 @@ export default function GestorView() {
                                         </td>
                                       );
                                     } else {
-                                      return <td key={k} className="text-right py-2.5 px-3 text-muted-foreground/60 italic">Conjunto</td>;
+                                      return <td key={k} className="text-right py-4 px-4 text-muted-foreground/60 italic font-medium">Conjunto</td>;
                                     }
                                   }
 
                                   return (
-                                    <td key={k} className="text-right py-2.5 px-3 tabular-nums whitespace-nowrap">
+                                    <td key={k} className="text-right py-4 px-4 tabular-nums font-medium text-[13px] text-slate-300 whitespace-nowrap">
                                       {formatMetricValue(raw, col?.format, currencySymbol)}
                                     </td>
                                   );
                                 })}
                                 
-                                <td className="text-center py-2.5"><ChevronRight className="h-3.5 w-3.5 text-muted-foreground inline" /></td>
+                                <td className="text-center py-4 px-4" onClick={(e) => { e.stopPropagation(); setDrill({ id: c.id, name: c.name }); }}>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-accent" title="Gerenciar Campanha">
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -1320,12 +1427,12 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE CONJUNTOS DE ANÚNCIOS === */}
                   {managerTab === "conjuntos" && (
-                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
+                    <Card className="rounded-2xl overflow-hidden border-white/5 shadow-2xl relative bg-card/60 backdrop-blur-xl">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
-                              <th className="py-2.5 px-3 w-10 text-center">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="text-muted-foreground bg-muted/20 border-b border-white/5">
+                            <tr className="shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+                              <th className="py-4 px-4 w-12 text-center">
                                 <input
                                   type="checkbox"
                                   checked={selectedAdsetIds.length === filteredAdsetsList.length && filteredAdsetsList.length > 0}
@@ -1333,28 +1440,28 @@ export default function GestorView() {
                                     if (e.target.checked) setSelectedAdsetIds(filteredAdsetsList.map((a) => a.id));
                                     else setSelectedAdsetIds([]);
                                   }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                  className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                 />
                               </th>
-                              <th className="text-left py-2.5 px-3 font-semibold">Nome do Conjunto</th>
+                              <th className="py-4 px-4 font-extrabold uppercase tracking-wider text-[10px]">Nome do Conjunto</th>
                               {columns.map((k) => {
                                 const col = ALL_METRIC_COLUMNS.find((c) => c.key === k);
-                                return <th key={k} className="text-right py-2.5 px-3 font-semibold whitespace-nowrap">{col?.label || k}</th>;
+                                return <th key={k} className="text-right py-4 px-4 font-extrabold uppercase tracking-wider text-[10px] whitespace-nowrap">{col?.label || k}</th>;
                               })}
-                              <th className="w-12">Ações</th>
+                              <th className="w-12 py-4 px-4 text-center">Editar</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-white/[0.04]">
                             {filteredAdsetsList.map((a) => (
                               <tr
                                 key={a.id}
-                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedAdsetIds.includes(a.id) ? "bg-primary/5" : ""}`}
+                                className={`hover:bg-accent/20 cursor-pointer transition ${selectedAdsetIds.includes(a.id) ? "bg-primary/5" : ""}`}
                                 onClick={() => {
                                   setSelectedAdsetFilter({ id: a.id, name: a.name });
                                   setManagerTab("anuncios");
                                 }}
                               >
-                                <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="checkbox"
                                     checked={selectedAdsetIds.includes(a.id)}
@@ -1362,10 +1469,10 @@ export default function GestorView() {
                                       if (e.target.checked) setSelectedAdsetIds([...selectedAdsetIds, a.id]);
                                       else setSelectedAdsetIds(selectedAdsetIds.filter((x) => x !== a.id));
                                     }}
-                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                    className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                   />
                                 </td>
-                                <td className="py-2.5 px-3 font-medium max-w-[280px] truncate text-primary hover:underline">{a.name}</td>
+                                <td className="py-4 px-4 text-[13px] font-bold max-w-[320px] truncate text-primary hover:underline">{a.name}</td>
                                 
                                 {columns.map((k) => {
                                   const col = ALL_METRIC_COLUMNS.find((x) => x.key === k);
@@ -1374,32 +1481,38 @@ export default function GestorView() {
                                   if (k === "status") {
                                     const active = a.status === "active";
                                     return (
-                                      <td key={k} className="text-right py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
-                                        <Badge variant={active ? "default" : "secondary"} className="text-[9px] uppercase tracking-wider">
-                                          {a.status}
-                                        </Badge>
+                                      <td key={k} className="text-right py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                                        {active ? (
+                                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-primary text-black px-2.5 py-1 rounded-md shadow-sm">
+                                            ACTIVE
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-neutral-800 text-muted-foreground px-2.5 py-1 rounded-md">
+                                            PAUSED
+                                          </span>
+                                        )}
                                       </td>
                                     );
                                   }
 
                                   if (k === "dailyBudget") {
                                     return (
-                                      <td key={k} className="text-right py-2.5 px-3 tabular-nums font-semibold">
+                                      <td key={k} className="text-right py-4 px-4 tabular-nums font-bold text-[13px] text-slate-200">
                                         {a.dailyBudget > 0 ? `${currencySymbol} ${(a.dailyBudget / 100).toFixed(2)}` : "CBO"}
                                       </td>
                                     );
                                   }
 
                                   return (
-                                    <td key={k} className="text-right py-2.5 px-3 tabular-nums whitespace-nowrap">
+                                    <td key={k} className="text-right py-4 px-4 tabular-nums font-medium text-[13px] text-slate-300 whitespace-nowrap">
                                       {formatMetricValue(raw, col?.format, currencySymbol)}
                                     </td>
                                   );
                                 })}
                                 
-                                <td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <Button size="icon" variant="ghost" onClick={() => handleEditAdset(a)} className="h-6 w-6 rounded-full hover:bg-accent" title="Editar definições no Meta">
-                                    <Pencil className="h-3.5 w-3.5" />
+                                <td className="text-center py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                                  <Button size="icon" variant="ghost" onClick={() => handleEditAdset(a)} className="h-7 w-7 rounded-full hover:bg-accent" title="Editar definições no Meta">
+                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                   </Button>
                                 </td>
                               </tr>
@@ -1412,12 +1525,12 @@ export default function GestorView() {
 
                   {/* === GERENCIADOR: TABELA DE ANÚNCIOS (CRIATIVOS + POST IDS) === */}
                   {managerTab === "anuncios" && (
-                    <Card className="rounded-xl overflow-hidden border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] shadow-lg relative">
+                    <Card className="rounded-2xl overflow-hidden border-white/5 shadow-2xl relative bg-card/60 backdrop-blur-xl">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="text-muted-foreground bg-muted/20">
-                            <tr className="border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
-                              <th className="py-2.5 px-3 w-10 text-center">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="text-muted-foreground bg-muted/20 border-b border-white/5">
+                            <tr className="shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+                              <th className="py-4 px-4 w-12 text-center">
                                 <input
                                   type="checkbox"
                                   checked={selectedAdIds.length === filteredAdsList.length && filteredAdsList.length > 0}
@@ -1425,25 +1538,25 @@ export default function GestorView() {
                                     if (e.target.checked) setSelectedAdIds(filteredAdsList.map((ad) => ad.id));
                                     else setSelectedAdIds([]);
                                   }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                  className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                 />
                               </th>
-                              <th className="text-left py-2.5 px-3 font-semibold min-w-[200px]">Criativo / Anúncio</th>
-                              <th className="text-left py-2.5 px-3 font-semibold">Post ID</th>
+                              <th className="py-4 px-4 font-extrabold uppercase tracking-wider text-[10px] min-w-[220px]">Criativo / Anúncio</th>
+                              <th className="py-4 px-4 font-extrabold uppercase tracking-wider text-[10px]">Post ID</th>
                               {columns.map((k) => {
                                 const col = ALL_METRIC_COLUMNS.find((c) => c.key === k);
-                                return <th key={k} className="text-right py-2.5 px-3 font-semibold whitespace-nowrap">{col?.label || k}</th>;
+                                return <th key={k} className="text-right py-4 px-4 font-extrabold uppercase tracking-wider text-[10px] whitespace-nowrap">{col?.label || k}</th>;
                               })}
-                              <th className="w-10"></th>
+                              <th className="w-12 py-4 px-4"></th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-white/[0.04]">
                             {filteredAdsList.map((ad) => (
                               <tr
                                 key={ad.id}
-                                className={`border-b border-white/5 hover:bg-accent/20 cursor-pointer transition ${selectedAdIds.includes(ad.id) ? "bg-primary/5" : ""}`}
+                                className={`hover:bg-accent/20 cursor-pointer transition ${selectedAdIds.includes(ad.id) ? "bg-primary/5" : ""}`}
                               >
-                                <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="checkbox"
                                     checked={selectedAdIds.includes(ad.id)}
@@ -1451,24 +1564,24 @@ export default function GestorView() {
                                       if (e.target.checked) setSelectedAdIds([...selectedAdIds, ad.id]);
                                       else setSelectedAdIds(selectedAdIds.filter((x) => x !== ad.id));
                                     }}
-                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                    className="rounded border-border text-primary focus:ring-primary/40 h-4 w-4 cursor-pointer"
                                   />
                                 </td>
                                 
                                 {/* Image display and Ad name */}
-                                <td className="py-2.5 px-3 font-medium">
-                                  <div className="flex items-center gap-2">
-                                    <img src={ad.thumbnail} alt={ad.name} className="w-8 h-8 rounded object-cover border border-border/50 shrink-0" />
-                                    <span className="truncate max-w-[200px]" title={ad.name}>{ad.name}</span>
+                                <td className="py-4 px-4 font-semibold text-[13px] text-slate-200">
+                                  <div className="flex items-center gap-3">
+                                    <img src={ad.thumbnail} alt={ad.name} className="w-11 h-11 rounded-lg object-cover border border-border/80 shadow-md shrink-0 transition-transform hover:scale-105" />
+                                    <span className="truncate max-w-[220px]" title={ad.name}>{ad.name}</span>
                                   </div>
                                 </td>
 
                                 {/* Copyable Post ID */}
-                                <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-1 font-mono text-[10px] bg-accent/40 px-1.5 py-0.5 rounded border border-white/5 max-w-[140px] justify-between">
-                                    <span className="truncate">{ad.postId}</span>
+                                <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1.5 font-mono text-[10px] bg-accent/40 px-2.5 py-1 rounded-xl border border-white/5 max-w-[145px] justify-between shadow-sm">
+                                    <span className="truncate text-slate-300 font-medium">{ad.postId}</span>
                                     <button onClick={() => handleCopyPostId(ad.postId)} className="hover:text-primary transition shrink-0" title="Copiar Post ID">
-                                      <Copy className="h-3 w-3" />
+                                      <Copy className="h-3 w-3 text-muted-foreground" />
                                     </button>
                                   </div>
                                 </td>
@@ -1480,26 +1593,36 @@ export default function GestorView() {
                                   if (k === "status") {
                                     const active = ad.status === "active";
                                     return (
-                                      <td key={k} className="text-right py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
-                                        <Badge variant={active ? "default" : "secondary"} className="text-[9px] uppercase tracking-wider">
-                                          {ad.status}
-                                        </Badge>
+                                      <td key={k} className="text-right py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                                        {active ? (
+                                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-primary text-black px-2.5 py-1 rounded-md shadow-sm">
+                                            ACTIVE
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-neutral-800 text-muted-foreground px-2.5 py-1 rounded-md">
+                                            PAUSED
+                                          </span>
+                                        )}
                                       </td>
                                     );
                                   }
 
                                   if (k === "dailyBudget") {
-                                    return <td key={k} className="text-right py-2.5 px-3 text-muted-foreground/60 italic">—</td>;
+                                    return <td key={k} className="text-right py-4 px-4 text-muted-foreground/60 italic font-medium">—</td>;
                                   }
 
                                   return (
-                                    <td key={k} className="text-right py-2.5 px-3 tabular-nums whitespace-nowrap">
+                                    <td key={k} className="text-right py-4 px-4 tabular-nums font-medium text-[13px] text-slate-300 whitespace-nowrap">
                                       {formatMetricValue(raw, col?.format, currencySymbol)}
                                     </td>
                                   );
                                 })}
                                 
-                                <td className="text-center py-2.5"><ChevronRight className="h-3.5 w-3.5 text-muted-foreground inline" /></td>
+                                <td className="text-center py-4 px-4" onClick={(e) => { e.stopPropagation(); setDrill({ id: ad.campaignId, name: ad.campaignName }); }}>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-accent" title="Gerenciar Campanha">
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2156,41 +2279,53 @@ function LineChartSvg({ data, color = "var(--primary)" }: { data: number[]; colo
   const range = max - min || 1;
   const width = 600;
   const height = 150;
-  const padding = 20;
+  const paddingLeft = 10;
+  const paddingRight = 10;
+  const paddingTop = 15;
+  const paddingBottom = 15;
 
-  const points = data
-    .map((val, idx) => {
-      const x = padding + (idx * (width - padding * 2)) / (data.length - 1);
-      const y = height - padding - ((val - min) * (height - padding * 2)) / range;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const points = data.length > 1
+    ? data
+        .map((val, idx) => {
+          const x = paddingLeft + (idx * (width - paddingLeft - paddingRight)) / (data.length - 1);
+          const y = height - paddingBottom - ((val - min) * (height - paddingTop - paddingBottom)) / range;
+          return `${x},${y}`;
+        })
+        .join(" ")
+    : `${paddingLeft},${height / 2} ${width - paddingRight},${height / 2}`;
 
   return (
-    <div className="w-full relative h-[150px]">
-      <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        <polyline
-          fill="none"
-          stroke={color}
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={points}
-        />
-        <path
-          d={`M ${padding},${height - padding} L ${points} L ${width - padding},${height - padding} Z`}
-          fill={`url(#area-grad-${color.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "")})`}
-          opacity="0.08"
-        />
-        <defs>
-          <linearGradient id={`area-grad-${color.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "")}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute left-0 bottom-0 text-[9px] font-mono text-muted-foreground/60">{min.toFixed(0)}</div>
-      <div className="absolute left-0 top-0 text-[9px] font-mono text-muted-foreground/60">{max.toFixed(0)}</div>
+    <div className="w-full h-[150px] flex items-stretch gap-3">
+      {/* Y-Axis Labels */}
+      <div className="flex flex-col justify-between text-[9px] font-mono text-muted-foreground/60 select-none py-1.5 shrink-0">
+        <span>{max.toFixed(0)}</span>
+        <span>{min.toFixed(0)}</span>
+      </div>
+      
+      {/* Chart SVG wrapper */}
+      <div className="flex-1 relative overflow-hidden">
+        <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+          <polyline
+            fill="none"
+            stroke={color}
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={points}
+          />
+          <path
+            d={`M ${paddingLeft},${height - paddingBottom} L ${points} L ${width - paddingRight},${height - paddingBottom} Z`}
+            fill={`url(#area-grad-${color.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "")})`}
+            opacity="0.08"
+          />
+          <defs>
+            <linearGradient id={`area-grad-${color.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
     </div>
   );
 }

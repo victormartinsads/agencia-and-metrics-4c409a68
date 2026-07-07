@@ -69,6 +69,7 @@ import {
   UserX,
   Edit3,
   DollarSign,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -176,16 +177,37 @@ export default function DiarioDoGestor() {
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
+  const [meetingClientName, setMeetingClientName] = useState("none");
+
+  const parseMeetingTitle = (t: string) => {
+    const match = t.match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (match) {
+      return { client: match[1], title: match[2] };
+    }
+    return { client: null, title: t };
+  };
+
+  const handleGenerateMeetLink = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz";
+    const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    setMeetingLink(`https://meet.google.com/${part1}-${part2}-${part3}`);
+    toast.info("Link do Google Meet gerado!");
+  };
 
   const handleOpenMeetingDialog = (meeting?: GestorDiaryCalendarEvent) => {
     if (meeting) {
       setEditingMeeting(meeting);
-      setMeetingTitle(meeting.title || "");
+      const parsed = parseMeetingTitle(meeting.title || "");
+      setMeetingTitle(parsed.title);
+      setMeetingClientName(parsed.client || "none");
       setMeetingDate(meeting.date ? meeting.date.split("T")[0] : "");
       setMeetingLink(meeting.meet_link || "");
     } else {
       setEditingMeeting(null);
       setMeetingTitle("");
+      setMeetingClientName("none");
       setMeetingDate("");
       setMeetingLink("");
     }
@@ -197,13 +219,17 @@ export default function DiarioDoGestor() {
       toast.error("Título e Data são obrigatórios!");
       return;
     }
+
+    const finalTitle = meetingClientName && meetingClientName !== "none"
+      ? `[${meetingClientName}] ${meetingTitle}`
+      : meetingTitle;
     
     manageCalendar.mutate({
       action: editingMeeting ? "update" : "insert",
       event: {
         id: editingMeeting?.id,
         gestor_id: activeGestorId,
-        title: meetingTitle,
+        title: finalTitle,
         date: meetingDate,
         meet_link: meetingLink,
         status: editingMeeting?.status || "pending",
@@ -291,13 +317,13 @@ export default function DiarioDoGestor() {
     setNewTaskTitle("");
   };
 
-  const handleToggleTask = (task: GestorDiaryTask) => {
+  const handleUpdateTaskStatus = (taskId: string, newStatus: "pending" | "in_progress" | "done") => {
     manageTask.mutate({
       action: "update",
       task: {
         gestor_id: activeGestorId,
-        id: task.id,
-        status: task.status === "done" ? "pending" : "done",
+        id: taskId,
+        status: newStatus,
       },
     });
   };
@@ -722,80 +748,267 @@ export default function DiarioDoGestor() {
           </div>
 
           <div className="w-full border-t border-border/40 my-8"></div>
+
+          {/* QUADRO KANBAN DE ROTINAS */}
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2 bg-card border border-border/50 px-4 py-2.5 rounded-lg shadow-sm">
+                <ClipboardList className="h-5 w-5 text-indigo-400" />
+                <h2 className="text-base font-bold tracking-tight uppercase">Quadro Kanban de Rotina</h2>
+              </div>
+
+              {/* Form to Add Task */}
+              <div className="flex items-center gap-2 w-full sm:w-auto bg-card/60 p-2 rounded-xl border border-border/50">
+                <Input
+                  placeholder="Nova tarefa de rotina..."
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  className="h-8 text-xs bg-background min-w-[200px]"
+                  onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
+                />
+                <Select value={newTaskTag} onValueChange={setNewTaskTag}>
+                  <SelectTrigger className="h-8 w-24 text-xs font-semibold">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Campanha", "Criativo", "Relatório", "Métrica", "Outro"].map((tag) => (
+                      <SelectItem key={tag} value={tag} className="text-xs font-semibold">
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" className="h-8 text-xs font-bold gap-1 px-3" onClick={handleAddTask}>
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* COL 1: PENDENTE */}
+              <div className="bg-card/25 border border-border/40 rounded-2xl p-4 flex flex-col min-h-[350px]">
+                <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" /> A Fazer ({tasks.filter((t: any) => t.status === "pending").length})
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3 overflow-y-auto flex-1 max-h-[400px] pr-1">
+                  {tasks.filter((t: any) => t.status === "pending").length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic text-center py-8 border border-dashed border-border/30 rounded-xl">
+                      Nenhuma tarefa a fazer.
+                    </div>
+                  ) : (
+                    tasks.filter((t: any) => t.status === "pending").map((t: any) => (
+                      <div key={t.id} className="bg-card/80 border border-border/40 p-3 rounded-xl flex flex-col gap-2 hover:border-border hover:bg-card/90 transition-all">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-bold text-slate-200 line-clamp-2 leading-relaxed">{t.title}</p>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0" onClick={() => handleDeleteTask(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          {t.tag ? (
+                            <Badge variant="outline" className="text-[9px] bg-slate-500/10 text-slate-400 border-slate-500/20 py-0 px-1 font-semibold uppercase tracking-wider">{t.tag}</Badge>
+                          ) : <div />}
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 font-bold hover:bg-indigo-500/10 hover:text-indigo-400 border-border/60" onClick={() => handleUpdateTaskStatus(t.id, "in_progress")}>
+                              Iniciar →
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* COL 2: EM ANDAMENTO */}
+              <div className="bg-card/25 border border-border/40 rounded-2xl p-4 flex flex-col min-h-[350px]">
+                <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Em Andamento ({tasks.filter((t: any) => t.status === "in_progress").length})
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3 overflow-y-auto flex-1 max-h-[400px] pr-1">
+                  {tasks.filter((t: any) => t.status === "in_progress").length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic text-center py-8 border border-dashed border-border/30 rounded-xl">
+                      Nenhuma tarefa em andamento.
+                    </div>
+                  ) : (
+                    tasks.filter((t: any) => t.status === "in_progress").map((t: any) => (
+                      <div key={t.id} className="bg-card/80 border border-border/40 p-3 rounded-xl flex flex-col gap-2 hover:border-border hover:bg-card/90 transition-all">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-bold text-slate-200 line-clamp-2 leading-relaxed">{t.title}</p>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0" onClick={() => handleDeleteTask(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          {t.tag ? (
+                            <Badge variant="outline" className="text-[9px] bg-slate-500/10 text-slate-400 border-slate-500/20 py-0 px-1 font-semibold uppercase tracking-wider">{t.tag}</Badge>
+                          ) : <div />}
+                          <div className="flex items-center gap-1.5">
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-1 text-muted-foreground hover:text-slate-200" onClick={() => handleUpdateTaskStatus(t.id, "pending")}>
+                              ← Voltar
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 font-bold hover:bg-emerald-500/10 hover:text-emerald-400 border-border/60" onClick={() => handleUpdateTaskStatus(t.id, "done")}>
+                              Concluir ✓
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* COL 3: CONCLUÍDO */}
+              <div className="bg-card/25 border border-border/40 rounded-2xl p-4 flex flex-col min-h-[350px]">
+                <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> Concluído ({tasks.filter((t: any) => t.status === "done").length})
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3 overflow-y-auto flex-1 max-h-[400px] pr-1">
+                  {tasks.filter((t: any) => t.status === "done").length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic text-center py-8 border border-dashed border-border/30 rounded-xl">
+                      Nenhuma tarefa concluída.
+                    </div>
+                  ) : (
+                    tasks.filter((t: any) => t.status === "done").map((t: any) => (
+                      <div key={t.id} className="bg-card/40 border border-border/30 p-3 rounded-xl flex flex-col gap-2 opacity-65 hover:opacity-100 hover:border-border/50 transition-all">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-medium text-muted-foreground line-through line-clamp-2 leading-relaxed">{t.title}</p>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0" onClick={() => handleDeleteTask(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          {t.tag ? (
+                            <Badge variant="outline" className="text-[9px] bg-slate-500/5 text-slate-500 border-slate-500/10 py-0 px-1 font-semibold uppercase tracking-wider line-through">{t.tag}</Badge>
+                          ) : <div />}
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-1 text-muted-foreground hover:text-slate-200" onClick={() => handleUpdateTaskStatus(t.id, "in_progress")}>
+                              ← Reabrir
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full border-t border-border/40 my-8"></div>
             
           {/* REUNIÕES */}
-          <div className="space-y-12 pb-12">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-                  <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> REUNIÕES
-                </h3>
-                <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleOpenMeetingDialog()}>
-                      <Plus className="h-4 w-4 mr-1" /> Nova Reunião
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>{editingMeeting ? "Editar Reunião" : "Nova Reunião"}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Título da Reunião</Label>
-                        <Input 
-                          placeholder="Ex: Alinhamento Estratégico" 
-                          value={meetingTitle}
-                          onChange={(e) => setMeetingTitle(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Data</Label>
-                        <Input 
-                          type="date"
-                          value={meetingDate}
-                          onChange={(e) => setMeetingDate(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Link do Meet (opcional)</Label>
+          <div className="space-y-6 pb-12">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-xs">▼</span> REUNIÕES
+              </h3>
+              <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="h-8 text-xs font-bold gap-1" onClick={() => handleOpenMeetingDialog()}>
+                    <Plus className="h-4 w-4" /> Nova Reunião
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>{editingMeeting ? "Editar Reunião" : "Nova Reunião"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Título da Reunião</Label>
+                      <Input 
+                        placeholder="Ex: Alinhamento Estratégico" 
+                        value={meetingTitle}
+                        onChange={(e) => setMeetingTitle(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cliente Relacionado (opcional)</Label>
+                      <Select value={meetingClientName} onValueChange={setMeetingClientName}>
+                        <SelectTrigger className="text-xs h-9 bg-background">
+                          <SelectValue placeholder="Selecione um cliente..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {gestorClients.map((c: any) => (
+                            <SelectItem key={c.client_id} value={c.client_name}>{c.client_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Data</Label>
+                      <Input 
+                        type="date"
+                        value={meetingDate}
+                        onChange={(e) => setMeetingDate(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Link do Meet (opcional)</Label>
+                      <div className="flex items-center gap-2">
                         <Input 
                           placeholder="https://meet.google.com/..." 
                           value={meetingLink}
                           onChange={(e) => setMeetingLink(e.target.value)}
+                          className="h-9 bg-background"
                         />
+                        <Button type="button" variant="outline" className="h-9 text-xs font-semibold shrink-0 gap-1 border-border/60" onClick={handleGenerateMeetLink}>
+                          <Video className="h-3.5 w-3.5" /> Gerar Meet
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setIsMeetingDialogOpen(false)}>Cancelar</Button>
-                      <Button onClick={handleSaveMeeting}>Salvar</Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
-                <table className="w-full text-left">
-                  <thead className="bg-muted/50 text-muted-foreground text-xs border-b border-border/50">
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsMeetingDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveMeeting}>Salvar</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <div className="border border-border/50 rounded-lg overflow-hidden bg-card text-sm">
+              <table className="w-full text-left">
+                <thead className="bg-muted/50 text-muted-foreground text-xs border-b border-border/50">
+                  <tr>
+                    <th className="font-medium p-2.5">Aa Título</th>
+                    <th className="font-medium p-2.5">Data</th>
+                    <th className="font-medium p-2.5">Status</th>
+                    <th className="font-medium p-2.5 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {calendarEvents.length === 0 ? (
                     <tr>
-                      <th className="font-medium p-2.5">Aa Título</th>
-                      <th className="font-medium p-2.5">Data</th>
-                      <th className="font-medium p-2.5">Status</th>
-                      <th className="font-medium p-2.5 text-right">Ações</th>
+                      <td colSpan={4} className="p-4 text-center text-muted-foreground text-xs italic">Nenhuma reunião agendada.</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/50">
-                    {calendarEvents.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">Nenhuma reunião agendada.</td>
-                      </tr>
-                    ) : (
-                      calendarEvents.map((ev) => (
+                  ) : (
+                    calendarEvents.map((ev) => {
+                      const parsed = parseMeetingTitle(ev.title || "");
+                      return (
                         <tr key={ev.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="p-2.5 font-medium flex items-center gap-2">
-                            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                            {ev.title}
+                          <td className="p-2.5 font-medium">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <span className="flex items-center gap-2">
+                                <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-xs font-bold text-slate-200">{parsed.title}</span>
+                              </span>
+                              {parsed.client && (
+                                <Badge variant="outline" className="w-fit text-[9px] bg-indigo-500/10 text-indigo-400 border-indigo-500/20 py-0.5 px-1.5 uppercase font-bold tracking-tight rounded-md">
+                                  {parsed.client}
+                                </Badge>
+                              )}
+                            </div>
                           </td>
-                          <td className="p-2.5 text-muted-foreground">
+                          <td className="p-2.5 text-muted-foreground text-xs">
                             {new Date(ev.date + "T00:00:00").toLocaleDateString('pt-BR')}
                           </td>
                           <td className="p-2.5">
@@ -816,12 +1029,13 @@ export default function DiarioDoGestor() {
                             </Button>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
+          </div>
 
           </div>
         </div>

@@ -24,7 +24,7 @@ export interface GestorDiaryTask {
   gestor_id: string;
   title: string;
   tag?: string;
-  status: "pending" | "done";
+  status: "pending" | "in_progress" | "done";
   created_at: string;
 }
 
@@ -588,10 +588,8 @@ export function useGestorCalendar(gestorId: string) {
         if (error) throw error;
         return (data || []) as GestorDiaryCalendarEvent[];
       } catch (err: any) {
-        if (isMissingTableError(err)) {
-          return getLocal<GestorDiaryCalendarEvent[]>(`calendar:${gestorId}`, []);
-        }
-        throw err;
+        console.warn("Calendar fetch error, fallback to local:", err);
+        return getLocal<GestorDiaryCalendarEvent[]>(`calendar:${gestorId}`, []);
       }
     },
     enabled: !!gestorId,
@@ -644,35 +642,33 @@ export function useManageGestorCalendar() {
           return { id: event.id, deleted: true };
         }
       } catch (err: any) {
-        if (isMissingTableError(err)) {
-          const list = getLocal<GestorDiaryCalendarEvent[]>(`calendar:${gestorId}`, []);
-          if (action === "insert") {
-            const inserted: GestorDiaryCalendarEvent = {
-              id: `local-event-${Date.now()}`,
-              gestor_id: gestorId,
-              date: event.date || new Date().toISOString().split("T")[0],
-              title: event.title || "",
-              meet_link: event.meet_link,
-              status: "pending",
-              created_at: new Date().toISOString(),
-            };
-            list.push(inserted);
+        console.warn("Calendar mutation error, fallback to local storage:", err);
+        const list = getLocal<GestorDiaryCalendarEvent[]>(`calendar:${gestorId}`, []);
+        if (action === "insert") {
+          const inserted: GestorDiaryCalendarEvent = {
+            id: `local-event-${Date.now()}`,
+            gestor_id: gestorId,
+            date: event.date || new Date().toISOString().split("T")[0],
+            title: event.title || "",
+            meet_link: event.meet_link,
+            status: "pending",
+            created_at: new Date().toISOString(),
+          };
+          list.push(inserted);
+          setLocal(`calendar:${gestorId}`, list);
+          return inserted;
+        } else if (action === "update") {
+          const idx = list.findIndex((e) => e.id === event.id);
+          if (idx > -1) {
+            list[idx] = { ...list[idx], ...event } as GestorDiaryCalendarEvent;
             setLocal(`calendar:${gestorId}`, list);
-            return inserted;
-          } else if (action === "update") {
-            const idx = list.findIndex((e) => e.id === event.id);
-            if (idx > -1) {
-              list[idx] = { ...list[idx], ...event } as GestorDiaryCalendarEvent;
-              setLocal(`calendar:${gestorId}`, list);
-              return list[idx];
-            }
-          } else {
-            const filtered = list.filter((e) => e.id !== event.id);
-            setLocal(`calendar:${gestorId}`, filtered);
-            return { id: event.id, deleted: true };
+            return list[idx];
           }
+        } else {
+          const filtered = list.filter((e) => e.id !== event.id);
+          setLocal(`calendar:${gestorId}`, filtered);
+          return { id: event.id, deleted: true };
         }
-        throw err;
       }
     },
     onSuccess: (_, variables) => {

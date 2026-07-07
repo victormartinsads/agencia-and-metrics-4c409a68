@@ -838,6 +838,18 @@ Deno.serve(async (req) => {
           }
         }
 
+        let ads: any[] = [];
+        try {
+          await delay(100);
+          const adsUrl = `${GRAPH_API}/${actId}/ads?fields=campaign_id,name,status,adset_name,adset{id,name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.${insightsModifier}{spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=150`;
+          const fetchedAds = await fetchMeta<any>(adsUrl);
+          if (fetchedAds && Array.isArray(fetchedAds)) {
+            ads = fetchedAds;
+          }
+        } catch (error) {
+          console.error(`Meta API ads error for ${actId}:`, error);
+        }
+
         // Daily insights
         const dailyData: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; purchases: number; leads: number }> = {};
         try {
@@ -869,15 +881,27 @@ Deno.serve(async (req) => {
           console.error(`Daily insights error for ${actId}:`, e);
         }
 
-        return { campaigns, dailyData, accountId: actId, accountError };
+        return { campaigns, dailyData, accountId: actId, accountError, ads };
       })
     );
 
     for (const result of accountResults) {
       if (result.status !== "fulfilled") continue;
-      const { campaigns, dailyData, accountId: aId, accountError } = result.value;
+      const { campaigns, dailyData, accountId: aId, accountError, ads } = result.value;
       if (accountError) {
         accountErrors.push({ accountId: aId, message: accountError });
+      }
+
+      // Group ads by campaign ID
+      const adsByCampaign: Record<string, any[]> = {};
+      if (Array.isArray(ads)) {
+        for (const ad of ads) {
+          const campId = ad.campaign_id;
+          if (campId) {
+            if (!adsByCampaign[campId]) adsByCampaign[campId] = [];
+            adsByCampaign[campId].push(ad);
+          }
+        }
       }
 
       for (const camp of campaigns) {
@@ -898,6 +922,44 @@ Deno.serve(async (req) => {
         const purchases = getActionValue(insight?.actions, "purchase") || getActionValue(insight?.actions, "offsite_conversion.fb_pixel_purchase");
         const purchaseValue = Number(insight?.action_values?.find((a) => a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase")?.value || 0);
 
+        const campAds = adsByCampaign[camp.id] || [];
+        const campCreatives = campAds.map((ad: any) => {
+          const adInsight = ad.insights?.data?.[0];
+          const adSpend = Number(adInsight?.spend || 0);
+          const adPrimary = getPrimaryResult(adInsight?.actions, [resolvedPrimaryActionType], adInsight as MetaInsight | undefined);
+          const adRevenue = adPrimary.value * 50;
+
+          const storyId = ad.creative?.effective_object_story_id;
+          const postUrl = ad.creative?.instagram_permalink_url
+            || (storyId && `https://facebook.com/${storyId}`)
+            || `https://www.facebook.com/ads/library/?id=${ad.id}`;
+
+          const adLinkClicks = getActionValue(adInsight?.actions, "link_click") || 0;
+          const adLinkCtr = Number(adInsight?.impressions || 0) > 0 
+            ? Number(((adLinkClicks / Number(adInsight.impressions)) * 100).toFixed(2))
+            : 0;
+
+          return {
+            id: ad.id,
+            name: ad.name,
+            status: ad.status === "ACTIVE" ? "active" : "paused",
+            adsetName: ad.adset_name || ad.adset?.name || "",
+            creativeId: ad.creative?.id,
+            permalinkUrl: postUrl,
+            type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
+            thumbnail: ad.creative?.thumbnail_url || `https://picsum.photos/seed/${ad.id}/300/300`,
+            impressions: Number(adInsight?.impressions || 0),
+            clicks: Number(adInsight?.clicks || 0),
+            ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
+            spend: adSpend,
+            conversions: adPrimary.value,
+            primaryResult: adPrimary.value,
+            roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
+            linkClicks: adLinkClicks,
+            linkCtr: adLinkCtr,
+          };
+        });
+
         allCampaigns.push({
           id: camp.id,
           name: camp.name,
@@ -916,7 +978,7 @@ Deno.serve(async (req) => {
           roas,
           reach: Number(insight?.reach || 0),
           frequency: Number(Number(insight?.frequency || 0).toFixed(2)),
-          creatives: [],
+          creatives: campCreatives,
           primaryResultLabel: primary.label,
           primaryResultKey: resolvedPrimaryActionType,
           _primaryActionTypes: actionPriority,
@@ -977,105 +1039,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Fetch creatives for top campaigns
-    const campaignsWithSpend = allCampaigns
-      .filter((c) => c.spend > 0)
-      .sort((a, b) => b.spend - a.spend)
-      .slice(0, 15);
+    // 3. Fetch hi-res thumbnails for top creatives across all campaigns
+    const hiResCache: Record<string, string> = {};
+    const topCreatives = allCampaigns
+      .flatMap((c) => c.creatives || [])
+      .sort((a: any, b: any) => b.spend - a.spend)
+      .slice(0, 8);
 
-    for (const camp of campaignsWithSpend) {
-      await delay(150);
-      const primaryActionType: string = camp.primaryResultKey || camp._primaryActionTypes?.[0] || "link_click";
-      const adsUrl = `${GRAPH_API}/${camp.id}/ads?fields=name,status,adset_name,adset{name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.${insightsModifier}{spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=25`;
-
-      let ads: any[] = [];
+    for (const cr of topCreatives) {
+      if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
       try {
-        ads = await fetchMeta<any>(adsUrl);
-      } catch (error) {
-        console.error(`Ads error for campaign ${camp.id}:`, error);
-        if (String(error).includes("request limit") || String(error).includes("too many calls")) {
-          hitRateLimit = true;
+        await delay(100);
+        const res = await fetch(
+          `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`
+        );
+        const data = await res.json();
+        if (data.thumbnail_url) {
+          hiResCache[cr.creativeId] = data.thumbnail_url;
         }
-        continue;
-      }
+      } catch (_) {}
+    }
 
-      const adsNeedingPermalink = ads.filter(
-        (ad: any) => !ad.creative?.instagram_permalink_url && ad.creative?.effective_object_story_id
-      );
-
-      const storyPermalinks: Record<string, string> = {};
-      for (const ad of adsNeedingPermalink.slice(0, 3)) {
-        const storyId = ad.creative.effective_object_story_id;
-        try {
-          await delay(100);
-          const storyRes = await fetch(`${GRAPH_API}/${storyId}?fields=permalink_url&access_token=${token}`);
-          const storyData = await storyRes.json();
-          if (storyData.permalink_url) {
-            storyPermalinks[storyId] = storyData.permalink_url;
-          }
-        } catch (_) {}
-      }
-
-      camp.creatives = ads.map((ad: any) => {
-        const adInsight = ad.insights?.data?.[0];
-        const adSpend = Number(adInsight?.spend || 0);
-        const adPrimary = getPrimaryResult(adInsight?.actions, [primaryActionType], adInsight as MetaInsight | undefined);
-        const adRevenue = adPrimary.value * 50;
-
-        const storyId = ad.creative?.effective_object_story_id;
-        const postUrl = ad.creative?.instagram_permalink_url
-          || (storyId && storyPermalinks[storyId])
-          || `https://www.facebook.com/ads/library/?id=${ad.id}`;
-
-        const adLinkClicks = getActionValue(adInsight?.actions, "link_click") || 0;
-        const adLinkCtr = Number(adInsight?.impressions || 0) > 0 
-          ? Number(((adLinkClicks / Number(adInsight.impressions)) * 100).toFixed(2))
-          : 0;
-
-        return {
-          id: ad.id,
-          name: ad.name,
-          status: ad.status === "ACTIVE" ? "active" : "paused",
-          adsetName: ad.adset_name || ad.adset?.name || "",
-          creativeId: ad.creative?.id,
-          permalinkUrl: postUrl,
-          type: ad.creative?.object_type === "VIDEO" ? "video" : ad.creative?.object_type === "CAROUSEL" ? "carousel" : "image",
-          thumbnail: ad.creative?.thumbnail_url || `https://picsum.photos/seed/${ad.id}/300/300`,
-          impressions: Number(adInsight?.impressions || 0),
-          clicks: Number(adInsight?.clicks || 0),
-          ctr: Number(Number(adInsight?.ctr || 0).toFixed(2)),
-          spend: adSpend,
-          conversions: adPrimary.value,
-          primaryResult: adPrimary.value,
-          roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
-          linkClicks: adLinkClicks,
-          linkCtr: adLinkCtr,
-        };
-      });
-
-      // Fetch hi-res thumbnails for top 3 creatives only
-      const hiResCache: Record<string, string> = {};
-      const topCreatives = [...camp.creatives].sort((a: any, b: any) => b.spend - a.spend).slice(0, 3);
-      for (const cr of topCreatives) {
-        if (!cr.creativeId || hiResCache[cr.creativeId]) continue;
-        try {
-          await delay(50);
-          const res = await fetch(
-            `${GRAPH_API}/${cr.creativeId}?fields=thumbnail_url&thumbnail_width=1080&thumbnail_height=1080&access_token=${token}`
-          );
-          const data = await res.json();
-          if (data.thumbnail_url) {
-            hiResCache[cr.creativeId] = data.thumbnail_url;
-          }
-        } catch (_) {}
-      }
-      for (const cr of camp.creatives) {
+    for (const camp of allCampaigns) {
+      for (const cr of camp.creatives || []) {
         if (cr.creativeId && hiResCache[cr.creativeId]) {
           cr.thumbnail = hiResCache[cr.creativeId];
         }
       }
-
-      delete camp._primaryActionTypes;
     }
 
     for (const camp of allCampaigns) {

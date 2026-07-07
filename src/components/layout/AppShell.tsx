@@ -16,6 +16,12 @@ import {
   BookOpen,
   Home,
   Bot,
+  MessageSquare,
+  MessageCircle,
+  CheckSquare,
+  Webhook,
+  ChevronRight,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +71,8 @@ interface AppShellProps {
     | "crm"
     | "manager"
     | "manage"
-    | "home";
+    | "home"
+    | "alerts";
   header?: ReactNode;
   noContainer?: boolean;
 }
@@ -167,13 +174,23 @@ export default function AppShell({
       label: "Operação",
       items: [
         { id: "crm", label: "CRM", icon: KanbanSquare, href: "/crm-app" },
-        ...((role?.isAdmin || role?.isCeo || role?.isDiretor || role?.isGestor || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
-          ? [{ id: "manager", label: "Gestor", icon: Brain, href: "/gestor" }]
-          : []),
+        { id: "alerts", label: "Alertas", icon: Bell, href: "/alertas" },
         ...((role?.isAdmin || isStaffAdmin || isStaffCeo || isStaffDiretor || isStaffGestor)
           ? [{ id: "diario-gestor", label: "Diário do Gestor", icon: BookOpen, href: "/diario-do-gestor" }]
           : []),
-        { id: "robo-analista", label: "Robô Analista", icon: Bot, href: "/robo-analista" },
+      ],
+    },
+    {
+      label: "Ferramentas do Gestor",
+      items: [
+        { id: "fg-meta", label: "Meta Ads", icon: Sparkles, href: "/ferramentas-do-gestor?tab=meta-ads" },
+        { id: "fg-google", label: "Google Ads", icon: Bot, href: "/ferramentas-do-gestor?tab=google-ads" },
+        { id: "fg-meetings", label: "Reuniões", icon: BookOpen, href: "/ferramentas-do-gestor?tab=meetings" },
+        { id: "fg-reports", label: "Relatórios", icon: LayoutDashboard, href: "/ferramentas-do-gestor?tab=reports" },
+        { id: "fg-automations", label: "Automações", icon: Webhook, href: "/ferramentas-do-gestor?tab=automations" },
+        { id: "fg-templates", label: "Templates", icon: MessageCircle, href: "/ferramentas-do-gestor?tab=templates" },
+        { id: "fg-integrations", label: "Integrações", icon: Users, href: "/ferramentas-do-gestor?tab=integrations" },
+        { id: "fg-settings", label: "Ajustes", icon: SettingsIcon, href: "/ferramentas-do-gestor?tab=settings" },
       ],
     },
     ...((role?.canAccessSettings || isStaffAdmin || isStaffCeo || isStaffDiretor)
@@ -191,7 +208,23 @@ export default function AppShell({
   const isActive = (item: { id: string; href: string }) => {
     if (currentPage && item.id === currentPage) return true;
     if (item.href === "/") return location.pathname === "/";
-    return location.pathname.startsWith(item.href);
+
+    const hasQuery = item.href.includes("?");
+    const pathPart = hasQuery ? item.href.split("?")[0] : item.href;
+    const queryPart = hasQuery ? item.href.split("?")[1] : "";
+    const itemTab = new URLSearchParams(queryPart).get("tab");
+    const currentTab = new URLSearchParams(location.search).get("tab");
+
+    if (location.pathname.startsWith(pathPart)) {
+      if (itemTab) {
+        if (itemTab === "overview") {
+          return currentTab === "overview" || !currentTab;
+        }
+        return currentTab === itemTab;
+      }
+      return !currentTab;
+    }
+    return false;
   };
 
   const segments = location.pathname.split("/").filter(Boolean);
@@ -256,15 +289,14 @@ export default function AppShell({
                     to={item.href}
                     title={!open ? item.label : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2 min-h-[44px] text-sm transition-all duration-300 relative cursor-pointer overflow-hidden group",
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[40px] text-xs transition-all duration-200 relative cursor-pointer group",
                       active
-                        ? "bg-primary/10 text-primary font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-primary/20"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground border border-transparent",
+                        ? "bg-primary text-black font-bold shadow-[0_4px_12px_rgba(163,230,53,0.2)]"
+                        : "text-sidebar-foreground/70 hover:bg-white/[0.03] hover:text-sidebar-foreground border border-transparent",
                     )}
                   >
-                    {active && <div className="absolute inset-y-0 left-0 w-1 bg-primary rounded-r-full shadow-[0_0_12px_hsl(var(--primary))]" />}
-                    <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", active ? "scale-110" : "group-hover:scale-110")} />
-                    {open && <span className="truncate">{item.label}</span>}
+                    <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200", active ? "text-black scale-105" : "group-hover:scale-105")} />
+                    {open && <span className="truncate font-semibold">{item.label}</span>}
                   </Link>
                 );
               })}

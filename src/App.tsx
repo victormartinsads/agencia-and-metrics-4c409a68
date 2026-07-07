@@ -33,6 +33,8 @@ import TrackingHub from "./pages/TrackingHub.tsx";
 import Home from "./pages/Home.tsx";
 import RoboAnalista from "./pages/RoboAnalista.tsx";
 import CampaignOptimizer from "./pages/CampaignOptimizer";
+import FerramentasGestor from "./pages/FerramentasGestor.tsx";
+import Alertas from "./pages/Alertas.tsx";
 
 const queryClient = new QueryClient();
 
@@ -73,12 +75,14 @@ const App = () => (
             <Route path="/gestor" element={<ProtectedRoute><GestorOverview /></ProtectedRoute>} />
             <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
             <Route path="/diario-do-gestor" element={<ProtectedRoute><DiarioDoGestor /></ProtectedRoute>} />
+            <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
             <Route path="/tracking/:clientId" element={<ProtectedRoute><TrackingHub /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
             <Route path="/portal/dashboard" element={<ProtectedRoute><ClientPortalDashboardRedirect /></ProtectedRoute>} />
             <Route path="/crm-app" element={<ProtectedRoute><CrmAppPage /></ProtectedRoute>} />
             <Route path="/robo-analista" element={<ProtectedRoute><RoboAnalista /></ProtectedRoute>} />
             <Route path="/campaign-optimizer" element={<ProtectedRoute><CampaignOptimizer /></ProtectedRoute>} />
+            <Route path="/ferramentas-do-gestor" element={<ProtectedRoute><FerramentasGestor /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
