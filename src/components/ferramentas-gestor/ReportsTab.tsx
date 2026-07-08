@@ -51,6 +51,10 @@ interface ReportsTabProps {
 export function ReportsTab({ selectedClient: initialSelectedClient, clients }: ReportsTabProps) {
   const [activeTab, setActiveTab] = useState("adsdaily");
   
+  const fmtMoney = (v: number) => {
+    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+  
   // Local client selector if none is selected globally
   const [localClientId, setLocalClientId] = useState<string>("");
   
@@ -530,40 +534,228 @@ export function ReportsTab({ selectedClient: initialSelectedClient, clients }: R
                 )}
               </Card>
 
-              {/* META ADS DETAIL CARD */}
-              <Card className="bg-card/50 border border-border/40 rounded-2xl overflow-hidden shadow-xl">
-                <CardHeader className="p-4 border-b border-border/40 bg-white/[0.01] flex flex-row items-center gap-2 space-y-0">
-                  <Facebook className="h-5 w-5 text-[#1877F2]" />
-                  <div>
-                    <CardTitle className="text-sm font-extrabold">Meta Ads Performance</CardTitle>
-                    <CardDescription className="text-[10px]">Resultados gerados via Facebook Ads</CardDescription>
+              {/* META ADS DETAIL REPORT (ADSDaily Style) */}
+              <div className="space-y-6">
+                <Card className="bg-card/50 border border-border/40 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="bg-gradient-to-r from-[#1877F2]/10 to-transparent p-5 border-b border-border/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-[#1877F2]/10 rounded-xl flex items-center justify-center border border-[#1877F2]/20">
+                        <Facebook className="h-5 w-5 text-[#1877F2]" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-extrabold text-slate-100 uppercase tracking-tight">Relatório Meta Ads</h3>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {activeClient?.name || "Cliente"} | {datePreset === "today" ? "Hoje" : datePreset === "yesterday" ? "Ontem" : datePreset === "last_7d" ? "Últimos 7 dias" : "Mês Atual"}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-[#b5f23d]/15 text-[#b5f23d] border border-[#b5f23d]/20 text-[10px] font-bold px-2.5 py-1">
+                      {metaData?.campaigns?.reduce((acc: number, c: any) => acc + (c.creatives?.length || 0), 0) || 0} criativos analisados
+                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">Gasto</span>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">
-                      {reportData?.meta.spent.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
+
+                  <CardContent className="p-6 space-y-6">
+                    {/* Budget Distribution */}
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-200">Comparativo por Campanha</h4>
+                        <p className="text-[10px] text-muted-foreground">Resultados por campanha, com leitura rápida do que mais performou.</p>
+                      </div>
+                      
+                      <div className="bg-black/20 border border-border/30 rounded-xl p-4 space-y-4">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Distribuição de Verba (Participação no investimento total)</p>
+                        <div className="space-y-3.5">
+                          {metaData?.campaigns && metaData.campaigns.length > 0 ? (
+                            metaData.campaigns.map((camp: any) => {
+                              const totalSpend = reportData?.meta.spent || 1;
+                              const percentage = Math.min(((camp.spend || 0) / totalSpend) * 100, 100);
+                              return (
+                                <div key={camp.id} className="space-y-1.5">
+                                  <div className="flex justify-between text-[11px] font-bold">
+                                    <span className="text-slate-300 truncate max-w-[250px]">{camp.name}</span>
+                                    <span className="text-slate-100">{fmtMoney(camp.spend || 0)} ({percentage.toFixed(0)}%)</span>
+                                  </div>
+                                  <div className="h-2 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-[#1877F2] to-[#00c6ff] rounded-full transition-all duration-500" 
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic text-center py-2">Sem campanhas para comparar.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Campaigns Table */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-200">Resumo por Campanha</h4>
+                      <div className="border border-border/30 rounded-xl overflow-hidden bg-black/10">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-[10px]">
+                            <thead>
+                              <tr className="border-b border-border/30 bg-white/[0.02] text-muted-foreground font-bold">
+                                <th className="p-3">Campanha</th>
+                                <th className="p-3">Objetivo</th>
+                                <th className="p-3 text-right">Invest.</th>
+                                <th className="p-3 text-right">Alcance</th>
+                                <th className="p-3 text-right">Cliques</th>
+                                <th className="p-3 text-right">CTR</th>
+                                <th className="p-3 text-right">Resultado</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/[0.02]">
+                              {metaData?.campaigns && metaData.campaigns.length > 0 ? (
+                                metaData.campaigns.map((camp: any) => (
+                                  <tr key={camp.id} className="hover:bg-white/[0.01]">
+                                    <td className="p-3 font-bold text-slate-200 max-w-[150px] truncate" title={camp.name}>{camp.name}</td>
+                                    <td className="p-3 text-muted-foreground">{camp.objective || "Conversões"}</td>
+                                    <td className="p-3 text-right text-slate-300 font-semibold">{fmtMoney(camp.spend || 0)}</td>
+                                    <td className="p-3 text-right text-slate-300">{(camp.reach || 0).toLocaleString("pt-BR")}</td>
+                                    <td className="p-3 text-right text-slate-300">{(camp.clicks || 0).toLocaleString("pt-BR")}</td>
+                                    <td className="p-3 text-right text-slate-300">{(camp.ctr || 0).toFixed(2)}%</td>
+                                    <td className="p-3 text-right text-emerald-400 font-bold">{(camp.conversions || 0).toLocaleString("pt-BR")}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={7} className="p-4 text-center text-muted-foreground italic">Nenhuma campanha encontrada.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Campaign Drill Down Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-200">Desempenho por Campanha</h4>
+                      <p className="text-[10px] text-muted-foreground">Campanhas, conjuntos e criativos detalhados no período.</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">Conversões</span>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">{reportData?.meta.conversions}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">CPA/CPL</span>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">
-                      {reportData?.meta.cpa.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">CTR / CPC</span>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">
-                      {reportData?.meta.ctr.toFixed(2)}% <span className="text-[10px] font-normal text-muted-foreground">({reportData?.meta.cpc.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})</span>
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+
+                  {metaData?.campaigns && metaData.campaigns.length > 0 ? (
+                    metaData.campaigns.map((camp: any) => {
+                      const cpa = camp.conversions > 0 ? camp.spend / camp.conversions : 0;
+                      return (
+                        <Card key={camp.id} className="bg-card/45 border border-border/30 rounded-2xl overflow-hidden shadow-lg space-y-4 p-5">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-border/30 pb-3">
+                            <div>
+                              <h5 className="text-xs font-black text-slate-200">{camp.name}</h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5">Objetivo: {camp.objective || "Conversões"}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {camp.status === "active" ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold py-0.5">Ativo</Badge>
+                              ) : (
+                                <Badge className="bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 text-[9px] font-bold py-0.5">Pausada</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Quick Metrics Grid */}
+                          <div className="grid grid-cols-3 gap-3 bg-black/10 border border-border/35 p-3 rounded-xl text-center">
+                            <div>
+                              <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Investido</p>
+                              <p className="text-xs font-bold text-slate-200 mt-0.5">{fmtMoney(camp.spend || 0)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Resultados</p>
+                              <p className="text-xs font-bold text-emerald-400 mt-0.5">{camp.conversions || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] uppercase tracking-wider text-muted-foreground">CPA/CPL</p>
+                              <p className="text-xs font-bold text-amber-500 mt-0.5">{fmtMoney(cpa)}</p>
+                            </div>
+                          </div>
+
+                          {/* Visual Funnel */}
+                          <div className="space-y-2">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-300">Funil de Conversão</p>
+                            <div className="grid grid-cols-4 gap-2 text-center text-[9px]">
+                              <div className="bg-white/[0.02] border border-border/30 p-2 rounded-lg">
+                                <span className="text-muted-foreground">Impressões</span>
+                                <p className="font-extrabold text-slate-200 mt-0.5">{(camp.impressions || 0).toLocaleString("pt-BR")}</p>
+                              </div>
+                              <div className="bg-white/[0.02] border border-border/30 p-2 rounded-lg">
+                                <span className="text-muted-foreground">Alcance</span>
+                                <p className="font-extrabold text-slate-200 mt-0.5">{(camp.reach || 0).toLocaleString("pt-BR")}</p>
+                              </div>
+                              <div className="bg-white/[0.02] border border-border/30 p-2 rounded-lg">
+                                <span className="text-muted-foreground">Cliques</span>
+                                <p className="font-extrabold text-slate-200 mt-0.5">{(camp.clicks || 0).toLocaleString("pt-BR")}</p>
+                              </div>
+                              <div className="bg-white/[0.02] border border-border/30 p-2 rounded-lg">
+                                <span className="text-muted-foreground">Resultados</span>
+                                <p className="font-extrabold text-emerald-400 mt-0.5">{(camp.conversions || 0).toLocaleString("pt-BR")}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Performance por Criativo */}
+                          {camp.creatives && camp.creatives.length > 0 && (
+                            <div className="space-y-2.5 pt-2 border-t border-border/30">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-300">Performance por Criativo</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {camp.creatives.map((cr: any) => {
+                                  const crCpa = cr.conversions > 0 ? cr.spend / cr.conversions : 0;
+                                  return (
+                                    <div key={cr.id} className="bg-black/15 border border-border/30 rounded-xl overflow-hidden flex flex-col justify-between text-[10px] shadow-sm">
+                                      <div className="p-3 border-b border-border/30 flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded bg-white/[0.03] border border-border/30 overflow-hidden flex items-center justify-center shrink-0">
+                                          {cr.thumbnail ? (
+                                            <img src={cr.thumbnail} alt={cr.name} className="h-full w-full object-cover" />
+                                          ) : (
+                                            <Facebook className="h-4 w-4 text-muted-foreground" />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-bold text-slate-200 truncate" title={cr.name}>{cr.name}</p>
+                                          <p className="text-[8px] text-muted-foreground uppercase">{cr.type || "Imagem"}</p>
+                                        </div>
+                                      </div>
+                                      <div className="p-3 grid grid-cols-3 gap-1 bg-white/[0.01] text-center text-[9px] border-b border-border/30">
+                                        <div>
+                                          <span className="text-muted-foreground">Investido</span>
+                                          <p className="font-bold text-slate-200 mt-0.5">{fmtMoney(cr.spend || 0)}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground">Resultados</span>
+                                          <p className="font-bold text-emerald-400 mt-0.5">{cr.conversions || 0}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground">CPA</span>
+                                          <p className="font-bold text-amber-500 mt-0.5">{fmtMoney(crCpa)}</p>
+                                        </div>
+                                      </div>
+                                      <div className="px-3 py-2 flex justify-between items-center text-[8px] text-muted-foreground">
+                                        <span>CTR: <strong className="text-slate-300">{(cr.ctr || 0).toFixed(2)}%</strong></span>
+                                        <span>Cliques: <strong className="text-slate-300">{(cr.clicks || 0).toLocaleString("pt-BR")}</strong></span>
+                                        <span>ROAS: <strong className="text-slate-300">{(cr.roas || 0).toFixed(1)}x</strong></span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic text-center py-6">Nenhum dado de campanha encontrado para detalhar.</p>
+                  )}
+                </div>
+              </div>
 
               {/* GOOGLE ADS DETAIL CARD */}
               <Card className="bg-card/50 border border-border/40 rounded-2xl overflow-hidden shadow-xl">
