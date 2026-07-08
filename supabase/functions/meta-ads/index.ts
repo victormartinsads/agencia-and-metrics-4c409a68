@@ -841,7 +841,7 @@ Deno.serve(async (req) => {
         let ads: any[] = [];
         try {
           await delay(100);
-          const adsUrl = `${GRAPH_API}/${actId}/ads?fields=campaign_id,name,status,adset_name,adset{id,name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.${insightsModifier}{spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=150`;
+          const adsUrl = `${GRAPH_API}/${actId}/ads?fields=campaign_id,name,status,adset_name,adset{id,name},creative{id,thumbnail_url,object_type,effective_object_story_id,instagram_permalink_url},insights.${insightsModifier}{spend,impressions,clicks,ctr,actions,reach}&access_token=${token}&limit=50`;
           const fetchedAds = await fetchMeta<any>(adsUrl);
           if (fetchedAds && Array.isArray(fetchedAds)) {
             ads = fetchedAds;
