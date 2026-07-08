@@ -15,10 +15,11 @@ import {
   Target,
   Flame,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Client } from "@/hooks/useClients";
 import { supabase } from "@/integrations/supabase/client";
@@ -392,6 +393,80 @@ export function MetaEditorView({
   const [expandedAdsets, setExpandedAdsets] = useState<Record<string, boolean>>({});
   const [actioning, setActioning] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"tabela" | "insights" | "criativos">("tabela");
+
+  // AI analysis states
+  const [aiCampaign, setAiCampaign] = useState<any | null>(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
+  const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
+
+  const handleCampaignAIAnalysis = async (camp: any) => {
+    setAiCampaign(camp);
+    setAiAnalysisOpen(true);
+    setAiAnalysisLoading(true);
+    setAiAnalysisResult(null);
+    try {
+      const tCPA = client.target_cpa_purchase || 80;
+      const tCPL = client.target_cpa_lead || 15;
+      
+      const creativesData = (camp.creatives || []).map((cr: any) => {
+        const ctr = Number(cr.ctr || 0);
+        const spend = Number(cr.spend || 0);
+        const conversions = Number(cr.conversions || 0);
+        const cpa = conversions > 0 ? spend / conversions : 0;
+        const clicks = Number(cr.clicks || 0);
+        const cpc = clicks > 0 ? spend / clicks : 0;
+        return `- Anúncio: "${cr.name}" (ID: ${cr.id}, Tipo: ${cr.type})
+  Investido: R$ ${spend.toFixed(2)}
+  CTR: ${ctr.toFixed(2)}% | CPC: R$ ${cpc.toFixed(2)}
+  Conversões: ${conversions} | CPA: R$ ${cpa.toFixed(2)}`;
+      }).join("\n");
+
+      const prompt = `Você é o Robô Analista AI da CENTRAL AND. Sua missão é fazer um diagnóstico de performance super aprofundado e prático da campanha: "${camp.name}" para o cliente "${client.name}".
+Aqui estão os dados da campanha no período selecionado:
+Campanha:
+- Nome: ${camp.name}
+- Objetivo/Tipo: ${camp.objective || "Vendas/Leads"}
+- Investimento: R$ ${Number(camp.spend || 0).toFixed(2)}
+- Cliques: ${camp.clicks || 0}
+- CTR: ${Number(camp.ctr || 0).toFixed(2)}%
+- CPC Médio: R$ ${Number(camp.cpc || (camp.clicks > 0 ? camp.spend / camp.clicks : 0)).toFixed(2)}
+- Conversões (Leads/Compras): ${camp.conversions || 0}
+- CPA Geral da Campanha: R$ ${Number(camp.conversions > 0 ? camp.spend / camp.conversions : 0).toFixed(2)}
+- Frequência Média: ${Number(camp.frequency || 1.1).toFixed(2)}x
+
+Anúncios/Criativos dessa campanha:
+${creativesData || "(Nenhum anúncio detalhado)"}
+
+Metas Estipuladas do Cliente:
+- Target CPA (Lead): R$ ${tCPL}
+- Target CPA (Venda/Compra): R$ ${tCPA}
+
+Por favor, forneça um relatório acionável estruturado com:
+1. 📊 DIAGNÓSTICO DA CAMPANHA: Avalie se a campanha está dentro das metas de CPA. Diga claramente se está rentável ou gastando sem retorno ideal.
+2. 🚀 AÇÕES DE OTIMIZAÇÃO RECOMENDADAS: Liste 3 a 4 ações exatas (ex: aumentar orçamento em 20%, pausar anúncio X porque gastou R$ Y sem gerar conversão, ou mudar copy do anúncio Z).
+3. 🎯 MELHORIAS DE COPY & CRIATIVO: Sugestões específicas para otimizar os criativos que estão com baixo CTR (abaixo de 0.8%) ou Hook Rate insatisfatório.
+4. 👥 AJUSTE DE PÚBLICO OU VEICULAÇÃO: Se a frequência ou CPM estão altos, sugira ações práticas (expandir interesses, mudar público).
+
+Retorne em Markdown bem formatado e profissional. Seja direto e focado no crescimento.`;
+
+      const { data, error } = await supabase.functions.invoke("funnel-insights", {
+        body: { prompt },
+      });
+
+      if (error) throw new Error(error.message);
+      
+      const aiReply = data?.text || data?.insights;
+      if (!aiReply) throw new Error("Não foi possível obter resposta da Inteligência Artificial.");
+      
+      setAiAnalysisResult(aiReply);
+    } catch (e: any) {
+      console.error(e);
+      setAiAnalysisResult(`⚠️ Erro ao gerar análise de IA: ${e.message}`);
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
 
   const campaigns: any[] = useMemo(() => metaData?.campaigns || [], [metaData]);
   const overview = metaData?.overviewMetrics || {};
@@ -822,10 +897,24 @@ export function MetaEditorView({
                               disabled={actioning === camp.id}
                             />
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-slate-200 truncate max-w-[240px]" title={camp.name}>
-                              {camp.name}
-                            </p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-slate-200 truncate max-w-[220px]" title={camp.name}>
+                                {camp.name}
+                              </p>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 rounded-md text-primary hover:text-primary-foreground hover:bg-primary/20 shrink-0 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCampaignAIAnalysis(camp);
+                                }}
+                                title="Análise Inteligente (IA)"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                              </Button>
+                            </div>
                             <p className="text-[10px] text-muted-foreground">
                               {creatives.length} anúncio{creatives.length !== 1 ? "s" : ""} ·{" "}
                               {camp.objective || "CBO"}
@@ -1382,6 +1471,64 @@ export function MetaEditorView({
         selected={columns}
         onApply={setColumns}
       />
+
+      {/* AI Analysis Modal */}
+      <Dialog open={aiAnalysisOpen} onOpenChange={setAiAnalysisOpen}>
+        <DialogContent className="max-w-3xl bg-[#0f1117] border border-white/10 text-slate-100 rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="p-5 border-b border-white/[0.06] flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                Análise de Performance IA
+              </DialogTitle>
+              <DialogDescription className="text-[10px] text-muted-foreground mt-1">
+                Campanha: {aiCampaign?.name || "Carregando..."}
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          <div className="p-6 overflow-y-auto max-h-[500px] space-y-4">
+            {aiAnalysisLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground animate-pulse">
+                  O Robô Analista está varrendo as métricas e gerando recomendações...
+                </p>
+              </div>
+            ) : aiAnalysisResult ? (
+              <div className="prose prose-invert prose-xs max-w-none text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
+                {aiAnalysisResult}
+              </div>
+            ) : (
+              <p className="text-center text-xs text-muted-foreground">Nenhuma análise disponível.</p>
+            )}
+          </div>
+
+          <div className="p-4 bg-white/[0.02] border-t border-white/[0.06] flex justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (aiAnalysisResult) {
+                  navigator.clipboard.writeText(aiAnalysisResult);
+                  toast.success("Análise copiada com sucesso!");
+                }
+              }}
+              disabled={aiAnalysisLoading || !aiAnalysisResult}
+              className="text-xs h-8 cursor-pointer"
+            >
+              Copiar Análise
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs h-8 bg-[#b5f23d] hover:bg-[#c5ff55] text-black font-bold cursor-pointer"
+              onClick={() => setAiAnalysisOpen(false)}
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
