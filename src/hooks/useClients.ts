@@ -92,13 +92,66 @@ export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (client: ClientInsert) => {
-      const { data, error } = await supabase
+      const { data: newClient, error: clientErr } = await supabase
         .from("clients")
         .insert({ ...client, slug: generateSlug(client.name) })
         .select()
         .single();
-      if (error) throw error;
-      return data;
+      if (clientErr) throw clientErr;
+
+      const clientId = newClient.id;
+
+      // Create default dashboard sheet config
+      const { error: configErr } = await (supabase as any)
+        .from("dashboard_sheet_config")
+        .insert({
+          client_id: clientId,
+          spreadsheet_id: "placeholder",
+        });
+      if (configErr) {
+        console.error("Error creating default dashboard_sheet_config:", configErr);
+      }
+
+      // Create default client notion diary
+      const defaultNotionData = {
+        properties: {
+          assinatura: "Vazio",
+          whatsapp: "Vazio",
+          vencimento: "Vazio",
+          prioridade: "BAIXA",
+          email: "Vazio",
+          mes_trafego: "R$ 0,00",
+          dia_trafego: "R$ 0,00",
+          instagram1: "Vazio",
+          instagram2: "Vazio"
+        },
+        plano_cliente: [],
+        plano_equipe: [],
+        documentos: [],
+        estrategias_ativas: [],
+        material_de_apoio: [],
+        gravacao: [],
+        trilha_semanal: [],
+        processos: [],
+        metas: [],
+        paginas: [],
+        icp: [],
+        produtos: [],
+        criativos: [],
+        inteligencia_trafego: []
+      };
+
+      const { error: diaryErr } = await supabase
+        .from("client_diary_notion")
+        .insert({
+          client_id: clientId,
+          notion_data: defaultNotionData,
+        });
+      if (diaryErr) {
+        console.error("Error creating default client_diary_notion:", diaryErr);
+      }
+
+      return newClient;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
   });

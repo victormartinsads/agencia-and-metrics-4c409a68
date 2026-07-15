@@ -86,6 +86,7 @@ const App = () => (
             <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
             <Route path="/diario-do-gestor" element={<ProtectedRoute><DiarioDoGestor /></ProtectedRoute>} />
             <Route path="/notion" element={<ProtectedRoute><NotionDashboard /></ProtectedRoute>} />
+            <Route path="/notion/:clientId" element={<ProtectedRoute><NotionDashboard /></ProtectedRoute>} />
             <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
             <Route path="/tracking/:clientId" element={<ProtectedRoute><TrackingHub /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />

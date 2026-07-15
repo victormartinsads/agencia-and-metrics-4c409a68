@@ -1106,4 +1106,89 @@ export function useAllClientsNotionData() {
   });
 }
 
+// ─── TEAM MEMBER HOOKS ─────────────────────────────────────────────────────
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  notion_data: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useTeamMembers() {
+  return useQuery({
+    queryKey: ["team-members"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("team_member_notion")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        return (data || []) as TeamMember[];
+      } catch (err: any) {
+        if (isMissingTableError(err)) return [] as TeamMember[];
+        throw err;
+      }
+    },
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useUpsertTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (member: Partial<TeamMember> & { name: string; role: string }) => {
+      const payload: any = {
+        name: member.name,
+        role: member.role,
+        notion_data: member.notion_data || {},
+        updated_at: new Date().toISOString(),
+      };
+      if (member.avatar_url !== undefined) payload.avatar_url = member.avatar_url;
+      if (member.banner_url !== undefined) payload.banner_url = member.banner_url;
+
+      if (member.id) {
+        const { data, error } = await (supabase as any)
+          .from("team_member_notion")
+          .update(payload)
+          .eq("id", member.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as TeamMember;
+      } else {
+        const { data, error } = await (supabase as any)
+          .from("team_member_notion")
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as TeamMember;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+  });
+}
+
+export function useDeleteTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("team_member_notion")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+  });
+}
