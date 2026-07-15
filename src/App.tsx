@@ -35,6 +35,8 @@ import RoboAnalista from "./pages/RoboAnalista.tsx";
 import CampaignOptimizer from "./pages/CampaignOptimizer";
 import FerramentasGestor from "./pages/FerramentasGestor.tsx";
 import Alertas from "./pages/Alertas.tsx";
+import NotionDashboard from "./pages/NotionDashboard.tsx";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +85,7 @@ const App = () => (
             <Route path="/gestor" element={<ProtectedRoute><GestorOverview /></ProtectedRoute>} />
             <Route path="/gestor/:clientId" element={<ProtectedRoute><GestorView /></ProtectedRoute>} />
             <Route path="/diario-do-gestor" element={<ProtectedRoute><DiarioDoGestor /></ProtectedRoute>} />
+            <Route path="/notion" element={<ProtectedRoute><NotionDashboard /></ProtectedRoute>} />
             <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
             <Route path="/tracking/:clientId" element={<ProtectedRoute><TrackingHub /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />

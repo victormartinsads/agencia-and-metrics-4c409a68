@@ -1082,4 +1082,28 @@ export function useSyncDriveCalls() {
   });
 }
 
+export function useAllClientsNotionData() {
+  return useQuery({
+    queryKey: ["all-clients-notion-data"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from("client_diary_notion")
+          .select("*");
+        if (error) throw error;
+        
+        const map: Record<string, any> = {};
+        (data || []).forEach((row: any) => {
+          map[row.client_id] = row.notion_data || {};
+        });
+        return map;
+      } catch (err: any) {
+        if (isMissingTableError(err)) return {};
+        throw err;
+      }
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
 
