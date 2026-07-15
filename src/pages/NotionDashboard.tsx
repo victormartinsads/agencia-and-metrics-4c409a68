@@ -63,6 +63,7 @@ import {
   ExternalLink,
   PlusCircle,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import ClientNotionTemplate from "@/components/clients/ClientNotionTemplate";
