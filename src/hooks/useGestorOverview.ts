@@ -171,10 +171,10 @@ export function useGestorOverview(clients: ClientCfg[] | undefined, period: stri
     queryKey: ["gestor-overview", (clients || []).map((c) => c.id).join(","), period],
     queryFn: async () => {
       if (!clients?.length) return [] as ClientOverview[];
-      // Run in parallel with limited concurrency (5 at a time)
+      // Concorrência limitada a 3 workers para não sobrecarregar a API do Meta
       const results: ClientOverview[] = [];
       const queue = [...clients];
-      const workers = Array.from({ length: Math.min(5, queue.length) }, async () => {
+      const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
         while (queue.length) {
           const c = queue.shift()!;
           results.push(await fetchOne(c, period));
@@ -184,6 +184,7 @@ export function useGestorOverview(clients: ClientCfg[] | undefined, period: stri
       return results;
     },
     enabled: !!clients?.length,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 min — dados de overview não precisam ser tão frescos
+    gcTime: 15 * 60 * 1000,    // 15 min — mantém em cache entre navegações
   });
 }

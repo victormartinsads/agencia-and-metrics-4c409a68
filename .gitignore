@@ -8,3 +8,4 @@ coverage/
 !.env.example
 supabase_cli/
 scratch/
+Notion Clone/

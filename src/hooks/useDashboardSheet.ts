@@ -78,6 +78,7 @@ export function useDashboardSheet(clientId?: string) {
       return data as DashboardSheetConfig | null;
     },
     enabled: !!clientId,
+    staleTime: 5 * 60 * 1000, // Config raramente muda
   });
 }
 
@@ -241,5 +242,7 @@ export function useWeeklyMetrics(clientId?: string, limit = 365) {
       return (data || []) as WeeklyMetric[];
     },
     enabled: !!clientId,
+    staleTime: 10 * 60 * 1000, // Dados históricos — 10 min de cache
+    gcTime: 15 * 60 * 1000,
   });
 }

@@ -744,6 +744,39 @@ export interface GestorClientMeta {
   tasks: Array<{ id: string; text: string; done: boolean }>;
 }
 
+/**
+ * Busca os metadados de TODOS os clientes do gestor em uma única query,
+ * retornando um mapa client_id → GestorClientMeta.
+ * Use este hook no componente pai e passe os dados via props para evitar
+ * N queries individuais (uma por ClientDiaryCard).
+ */
+export function useAllGestorClientMeta(gestorId: string) {
+  return useQuery({
+    queryKey: ["gestor-client-meta-all", gestorId],
+    queryFn: async () => {
+      if (!gestorId) return {} as Record<string, GestorClientMeta>;
+      try {
+        const { data, error } = await (supabase as any)
+          .from("gestor_diary_client_meta")
+          .select("*")
+          .eq("gestor_id", gestorId);
+
+        if (error) throw error;
+        const map: Record<string, GestorClientMeta> = {};
+        (data || []).forEach((row: GestorClientMeta) => {
+          map[row.client_id] = row;
+        });
+        return map;
+      } catch (err: any) {
+        if (isMissingTableError(err)) return {} as Record<string, GestorClientMeta>;
+        throw err;
+      }
+    },
+    enabled: !!gestorId,
+    staleTime: 60 * 1000, // 1 min
+  });
+}
+
 export function useGestorClientMeta(gestorId: string, clientId: string) {
   return useQuery({
     queryKey: ["gestor-client-meta", gestorId, clientId],

@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { useGestorClientMeta, useSaveGestorClientMeta } from "@/hooks/useGestorDiary";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGestorClientMeta, useAllGestorClientMeta, useSaveGestorClientMeta, GestorClientMeta } from "@/hooks/useGestorDiary";
 import { useAllClientManagerMeta } from "@/hooks/useClientManagerMeta";
 import { toast } from "sonner";
 
@@ -57,10 +57,12 @@ function ClientDiaryCard({
   client,
   gestorId,
   healthMapData,
+  initialMeta,
 }: {
   client: any;
   gestorId: string;
   healthMapData?: any;
+  initialMeta?: GestorClientMeta | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editingNote, setEditingNote] = useState(false);
@@ -68,11 +70,17 @@ function ClientDiaryCard({
   const [addingTask, setAddingTask] = useState(false);
   const [newTask, setNewTask] = useState("");
 
-  const { data: meta, isLoading } = useGestorClientMeta(gestorId, client.id);
+  // Só faz query individual se o card for expandido E não tiver dados do batch
+  const { data: meta, isLoading } = useGestorClientMeta(
+    expanded ? gestorId : "",
+    expanded ? client.id : "",
+  );
+  // Usa dados do batch enquanto não expandiu (evita N queries simultâneas)
+  const effectiveMeta = meta ?? initialMeta ?? null;
   const saveMeta = useSaveGestorClientMeta();
 
-  const health: number = meta?.health ?? 10;
-  const tasks: Array<{ id: string; text: string; done: boolean }> = meta?.tasks ?? [];
+  const health: number = effectiveMeta?.health ?? 10;
+  const tasks: Array<{ id: string; text: string; done: boolean }> = effectiveMeta?.tasks ?? [];
   const pendingCount = tasks.filter((t) => !t.done).length;
 
   // Notes from localStorage (same as ClientDetailModal)
@@ -401,6 +409,8 @@ export function DiarioDoGestorTab() {
   const gestorId = user?.id || "";
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: healthMap } = useAllClientManagerMeta();
+  // Busca metadados de todos os clientes em UMA única query (saúde + tarefas)
+  const { data: allClientMeta } = useAllGestorClientMeta(gestorId);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "critico" | "regular" | "bom">("all");
 
@@ -496,6 +506,7 @@ export function DiarioDoGestorTab() {
               client={client}
               gestorId={gestorId}
               healthMapData={healthMap ? { score: healthMap[client.id] } : undefined}
+              initialMeta={allClientMeta?.[client.id] ?? null}
             />
           ))}
         </div>

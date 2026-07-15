@@ -36,7 +36,15 @@ import CampaignOptimizer from "./pages/CampaignOptimizer";
 import FerramentasGestor from "./pages/FerramentasGestor.tsx";
 import Alertas from "./pages/Alertas.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,  // 2 min: não refetch sem necessidade
+      gcTime: 10 * 60 * 1000,    // 10 min: mantém cache em memória
+      retry: 1,                   // 1 retry em caso de erro
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

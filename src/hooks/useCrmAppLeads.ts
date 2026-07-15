@@ -9,7 +9,7 @@ export function useLeadsForOrg(orgId?: string) {
     queryKey: ["crm-app-leads", orgId],
     enabled: !!orgId,
     queryFn: () => leadsService.getAll(orgId!),
-    refetchInterval: 30000,
+    // Sem refetchInterval — o realtime (.subscribe) abaixo já atualiza em tempo real
   });
 
   useEffect(() => {
