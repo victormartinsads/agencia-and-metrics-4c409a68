@@ -32,7 +32,7 @@ import {
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
-import { useClientTasks, useCreateClientTask, useUpdateClientTask, useDeleteClientTask } from "@/hooks/useClientTasks";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -276,6 +276,19 @@ export default function ClientNotionTemplate({ clientId, canManage }: any) {
   const [newTaskWho, setNewTaskWho] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState("A Fazer");
 
+  // useMemo hooks MUST be before any conditional return to respect React hooks rules
+  const calendarDays = useMemo(() => {
+    return getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+  }, [currentDate]);
+
+  const monthLabel = useMemo(() => {
+    const monthsPt = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+    return `${monthsPt[currentDate.getMonth()]} de ${currentDate.getFullYear()}`;
+  }, [currentDate]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
@@ -511,17 +524,7 @@ export default function ClientNotionTemplate({ clientId, canManage }: any) {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
-  const calendarDays = useMemo(() => {
-    return getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
-  }, [currentDate]);
-
-  const monthLabel = useMemo(() => {
-    const monthsPt = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ];
-    return `${monthsPt[currentDate.getMonth()]} de ${currentDate.getFullYear()}`;
-  }, [currentDate]);
+  // calendarDays and monthLabel are computed above (before conditional return)
 
   const subSections = [
     { key: "icp", label: "ICP" },
