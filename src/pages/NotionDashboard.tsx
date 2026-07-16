@@ -349,25 +349,8 @@ export default function NotionDashboard() {
   );
 
   // ── Team member full page ──
-  if (selectedTeamMember) {
-    // For gestores, they can only edit their own card; admins/ceos can edit any
-    const canEditThisMember =
-      canSeeAllTeam ||
-      (() => {
-        const myProfile = profiles.find((p: any) => p.user_id === user?.id);
-        const myMeta = allMeta.find((m: any) => m.gestor_id === user?.id);
-        const myName = (myMeta?.name_override || myProfile?.full_name || "").toLowerCase().trim();
-        
-        const norm = (s: string) =>
-          s.normalize("NFD")
-           .replace(/[\u0300-\u036f]/g, "")
-           .toLowerCase()
-           .replace(/[^a-z0-9]/g, "");
-
-        const myNorm = norm(myName);
-        const mNorm = norm(selectedTeamMember.name);
-        return !!myNorm && (mNorm.includes(myNorm) || myNorm.includes(mNorm));
-      })();
+  if (selectedTeamMember && canSeeAllTeam) {
+    const canEditThisMember = true; // since they have canSeeAllTeam permission
 
     return (
       <AppShell currentPage="notion" header={null} noContainer>
@@ -477,11 +460,12 @@ export default function NotionDashboard() {
           <div className="xl:col-span-2 space-y-5">
 
             {/* Tabs */}
+            {/* Tabs */}
             <div className="flex items-center gap-1 border-b border-[#2c2c2b] pb-2">
-              {(["clients", "team"] as const).map((s) => (
+              {["clients", canSeeAllTeam && "team"].filter(Boolean).map((s) => (
                 <button
                   key={s}
-                  onClick={() => setActiveSection(s)}
+                  onClick={() => setActiveSection(s as any)}
                   className={`text-xs font-bold uppercase tracking-wider py-1.5 px-3 rounded-md transition ${
                     activeSection === s
                       ? "bg-[#2c2c2b] text-white"
