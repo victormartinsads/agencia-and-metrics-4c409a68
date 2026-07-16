@@ -36,6 +36,8 @@ import CampaignOptimizer from "./pages/CampaignOptimizer";
 import FerramentasGestor from "./pages/FerramentasGestor.tsx";
 import Alertas from "./pages/Alertas.tsx";
 import NotionDashboard from "./pages/NotionDashboard.tsx";
+import Processos from "./pages/Processos.tsx";
+
 
 
 const queryClient = new QueryClient({
@@ -87,6 +89,8 @@ const App = () => (
             <Route path="/diario-do-gestor" element={<ProtectedRoute><DiarioDoGestor /></ProtectedRoute>} />
             <Route path="/notion" element={<ProtectedRoute><NotionDashboard /></ProtectedRoute>} />
             <Route path="/notion/:clientId" element={<ProtectedRoute><NotionDashboard /></ProtectedRoute>} />
+            <Route path="/processos" element={<ProtectedRoute><Processos /></ProtectedRoute>} />
+
             <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
             <Route path="/tracking/:clientId" element={<ProtectedRoute><TrackingHub /></ProtectedRoute>} />
             <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />

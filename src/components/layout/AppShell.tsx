@@ -22,6 +22,7 @@ import {
   Webhook,
   ChevronRight,
   Bell,
+  GitMerge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,8 @@ interface AppShellProps {
     | "manager"
     | "manage"
     | "home"
+    | "notion"
+    | "processos"
     | "alerts";
   header?: ReactNode;
   noContainer?: boolean;
@@ -89,6 +92,7 @@ const PAGE_LABELS: Record<string, string> = {
   webhooks: "Webhooks",
   portal: "Portal",
   notion: "Notion",
+  processos: "Processos",
 };
 
 export default function AppShell({
@@ -170,6 +174,7 @@ export default function AppShell({
         { id: "home", label: "Home", icon: Home, href: "/" },
         { id: "clients", label: "Clientes", icon: Users, href: "/clients" },
         { id: "notion", label: "Notion", icon: Command, href: "/notion" },
+        { id: "processos", label: "Processos", icon: GitMerge, href: "/processos" },
       ],
     },
     {

@@ -547,11 +547,12 @@ export default function NotionDashboard() {
                 { key: "clients", label: "📁 Clientes Ativos" },
                 { key: "archived_clients", label: "🗄️ Clientes Inativos" },
                 { key: "global_calendar", label: "📅 Calendário Geral" },
+                { key: "processos", label: "🔄 Processos", action: () => navigate("/processos") },
                 (canSeeAllTeam ? { key: "team", label: "👥 Equipe" } : null)
               ].filter(Boolean).map((item: any) => (
                 <button
                   key={item.key}
-                  onClick={() => setActiveSection(item.key as any)}
+                  onClick={() => item.action ? item.action() : setActiveSection(item.key as any)}
                   className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all ${
                     activeSection === item.key
                       ? "border-[#e3e2e0] text-[#e3e2e0]"
