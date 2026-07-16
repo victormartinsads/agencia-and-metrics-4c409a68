@@ -6,7 +6,6 @@ import {
   Square,
   Plus,
   Trash2,
-  ListChecks,
   Compass,
   Users,
   FolderOpen,
@@ -24,6 +23,9 @@ import {
   Flag,
   Instagram,
   RefreshCw,
+  Camera,
+  Image as ImageIcon,
+  ListChecks,
 } from "lucide-react";
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -34,6 +36,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import * as locales from "@blocknote/core/locales";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUpdateClient } from "@/hooks/useClients";
 
 // ─── Notion Property Row ─────────────────────────────────────────────────────
 function PropertyInput({ label, icon, value, onChange, canManage }: any) {
@@ -296,8 +301,24 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
 }
 
 export default function ClientNotionTemplate({ clientId, canManage }: any) {
+  // Fetch real client data from the clients table
+  const { data: clientInfo, refetch: refetchClientInfo } = useQuery({
+    queryKey: ["client-info-notion", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("name, logo_url")
+        .eq("id", clientId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clientId,
+  });
+
   const { data: notionData, isLoading } = useClientNotionData(clientId);
   const saveNotionData = useSaveClientNotionData();
+  const updateClient = useUpdateClient();
   const syncDrive = useSyncDriveCalls();
   const [activeSubSection, setActiveSubSection] = useState<string | null>(null);
 
@@ -310,22 +331,112 @@ export default function ClientNotionTemplate({ clientId, canManage }: any) {
     );
   }
 
-  const clientName = notionData?.clientName || "Cliente";
+  const clientName = clientInfo?.name || notionData?.clientName || "Cliente";
+  const logoUrl = clientInfo?.logo_url || null;
   const propsData = notionData?.properties || {};
   const sectionsData = notionData?.sections || {};
+  const coverUrl = notionData?.cover_url || null;
 
   const handlePropertyChange = (key: string, value: string) => {
-    saveNotionData.mutate({
-      clientId,
+    const updated = {
+      ...notionData,
       properties: { ...propsData, [key]: value },
+    };
+    saveNotionData.mutate({
+      client_id: clientId,
+      data: updated,
     });
   };
 
   const handleSaveSection = (key: string, content: any) => {
-    saveNotionData.mutate({
-      clientId,
+    const updated = {
+      ...notionData,
       sections: { ...sectionsData, [key]: content },
+    };
+    saveNotionData.mutate({
+      client_id: clientId,
+      data: updated,
     });
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione um arquivo de imagem");
+      return;
+    }
+    const toastId = toast.loading("Enviando capa...");
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${clientId}/cover-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("client-logos")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("client-logos").getPublicUrl(path);
+      const url = data.publicUrl;
+      
+      const updated = {
+        ...notionData,
+        cover_url: url
+      };
+      await saveNotionData.mutateAsync({ client_id: clientId, data: updated });
+      toast.success("Imagem de capa atualizada!", { id: toastId });
+    } catch (err: any) {
+      toast.error("Erro ao enviar capa: " + err.message, { id: toastId });
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    const toastId = toast.loading("Removendo capa...");
+    try {
+      const updated = {
+        ...notionData,
+        cover_url: null
+      };
+      await saveNotionData.mutateAsync({ client_id: clientId, data: updated });
+      toast.success("Imagem de capa removida!", { id: toastId });
+    } catch (err: any) {
+      toast.error("Erro ao remover capa: " + err.message, { id: toastId });
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione um arquivo de imagem");
+      return;
+    }
+    const toastId = toast.loading("Enviando foto...");
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${clientId}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("client-logos")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("client-logos").getPublicUrl(path);
+      const url = data.publicUrl;
+      
+      await updateClient.mutateAsync({ id: clientId, logo_url: url });
+      refetchClientInfo();
+      toast.success("Foto do cliente atualizada!", { id: toastId });
+    } catch (err: any) {
+      toast.error("Erro ao enviar foto: " + err.message, { id: toastId });
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    const toastId = toast.loading("Removendo foto...");
+    try {
+      await updateClient.mutateAsync({ id: clientId, logo_url: null });
+      refetchClientInfo();
+      toast.success("Foto do cliente removida!", { id: toastId });
+    } catch (err: any) {
+      toast.error("Erro ao remover foto: " + err.message, { id: toastId });
+    }
   };
 
   const handleSyncDrive = async () => {
@@ -347,243 +458,314 @@ export default function ClientNotionTemplate({ clientId, canManage }: any) {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Notion Page Header & Properties */}
-      <div className="border-b border-[#2c2c2b] pb-6 space-y-4">
-        {/* Large emoji icon above title */}
-        <div className="text-4xl select-none filter drop-shadow-sm pb-1">📁</div>
-        <h1 className="text-3xl font-bold tracking-tight text-[#e3e2e0] font-sans">
-          {clientName}
-        </h1>
-
-        {/* Clean Notion-style metadata list */}
-        <div className="max-w-xl space-y-0.5 pt-2">
-          <PropertyInput
-            label="Assinatura"
-            icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.assinatura}
-            onChange={(val: string) => handlePropertyChange("assinatura", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="WhatsApp"
-            icon={<MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.whatsapp}
-            onChange={(val: string) => handlePropertyChange("whatsapp", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Vencimento do Contrato"
-            icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.vencimento}
-            onChange={(val: string) => handlePropertyChange("vencimento", val)}
-            canManage={canManage}
-          />
-          <PriorityProperty
-            value={propsData.prioridade}
-            onChange={(val: string) => handlePropertyChange("prioridade", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Email"
-            icon={<Mail className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.email}
-            onChange={(val: string) => handlePropertyChange("email", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Mês no Tráfego"
-            icon={<DollarSign className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.mes_trafego}
-            onChange={(val: string) => handlePropertyChange("mes_trafego", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Instagram - 01"
-            icon={<Instagram className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.instagram1}
-            onChange={(val: string) => handlePropertyChange("instagram1", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Dia no Tráfego"
-            icon={<DollarSign className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.dia_trafego}
-            onChange={(val: string) => handlePropertyChange("dia_trafego", val)}
-            canManage={canManage}
-          />
-          <PropertyInput
-            label="Instagram - 02"
-            icon={<Instagram className="h-3.5 w-3.5 text-muted-foreground" />}
-            value={propsData.instagram2}
-            onChange={(val: string) => handlePropertyChange("instagram2", val)}
-            canManage={canManage}
-          />
-        </div>
-      </div>
-
-      {/* Database Blocks layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Left Column */}
-        <div className="space-y-6">
-          <DiaryCard
-            title="Plano Estratégico - Cliente"
-            icon={<Compass className="h-4 w-4" />}
-            sectionKey="plano_cliente"
-            initialContent={sectionsData.plano_cliente}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-          <DiaryCard
-            title="Plano Estratégico - Equipe AND"
-            icon={<Users className="h-4 w-4" />}
-            sectionKey="plano_equipe"
-            initialContent={sectionsData.plano_equipe}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-          <DiaryCard
-            title="Documentos"
-            icon={<FolderOpen className="h-4 w-4" />}
-            sectionKey="documentos"
-            initialContent={sectionsData.documentos}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-          <DiaryCard
-            title="Estratégias Ativas"
-            icon={<Flame className="h-4 w-4" />}
-            sectionKey="estrategias_ativas"
-            initialContent={sectionsData.estrategias_ativas}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
-          <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 flex flex-col h-fit">
-            <ClientTasksSection clientId={clientId} canManage={canManage} />
-          </div>
-
-          <DiaryCard
-            title="Material de Apoio"
-            icon={<Link2 className="h-4 w-4" />}
-            sectionKey="material_apoio"
-            initialContent={sectionsData.material_apoio}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-
-          <DiaryCard
-            title="Dados"
-            icon={<Database className="h-4 w-4" />}
-            clientId={clientId}
-          >
-            <div className="flex flex-col gap-2 pt-1">
-              <div className="text-[11px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-3 py-2 mb-2 font-mono">
-                💡 Contém ICP, especificações de Produtos, Seguidores, etc.
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {subSections.map((sub) => (
-                  <button
-                    key={sub.key}
-                    onClick={() => setActiveSubSection(sub.key)}
-                    className="text-left bg-[#252525] border border-[#2c2c2b] hover:bg-[#2c2c2b] px-3 py-2 rounded flex flex-col gap-1 text-[11px] text-[#e3e2e0] transition-colors"
-                  >
-                    <span className="font-semibold text-primary">{sub.label}</span>
-                    <span className="text-[9px] text-[#9b9a97] uppercase">Abrir Bloco →</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </DiaryCard>
-
-          <DiaryCard
-            title="Gravação da Call"
-            icon={<Video className="h-4 w-4" />}
-            sectionKey="gravacao_call"
-            initialContent={sectionsData.gravacao_call}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-            action={canManage && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSyncDrive}
-                disabled={syncDrive.isPending}
-                className="h-6 text-[10px] uppercase font-bold text-primary hover:text-primary hover:bg-[#2c2c2b] border border-primary/20 gap-1 px-2 rounded"
+    <div className="space-y-6 -mx-8 -mt-6">
+      {/* ── COVER IMAGE BANNER ── */}
+      <div className="h-48 md:h-56 w-full bg-[#202020] relative overflow-hidden group/cover border-b border-[#2c2c2b]">
+        {coverUrl ? (
+          <img src={coverUrl} alt="Capa" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-r from-slate-900 via-[#1e1e20] to-slate-900 opacity-60" />
+        )}
+        
+        {canManage && (
+          <div className="absolute top-3 right-3 opacity-0 group-hover/cover:opacity-100 transition-opacity flex gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              id={`cover-upload-${clientId}`}
+              className="hidden"
+              onChange={handleCoverUpload}
+            />
+            <label
+              htmlFor={`cover-upload-${clientId}`}
+              className="bg-[#202020]/90 border border-[#2c2c2b] hover:bg-[#252525] text-[10px] font-semibold text-[#e3e2e0] px-2.5 py-1.5 rounded cursor-pointer transition-colors flex items-center gap-1 select-none"
+            >
+              <ImageIcon className="h-3 w-3" />
+              {coverUrl ? "Alterar Capa" : "Adicionar Capa"}
+            </label>
+            {coverUrl && (
+              <button
+                onClick={handleRemoveCover}
+                className="bg-[#202020]/90 border border-[#2c2c2b] hover:bg-red-950/20 hover:border-red-900 text-[10px] font-semibold text-red-400 px-2.5 py-1.5 rounded transition-colors flex items-center gap-1"
               >
-                {syncDrive.isPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
-                Sincronizar Drive
-              </Button>
-            )}
-          />
-          <DiaryCard
-            title="Trilha Semanal"
-            icon={<Milestone className="h-4 w-4" />}
-            sectionKey="trilha_semanal"
-            initialContent={sectionsData.trilha_semanal}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-          <DiaryCard
-            title="Processos"
-            icon={<GitMerge className="h-4 w-4" />}
-            sectionKey="processos"
-            initialContent={sectionsData.processos}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-          <DiaryCard
-            title="Metas"
-            icon={<Trophy className="h-4 w-4" />}
-            sectionKey="metas"
-            initialContent={sectionsData.metas}
-            onSave={handleSaveSection}
-            canManage={canManage}
-            clientId={clientId}
-          />
-        </div>
-      </div>
-
-      {/* Sub-Section Dialog Editor for DADOS */}
-      <Dialog
-        open={activeSubSection !== null}
-        onOpenChange={(open) => !open && setActiveSubSection(null)}
-      >
-        <DialogContent className="max-w-3xl bg-[#191919] border-[#2c2c2b] blocknote-editor-wrapper text-[#e3e2e0] rounded-lg">
-          <DialogHeader className="border-b border-[#2c2c2b] pb-3">
-            <DialogTitle className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#e3e2e0]">
-              <Database className="h-4 w-4 text-primary" />
-              Dados · {subSections.find(s => s.key === activeSubSection)?.label}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="min-h-[350px] border border-[#2c2c2b] rounded-[6px] p-4 bg-[#202020] mt-4 overflow-y-auto max-h-[60vh]">
-            {activeSubSection && (
-              <SectionEditor
-                key={`${clientId}-${activeSubSection}`}
-                initialContent={sectionsData[activeSubSection]}
-                sectionKey={activeSubSection}
-                onSave={handleSaveSection}
-                canManage={canManage}
-              />
+                Remover Capa
+              </button>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
+
+      <div className="max-w-5xl mx-auto px-8 relative space-y-6">
+        {/* ── CLIENT LOGO OVERLAY ── */}
+        <div className="absolute -top-12 left-8 h-20 w-20 rounded-xl overflow-hidden border border-[#2c2c2b] bg-[#191919] group/logo flex items-center justify-center shadow-md shrink-0 z-10">
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-3xl select-none">📁</span>
+          )}
+          {canManage && (
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+              <input
+                type="file"
+                accept="image/*"
+                id={`logo-upload-${clientId}`}
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              <label
+                htmlFor={`logo-upload-${clientId}`}
+                className="cursor-pointer text-[10px] font-bold text-white hover:underline flex items-center gap-1"
+              >
+                <Camera className="h-3 w-3" />
+                Alterar
+              </label>
+              {logoUrl && (
+                <button
+                  onClick={handleRemoveLogo}
+                  className="text-[9px] font-bold text-red-400 hover:underline"
+                >
+                  Remover
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Notion Page Header & Properties ── */}
+        <div className="border-b border-[#2c2c2b] pb-6 pt-10 space-y-4">
+          <h1 className="text-3xl font-bold tracking-tight text-[#e3e2e0] font-sans">
+            {clientName}
+          </h1>
+
+          {/* Clean Notion-style metadata list */}
+          <div className="max-w-xl space-y-0.5 pt-2">
+            <PropertyInput
+              label="Assinatura"
+              icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.assinatura}
+              onChange={(val: string) => handlePropertyChange("assinatura", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="WhatsApp"
+              icon={<MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.whatsapp}
+              onChange={(val: string) => handlePropertyChange("whatsapp", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Vencimento do Contrato"
+              icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.vencimento}
+              onChange={(val: string) => handlePropertyChange("vencimento", val)}
+              canManage={canManage}
+            />
+            <PriorityProperty
+              value={propsData.prioridade}
+              onChange={(val: string) => handlePropertyChange("prioridade", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Email"
+              icon={<Mail className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.email}
+              onChange={(val: string) => handlePropertyChange("email", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Mês no Tráfego"
+              icon={<DollarSign className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.mes_trafego}
+              onChange={(val: string) => handlePropertyChange("mes_trafego", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Instagram - 01"
+              icon={<Instagram className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.instagram1}
+              onChange={(val: string) => handlePropertyChange("instagram1", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Dia no Tráfego"
+              icon={<DollarSign className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.dia_trafego}
+              onChange={(val: string) => handlePropertyChange("dia_trafego", val)}
+              canManage={canManage}
+            />
+            <PropertyInput
+              label="Instagram - 02"
+              icon={<Instagram className="h-3.5 w-3.5 text-muted-foreground" />}
+              value={propsData.instagram2}
+              onChange={(val: string) => handlePropertyChange("instagram2", val)}
+              canManage={canManage}
+            />
+          </div>
+        </div>
+
+        {/* Database Blocks layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* Left Column */}
+          <div className="space-y-6">
+            <DiaryCard
+              title="Plano Estratégico - Cliente"
+              icon={<Compass className="h-4 w-4" />}
+              sectionKey="plano_cliente"
+              initialContent={sectionsData.plano_cliente}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+            <DiaryCard
+              title="Plano Estratégico - Equipe AND"
+              icon={<Users className="h-4 w-4" />}
+              sectionKey="plano_equipe"
+              initialContent={sectionsData.plano_equipe}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+            <DiaryCard
+              title="Documentos"
+              icon={<FolderOpen className="h-4 w-4" />}
+              sectionKey="documentos"
+              initialContent={sectionsData.documentos}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+            <DiaryCard
+              title="Estratégias Ativas"
+              icon={<Flame className="h-4 w-4" />}
+              sectionKey="estrategias_ativas"
+              initialContent={sectionsData.estrategias_ativas}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 flex flex-col h-fit">
+              <ClientTasksSection clientId={clientId} canManage={canManage} />
+            </div>
+
+            <DiaryCard
+              title="Material de Apoio"
+              icon={<Link2 className="h-4 w-4" />}
+              sectionKey="material_apoio"
+              initialContent={sectionsData.material_apoio}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+
+            <DiaryCard
+              title="Dados"
+              icon={<Database className="h-4 w-4" />}
+              clientId={clientId}
+            >
+              <div className="flex flex-col gap-2 pt-1">
+                <div className="text-[11px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-3 py-2 mb-2 font-mono">
+                  💡 Contém ICP, especificações de Produtos, Seguidores, etc.
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {subSections.map((sub) => (
+                    <button
+                      key={sub.key}
+                      onClick={() => setActiveSubSection(sub.key)}
+                      className="text-left bg-[#252525] border border-[#2c2c2b] hover:bg-[#2c2c2b] px-3 py-2 rounded flex flex-col gap-1 text-[11px] text-[#e3e2e0] transition-colors"
+                    >
+                      <span className="font-semibold text-primary">{sub.label}</span>
+                      <span className="text-[9px] text-[#9b9a97] uppercase">Abrir Bloco →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </DiaryCard>
+
+            <DiaryCard
+              title="Gravação da Call"
+              icon={<Video className="h-4 w-4" />}
+              sectionKey="gravacao_call"
+              initialContent={sectionsData.gravacao_call}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+              action={canManage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSyncDrive}
+                  disabled={syncDrive.isPending}
+                  className="h-6 text-[10px] uppercase font-bold text-primary hover:text-primary hover:bg-[#2c2c2b] border border-primary/20 gap-1 px-2 rounded"
+                >
+                  {syncDrive.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                  Sincronizar Drive
+                </Button>
+              )}
+            />
+            <DiaryCard
+              title="Trilha Semanal"
+              icon={<Milestone className="h-4 w-4" />}
+              sectionKey="trilha_semanal"
+              initialContent={sectionsData.trilha_semanal}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+            <DiaryCard
+              title="Processos"
+              icon={<GitMerge className="h-4 w-4" />}
+              sectionKey="processos"
+              initialContent={sectionsData.processos}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+            <DiaryCard
+              title="Metas"
+              icon={<Trophy className="h-4 w-4" />}
+              sectionKey="metas"
+              initialContent={sectionsData.metas}
+              onSave={handleSaveSection}
+              canManage={canManage}
+              clientId={clientId}
+            />
+          </div>
+        </div>
+
+        {/* Sub-Section Dialog Editor for DADOS */}
+        <Dialog
+          open={activeSubSection !== null}
+          onOpenChange={(open) => !open && setActiveSubSection(null)}
+        >
+          <DialogContent className="max-w-3xl bg-[#191919] border-[#2c2c2b] blocknote-editor-wrapper text-[#e3e2e0] rounded-lg">
+            <DialogHeader className="border-b border-[#2c2c2b] pb-3">
+              <DialogTitle className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#e3e2e0]">
+                <Database className="h-4 w-4 text-primary" />
+                Dados · {subSections.find(s => s.key === activeSubSection)?.label}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-[350px] border border-[#2c2c2b] rounded-[6px] p-4 bg-[#202020] mt-4 overflow-y-auto max-h-[60vh]">
+              {activeSubSection && (
+                <SectionEditor
+                  key={`${clientId}-${activeSubSection}`}
+                  initialContent={sectionsData[activeSubSection]}
+                  sectionKey={activeSubSection}
+                  onSave={handleSaveSection}
+                  canManage={canManage}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

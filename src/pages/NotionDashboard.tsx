@@ -3,7 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useClients, useCreateClient, ClientInsert } from "@/hooks/useClients";
+import {
+  useClients,
+  useCreateClient,
+  useDeleteClient,
+  useArchiveClient,
+  ClientInsert,
+} from "@/hooks/useClients";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -42,7 +48,6 @@ import {
 import {
   Search,
   Video,
-  Eye,
   User,
   Square,
   CheckCircle,
@@ -53,6 +58,8 @@ import {
   Calendar as CalendarIcon,
   UserPlus,
   Lock,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -247,8 +254,15 @@ export default function NotionDashboard() {
   const canManageAll = isAdmin || isCeo || isDiretor;
   const canSeeAllTeam = canManageAll;
 
-  // Clients
+  // Active Clients
   const { data: globalClients = [], isLoading: clientsLoading } = useClients({ allClientsForStaff: true });
+  
+  // Archived Clients
+  const { data: archivedClients = [], isLoading: archivedLoading } = useClients({
+    onlyArchived: true,
+    allClientsForStaff: true,
+  });
+
   const { data: notionMap = {} } = useAllClientsNotionData();
 
   // Team
@@ -263,6 +277,8 @@ export default function NotionDashboard() {
   const { data: staffRoles = [] } = useStaffRoles();
   const [selectedGestorId, setSelectedGestorId] = useState("");
   const deleteTeamMember = useDeleteTeamMember();
+  const archiveClient = useArchiveClient();
+  const deleteClient = useDeleteClient();
 
   const gestoresList = useMemo(
     () =>
@@ -289,7 +305,7 @@ export default function NotionDashboard() {
 
   // UI State
   const [search, setSearch] = useState("");
-  const [activeSection, setActiveSection] = useState<"clients" | "team">("clients");
+  const [activeSection, setActiveSection] = useState<"clients" | "archived_clients" | "team">("clients");
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
   const [createClientOpen, setCreateClientOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
@@ -316,8 +332,11 @@ export default function NotionDashboard() {
   // Client filtering
   const activeClientId = clientIdParam || null;
   const activeClient = useMemo(
-    () => globalClients.find((c) => c.id === activeClientId) || null,
-    [globalClients, activeClientId]
+    () => {
+      const all = [...globalClients, ...archivedClients];
+      return all.find((c) => c.id === activeClientId) || null;
+    },
+    [globalClients, archivedClients, activeClientId]
   );
 
   const filteredClients = useMemo(() => {
@@ -325,6 +344,12 @@ export default function NotionDashboard() {
     const q = search.toLowerCase();
     return globalClients.filter((c) => c.name.toLowerCase().includes(q));
   }, [globalClients, search]);
+
+  const filteredArchivedClients = useMemo(() => {
+    if (!search.trim()) return archivedClients;
+    const q = search.toLowerCase();
+    return archivedClients.filter((c) => c.name.toLowerCase().includes(q));
+  }, [archivedClients, search]);
 
   const activeMeetings = useMemo(
     () => calendarEvents.filter((e) => e.status !== "done").slice(0, 5),
@@ -355,6 +380,7 @@ export default function NotionDashboard() {
 
   // ── Client view ──
   if (activeClientId && activeClient) {
+    const all = [...globalClients, ...archivedClients];
     return (
       <AppShell currentPage="notion" header={null} noContainer>
         <div className="min-h-screen bg-[#191919] text-[#e3e2e0] pb-16">
@@ -372,7 +398,7 @@ export default function NotionDashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
-                {globalClients.map((c) => (
+                {all.map((c) => (
                   <SelectItem key={c.id} value={c.id} className="hover:bg-[#2c2c2b] focus:bg-[#2c2c2b] text-xs">
                     {c.name}
                   </SelectItem>
@@ -430,22 +456,26 @@ export default function NotionDashboard() {
           <div className="lg:col-span-2 space-y-6">
             {/* View/Tab selector exactly like Notion */}
             <div className="flex items-center gap-2 border-b border-[#2c2c2b] pb-0.5">
-              {["clients", canSeeAllTeam && "team"].filter(Boolean).map((s) => (
+              {[
+                { key: "clients", label: "📁 Clientes Ativos" },
+                { key: "archived_clients", label: "🗄️ Clientes Inativos" },
+                (canSeeAllTeam ? { key: "team", label: "👥 Equipe" } : null)
+              ].filter(Boolean).map((item: any) => (
                 <button
-                  key={s}
-                  onClick={() => setActiveSection(s as any)}
+                  key={item.key}
+                  onClick={() => setActiveSection(item.key)}
                   className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all ${
-                    activeSection === s
+                    activeSection === item.key
                       ? "border-[#e3e2e0] text-[#e3e2e0]"
                       : "border-transparent text-[#9b9a97] hover:text-[#e3e2e0]"
                   }`}
                 >
-                  {s === "clients" ? "📁 Clientes" : "👥 Equipe"}
+                  {item.label}
                 </button>
               ))}
 
               <div className="ml-auto flex items-center gap-2 pb-1">
-                {activeSection === "clients" && (
+                {(activeSection === "clients" || activeSection === "archived_clients") && (
                   <>
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-[#9b9a97]" />
@@ -477,7 +507,7 @@ export default function NotionDashboard() {
               </div>
             </div>
 
-            {/* ── CLIENTS GALLERY VIEW ── */}
+            {/* ── CLIENTS GALLERY VIEW (ACTIVE) ── */}
             {activeSection === "clients" && (
               <>
                 {clientsLoading ? (
@@ -488,7 +518,9 @@ export default function NotionDashboard() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredClients.map((client) => {
-                      const np = notionMap[client.id]?.properties || {};
+                      const cNotion = notionMap[client.id] || {};
+                      const np = cNotion.notion_data?.properties || {};
+                      const coverUrl = cNotion.notion_data?.cover_url;
                       const clientMeta = healthMap[client.id] || {};
                       const hVal = clientMeta.health ?? 10;
 
@@ -498,7 +530,13 @@ export default function NotionDashboard() {
                           onClick={() => navigate(`/notion/${client.id}`)}
                           className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden hover:bg-[#252525] transition-colors duration-150 cursor-pointer flex flex-col group select-none shadow-sm h-fit"
                         >
-                          <div className="h-2 w-full bg-[#262625] border-b border-[#2c2c2b]/30" />
+                          <div className="h-16 w-full bg-[#262625] border-b border-[#2c2c2b]/30 relative overflow-hidden shrink-0">
+                            {coverUrl ? (
+                              <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-r from-slate-800/40 to-slate-900/60" />
+                            )}
+                          </div>
                           <div className="p-3.5 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-[13px] font-semibold text-[#e3e2e0] group-hover:text-primary transition-colors">
@@ -533,6 +571,45 @@ export default function NotionDashboard() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Actions bar for archiving and deleting */}
+                            <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-[#2c2c2b]/20 mt-1 select-none">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await archiveClient.mutateAsync({ id: client.id, archived: true });
+                                    toast.success("Cliente arquivado!");
+                                  } catch (err: any) {
+                                    toast.error("Erro ao arquivar: " + err.message);
+                                  }
+                                }}
+                                className="text-[10px] text-[#9b9a97] hover:text-[#e3e2e0] transition-colors flex items-center gap-1 bg-[#262625] px-2 py-0.5 rounded border border-[#2c2c2b]"
+                              >
+                                <Archive className="h-3 w-3" />
+                                Arquivar
+                              </button>
+                              {canManageAll && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Tem certeza que deseja EXCLUIR permanentemente o cliente ${client.name} e todo o diário dele?`)) {
+                                      try {
+                                        await deleteClient.mutateAsync(client.id);
+                                        toast.success("Cliente e diário excluídos permanentemente");
+                                      } catch (err: any) {
+                                        toast.error("Erro ao excluir: " + err.message);
+                                      }
+                                    }
+                                  }}
+                                  className="text-[10px] text-[#9b9a97] hover:text-red-400 transition-colors flex items-center gap-1 hover:bg-red-500/10 px-2 py-0.5 rounded"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Excluir
+                                </button>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                       );
@@ -540,7 +617,125 @@ export default function NotionDashboard() {
 
                     {filteredClients.length === 0 && (
                       <div className="col-span-2 text-center py-12 bg-[#202020] rounded-[6px] border border-dashed border-[#2c2c2b]">
-                        <p className="text-xs text-[#9b9a97]">Nenhum cliente encontrado.</p>
+                        <p className="text-xs text-[#9b9a97]">Nenhum cliente ativo encontrado.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── CLIENTS GALLERY VIEW (INACTIVE/ARCHIVED) ── */}
+            {activeSection === "archived_clients" && (
+              <>
+                {archivedLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-xs text-[#9b9a97]">Carregando clientes inativos...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredArchivedClients.map((client) => {
+                      const cNotion = notionMap[client.id] || {};
+                      const np = cNotion.notion_data?.properties || {};
+                      const coverUrl = cNotion.notion_data?.cover_url;
+                      const clientMeta = healthMap[client.id] || {};
+                      const hVal = clientMeta.health ?? 10;
+
+                      return (
+                        <div
+                          key={client.id}
+                          onClick={() => navigate(`/notion/${client.id}`)}
+                          className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden hover:bg-[#252525] transition-colors duration-150 cursor-pointer flex flex-col group select-none shadow-sm h-fit opacity-75 hover:opacity-100"
+                        >
+                          <div className="h-16 w-full bg-[#262625] border-b border-[#2c2c2b]/30 relative overflow-hidden shrink-0">
+                            {coverUrl ? (
+                              <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-r from-slate-800/40 to-slate-900/60" />
+                            )}
+                          </div>
+                          <div className="p-3.5 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-[13px] font-semibold text-[#e3e2e0] group-hover:text-primary transition-colors">
+                                {client.name}
+                              </p>
+                              <span className={`text-[10px] font-mono font-bold shrink-0 ${healthColorText(hVal)}`}>
+                                {hVal}/10
+                              </span>
+                            </div>
+                            {np.prioridade && (
+                              <span className="text-[9px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-1.5 py-0.5 w-fit uppercase font-semibold">
+                                PRIORIDADE {np.prioridade}
+                              </span>
+                            )}
+                            <div className="grid grid-cols-1 gap-1 border-t border-[#2c2c2b]/40 pt-2 text-[11px] text-[#9b9a97] font-sans">
+                              {np.whatsapp && (
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="opacity-60 text-xs">📞</span>
+                                  <span className="truncate">{np.whatsapp}</span>
+                                </div>
+                              )}
+                              {np.vencimento && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="opacity-60 text-xs">📅</span>
+                                  <span>Vence: <strong className="text-yellow-500">{np.vencimento}</strong></span>
+                                </div>
+                              )}
+                              {np.mes_trafego && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="opacity-60 text-xs">💰</span>
+                                  <span>{np.mes_trafego}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions bar for unarchiving and deleting */}
+                            <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-[#2c2c2b]/20 mt-1 select-none">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await archiveClient.mutateAsync({ id: client.id, archived: false });
+                                    toast.success("Cliente reativado!");
+                                  } catch (err: any) {
+                                    toast.error("Erro ao reativar: " + err.message);
+                                  }
+                                }}
+                                className="text-[10px] text-[#9b9a97] hover:text-[#e3e2e0] transition-colors flex items-center gap-1 bg-[#262625] px-2 py-0.5 rounded border border-[#2c2c2b]"
+                              >
+                                <ArchiveRestore className="h-3 w-3" />
+                                Reativar
+                              </button>
+                              {canManageAll && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Tem certeza que deseja EXCLUIR permanentemente o cliente ${client.name} e todo o diário dele?`)) {
+                                      try {
+                                        await deleteClient.mutateAsync(client.id);
+                                        toast.success("Cliente e diário excluídos permanentemente");
+                                      } catch (err: any) {
+                                        toast.error("Erro ao excluir: " + err.message);
+                                      }
+                                    }
+                                  }}
+                                  className="text-[10px] text-[#9b9a97] hover:text-red-400 transition-colors flex items-center gap-1 hover:bg-red-500/10 px-2 py-0.5 rounded"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Excluir
+                                </button>
+                              )}
+                            </div>
+
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {filteredArchivedClients.length === 0 && (
+                      <div className="col-span-2 text-center py-12 bg-[#202020] rounded-[6px] border border-dashed border-[#2c2c2b]">
+                        <p className="text-xs text-[#9b9a97]">Nenhum cliente inativo encontrado.</p>
                       </div>
                     )}
                   </div>
