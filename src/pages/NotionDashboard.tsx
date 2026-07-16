@@ -60,6 +60,8 @@ import {
   Lock,
   Archive,
   ArchiveRestore,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +70,48 @@ const healthColorText = (h: number) => {
   if (h <= 3) return "text-red-400";
   if (h <= 6) return "text-yellow-400";
   return "text-[#2eaadc]";
+};
+
+// Calendar math helper
+const getDaysInMonth = (year: number, month: number) => {
+  const date = new Date(year, month, 1);
+  const days = [];
+  const startDay = date.getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  
+  const prevMonthTotalDays = new Date(year, month, 0).getDate();
+  for (let i = startDay - 1; i >= 0; i--) {
+    days.push({
+      day: prevMonthTotalDays - i,
+      month: month - 1,
+      year: year,
+      isCurrentMonth: false,
+      dateStr: `${year}-${String(month).padStart(2, '0')}-${String(prevMonthTotalDays - i).padStart(2, '0')}`
+    });
+  }
+  
+  for (let i = 1; i <= totalDays; i++) {
+    days.push({
+      day: i,
+      month: month,
+      year: year,
+      isCurrentMonth: true,
+      dateStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    });
+  }
+  
+  const remaining = 42 - days.length;
+  for (let i = 1; i <= remaining; i++) {
+    days.push({
+      day: i,
+      month: month + 1,
+      year: year,
+      isCurrentMonth: false,
+      dateStr: `${year}-${String(month + 2).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    });
+  }
+  
+  return days;
 };
 
 // ─── Team card (Notion Gallery Item) ─────────────────────────────────────────
@@ -305,10 +349,33 @@ export default function NotionDashboard() {
 
   // UI State
   const [search, setSearch] = useState("");
-  const [activeSection, setActiveSection] = useState<"clients" | "archived_clients" | "team">("clients");
+  const [activeSection, setActiveSection] = useState<"clients" | "archived_clients" | "team" | "global_calendar">("clients");
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
   const [createClientOpen, setCreateClientOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
+
+  // Calendar State
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  // Compile all tasks across all clients for the Global Calendar
+  const allTasks = useMemo(() => {
+    const list: any[] = [];
+    Object.keys(notionMap).forEach(cid => {
+      const cNotion = notionMap[cid] || {};
+      const clientTasks = cNotion.notion_data?.tasks || [];
+      const clientRecord = globalClients.find(c => c.id === cid) || archivedClients.find(c => c.id === cid);
+      if (!clientRecord) return;
+      
+      clientTasks.forEach((t: any) => {
+        list.push({
+          ...t,
+          clientId: cid,
+          clientName: clientRecord.name
+        });
+      });
+    });
+    return list;
+  }, [notionMap, globalClients, archivedClients]);
 
   // ── Access control for team members ──
   const visibleTeamMembers = useMemo(() => {
@@ -355,6 +422,26 @@ export default function NotionDashboard() {
     () => calendarEvents.filter((e) => e.status !== "done").slice(0, 5),
     [calendarEvents]
   );
+
+  const handlePrevMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const calendarDays = useMemo(() => {
+    return getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+  }, [currentDate]);
+
+  const monthLabel = useMemo(() => {
+    const monthsPt = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+    return `${monthsPt[currentDate.getMonth()]} de ${currentDate.getFullYear()}`;
+  }, [currentDate]);
 
   // ── Team member view ──
   if (selectedTeamMember && canSeeAllTeam) {
@@ -459,11 +546,12 @@ export default function NotionDashboard() {
               {[
                 { key: "clients", label: "📁 Clientes Ativos" },
                 { key: "archived_clients", label: "🗄️ Clientes Inativos" },
+                { key: "global_calendar", label: "📅 Calendário Geral" },
                 (canSeeAllTeam ? { key: "team", label: "👥 Equipe" } : null)
               ].filter(Boolean).map((item: any) => (
                 <button
                   key={item.key}
-                  onClick={() => setActiveSection(item.key)}
+                  onClick={() => setActiveSection(item.key as any)}
                   className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all ${
                     activeSection === item.key
                       ? "border-[#e3e2e0] text-[#e3e2e0]"
@@ -741,6 +829,79 @@ export default function NotionDashboard() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* ── GLOBAL CALENDAR VIEW ── */}
+            {activeSection === "global_calendar" && (
+              <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 space-y-4">
+                <div className="flex items-center justify-between border-b border-[#2c2c2b]/30 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-[#e3e2e0]">Calendário Geral de Tarefas</span>
+                  </div>
+                  <div className="flex items-center gap-2 select-none">
+                    <button
+                      onClick={handlePrevMonth}
+                      className="p-1 text-[#9b9a97] hover:text-white transition rounded hover:bg-[#2c2c2b]"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-xs font-semibold text-[#e3e2e0] min-w-[120px] text-center font-mono">
+                      {monthLabel}
+                    </span>
+                    <button
+                      onClick={handleNextMonth}
+                      className="p-1 text-[#9b9a97] hover:text-white transition rounded hover:bg-[#2c2c2b]"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-px bg-[#2c2c2b] overflow-hidden rounded-[4px] text-center text-[10px] text-[#9b9a97] font-semibold border border-[#2c2c2b]">
+                  {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
+                    <div key={d} className="bg-[#252525] py-1.5">{d}</div>
+                  ))}
+                  {calendarDays.map((dayObj, idx) => {
+                    const dayTasks = allTasks.filter(t => t.date === dayObj.dateStr);
+                    
+                    return (
+                      <div
+                        key={idx}
+                        className={`min-h-[75px] bg-[#202020] p-1 flex flex-col gap-1 transition-colors relative hover:bg-[#232323] ${
+                          !dayObj.isCurrentMonth ? "opacity-30" : ""
+                        }`}
+                      >
+                        <span className={`text-[9px] font-bold text-right pr-0.5 ${
+                          new Date().toISOString().split('T')[0] === dayObj.dateStr
+                            ? "text-primary bg-primary/10 rounded px-1"
+                            : "text-[#5f5e5b]"
+                        }`}>
+                          {dayObj.day}
+                        </span>
+                        
+                        <div className="flex-1 overflow-y-auto space-y-0.5 max-h-[50px] pr-0.5">
+                          {dayTasks.map((t, tIdx) => {
+                            const statusColor = t.status === "Concluído" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                                                t.status === "Em Progresso" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                                                "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+                            return (
+                              <div
+                                key={tIdx}
+                                onClick={() => navigate(`/notion/${t.clientId}`)}
+                                className={`text-[8px] px-1.5 py-0.5 rounded truncate select-none border font-medium cursor-pointer ${statusColor}`}
+                                title={`[${t.clientName}] ${t.name} (${t.who || 'Sem Responsável'}) - ${t.status}`}
+                              >
+                                <span className="font-bold">[{t.clientName.split(" ")[0]}]</span> {t.name}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* ── TEAM GALLERY VIEW ── */}
