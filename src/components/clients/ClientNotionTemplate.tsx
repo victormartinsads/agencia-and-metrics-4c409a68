@@ -1,6 +1,30 @@
 import { useState, useEffect } from "react";
 import { useClientNotionData, useSaveClientNotionData, useSyncDriveCalls } from "@/hooks/useGestorDiary";
-import { Loader2, CheckCircle, Square, Plus, Trash2, ListChecks, Compass, Users, FolderOpen, Flame, Link2, Database, Video, Milestone, GitMerge, Trophy, Calendar, MessageCircle, Mail, DollarSign, Flag, Instagram, RefreshCw } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle,
+  Square,
+  Plus,
+  Trash2,
+  ListChecks,
+  Compass,
+  Users,
+  FolderOpen,
+  Flame,
+  Link2,
+  Database,
+  Video,
+  Milestone,
+  GitMerge,
+  Trophy,
+  Calendar,
+  MessageCircle,
+  Mail,
+  DollarSign,
+  Flag,
+  Instagram,
+  RefreshCw,
+} from "lucide-react";
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
@@ -10,9 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import * as locales from "@blocknote/core/locales";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
+// ─── Notion Property Row ─────────────────────────────────────────────────────
 function PropertyInput({ label, icon, value, onChange, canManage }: any) {
   const [localVal, setLocalVal] = useState(value || "");
 
@@ -29,12 +52,12 @@ function PropertyInput({ label, icon, value, onChange, canManage }: any) {
   const isLink = localVal.startsWith("http://") || localVal.startsWith("https://");
 
   return (
-    <div className="grid grid-cols-3 py-1.5 items-center hover:bg-accent/15 px-2 rounded-md transition-colors text-xs border-b border-border/10">
-      <div className="flex items-center gap-2 text-muted-foreground select-none">
-        {icon}
-        <span>{label}</span>
+    <div className="flex items-center text-xs py-1 hover:bg-[#202020] px-2 rounded transition-colors group h-7">
+      <div className="w-40 flex items-center gap-2 text-[#9b9a97] select-none shrink-0 font-medium">
+        <span className="opacity-70">{icon}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="col-span-2">
+      <div className="flex-1 min-w-0">
         {canManage ? (
           <input
             type="text"
@@ -43,16 +66,16 @@ function PropertyInput({ label, icon, value, onChange, canManage }: any) {
             onBlur={handleBlur}
             onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
             placeholder="Vazio"
-            className="w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/20 rounded px-1.5 py-0.5 text-foreground hover:bg-accent/30 transition-all placeholder:italic placeholder:opacity-50"
+            className="w-full bg-transparent border-none outline-none focus:ring-0 rounded px-1 text-[#e3e2e0] hover:bg-[#252525] focus:bg-[#252525] transition-all placeholder:italic placeholder:opacity-30"
           />
         ) : (
-          <div className="px-1.5 py-0.5 text-foreground min-h-[20px] truncate">
+          <div className="px-1 text-[#e3e2e0] truncate">
             {isLink ? (
               <a href={localVal} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate block">
                 {localVal}
               </a>
             ) : (
-              localVal || <span className="text-muted-foreground/30 italic">Vazio</span>
+              localVal || <span className="text-[#5f5e5b] italic">Vazio</span>
             )}
           </div>
         )}
@@ -62,25 +85,23 @@ function PropertyInput({ label, icon, value, onChange, canManage }: any) {
 }
 
 function PriorityProperty({ value, onChange, canManage }: any) {
-  const badgeColor = value === "Alta" ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                     value === "Média" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" :
-                     value === "Baixa" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                     "text-muted-foreground/30 italic";
+  const badgeColor = value === "Alta" ? "text-red-400" :
+                     value === "Média" ? "text-yellow-400" :
+                     value === "Baixa" ? "text-emerald-400" :
+                     "text-[#5f5e5b] italic";
 
   if (!canManage) {
     return (
-      <div className="grid grid-cols-3 py-1.5 items-center hover:bg-accent/15 px-2 rounded-md transition-colors text-xs border-b border-border/10">
-        <div className="flex items-center gap-2 text-muted-foreground select-none">
-          <Flag className="h-3.5 w-3.5" />
+      <div className="flex items-center text-xs py-1 hover:bg-[#202020] px-2 rounded transition-colors h-7">
+        <div className="w-40 flex items-center gap-2 text-[#9b9a97] select-none shrink-0 font-medium">
+          <span className="opacity-70"><Flag className="h-3.5 w-3.5" /></span>
           <span>Prioridade</span>
         </div>
-        <div className="col-span-2 px-1.5 py-0.5 text-foreground">
+        <div className="flex-1 px-1">
           {value ? (
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeColor}`}>
-              {value.toUpperCase()}
-            </span>
+            <span className={`font-semibold ${badgeColor}`}>{value}</span>
           ) : (
-            <span className="text-muted-foreground/30 italic">Vazio</span>
+            <span className="text-[#5f5e5b] italic">Vazio</span>
           )}
         </div>
       </div>
@@ -88,21 +109,21 @@ function PriorityProperty({ value, onChange, canManage }: any) {
   }
 
   return (
-    <div className="grid grid-cols-3 py-1.5 items-center hover:bg-accent/15 px-2 rounded-md transition-colors text-xs border-b border-border/10">
-      <div className="flex items-center gap-2 text-muted-foreground select-none">
-        <Flag className="h-3.5 w-3.5" />
+    <div className="flex items-center text-xs py-1 hover:bg-[#202020] px-2 rounded transition-colors h-7">
+      <div className="w-40 flex items-center gap-2 text-[#9b9a97] select-none shrink-0 font-medium">
+        <span className="opacity-70"><Flag className="h-3.5 w-3.5" /></span>
         <span>Prioridade</span>
       </div>
-      <div className="col-span-2 px-1.5">
+      <div className="flex-1 px-1">
         <select
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/20 rounded py-0.5 text-foreground cursor-pointer hover:bg-accent/30 transition-all font-semibold"
+          className="bg-transparent border-none outline-none focus:ring-0 text-[#e3e2e0] cursor-pointer hover:bg-[#252525] focus:bg-[#252525] rounded transition-all font-medium py-0.5"
         >
-          <option value="" className="bg-card text-muted-foreground">Vazio</option>
-          <option value="Alta" className="bg-card text-red-400">ALTA</option>
-          <option value="Média" className="bg-card text-yellow-400">MÉDIA</option>
-          <option value="Baixa" className="bg-card text-emerald-400">BAIXA</option>
+          <option value="" className="bg-[#191919] text-[#5f5e5b]">Vazio</option>
+          <option value="Alta" className="bg-[#191919] text-red-400">Alta</option>
+          <option value="Média" className="bg-[#191919] text-yellow-400">Média</option>
+          <option value="Baixa" className="bg-[#191919] text-emerald-400">Baixa</option>
         </select>
       </div>
     </div>
@@ -133,24 +154,25 @@ function SectionEditor({ initialContent, sectionKey, onSave, canManage }: any) {
   );
 }
 
+// ─── Notion Block style ──────────────────────────────────────────────────────
 function DiaryCard({ title, icon, sectionKey, initialContent, onSave, canManage, clientId, children, action }: any) {
   return (
-    <div className="border border-border/80 rounded-xl p-5 bg-card shadow-sm flex flex-col gap-3">
-      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+    <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 flex flex-col gap-3 h-full">
+      <div className="flex items-center justify-between border-b border-[#2c2c2b]/30 pb-2">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+          <span className="text-[14px] text-primary shrink-0 select-none">
             {icon}
-          </div>
-          <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
+          </span>
+          <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">
             {title}
           </span>
         </div>
         {action}
       </div>
-      <div className="flex-1 min-h-[85px]">
+      <div className="flex-1 min-h-[85px] pt-1">
         {children ? children : (
           <SectionEditor
-            key={`${clientId}-${sectionKey}`} // Força a recriação do editor ao mudar de cliente
+            key={`${clientId}-${sectionKey}`}
             initialContent={initialContent}
             sectionKey={sectionKey}
             onSave={onSave}
@@ -183,9 +205,9 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
   if (tasksLoading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+        <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
           <ListChecks className="h-4 w-4 text-primary animate-pulse" />
-          <span className="text-sm font-bold uppercase tracking-tight">Pendências e Tarefas</span>
+          <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">Pendências e Tarefas</span>
         </div>
         <div className="flex justify-center py-12 text-muted-foreground text-xs gap-2 items-center">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -197,40 +219,51 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-        <ListChecks className="h-4 w-4 text-primary" />
-        <span className="text-sm font-bold uppercase tracking-tight">Pendências e Tarefas</span>
+      <div className="flex items-center justify-between border-b border-[#2c2c2b]/30 pb-2">
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-primary" />
+          <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">Pendências e Tarefas</span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2.5 max-h-[400px] overflow-y-auto pr-1">
+      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
         {tasks && tasks.length > 0 ? (
           tasks.map((task) => (
             <div key={task.id} className="flex items-start gap-2.5 group">
               <button
                 disabled={!canManage}
-                onClick={() => updateTask.mutate({ id: task.id, completed: !task.completed })}
-                className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:opacity-90 disabled:cursor-not-allowed"
+                onClick={async () => {
+                  await updateTask.mutateAsync({
+                    taskId: task.id,
+                    clientId,
+                    done: !task.done,
+                    content: task.content,
+                  });
+                }}
+                className="mt-0.5 shrink-0 text-[#9b9a97] hover:text-[#e3e2e0] transition-colors disabled:cursor-not-allowed"
               >
-                {task.completed ? (
-                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                {task.done ? (
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
                 ) : (
                   <Square className="h-4 w-4" />
                 )}
               </button>
               <span
-                className={`text-sm flex-1 break-words leading-tight ${
-                  task.completed
-                    ? "line-through text-muted-foreground opacity-60"
-                    : "text-foreground font-medium"
+                className={`text-xs flex-1 break-words leading-relaxed ${
+                  task.done ? "line-through text-[#5f5e5b] opacity-60" : "text-[#e3e2e0]"
                 }`}
               >
                 {task.content}
               </span>
               {canManage && (
                 <button
-                  onClick={() => deleteTask.mutate(task.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 shrink-0 text-muted-foreground hover:text-red-400 transition-all"
-                  title="Excluir tarefa"
+                  onClick={async () => {
+                    if (confirm("Remover esta tarefa?")) {
+                      await deleteTask.mutateAsync({ taskId: task.id, clientId });
+                      toast.success("Tarefa removida");
+                    }
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 shrink-0 text-[#5f5e5b] hover:text-red-400 transition-all"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -238,29 +271,23 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
             </div>
           ))
         ) : (
-          <div className="text-xs text-muted-foreground/70 italic text-center py-6 bg-muted/10 rounded-lg border border-dashed border-border/50">
-            Nenhuma pendência anotada.
-          </div>
+          <p className="text-xs text-[#9b9a97] italic text-center py-4 bg-[#262625] border border-dashed border-[#2c2c2b] rounded-[6px]">
+            Sem tarefas pendentes.
+          </p>
         )}
       </div>
 
       {canManage && (
-        <div className="flex items-center gap-2 pt-2 border-t border-border/40 mt-auto">
+        <div className="flex items-center gap-2 pt-2 border-t border-[#2c2c2b]/30">
           <Input
-            placeholder="Nova pendência..."
+            placeholder="Nova tarefa..."
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            className="h-8 text-xs bg-background"
+            className="h-7 text-xs bg-[#202020] border-[#2c2c2b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px]"
           />
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-8 w-8 shrink-0"
-            onClick={handleAdd}
-            disabled={!newText.trim() || createTask.isPending}
-          >
-            <Plus className="h-4 w-4" />
+          <Button size="sm" onClick={handleAdd} className="h-7 px-3 text-xs bg-primary hover:bg-primary/95 text-white rounded-[4px]">
+            <Plus className="h-3 w-3" />
           </Button>
         </div>
       )}
@@ -268,102 +295,69 @@ function ClientTasksSection({ clientId, canManage }: { clientId: string; canMana
   );
 }
 
-export default function ClientNotionTemplate({ clientId, canManage }: { clientId: string, canManage: boolean }) {
+export default function ClientNotionTemplate({ clientId, canManage }: any) {
   const { data: notionData, isLoading } = useClientNotionData(clientId);
   const saveNotionData = useSaveClientNotionData();
   const syncDrive = useSyncDriveCalls();
   const [activeSubSection, setActiveSubSection] = useState<string | null>(null);
 
-  const handleSyncDrive = async () => {
-    try {
-      toast.loading("Buscando gravações no Google Drive...", { id: "sync-drive" });
-      const res = await syncDrive.mutateAsync(clientId);
-      toast.success(`Sincronização concluída! ${res.count} gravações encontradas.`, { id: "sync-drive" });
-    } catch (e: any) {
-      toast.error("Erro ao sincronizar: " + e.message, { id: "sync-drive" });
-    }
-  };
-
-  const { data: clientInfo } = useQuery({
-    queryKey: ["client-info-notion", clientId],
-    queryFn: async () => {
-      const { data } = await supabase.from("clients").select("name").eq("id", clientId).single();
-      return data;
-    },
-    enabled: !!clientId
-  });
-
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-12 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        <span>Carregando diário do cliente...</span>
+      <div className="flex flex-col items-center justify-center py-32 gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="text-xs text-[#9b9a97]">Carregando diário do cliente...</span>
       </div>
     );
   }
 
-  // Resolve os conteúdos de cada seção
-  let sectionsData: any = {};
-  if (notionData) {
-    if (Array.isArray(notionData)) {
-      sectionsData = { plano_cliente: notionData };
-    } else {
-      sectionsData = notionData;
-    }
-  }
-
-  const propsData = sectionsData.properties || {};
-
-  const handleSaveSection = (key: string, doc: any) => {
-    const updated = {
-      ...sectionsData,
-      [key]: doc
-    };
-    saveNotionData.mutate({ client_id: clientId, data: updated });
-  };
+  const clientName = notionData?.clientName || "Cliente";
+  const propsData = notionData?.properties || {};
+  const sectionsData = notionData?.sections || {};
 
   const handlePropertyChange = (key: string, value: string) => {
-    const updatedProperties = {
-      ...propsData,
-      [key]: value
-    };
-    const updated = {
-      ...sectionsData,
-      properties: updatedProperties
-    };
-    saveNotionData.mutate({ client_id: clientId, data: updated });
+    saveNotionData.mutate({
+      clientId,
+      properties: { ...propsData, [key]: value },
+    });
+  };
+
+  const handleSaveSection = (key: string, content: any) => {
+    saveNotionData.mutate({
+      clientId,
+      sections: { ...sectionsData, [key]: content },
+    });
+  };
+
+  const handleSyncDrive = async () => {
+    try {
+      await syncDrive.mutateAsync({ clientId });
+      toast.success("Gravações do Google Drive sincronizadas!");
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar Drive: " + e.message);
+    }
   };
 
   const subSections = [
-    { key: "dados_paginas", label: "Páginas" },
-    { key: "dados_icp", label: "ICP" },
-    { key: "dados_produtos", label: "Produtos" },
-    { key: "dados_criativos", label: "Criativos" },
-    { key: "dados_trafego", label: "Inteligência do Tráfego" }
+    { key: "icp", label: "ICP" },
+    { key: "produto", label: "Produto" },
+    { key: "seguidores", label: "Seguidores" },
+    { key: "proposta_unica", label: "Proposta Única de Valor (PUV)" },
+    { key: "estrategias_high", label: "Estratégia High Ticket" },
+    { key: "estrategias_low", label: "Estratégia Low Ticket" },
   ];
 
-  const clientName = clientInfo?.name || "Ficha do Cliente";
-
   return (
-    <div className="space-y-8">
-      {/* CSS overrides to fix grey background leakage and alignment */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .blocknote-editor-wrapper .bn-container,
-        .blocknote-editor-wrapper .bn-editor {
-          background-color: transparent !important;
-          padding: 0 !important;
-        }
-        .blocknote-editor-wrapper .bn-editor {
-          margin-inline-start: 12px !important;
-        }
-      ` }} />
-
+    <div className="space-y-6">
       {/* Notion Page Header & Properties */}
-      <div className="border-b border-border/40 pb-6 space-y-5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground uppercase">
+      <div className="border-b border-[#2c2c2b] pb-6 space-y-4">
+        {/* Large emoji icon above title */}
+        <div className="text-4xl select-none filter drop-shadow-sm pb-1">📁</div>
+        <h1 className="text-3xl font-bold tracking-tight text-[#e3e2e0] font-sans">
           {clientName}
         </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1 max-w-4xl bg-card/25 p-4 rounded-xl border border-border/40 shadow-sm">
+
+        {/* Clean Notion-style metadata list */}
+        <div className="max-w-xl space-y-0.5 pt-2">
           <PropertyInput
             label="Assinatura"
             icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -428,9 +422,9 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
         </div>
       </div>
 
-      {/* Grade de Cards do Diário */}
+      {/* Database Blocks layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Coluna Esquerda */}
+        {/* Left Column */}
         <div className="space-y-6">
           <DiaryCard
             title="Plano Estratégico - Cliente"
@@ -470,10 +464,9 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
           />
         </div>
 
-        {/* Coluna Direita */}
+        {/* Right Column */}
         <div className="space-y-6">
-          {/* Card de Tarefas Sincronizado */}
-          <div className="border border-border/80 rounded-xl p-5 bg-card shadow-sm flex flex-col h-fit">
+          <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 flex flex-col h-fit">
             <ClientTasksSection clientId={clientId} canManage={canManage} />
           </div>
 
@@ -486,28 +479,28 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
             canManage={canManage}
             clientId={clientId}
           />
-          
+
           <DiaryCard
             title="Dados"
             icon={<Database className="h-4 w-4" />}
             clientId={clientId}
           >
-            <div className="flex flex-col gap-2 pt-2">
-              <p className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2.5 py-1.5 mb-2 font-bold select-none uppercase tracking-wide">
-                ICP, Produtos, Seguidores, etc.
-              </p>
-              {subSections.map((sub) => (
-                <button
-                  key={sub.key}
-                  onClick={() => setActiveSubSection(sub.key)}
-                  className="w-full text-left bg-accent/20 border border-border/40 hover:bg-accent/40 hover:border-primary/30 px-3.5 py-2.5 rounded-lg flex items-center justify-between text-xs font-bold text-foreground transition-all group"
-                >
-                  <span className="uppercase tracking-wider select-none">{sub.label}</span>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-primary transition-colors font-bold uppercase select-none">
-                    Abrir Bloco →
-                  </span>
-                </button>
-              ))}
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="text-[11px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-3 py-2 mb-2 font-mono">
+                💡 Contém ICP, especificações de Produtos, Seguidores, etc.
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {subSections.map((sub) => (
+                  <button
+                    key={sub.key}
+                    onClick={() => setActiveSubSection(sub.key)}
+                    className="text-left bg-[#252525] border border-[#2c2c2b] hover:bg-[#2c2c2b] px-3 py-2 rounded flex flex-col gap-1 text-[11px] text-[#e3e2e0] transition-colors"
+                  >
+                    <span className="font-semibold text-primary">{sub.label}</span>
+                    <span className="text-[9px] text-[#9b9a97] uppercase">Abrir Bloco →</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </DiaryCard>
 
@@ -525,7 +518,7 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
                 size="sm"
                 onClick={handleSyncDrive}
                 disabled={syncDrive.isPending}
-                className="h-6 text-[10px] uppercase font-bold text-primary hover:text-primary hover:bg-primary/10 gap-1 px-2 border border-primary/20"
+                className="h-6 text-[10px] uppercase font-bold text-primary hover:text-primary hover:bg-[#2c2c2b] border border-primary/20 gap-1 px-2 rounded"
               >
                 {syncDrive.isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -571,17 +564,17 @@ export default function ClientNotionTemplate({ clientId, canManage }: { clientId
         open={activeSubSection !== null}
         onOpenChange={(open) => !open && setActiveSubSection(null)}
       >
-        <DialogContent className="max-w-3xl bg-card border-border/80 blocknote-editor-wrapper">
-          <DialogHeader className="border-b border-border/40 pb-3">
-            <DialogTitle className="uppercase tracking-wider flex items-center gap-2 text-sm font-bold text-foreground">
+        <DialogContent className="max-w-3xl bg-[#191919] border-[#2c2c2b] blocknote-editor-wrapper text-[#e3e2e0] rounded-lg">
+          <DialogHeader className="border-b border-[#2c2c2b] pb-3">
+            <DialogTitle className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#e3e2e0]">
               <Database className="h-4 w-4 text-primary" />
               Dados · {subSections.find(s => s.key === activeSubSection)?.label}
             </DialogTitle>
           </DialogHeader>
-          <div className="min-h-[350px] border border-border/60 rounded-xl p-4 bg-muted/10 mt-4 overflow-y-auto max-h-[60vh]">
+          <div className="min-h-[350px] border border-[#2c2c2b] rounded-[6px] p-4 bg-[#202020] mt-4 overflow-y-auto max-h-[60vh]">
             {activeSubSection && (
               <SectionEditor
-                key={`${clientId}-${activeSubSection}`} // Recria o editor se o cliente ou subseção mudar
+                key={`${clientId}-${activeSubSection}`}
                 initialContent={sectionsData[activeSubSection]}
                 sectionKey={activeSubSection}
                 onSave={handleSaveSection}

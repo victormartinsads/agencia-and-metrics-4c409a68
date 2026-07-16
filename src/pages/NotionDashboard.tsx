@@ -4,10 +4,9 @@ import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useClients, useCreateClient, ClientInsert } from "@/hooks/useClients";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  useStaffRoles,
   useStaffMemberRole,
   useGestorDiary,
   useSaveGestorDiary,
@@ -22,11 +21,9 @@ import {
 } from "@/hooks/useGestorDiary";
 import TeamMemberNotionTemplate from "@/components/team/TeamMemberNotionTemplate";
 import ClientNotionTemplate from "@/components/clients/ClientNotionTemplate";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -46,7 +43,6 @@ import {
   Video,
   Eye,
   User,
-  Users,
   Square,
   CheckCircle,
   Loader2,
@@ -59,29 +55,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ─── Colour helpers ──────────────────────────────────────────────────────────
-const prioBg = (p: string) => {
-  const u = p?.toUpperCase() || "";
-  if (u === "ALTA") return "bg-red-500/10 text-red-400 border-red-500/20";
-  if (u === "MÉDIA" || u === "MEDIA") return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-  return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+// ─── Normalização de Cores e Estilos Padrão Notion ───────────────────────────
+const healthColorText = (h: number) => {
+  if (h <= 3) return "text-red-400";
+  if (h <= 6) return "text-yellow-400";
+  return "text-[#2eaadc]";
 };
-const healthBg = (h: number) => {
-  if (h <= 3) return "bg-red-500/10 border-red-500/20 text-red-400";
-  if (h <= 6) return "bg-yellow-500/10 border-yellow-500/20 text-yellow-400";
-  return "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
-};
-const CARGO_COLORS: Record<string, string> = {
-  "DIRETOR DE OPERAÇÕES": "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  "GESTOR DE TRÁFEGO": "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "SOCIAL SELLING": "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  "FINANCEIRO": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  "WEBDESIGNER E DESIGNER": "bg-pink-500/10 text-pink-400 border-pink-500/20",
-};
-const cargoBadge = (role: string) =>
-  CARGO_COLORS[role?.toUpperCase()] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
 
-// ─── Team card ───────────────────────────────────────────────────────────────
+// ─── Team card (Notion Gallery Item) ─────────────────────────────────────────
 function TeamMemberCard({
   member,
   onSelect,
@@ -97,38 +78,48 @@ function TeamMemberCard({
   return (
     <div
       onClick={onSelect}
-      className="bg-[#202020] border border-[#2c2c2b] rounded-xl overflow-hidden hover:border-[#3f3f3e] transition-all duration-200 cursor-pointer shadow-md group"
+      className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden hover:bg-[#252525] transition-colors duration-150 cursor-pointer flex flex-col group select-none shadow-sm h-fit"
     >
-      <div className="h-14 w-full bg-gradient-to-r from-slate-800/60 to-slate-900/80 group-hover:from-slate-700/60 transition-all relative">
-        <div className="absolute bottom-2 left-3 text-2xl select-none">👤</div>
+      {/* Cover / Icon Area */}
+      <div className="h-10 w-full bg-[#262625] border-b border-[#2c2c2b] relative flex items-center px-3 gap-2">
+        <span className="text-base">👤</span>
+        <span className="text-[10px] text-[#9b9a97] uppercase tracking-wider font-semibold">
+          {member.role}
+        </span>
       </div>
-      <div className="p-3 space-y-2">
+      {/* Notion Card Details */}
+      <div className="p-3.5 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-extrabold text-white uppercase leading-tight group-hover:text-primary transition-colors">
+          <p className="text-[13px] font-semibold text-[#e3e2e0] group-hover:text-primary transition-colors">
             {member.name}
           </p>
           {canDelete && (
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="opacity-0 group-hover:opacity-100 transition text-[#5f5e5b] hover:text-red-400 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-[#5f5e5b] hover:text-red-400 shrink-0 p-0.5"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
             </button>
           )}
         </div>
-        <Badge className={`text-[9px] font-bold border rounded-full px-2 py-0 ${cargoBadge(member.role)}`}>
-          {member.role.toUpperCase()}
-        </Badge>
-        {props.whatsapp && (
-          <p className="text-[10px] text-[#9b9a97] font-mono truncate">📞 {props.whatsapp}</p>
-        )}
-        {props.email_contato && (
-          <p className="text-[10px] text-[#9b9a97] font-mono truncate">📧 {props.email_contato}</p>
-        )}
-        <div className="flex justify-end pt-0.5">
-          <span className="text-[9px] text-primary font-bold opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
-            <Eye className="h-3 w-3" /> Abrir Ficha →
-          </span>
+
+        {/* List properties in simple Notion styling */}
+        <div className="space-y-1 pt-1 border-t border-[#2c2c2b]/30">
+          {props.whatsapp && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#9b9a97] font-sans">
+              <span className="opacity-60 text-xs">📞</span>
+              <span className="truncate">{props.whatsapp}</span>
+            </div>
+          )}
+          {props.email_contato && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#9b9a97] font-sans">
+              <span className="opacity-60 text-xs">✉️</span>
+              <span className="truncate">{props.email_contato}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -165,9 +156,9 @@ function CreateTeamMemberDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#191919] border-[#2c2c2b] text-[#e3e2e0] max-w-md">
+      <DialogContent className="bg-[#191919] border-[#2c2c2b] text-[#e3e2e0] max-w-sm rounded-lg">
         <DialogHeader>
-          <DialogTitle className="text-white font-extrabold uppercase">Nova Ficha de Equipe</DialogTitle>
+          <DialogTitle className="text-white font-semibold text-sm uppercase tracking-wider">Nova Ficha de Equipe</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
           {[
@@ -215,13 +206,12 @@ function CreateClientDiaryDialog({ open, onOpenChange }: { open: boolean; onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#191919] border-[#2c2c2b] text-[#e3e2e0] max-w-md">
+      <DialogContent className="bg-[#191919] border-[#2c2c2b] text-[#e3e2e0] max-w-sm rounded-lg">
         <DialogHeader>
-          <DialogTitle className="text-white font-extrabold uppercase">Novo Cliente + Diário</DialogTitle>
+          <DialogTitle className="text-white font-semibold text-sm uppercase tracking-wider">Novo Cliente + Diário</DialogTitle>
         </DialogHeader>
-        <p className="text-xs text-[#9b9a97] pb-1">
-          O <span className="text-primary font-bold">Diário Notion</span> e o{" "}
-          <span className="text-primary font-bold">Dashboard</span> serão automaticamente criados.
+        <p className="text-[11px] text-[#9b9a97] pb-1">
+          O Diário Notion e o Dashboard serão automaticamente criados.
         </p>
         <div className="space-y-3 py-2">
           <div className="space-y-1">
@@ -244,7 +234,7 @@ function CreateClientDiaryDialog({ open, onOpenChange }: { open: boolean; onOpen
   );
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
 export default function NotionDashboard() {
   const { clientId: clientIdParam } = useParams<{ clientId?: string }>();
   const navigate = useNavigate();
@@ -304,20 +294,14 @@ export default function NotionDashboard() {
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
 
   // ── Access control for team members ──
-  // If gestor (not admin/ceo/diretor), only show their own team member card
   const visibleTeamMembers = useMemo(() => {
     if (canSeeAllTeam) return allTeamMembers;
-    // Gestores: match by name against profile
     const myProfile = profiles.find((p: any) => p.user_id === user?.id);
     const myMeta = allMeta.find((m: any) => m.gestor_id === user?.id);
-    const myName =
-      (myMeta?.name_override || myProfile?.full_name || "").toLowerCase().trim();
+    const myName = (myMeta?.name_override || myProfile?.full_name || "").toLowerCase().trim();
     
     const norm = (s: string) =>
-      s.normalize("NFD")
-       .replace(/[\u0300-\u036f]/g, "")
-       .toLowerCase()
-       .replace(/[^a-z0-9]/g, "");
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
     const myNorm = norm(myName);
     if (!myNorm) return [];
@@ -328,7 +312,7 @@ export default function NotionDashboard() {
     });
   }, [canSeeAllTeam, allTeamMembers, profiles, allMeta, user?.id]);
 
-  // ── Client page ──
+  // Client filtering
   const activeClientId = clientIdParam || null;
   const activeClient = useMemo(
     () => globalClients.find((c) => c.id === activeClientId) || null,
@@ -346,65 +330,56 @@ export default function NotionDashboard() {
     [calendarEvents]
   );
 
-  // ── Team member full page ──
+  // ── Team member view ──
   if (selectedTeamMember && canSeeAllTeam) {
-    const canEditThisMember = true; // since they have canSeeAllTeam permission
-
+    const canEditThisMember = true;
     return (
       <AppShell currentPage="notion" header={null} noContainer>
         <div className="min-h-screen bg-[#191919] text-[#e3e2e0] pb-16">
-          {/* Cover */}
-          <div className="h-40 w-full bg-gradient-to-r from-slate-800/60 to-slate-900/80 relative border-b border-[#2c2c2b]" />
-
-          <div className="max-w-5xl mx-auto px-6 md:px-12 pt-8 space-y-6">
+          <div className="h-28 w-full bg-[#202020] border-b border-[#2c2c2b] relative" />
+          <div className="max-w-4xl mx-auto px-8 pt-8 space-y-6">
             <button
               onClick={() => setSelectedTeamMember(null)}
-              className="text-[#9b9a97] hover:text-white transition flex items-center gap-1.5 text-[11px] font-bold"
+              className="text-[#9b9a97] hover:text-[#e3e2e0] transition-colors flex items-center gap-1.5 text-xs font-medium"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Voltar para Equipe
             </button>
-
-            <TeamMemberNotionTemplate
-              member={selectedTeamMember}
-              canEdit={canEditThisMember}
-            />
+            <TeamMemberNotionTemplate member={selectedTeamMember} canEdit={canEditThisMember} />
           </div>
         </div>
       </AppShell>
     );
   }
 
-  // ── Client full page ──
+  // ── Client view ──
   if (activeClientId && activeClient) {
     return (
       <AppShell currentPage="notion" header={null} noContainer>
         <div className="min-h-screen bg-[#191919] text-[#e3e2e0] pb-16">
-          {/* Discrete selector strip */}
           <div className="bg-[#202020] border-b border-[#2c2c2b] px-6 py-2 flex items-center gap-3">
             <button
               onClick={() => navigate("/notion")}
-              className="text-[#9b9a97] hover:text-white transition flex items-center gap-1 text-[11px] font-bold"
+              className="text-[#9b9a97] hover:text-white transition flex items-center gap-1 text-xs font-semibold"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Dashboard
             </button>
             <span className="text-[#3f3f3e]">/</span>
             <Select value={activeClientId} onValueChange={(val) => navigate(`/notion/${val}`)}>
-              <SelectTrigger className="h-6 w-[220px] text-[11px] font-bold bg-transparent border-none text-primary focus:ring-0 shadow-none p-0">
+              <SelectTrigger className="h-6 w-[200px] text-xs font-semibold bg-transparent border-none text-primary focus:ring-0 shadow-none p-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
                 {globalClients.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="hover:bg-[#2c2c2b] focus:bg-[#2c2c2b] text-[11px]">
+                  <SelectItem key={c.id} value={c.id} className="hover:bg-[#2c2c2b] focus:bg-[#2c2c2b] text-xs">
                     {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-6">
+          <div className="max-w-5xl mx-auto px-8 py-6">
             <ClientNotionTemplate clientId={activeClientId} canManage={true} />
           </div>
         </div>
@@ -412,35 +387,32 @@ export default function NotionDashboard() {
     );
   }
 
-  // ── Main Dashboard ──
   return (
     <AppShell currentPage="notion" header={null} noContainer>
       <div className="min-h-screen bg-[#191919] text-[#e3e2e0] font-sans pb-16 selection:bg-[#2c2c2b]">
         {/* Cover Banner */}
-        <div className="h-40 w-full bg-[#202020] relative border-b border-[#2c2c2b]">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/20 to-slate-900/30" />
-          <div className="absolute -bottom-6 left-12 md:left-20 text-5xl select-none filter drop-shadow-md">🚀</div>
+        <div className="h-36 w-full bg-[#202020] relative border-b border-[#2c2c2b] flex items-end">
+          <div className="absolute -bottom-6 left-16 md:left-24 text-5xl select-none filter drop-shadow-sm">🚀</div>
         </div>
 
-        {/* Header */}
-        <div className="max-w-7xl mx-auto px-6 md:px-16 pt-10 space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">DASHBOARD AND</h1>
-          <p className="text-xs text-[#9b9a97] max-w-xl leading-relaxed">
+        {/* Notion-style Header */}
+        <div className="max-w-6xl mx-auto px-16 pt-10 space-y-3">
+          <h1 className="text-3xl font-bold tracking-tight text-[#e3e2e0] font-sans">DASHBOARD AND</h1>
+          <p className="text-sm text-[#9b9a97] max-w-xl leading-relaxed">
             Área de controle unificada da agência AND — clientes, equipe e diários operacionais.
           </p>
 
           {canManageAll && gestoresList.length > 0 && (
-            <div className="flex items-center gap-2 pt-1 text-xs">
-              <User className="h-3 w-3 text-primary shrink-0" />
+            <div className="flex items-center gap-2 pt-2 text-xs">
               <span className="text-[#9b9a97] font-semibold">Diário de:</span>
               <Select value={activeGestorId} onValueChange={setSelectedGestorId}>
-                <SelectTrigger className="h-6 w-[160px] text-[11px] font-bold bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] focus:ring-0">
+                <SelectTrigger className="h-6 w-[150px] text-xs bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] focus:ring-0">
                   <SelectValue placeholder="Gestor" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
                   {gestoresList.map((g) => (
                     <SelectItem key={g.id} value={g.id} className="hover:bg-[#2c2c2b] focus:bg-[#2c2c2b] text-xs">
-                      {g.name.toUpperCase()}
+                      {g.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -448,65 +420,68 @@ export default function NotionDashboard() {
             </div>
           )}
 
-          <hr className="border-[#2c2c2b] mt-4" />
+          <div className="border-b border-[#2c2c2b] pt-4" />
         </div>
 
-        {/* Body */}
-        <div className="max-w-7xl mx-auto px-6 md:px-16 grid grid-cols-1 xl:grid-cols-3 gap-8 items-start mt-6">
-
-          {/* LEFT */}
-          <div className="xl:col-span-2 space-y-5">
-
-            {/* Tabs */}
-            {/* Tabs */}
-            <div className="flex items-center gap-1 border-b border-[#2c2c2b] pb-2">
+        {/* Notion Database Workspace layout */}
+        <div className="max-w-6xl mx-auto px-16 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mt-6">
+          {/* Main area */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* View/Tab selector exactly like Notion */}
+            <div className="flex items-center gap-2 border-b border-[#2c2c2b] pb-0.5">
               {["clients", canSeeAllTeam && "team"].filter(Boolean).map((s) => (
                 <button
                   key={s}
                   onClick={() => setActiveSection(s as any)}
-                  className={`text-xs font-bold uppercase tracking-wider py-1.5 px-3 rounded-md transition ${
+                  className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all ${
                     activeSection === s
-                      ? "bg-[#2c2c2b] text-white"
-                      : "text-[#9b9a97] hover:bg-[#202020] hover:text-[#e3e2e0]"
+                      ? "border-[#e3e2e0] text-[#e3e2e0]"
+                      : "border-transparent text-[#9b9a97] hover:text-[#e3e2e0]"
                   }`}
                 >
                   {s === "clients" ? "📁 Clientes" : "👥 Equipe"}
                 </button>
               ))}
 
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-2 pb-1">
                 {activeSection === "clients" && (
                   <>
                     <div className="relative">
-                      <Search className="absolute left-2 top-1.5 h-3.5 w-3.5 text-[#9b9a97]" />
+                      <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-[#9b9a97]" />
                       <Input
                         placeholder="Pesquisar..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="h-7 pl-7 text-xs w-36 bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] placeholder:text-[#5f5e5b] focus-visible:ring-0 focus-visible:border-[#3f3f3e]"
+                        className="h-7 pl-8 text-xs w-36 bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] placeholder:text-[#5f5e5b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px]"
                       />
                     </div>
                     {canManageAll && (
-                      <Button size="sm" onClick={() => setCreateClientOpen(true)} className="h-7 text-[10px] font-bold uppercase bg-primary text-white px-3 gap-1">
+                      <Button
+                        onClick={() => setCreateClientOpen(true)}
+                        className="h-7 text-xs bg-primary hover:bg-primary/90 text-white px-3 gap-1 rounded-[4px]"
+                      >
                         <Plus className="h-3 w-3" />Novo Cliente
                       </Button>
                     )}
                   </>
                 )}
                 {activeSection === "team" && canSeeAllTeam && (
-                  <Button size="sm" onClick={() => setCreateTeamOpen(true)} className="h-7 text-[10px] font-bold uppercase bg-primary text-white px-3 gap-1">
+                  <Button
+                    onClick={() => setCreateTeamOpen(true)}
+                    className="h-7 text-xs bg-primary hover:bg-primary/90 text-white px-3 gap-1 rounded-[4px]"
+                  >
                     <UserPlus className="h-3 w-3" />Nova Ficha
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* ── CLIENTS ── */}
+            {/* ── CLIENTS GALLERY VIEW ── */}
             {activeSection === "clients" && (
               <>
                 {clientsLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
                     <span className="text-xs text-[#9b9a97]">Carregando clientes...</span>
                   </div>
                 ) : (
@@ -520,47 +495,42 @@ export default function NotionDashboard() {
                         <div
                           key={client.id}
                           onClick={() => navigate(`/notion/${client.id}`)}
-                          className="bg-[#202020] border border-[#2c2c2b] rounded-xl overflow-hidden hover:border-[#3f3f3e] transition-all duration-200 cursor-pointer shadow-md group"
+                          className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden hover:bg-[#252525] transition-colors duration-150 cursor-pointer flex flex-col group select-none shadow-sm h-fit"
                         >
-                          <div className="h-9 w-full bg-gradient-to-r from-emerald-500/10 to-slate-800/20 group-hover:from-emerald-500/20 transition-all" />
-                          <div className="p-4 space-y-2">
+                          <div className="h-2 w-full bg-[#262625] border-b border-[#2c2c2b]/30" />
+                          <div className="p-3.5 space-y-2">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="text-sm font-extrabold text-white group-hover:text-primary transition-colors uppercase leading-tight">
+                              <p className="text-[13px] font-semibold text-[#e3e2e0] group-hover:text-primary transition-colors">
                                 {client.name}
                               </p>
-                              <Badge className={`text-[9px] font-bold border rounded-full px-2 py-0 shrink-0 ${healthBg(hVal)}`}>
+                              <span className={`text-[10px] font-mono font-bold shrink-0 ${healthColorText(hVal)}`}>
                                 {hVal}/10
-                              </Badge>
+                              </span>
                             </div>
                             {np.prioridade && (
-                              <Badge className={`text-[8px] font-bold border rounded-full px-2 py-0 ${prioBg(np.prioridade)}`}>
-                                PRIORIDADE {np.prioridade.toUpperCase()}
-                              </Badge>
+                              <span className="text-[9px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-1.5 py-0.5 w-fit uppercase font-semibold">
+                                PRIORIDADE {np.prioridade}
+                              </span>
                             )}
-                            <div className="grid grid-cols-1 gap-1 border-t border-[#2c2c2b]/50 pt-2 font-mono text-[10px] text-[#9b9a97]">
+                            <div className="grid grid-cols-1 gap-1 border-t border-[#2c2c2b]/40 pt-2 text-[11px] text-[#9b9a97] font-sans">
                               {np.whatsapp && (
                                 <div className="flex items-center gap-1.5 truncate">
-                                  <span className="text-[#5f5e5b] shrink-0">📞</span>
+                                  <span className="opacity-60 text-xs">📞</span>
                                   <span className="truncate">{np.whatsapp}</span>
                                 </div>
                               )}
                               {np.vencimento && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[#5f5e5b] shrink-0">📅</span>
-                                  <span className="text-yellow-400 font-bold">{np.vencimento}</span>
+                                  <span className="opacity-60 text-xs">📅</span>
+                                  <span>Vence: <strong className="text-yellow-500">{np.vencimento}</strong></span>
                                 </div>
                               )}
                               {np.mes_trafego && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[#5f5e5b] shrink-0">💰</span>
-                                  <span>{np.mes_trafego}/mês</span>
+                                  <span className="opacity-60 text-xs">💰</span>
+                                  <span>{np.mes_trafego}</span>
                                 </div>
                               )}
-                            </div>
-                            <div className="flex justify-end pt-0.5">
-                              <span className="text-[9px] text-primary font-bold opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
-                                <Eye className="h-3 w-3" /> Abrir Ficha →
-                              </span>
                             </div>
                           </div>
                         </div>
@@ -568,7 +538,7 @@ export default function NotionDashboard() {
                     })}
 
                     {filteredClients.length === 0 && (
-                      <div className="col-span-2 text-center py-12 bg-[#202020] rounded-xl border border-dashed border-[#2c2c2b]">
+                      <div className="col-span-2 text-center py-12 bg-[#202020] rounded-[6px] border border-dashed border-[#2c2c2b]">
                         <p className="text-xs text-[#9b9a97]">Nenhum cliente encontrado.</p>
                       </div>
                     )}
@@ -577,19 +547,19 @@ export default function NotionDashboard() {
               </>
             )}
 
-            {/* ── TEAM ── */}
+            {/* ── TEAM GALLERY VIEW ── */}
             {activeSection === "team" && (
               <>
                 {teamLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
                     <span className="text-xs text-[#9b9a97]">Carregando equipe...</span>
                   </div>
                 ) : visibleTeamMembers.length === 0 && !canSeeAllTeam ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
                     <Lock className="h-8 w-8 text-[#3f3f3e]" />
                     <p className="text-xs text-[#9b9a97] max-w-xs">
-                      Você tem acesso apenas à sua própria ficha. Nenhuma ficha foi encontrada para o seu perfil.
+                      Acesso restrito.
                     </p>
                   </div>
                 ) : (
@@ -600,7 +570,7 @@ export default function NotionDashboard() {
                         member={member}
                         onSelect={() => setSelectedTeamMember(member)}
                         onDelete={async () => {
-                          if (confirm("Remover ficha desta pessoa?")) {
+                          if (confirm("Remover ficha deste membro da equipe?")) {
                             await deleteTeamMember.mutateAsync(member.id);
                             toast.success("Ficha removida.");
                           }
@@ -612,10 +582,10 @@ export default function NotionDashboard() {
                     {canSeeAllTeam && (
                       <button
                         onClick={() => setCreateTeamOpen(true)}
-                        className="bg-[#202020] border border-dashed border-[#2c2c2b] rounded-xl hover:border-primary/40 transition-all duration-200 flex flex-col items-center justify-center gap-2 py-10 text-[#5f5e5b] hover:text-primary group"
+                        className="bg-[#202020] border border-dashed border-[#2c2c2b] rounded-[6px] hover:bg-[#252525] hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2 py-10 text-[#5f5e5b] hover:text-primary group"
                       >
-                        <UserPlus className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-bold uppercase">Nova Ficha</span>
+                        <UserPlus className="h-5 w-5 group-hover:scale-105 transition-transform" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Nova Ficha</span>
                       </button>
                     )}
                   </div>
@@ -624,43 +594,51 @@ export default function NotionDashboard() {
             )}
           </div>
 
-          {/* ── RIGHT: Diary Panel ── */}
-          <div className="space-y-5">
-            {/* Meetings */}
-            <Card className="bg-[#202020] border border-[#2c2c2b] rounded-xl shadow-md overflow-hidden">
-              <CardHeader className="p-4 pb-2 border-b border-[#2c2c2b]">
-                <CardTitle className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+          {/* Right sidebar - clean widget list */}
+          <div className="space-y-6">
+            {/* Meetings Widget */}
+            <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-[#2c2c2b] bg-[#252525] flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#e3e2e0] flex items-center gap-1.5">
                   <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-                  Próximas Reuniões ({activeMeetings.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2.5">
+                  Próximas Reuniões
+                </span>
+                <span className="text-[10px] text-[#9b9a97] font-mono">({activeMeetings.length})</span>
+              </div>
+              <div className="p-4 space-y-2.5">
                 {activeMeetings.length === 0 ? (
                   <p className="text-xs text-[#9b9a97] italic text-center py-4">Sem reuniões pendentes.</p>
                 ) : (
                   activeMeetings.map((e) => (
-                    <div key={e.id} className="p-3 bg-[#262625] border border-[#2c2c2b]/60 rounded-lg text-xs space-y-1.5">
-                      <div className="flex items-start justify-between gap-1">
-                        <span className="font-bold text-[#e3e2e0] leading-snug">{e.title}</span>
-                        <span className="text-[10px] text-primary font-mono font-bold shrink-0">{e.date?.split("T")[0]}</span>
+                    <div key={e.id} className="p-3 bg-[#262625] border border-[#2c2c2b]/60 rounded-[4px] text-xs space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-[#e3e2e0] leading-snug">{e.title}</span>
+                        <span className="text-[10px] text-primary font-mono shrink-0">{e.date?.split("T")[0]}</span>
                       </div>
                       {e.meet_link && (
-                        <a href={e.meet_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded hover:bg-emerald-500/20 transition">
+                        <a
+                          href={e.meet_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded hover:bg-emerald-500/20 transition-colors w-fit"
+                        >
                           <Video className="h-3 w-3" /> Entrar no Meet
                         </a>
                       )}
                     </div>
                   ))
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Metas da Semana */}
-            <div className="bg-[#262625] border border-[#2c2c2b] p-4 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-[#e3e2e0]">
-                ⚡ Metas da Semana
               </div>
-              <div className="space-y-2 border-t border-[#2c2c2b] pt-3">
+            </div>
+
+            {/* Metas da Semana Widget */}
+            <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-[#2c2c2b] bg-[#252525]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#e3e2e0] flex items-center gap-1.5">
+                  ⚡ Metas da Semana
+                </span>
+              </div>
+              <div className="p-4 space-y-2.5">
                 {diary?.meta_semana && diary.meta_semana.length > 0 ? (
                   diary.meta_semana.map((g: any) => (
                     <div
@@ -676,7 +654,7 @@ export default function NotionDashboard() {
                       {g.done ? (
                         <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       ) : (
-                        <Square className="h-4 w-4 text-[#5f5e5b] group-hover:text-[#9b9a97] shrink-0 mt-0.5 transition" />
+                        <Square className="h-4 w-4 text-[#5f5e5b] group-hover:text-[#9b9a97] shrink-0 mt-0.5 transition-colors" />
                       )}
                       <span className={`leading-snug ${g.done ? "line-through text-[#5f5e5b]" : "text-[#e3e2e0]"}`}>
                         {g.text}
@@ -684,17 +662,19 @@ export default function NotionDashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-[#9b9a97] italic py-2">Nenhuma meta para essa semana.</p>
+                  <p className="text-xs text-[#9b9a97] italic text-center py-4">Nenhuma meta para essa semana.</p>
                 )}
               </div>
             </div>
 
-            {/* Pedidos de Clientes */}
-            <div className="bg-[#202020] border border-[#2c2c2b] p-4 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-[#e3e2e0]">
-                📋 Pedidos de Clientes
+            {/* Pedidos de Clientes Widget */}
+            <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-[#2c2c2b] bg-[#252525]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#e3e2e0] flex items-center gap-1.5">
+                  📋 Pedidos de Clientes
+                </span>
               </div>
-              <div className="space-y-2 border-t border-[#2c2c2b] pt-3">
+              <div className="p-4 space-y-2.5">
                 {diary?.pedidos_cliente && diary.pedidos_cliente.length > 0 ? (
                   diary.pedidos_cliente.map((r: any) => (
                     <div
@@ -710,7 +690,7 @@ export default function NotionDashboard() {
                       {r.done ? (
                         <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       ) : (
-                        <Square className="h-4 w-4 text-[#5f5e5b] group-hover:text-[#9b9a97] shrink-0 mt-0.5 transition" />
+                        <Square className="h-4 w-4 text-[#5f5e5b] group-hover:text-[#9b9a97] shrink-0 mt-0.5 transition-colors" />
                       )}
                       <span className={`leading-snug ${r.done ? "line-through text-[#5f5e5b]" : "text-[#e3e2e0]"}`}>
                         {r.text}
@@ -718,7 +698,7 @@ export default function NotionDashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-[#9b9a97] italic py-2">Sem pedidos pendentes.</p>
+                  <p className="text-xs text-[#9b9a97] italic text-center py-4">Sem pedidos pendentes.</p>
                 )}
               </div>
             </div>

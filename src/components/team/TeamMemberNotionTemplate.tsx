@@ -1,17 +1,29 @@
 import { useState } from "react";
 import {
-  Loader2, Plus, Trash2, CheckCircle, Square, Mail,
-  Phone, DollarSign, User, Briefcase, Link2, Video,
-  Calendar, Target, Users, AlertCircle, BookOpen,
+  Loader2,
+  Plus,
+  Trash2,
+  CheckCircle,
+  Square,
+  Mail,
+  Phone,
+  DollarSign,
+  User,
+  Link2,
+  Video,
+  Calendar,
+  Target,
+  Users,
+  AlertCircle,
+  BookOpen,
+  Flag,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useUpsertTeamMember, TeamMember } from "@/hooks/useGestorDiary";
-import { useQueryClient } from "@tanstack/react-query";
 
-// ─── Inline editable field ──────────────────────────────────────────────────
+// ─── Notion Property Row ─────────────────────────────────────────────────────
 function PropField({
   icon,
   label,
@@ -27,13 +39,14 @@ function PropField({
 }) {
   const [local, setLocal] = useState(value || "");
   const isLink = local.startsWith("http");
+
   return (
-    <div className="grid grid-cols-3 py-1.5 items-center hover:bg-accent/10 px-2 rounded-md transition-colors text-xs border-b border-border/10">
-      <div className="flex items-center gap-2 text-muted-foreground select-none">
-        {icon}
-        <span>{label}</span>
+    <div className="flex items-center text-xs py-1 hover:bg-[#202020] px-2 rounded transition-colors group h-7">
+      <div className="w-40 flex items-center gap-2 text-[#9b9a97] select-none shrink-0 font-medium">
+        <span className="opacity-70">{icon}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="col-span-2">
+      <div className="flex-1 min-w-0">
         {canEdit ? (
           <input
             type="text"
@@ -42,15 +55,15 @@ function PropField({
             onBlur={() => local !== value && onSave(local)}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             placeholder="Vazio"
-            className="w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/20 rounded px-1.5 py-0.5 text-foreground hover:bg-accent/30 transition-all placeholder:italic placeholder:opacity-50"
+            className="w-full bg-transparent border-none outline-none focus:ring-0 rounded px-1 text-[#e3e2e0] hover:bg-[#252525] focus:bg-[#252525] transition-all placeholder:italic placeholder:opacity-30"
           />
         ) : isLink ? (
-          <a href={local} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate block px-1.5 py-0.5">
-            {local || <span className="text-muted-foreground/30 italic">Vazio</span>}
+          <a href={local} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate block px-1">
+            {local}
           </a>
         ) : (
-          <div className="px-1.5 py-0.5 text-foreground min-h-[20px] truncate">
-            {local || <span className="text-muted-foreground/30 italic">Vazio</span>}
+          <div className="px-1 text-[#e3e2e0] truncate">
+            {local || <span className="text-[#5f5e5b] italic">Vazio</span>}
           </div>
         )}
       </div>
@@ -80,28 +93,28 @@ function ChecklistSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-        {icon}
-        <span className="text-sm font-bold uppercase tracking-tight">{title}</span>
+      <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
+        <span className="text-primary select-none">{icon}</span>
+        <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">{title}</span>
       </div>
       <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
         {items.length > 0 ? (
           items.map((item) => (
-            <div key={item.id} className="flex items-start gap-2 group">
+            <div key={item.id} className="flex items-start gap-2.5 group">
               <button
                 disabled={!canEdit}
                 onClick={() => onToggle(item.id)}
-                className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed"
+                className="mt-0.5 shrink-0 text-[#9b9a97] hover:text-[#e3e2e0] transition-colors disabled:cursor-not-allowed"
               >
                 {item.done ? (
-                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
                 ) : (
                   <Square className="h-4 w-4" />
                 )}
               </button>
               <span
-                className={`text-sm flex-1 break-words leading-tight ${
-                  item.done ? "line-through text-muted-foreground opacity-60" : "text-foreground"
+                className={`text-xs flex-1 break-words leading-relaxed ${
+                  item.done ? "line-through text-[#5f5e5b] opacity-60" : "text-[#e3e2e0]"
                 }`}
               >
                 {item.text}
@@ -109,7 +122,7 @@ function ChecklistSection({
               {canEdit && (
                 <button
                   onClick={() => onDelete(item.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 shrink-0 text-muted-foreground hover:text-red-400 transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-1 shrink-0 text-[#5f5e5b] hover:text-red-400 transition-all"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -117,13 +130,13 @@ function ChecklistSection({
             </div>
           ))
         ) : (
-          <div className="text-xs text-muted-foreground/60 italic text-center py-4 bg-muted/10 rounded-lg border border-dashed border-border/50">
-            Nenhum item.
-          </div>
+          <p className="text-xs text-[#9b9a97] italic text-center py-4 bg-[#262625] border border-dashed border-[#2c2c2b] rounded-[6px]">
+            Sem itens pendentes.
+          </p>
         )}
       </div>
       {canEdit && (
-        <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+        <div className="flex items-center gap-2 pt-2 border-t border-[#2c2c2b]/30">
           <Input
             placeholder="Novo item..."
             value={newItem}
@@ -134,11 +147,11 @@ function ChecklistSection({
                 setNewItem("");
               }
             }}
-            className="h-7 text-xs bg-muted/30 border-border/40 focus-visible:ring-primary/30"
+            className="h-7 text-xs bg-[#202020] border-[#2c2c2b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px]"
           />
           <Button
             size="sm"
-            className="h-7 px-3 text-xs"
+            className="h-7 px-3 text-xs bg-primary hover:bg-primary/95 text-white rounded-[4px]"
             onClick={() => {
               if (newItem.trim()) {
                 onAdd(newItem.trim());
@@ -175,36 +188,36 @@ function ListSection({
   const [newItem, setNewItem] = useState("");
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-        {icon}
-        <span className="text-sm font-bold uppercase tracking-tight">{title}</span>
+      <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
+        <span className="text-primary select-none">{icon}</span>
+        <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">{title}</span>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-[280px] overflow-y-auto">
+      <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto">
         {items.length > 0 ? (
           items.map((item, i) => (
-            <div key={i} className="flex items-start gap-2 group text-sm">
+            <div key={i} className="flex items-start gap-2 group text-xs">
               <span className="text-primary font-bold mt-0.5 shrink-0">{i + 1}.</span>
-              <span className="flex-1 text-foreground leading-snug">
+              <span className="flex-1 text-[#e3e2e0] leading-relaxed">
                 {renderItem ? renderItem(item) : item}
               </span>
               {canEdit && (
                 <button
                   onClick={() => onDelete(i)}
-                  className="opacity-0 group-hover:opacity-100 shrink-0 text-muted-foreground hover:text-red-400 transition-all"
+                  className="opacity-0 group-hover:opacity-100 shrink-0 text-[#5f5e5b] hover:text-red-400 transition-all p-0.5"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </button>
               )}
             </div>
           ))
         ) : (
-          <div className="text-xs text-muted-foreground/60 italic text-center py-4 bg-muted/10 rounded-lg border border-dashed border-border/50">
-            Nenhum item.
-          </div>
+          <p className="text-xs text-[#9b9a97] italic text-center py-4 bg-[#262625] border border-dashed border-[#2c2c2b] rounded-[6px]">
+            Nenhum item adicionado.
+          </p>
         )}
       </div>
       {canEdit && (
-        <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+        <div className="flex items-center gap-2 pt-2 border-t border-[#2c2c2b]/30">
           <Input
             placeholder="Novo item..."
             value={newItem}
@@ -215,11 +228,18 @@ function ListSection({
                 setNewItem("");
               }
             }}
-            className="h-7 text-xs bg-muted/30 border-border/40 focus-visible:ring-primary/30"
+            className="h-7 text-xs bg-[#202020] border-[#2c2c2b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px]"
           />
-          <Button size="sm" className="h-7 px-3 text-xs" onClick={() => {
-            if (newItem.trim()) { onAdd(newItem.trim()); setNewItem(""); }
-          }}>
+          <Button
+            size="sm"
+            className="h-7 px-3 text-xs bg-primary hover:bg-primary/95 text-white rounded-[4px]"
+            onClick={() => {
+              if (newItem.trim()) {
+                onAdd(newItem.trim());
+                setNewItem("");
+              }
+            }}
+          >
             <Plus className="h-3 w-3" />
           </Button>
         </div>
@@ -241,14 +261,16 @@ function ClientHealthItem({
   const hColor =
     client.health <= 3 ? "text-red-400" : client.health <= 6 ? "text-yellow-400" : "text-emerald-400";
   return (
-    <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md hover:bg-muted/20 group text-xs">
-      <span className="font-medium text-foreground truncate flex-1">{client.name}</span>
-      <Badge className={`text-[9px] font-bold shrink-0 ${hColor}`}>{client.health}/10</Badge>
+    <div className="flex items-center justify-between gap-2.5 py-1.5 px-2 rounded hover:bg-[#252525] group text-xs">
+      <span className="font-medium text-[#e3e2e0] truncate flex-1">{client.name}</span>
+      <span className={`text-[10px] font-mono font-bold shrink-0 ${hColor}`}>{client.health}/10</span>
       {client.status && (
-        <Badge variant="outline" className="text-[9px] shrink-0">{client.status}</Badge>
+        <span className="text-[9px] text-[#9b9a97] border border-[#2c2c2b] rounded px-1 py-0.5 shrink-0 bg-[#262625]">
+          {client.status}
+        </span>
       )}
       {canEdit && (
-        <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all shrink-0">
+        <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 text-[#5f5e5b] hover:text-red-400 transition-all shrink-0 p-0.5">
           <Trash2 className="h-3 w-3" />
         </button>
       )}
@@ -267,14 +289,12 @@ export default function TeamMemberNotionTemplate({
   canEdit,
 }: TeamMemberNotionTemplateProps) {
   const upsert = useUpsertTeamMember();
-  const qc = useQueryClient();
 
   const data = member.notion_data || {};
   const props = data.properties || {};
 
   const makeId = () => Math.random().toString(36).slice(2);
 
-  // Helper to save notion_data changes
   const save = async (patch: Partial<typeof data>) => {
     try {
       await upsert.mutateAsync({
@@ -288,16 +308,12 @@ export default function TeamMemberNotionTemplate({
     }
   };
 
-  // Helper to save a single property
   const saveProp = (key: string, value: string) => {
     save({ properties: { ...props, [key]: value } });
   };
 
-  // Checklist helpers
-  const tarefas: Array<{ id: string; text: string; done: boolean }> =
-    data.tarefas_diarias_checklist || [];
-  const plano: Array<{ id: string; text: string; done: boolean }> =
-    data.plano_estrategico_checklist || [];
+  const tarefas = data.tarefas_diarias_checklist || [];
+  const plano = data.plano_estrategico_checklist || [];
 
   const toggleItem = (
     key: "tarefas_diarias_checklist" | "plano_estrategico_checklist",
@@ -325,40 +341,37 @@ export default function TeamMemberNotionTemplate({
     save({ [key]: list });
   };
 
-  // List helpers (plain string arrays)
   const addToList = (key: string, value: string) => {
     const list = [...(data[key] || []), value];
     save({ [key]: list });
   };
+
   const deleteFromList = (key: string, i: number) => {
     const list = [...(data[key] || [])];
     list.splice(i, 1);
     save({ [key]: list });
   };
 
-  // Client list
   const [newClientName, setNewClientName] = useState("");
   const [newClientHealth, setNewClientHealth] = useState("10");
-  const clientesAtivos: Array<{ name: string; health: number; status?: string }> =
-    data.clientes_ativos || [];
+  const clientesAtivos = data.clientes_ativos || [];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="pb-2 border-b border-border/30 space-y-1">
-        <h2 className="text-2xl font-extrabold uppercase tracking-tight text-foreground">
+      <div className="pb-4 border-b border-[#2c2c2b] space-y-4">
+        {/* Large emoji icon above title */}
+        <div className="text-4xl select-none filter drop-shadow-sm pb-1">👤</div>
+        <h1 className="text-3xl font-bold tracking-tight text-[#e3e2e0] font-sans">
           {member.name}
-        </h2>
-        <Badge
-          variant="outline"
-          className="text-[10px] font-bold uppercase tracking-wider px-2"
-        >
+        </h1>
+        <span className="text-[10px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-2 py-0.5 uppercase tracking-wider font-semibold w-fit block">
           {member.role}
-        </Badge>
+        </span>
       </div>
 
       {/* ── PROPERTIES ── */}
-      <div className="bg-muted/20 rounded-lg border border-border/30 divide-y divide-border/10 overflow-hidden">
+      <div className="max-w-xl space-y-0.5 pt-1">
         <PropField
           icon={<Mail className="h-3.5 w-3.5" />}
           label="Email Contato"
@@ -403,14 +416,15 @@ export default function TeamMemberNotionTemplate({
         />
       </div>
 
-      {/* ── 2-col grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+      <div className="border-b border-[#2c2c2b] pt-2" />
 
+      {/* ── Notion database blocks grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         {/* Tarefas Diárias */}
-        <div className="bg-card border border-border/50 rounded-xl p-4">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4">
           <ChecklistSection
             title="Tarefas Diárias"
-            icon={<Square className="h-4 w-4 text-primary" />}
+            icon={<Square className="h-4 w-4" />}
             items={tarefas}
             onToggle={(id) => toggleItem("tarefas_diarias_checklist", id)}
             onAdd={(text) => addItem("tarefas_diarias_checklist", text)}
@@ -420,10 +434,10 @@ export default function TeamMemberNotionTemplate({
         </div>
 
         {/* Plano Estratégico */}
-        <div className="bg-card border border-border/50 rounded-xl p-4">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4">
           <ChecklistSection
             title="Plano Estratégico - Semanal"
-            icon={<Target className="h-4 w-4 text-primary" />}
+            icon={<Target className="h-4 w-4" />}
             items={plano}
             onToggle={(id) => toggleItem("plano_estrategico_checklist", id)}
             onAdd={(text) => addItem("plano_estrategico_checklist", text)}
@@ -433,14 +447,14 @@ export default function TeamMemberNotionTemplate({
         </div>
 
         {/* Clientes Ativos */}
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 space-y-3 flex flex-col h-full">
+          <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
             <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold uppercase tracking-tight">
+            <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">
               Clientes Ativos ({clientesAtivos.length})
             </span>
           </div>
-          <div className="space-y-1 max-h-[260px] overflow-y-auto">
+          <div className="space-y-1.5 max-h-[260px] overflow-y-auto flex-1">
             {clientesAtivos.length > 0 ? (
               clientesAtivos.map((c, i) => (
                 <ClientHealthItem
@@ -454,28 +468,28 @@ export default function TeamMemberNotionTemplate({
                 />
               ))
             ) : (
-              <div className="text-xs text-muted-foreground/60 italic text-center py-4 bg-muted/10 rounded-lg border border-dashed border-border/50">
+              <p className="text-xs text-[#9b9a97] italic text-center py-4 bg-[#262625] border border-dashed border-[#2c2c2b] rounded-[6px]">
                 Nenhum cliente ativo.
-              </div>
+              </p>
             )}
           </div>
           {canEdit && (
-            <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+            <div className="flex items-center gap-2 pt-2 border-t border-[#2c2c2b]/30">
               <Input
                 placeholder="Nome do cliente"
                 value={newClientName}
                 onChange={(e) => setNewClientName(e.target.value)}
-                className="h-7 text-xs bg-muted/30 border-border/40 flex-1"
+                className="h-7 text-xs bg-[#202020] border-[#2c2c2b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px] flex-1"
               />
               <Input
                 placeholder="Saúde (0-10)"
                 value={newClientHealth}
                 onChange={(e) => setNewClientHealth(e.target.value)}
-                className="h-7 text-xs bg-muted/30 border-border/40 w-24"
+                className="h-7 text-xs bg-[#202020] border-[#2c2c2b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px] w-24"
               />
               <Button
                 size="sm"
-                className="h-7 px-3 text-xs shrink-0"
+                className="h-7 px-3 text-xs bg-primary hover:bg-primary/95 text-white rounded-[4px] shrink-0"
                 onClick={() => {
                   if (!newClientName.trim()) return;
                   const list = [
@@ -498,10 +512,10 @@ export default function TeamMemberNotionTemplate({
         </div>
 
         {/* Reuniões */}
-        <div className="bg-card border border-border/50 rounded-xl p-4">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4">
           <ListSection
             title="Reuniões"
-            icon={<Calendar className="h-4 w-4 text-primary" />}
+            icon={<Calendar className="h-4 w-4" />}
             items={data.reunioes || []}
             onAdd={(v) => addToList("reunioes", v)}
             onDelete={(i) => deleteFromList("reunioes", i)}
@@ -510,10 +524,10 @@ export default function TeamMemberNotionTemplate({
         </div>
 
         {/* Links Úteis */}
-        <div className="bg-card border border-border/50 rounded-xl p-4">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4">
           <ListSection
             title="Links Úteis"
-            icon={<Link2 className="h-4 w-4 text-primary" />}
+            icon={<Link2 className="h-4 w-4" />}
             items={data.links || []}
             onAdd={(v) => addToList("links", v)}
             onDelete={(i) => deleteFromList("links", i)}
@@ -531,56 +545,53 @@ export default function TeamMemberNotionTemplate({
         </div>
 
         {/* Gravação / Anotações de Call */}
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-            <Video className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold uppercase tracking-tight">Gravação da Call</span>
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 space-y-3">
+          <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
+            <Video className="h-4 w-4 text-[#e3e2e0]" />
+            <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">Gravação da Call</span>
           </div>
           {canEdit ? (
             <textarea
-              className="w-full bg-muted/30 border border-border/40 rounded-md text-xs text-foreground p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30 min-h-[80px]"
-              value={data.gravacao || ""}
-              onChange={(e) => {/* debounce handled on blur */}}
-              onBlur={(e) => save({ gravacao: e.target.value })}
+              className="w-full bg-[#202020] border border-[#2c2c2b] rounded-[6px] text-xs text-[#e3e2e0] p-2 resize-none focus:outline-none focus:ring-0 focus:border-[#3f3f3e] min-h-[80px]"
               defaultValue={data.gravacao || ""}
+              onBlur={(e) => save({ gravacao: e.target.value })}
               placeholder="Link ou anotações da gravação..."
             />
           ) : (
-            <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+            <p className="text-xs text-[#9b9a97] whitespace-pre-wrap leading-relaxed">
               {data.gravacao || <span className="italic opacity-50">Vazio</span>}
             </p>
           )}
         </div>
 
         {/* Inteligência de Tráfego */}
-        <div className="bg-card border border-border/50 rounded-xl p-4">
+        <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4">
           <ListSection
             title="Inteligência de Tráfego"
-            icon={<BookOpen className="h-4 w-4 text-primary" />}
+            icon={<BookOpen className="h-4 w-4" />}
             items={data.inteligencia_trafego || []}
             onAdd={(v) => addToList("inteligencia_trafego", v)}
             onDelete={(i) => deleteFromList("inteligencia_trafego", i)}
             canEdit={canEdit}
           />
         </div>
-
       </div>
 
       {/* ── Conteúdo Principal / Observações ── */}
-      <div className="bg-card border border-border/50 rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-          <AlertCircle className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold uppercase tracking-tight">Observações Gerais</span>
+      <div className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 space-y-3">
+        <div className="flex items-center gap-2 border-b border-[#2c2c2b]/30 pb-2">
+          <AlertCircle className="h-4 w-4 text-[#e3e2e0]" />
+          <span className="text-[12px] font-semibold text-[#e3e2e0] tracking-wide">Observações Gerais</span>
         </div>
         {canEdit ? (
           <textarea
-            className="w-full bg-muted/30 border border-border/40 rounded-md text-xs text-foreground p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30 min-h-[120px]"
-            onBlur={(e) => save({ conteudo_principal: e.target.value })}
+            className="w-full bg-[#202020] border border-[#2c2c2b] rounded-[6px] text-xs text-[#e3e2e0] p-2 resize-none focus:outline-none focus:ring-0 focus:border-[#3f3f3e] min-h-[120px]"
             defaultValue={data.conteudo_principal || ""}
+            onBlur={(e) => save({ conteudo_principal: e.target.value })}
             placeholder="Observações, anotações gerais, contexto..."
           />
         ) : (
-          <pre className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed font-sans">
+          <pre className="text-xs text-[#9b9a97] whitespace-pre-wrap leading-relaxed font-sans">
             {data.conteudo_principal || <span className="italic opacity-50">Vazio</span>}
           </pre>
         )}
@@ -588,18 +599,20 @@ export default function TeamMemberNotionTemplate({
 
       {/* ── Subpáginas ── */}
       {(data.subpaginas || []).length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-4 pt-2">
+          <h2 className="text-sm font-semibold tracking-wider text-[#9b9a97] uppercase select-none">
             📁 Subpáginas
-          </p>
-          {(data.subpaginas || []).map((sp: any, i: number) => (
-            <div key={i} className="bg-card border border-border/50 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-black uppercase tracking-wider text-primary">{sp.titulo}</p>
-              <pre className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed font-sans">
-                {sp.conteudo}
-              </pre>
-            </div>
-          ))}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(data.subpaginas || []).map((sp: any, i: number) => (
+              <div key={i} className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-4 space-y-2">
+                <p className="text-xs font-semibold text-[#e3e2e0]">{sp.titulo}</p>
+                <pre className="text-xs text-[#9b9a97] whitespace-pre-wrap leading-relaxed font-sans">
+                  {sp.conteudo}
+                </pre>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
