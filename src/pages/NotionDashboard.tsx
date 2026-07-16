@@ -253,10 +253,8 @@ export default function NotionDashboard() {
 
   // Role checks
   const { isAdmin, isCeo, isDiretor, isGestor } = useStaffMemberRole(user?.id);
-  const canManageAll =
-    isAdmin || isCeo || isDiretor ||
-    sysRole?.isAdmin || sysRole?.isCeo;
-  const canSeeAllTeam = canManageAll || isDiretor;
+  const canManageAll = isAdmin || isCeo || isDiretor;
+  const canSeeAllTeam = canManageAll;
 
   // Clients
   const { data: globalClients = [], isLoading: clientsLoading } = useClients({ allClientsForStaff: true });
