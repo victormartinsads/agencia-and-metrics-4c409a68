@@ -151,6 +151,163 @@ export default function ProcessosPage() {
     { key: "CONTROLE", label: "CONTROLE", items: controleItems, bg: "bg-blue-500/10 border-blue-500/30 text-blue-400" },
   ];
 
+  if (selectedProcess) {
+    return (
+      <AppShell currentPage="notion" header={null} noContainer>
+        <div className="min-h-screen bg-[#191919] text-[#e3e2e0] font-sans pb-24 selection:bg-[#2c2c2b]">
+          
+          {/* Notion-style Top Navigation Bar */}
+          <div className="sticky top-0 bg-[#191919]/95 backdrop-blur-sm z-30 border-b border-[#2c2c2b]/30 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setSelectedProcess(null)}
+                className="flex items-center gap-1.5 text-xs text-[#9b9a97] hover:text-[#e3e2e0] transition-colors p-1 rounded hover:bg-[#2c2c2b] font-medium"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Processos</span>
+              </button>
+              <span className="text-[#5f5e5b] text-xs">/</span>
+              <span className="text-xs text-[#e3e2e0] font-semibold flex items-center gap-1.5">
+                {selectedProcess.icon_type === "logo" && "🟢"}
+                {selectedProcess.icon_type === "cyclone" && "🌀"}
+                {selectedProcess.icon_type === "stop" && "🛑"}
+                {selectedProcess.icon_type === "cross" && "❌"}
+                <span>{selectedProcess.name}</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (confirm(`Excluir permanentemente o processo "${selectedProcess.name}"?`)) {
+                    await deleteProcess.mutateAsync(selectedProcess.id);
+                    toast.success("Processo excluído");
+                    setSelectedProcess(null);
+                  }
+                }}
+                className="h-7 text-xs bg-red-950/20 hover:bg-red-900 border border-red-900 text-red-400 hover:text-white px-2.5 rounded-[4px] font-bold"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir Página
+              </Button>
+              <Button
+                onClick={() => setSelectedProcess(null)}
+                className="h-7 text-xs bg-[#7a9d96] hover:bg-[#7a9d96]/90 text-[#191919] font-bold px-3.5 rounded-[4px]"
+              >
+                Voltar
+              </Button>
+            </div>
+          </div>
+
+          {/* Cover Banner (Dark industrial style) */}
+          <div className="h-44 md:h-52 w-full relative overflow-hidden border-b border-[#2c2c2b]">
+            <img
+              src="https://images.unsplash.com/photo-1560563609-3b4b1f5c2122?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=6000"
+              alt="Cover"
+              className="w-full h-full object-cover opacity-60"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#191919] via-[#191919]/20 to-transparent" />
+            <div className="absolute -bottom-6 left-16 md:left-24 h-16 w-16 bg-[#7a9d96]/10 border-2 border-[#7a9d96] flex items-center justify-center rounded-full shadow-lg">
+              <GitMerge className="h-8 w-8 text-[#7a9d96]" />
+            </div>
+          </div>
+
+          {/* Notion Page Container */}
+          <div className="max-w-4xl mx-auto px-6 md:px-16 pt-12 space-y-6">
+            
+            {/* Title Input */}
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={selectedProcess.name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedProcess(p => p ? { ...p, name: val } : null);
+                }}
+                onBlur={() => {
+                  if (selectedProcess.name.trim()) {
+                    upsertProcess.mutate(selectedProcess);
+                  }
+                }}
+                className="w-full bg-transparent border-none text-4xl font-bold text-white focus:ring-0 outline-none p-0 focus:border-none focus:outline-none tracking-tight"
+                placeholder="Sem título"
+              />
+            </div>
+
+            {/* Properties Panel (Notion-style Metadata Grid) */}
+            <div className="space-y-2 pt-2 pb-4 border-b border-[#2c2c2b]/30 max-w-xl">
+              
+              {/* Column/Group Property */}
+              <div className="flex items-center text-xs">
+                <div className="w-36 text-[#9b9a97] font-medium flex items-center gap-1.5 select-none">
+                  <span>📂</span> Coluna / Grupo
+                </div>
+                <Select
+                  value={selectedProcess.column_name}
+                  onValueChange={(val: any) => {
+                    const updated = { ...selectedProcess, column_name: val };
+                    setSelectedProcess(updated);
+                    upsertProcess.mutate(updated);
+                    toast.success(`Movido para ${val.replace("_", " ")}`);
+                  }}
+                >
+                  <SelectTrigger className="h-7 bg-transparent border-none text-[#e3e2e0] hover:bg-[#252525] focus:ring-0 rounded px-1.5 font-medium py-0 w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
+                    <SelectItem value="PRE_VENDA">PRÉ VENDA</SelectItem>
+                    <SelectItem value="CLIENTE_ATIVO">CLIENTE ATIVO</SelectItem>
+                    <SelectItem value="CONTROLE">CONTROLE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Icon / Status Property */}
+              <div className="flex items-center text-xs">
+                <div className="w-36 text-[#9b9a97] font-medium flex items-center gap-1.5 select-none">
+                  <span>✨</span> Ícone / Status
+                </div>
+                <Select
+                  value={selectedProcess.icon_type}
+                  onValueChange={(val: any) => {
+                    const updated = { ...selectedProcess, icon_type: val };
+                    setSelectedProcess(updated);
+                    upsertProcess.mutate(updated);
+                  }}
+                >
+                  <SelectTrigger className="h-7 bg-transparent border-none text-[#e3e2e0] hover:bg-[#252525] focus:ring-0 rounded px-1.5 font-medium py-0 w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
+                    <SelectItem value="logo">AND Logo 🟢</SelectItem>
+                    <SelectItem value="cyclone">Cyclone 🌀</SelectItem>
+                    <SelectItem value="stop">Pausado 🛑</SelectItem>
+                    <SelectItem value="cross">Desativado ❌</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+            </div>
+
+            {/* BlockNote Document Editor */}
+            <div className="blocknote-editor-wrapper pt-2">
+              <ProcessEditor
+                key={selectedProcess.id}
+                initialContent={selectedProcess.content}
+                onSave={(content) => {
+                  const updated = { ...selectedProcess, content };
+                  setSelectedProcess(p => p ? { ...p, content } : null);
+                  upsertProcess.mutate(updated);
+                }}
+              />
+            </div>
+
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell currentPage="notion" header={null} noContainer>
       <div className="min-h-screen bg-[#191919] text-[#e3e2e0] font-sans pb-16 selection:bg-[#2c2c2b]">
@@ -293,149 +450,6 @@ export default function ProcessosPage() {
         </div>
 
       </div>
-
-      {/* dialog for selected subpage (notion page detail view) */}
-      <Dialog
-        open={selectedProcess !== null}
-        onOpenChange={(open) => !open && setSelectedProcess(null)}
-      >
-        {selectedProcess && (
-          <DialogContent className="max-w-4xl bg-[#191919] border-[#2c2c2b] text-[#e3e2e0] rounded-lg h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-            
-            {/* Custom Cover Banner inside Dialog */}
-            <div className="h-28 w-full relative overflow-hidden bg-[#202020] shrink-0 border-b border-[#2c2c2b]/40">
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent" />
-              <div className="absolute -bottom-4 left-8 text-3xl select-none">
-                {selectedProcess.icon_type === "logo" && "🟢"}
-                {selectedProcess.icon_type === "cyclone" && "🌀"}
-                {selectedProcess.icon_type === "stop" && "🛑"}
-                {selectedProcess.icon_type === "cross" && "❌"}
-              </div>
-            </div>
-
-            {/* Dialog Scrollable Body */}
-            <div className="flex-1 overflow-y-auto px-8 pt-6 pb-8 space-y-6">
-              
-              {/* Process Name Input */}
-              <div className="space-y-1">
-                <input
-                  type="text"
-                  value={selectedProcess.name}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedProcess(p => p ? { ...p, name: val } : null);
-                  }}
-                  onBlur={() => {
-                    if (selectedProcess.name.trim()) {
-                      upsertProcess.mutate(selectedProcess);
-                    }
-                  }}
-                  className="w-full bg-transparent border-none text-2xl font-bold text-white focus:ring-0 outline-none p-0 focus:border-none focus:outline-none"
-                  placeholder="Nome do Processo"
-                />
-              </div>
-
-              {/* Property Grid exactly like Notion */}
-              <div className="space-y-1.5 pt-2 max-w-md border-t border-[#2c2c2b]/20">
-                
-                {/* Column Selection */}
-                <div className="flex items-center text-xs h-7">
-                  <div className="w-32 text-[#9b9a97] font-medium flex items-center gap-1.5">
-                    <span>📂</span> Coluna
-                  </div>
-                  <Select
-                    value={selectedProcess.column_name}
-                    onValueChange={(val: any) => {
-                      const updated = { ...selectedProcess, column_name: val };
-                      setSelectedProcess(updated);
-                      upsertProcess.mutate(updated);
-                      toast.success(`Movido para ${val.replace("_", " ")}`);
-                    }}
-                  >
-                    <SelectTrigger className="h-6 bg-transparent border-none text-[#e3e2e0] hover:bg-[#252525] focus:ring-0 rounded px-1.5 font-medium py-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
-                      <SelectItem value="PRE_VENDA">PRÉ VENDA</SelectItem>
-                      <SelectItem value="CLIENTE_ATIVO">CLIENTE ATIVO</SelectItem>
-                      <SelectItem value="CONTROLE">CONTROLE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Icon selection */}
-                <div className="flex items-center text-xs h-7">
-                  <div className="w-32 text-[#9b9a97] font-medium flex items-center gap-1.5">
-                    <span>✨</span> Ícone
-                  </div>
-                  <Select
-                    value={selectedProcess.icon_type}
-                    onValueChange={(val: any) => {
-                      const updated = { ...selectedProcess, icon_type: val };
-                      setSelectedProcess(updated);
-                      upsertProcess.mutate(updated);
-                    }}
-                  >
-                    <SelectTrigger className="h-6 bg-transparent border-none text-[#e3e2e0] hover:bg-[#252525] focus:ring-0 rounded px-1.5 font-medium py-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
-                      <SelectItem value="logo">AND Logo 🟢</SelectItem>
-                      <SelectItem value="cyclone">Cyclone 🌀</SelectItem>
-                      <SelectItem value="stop">Pausado 🛑</SelectItem>
-                      <SelectItem value="cross">Desativado ❌</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-              </div>
-
-              {/* Page Contents Divider */}
-              <div className="border-b border-[#2c2c2b]/30 my-4" />
-
-              {/* BlockNote Document Editor */}
-              <div className="blocknote-editor-wrapper">
-                <ProcessEditor
-                  key={selectedProcess.id}
-                  initialContent={selectedProcess.content}
-                  onSave={(content) => {
-                    const updated = { ...selectedProcess, content };
-                    setSelectedProcess(p => p ? { ...p, content } : null);
-                    // Debounced or direct save
-                    upsertProcess.mutate(updated);
-                  }}
-                />
-              </div>
-
-            </div>
-
-            {/* Dialog Footer Actions */}
-            <div className="bg-[#202020] px-6 py-3 border-t border-[#2c2c2b]/60 flex items-center justify-between shrink-0">
-              <Button
-                variant="destructive"
-                onClick={async () => {
-                  if (confirm(`Excluir permanentemente o processo "${selectedProcess.name}"?`)) {
-                    await deleteProcess.mutateAsync(selectedProcess.id);
-                    toast.success("Processo excluído");
-                    setSelectedProcess(null);
-                  }
-                }}
-                className="h-7 text-xs bg-red-950/20 hover:bg-red-900 border border-red-900 text-red-400 hover:text-white px-3"
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir Página
-              </Button>
-              
-              <Button
-                onClick={() => setSelectedProcess(null)}
-                className="h-7 text-xs bg-[#7a9d96] text-[#191919] font-bold px-4"
-              >
-                Fechar
-              </Button>
-            </div>
-
-          </DialogContent>
-        )}
-      </Dialog>
 
       {/* Dialog for creating a new process card */}
       <Dialog open={newProcessOpen} onOpenChange={setNewProcessOpen}>
