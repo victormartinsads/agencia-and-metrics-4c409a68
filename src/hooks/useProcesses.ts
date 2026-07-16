@@ -46,6 +46,27 @@ const setLocal = (key: string, value: any) => {
   }
 };
 
+const shouldReplaceWithDefault = (currentContent: any, defaultContent: any) => {
+  if (!defaultContent || !Array.isArray(defaultContent) || defaultContent.length <= 1) return false;
+  
+  const currentStr = JSON.stringify(currentContent || "");
+  const defaultStr = JSON.stringify(defaultContent);
+  
+  // If current is empty or a placeholder
+  const isPlaceholder = 
+    !currentContent || 
+    !Array.isArray(currentContent) || 
+    currentContent.length === 0 || 
+    currentStr.includes("Espaço destinado") || 
+    currentStr.includes("Escreva aqui") || 
+    currentStr.includes("descrição detalhada deste processo") ||
+    currentStr.length < 200;
+    
+  const isDefaultRicher = defaultStr.length > currentStr.length && defaultStr.length > 200;
+  
+  return isPlaceholder && isDefaultRicher;
+};
+
 export function useProcesses() {
   return useQuery({
     queryKey: ["agency-processes"],
@@ -68,27 +89,10 @@ export function useProcesses() {
         const toUpdate: ProcessCard[] = [];
         const merged = data.map((item: any) => {
           const defaultItem = DEFAULT_PROCESSES.find(d => d.id === item.id || d.name === item.name);
-          if (defaultItem) {
-            const dbContentStr = JSON.stringify(item.content || "");
-            const defContentStr = JSON.stringify(defaultItem.content || "");
-            
-            // Check if db content is a placeholder (short description or empty space)
-            const isPlaceholder = 
-              dbContentStr.includes("Espaço destinado") || 
-              dbContentStr.includes("Escreva aqui a descrição") || 
-              !item.content || 
-              item.content.length <= 2;
-              
-            const hasRicherDefault = 
-              defaultItem.content && 
-              defaultItem.content.length > 2 && 
-              defContentStr.length > dbContentStr.length;
-
-            if (isPlaceholder && hasRicherDefault) {
-              const updatedItem = { ...item, content: defaultItem.content };
-              toUpdate.push(updatedItem);
-              return updatedItem;
-            }
+          if (defaultItem && shouldReplaceWithDefault(item.content, defaultItem.content)) {
+            const updatedItem = { ...item, content: defaultItem.content };
+            toUpdate.push(updatedItem);
+            return updatedItem;
           }
           return item;
         });
@@ -105,7 +109,20 @@ export function useProcesses() {
         return merged as ProcessCard[];
       } catch (err: any) {
         if (isMissingTableError(err)) {
-          return getLocal<ProcessCard[]>("agency-processes-local", DEFAULT_PROCESSES);
+          const localData = getLocal<ProcessCard[]>("agency-processes-local", DEFAULT_PROCESSES);
+          let updated = false;
+          const merged = localData.map((item: any) => {
+            const defaultItem = DEFAULT_PROCESSES.find(d => d.id === item.id || d.name === item.name);
+            if (defaultItem && shouldReplaceWithDefault(item.content, defaultItem.content)) {
+              updated = true;
+              return { ...item, content: defaultItem.content };
+            }
+            return item;
+          });
+          if (updated) {
+            setLocal("agency-processes-local", merged);
+          }
+          return merged;
         }
         throw err;
       }
