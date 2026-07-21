@@ -46,12 +46,22 @@ const setLocal = (key: string, value: any) => {
   }
 };
 
+// Detects if content still has broken Notion relative .md links
+const hasBrokenNotionLinks = (content: any): boolean => {
+  if (!content) return false;
+  const str = JSON.stringify(content);
+  return /\[[^\]]+\]\([^)]*[a-f0-9]{32}\.(?:md|csv)\)/.test(str);
+};
+
 const shouldReplaceWithDefault = (currentContent: any, defaultContent: any) => {
   if (!defaultContent || !Array.isArray(defaultContent) || defaultContent.length <= 1) return false;
   
   const currentStr = JSON.stringify(currentContent || "");
   const defaultStr = JSON.stringify(defaultContent);
   
+  // Force replace if current content has broken Notion .md links
+  if (hasBrokenNotionLinks(currentContent)) return true;
+
   // If current is empty or a placeholder
   const isPlaceholder = 
     !currentContent || 
