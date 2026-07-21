@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
 import { useQuery } from "@tanstack/react-query";
@@ -41,6 +41,9 @@ import * as locales from "@blocknote/core/locales";
 
 // Custom BlockNote Editor Component for Process Subpage
 function ProcessEditor({ initialContent, onSave }: { initialContent: any; onSave: (content: any) => void }) {
+  const navigate = useNavigate();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   const options = {
     initialContent: (initialContent && initialContent.length > 0)
       ? initialContent
@@ -59,8 +62,28 @@ function ProcessEditor({ initialContent, onSave }: { initialContent: any; onSave
     onSave(editor.document);
   };
 
+  // Intercept clicks on internal /processos/pagina/ links
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') || '';
+      if (href.startsWith('/processos/pagina/')) {
+        e.preventDefault();
+        navigate(href);
+      }
+    };
+
+    wrapper.addEventListener('click', handleClick, true);
+    return () => wrapper.removeEventListener('click', handleClick, true);
+  }, [navigate]);
+
   return (
-    <div className="blocknote-editor-wrapper text-sm">
+    <div className="blocknote-editor-wrapper text-sm" ref={wrapperRef}>
       <BlockNoteView
         editor={editor}
         editable={true}
