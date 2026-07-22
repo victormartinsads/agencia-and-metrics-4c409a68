@@ -23,6 +23,14 @@ import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PRIMARY_METRIC_OPTIONS } from "@/hooks/useFunnelPrimaryMetric";
 
 interface Props {
   clientName: string;
@@ -398,6 +406,9 @@ function GroupSlide({
     });
   };
 
+  // State do seletor de métrica ativa no slide da apresentação
+  const [selectedMetric, setSelectedMetric] = useState<string>("auto");
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -410,6 +421,32 @@ function GroupSlide({
               {group.campaigns.length} campanhas agrupadas
             </p>
           )}
+
+          {/* Seletor de métricas para apresentação ao cliente */}
+          <Select
+            value={selectedMetric}
+            onValueChange={(v) => setSelectedMetric(v)}
+          >
+            <SelectTrigger className="h-7 text-xs font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-3 py-1 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[160px]">
+              <SelectValue placeholder="Métrica" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border max-h-[350px] overflow-y-auto z-[300]">
+              <SelectItem value="auto" className="text-xs">Métrica: Padrão ({resultLabel})</SelectItem>
+              <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
+              <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+              <SelectItem value="clicks" className="text-xs">Métrica: Cliques</SelectItem>
+              <SelectItem value="ctr" className="text-xs">Métrica: CTR (%)</SelectItem>
+              <SelectItem value="cpc" className="text-xs">Métrica: CPC</SelectItem>
+              <SelectItem value="cpa" className="text-xs">Métrica: CPA</SelectItem>
+              <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
+              {PRIMARY_METRIC_OPTIONS.filter(opt => opt.key !== "conversions").map(opt => (
+                <SelectItem key={opt.key} value={opt.key} className="text-xs">
+                  Métrica: {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {clientId && (
             <MetricsCustomizer clientId={clientId} datePreset={datePreset} groupKey={group.key} />
           )}
@@ -493,6 +530,7 @@ function GroupSlide({
               clientId={clientId || ""}
               currencySymbol={currencySymbol}
               readOnly={true}
+              selectedMetricKey={selectedMetric === "auto" ? undefined : (selectedMetric as any)}
               showAll={false}
             />
           </div>
