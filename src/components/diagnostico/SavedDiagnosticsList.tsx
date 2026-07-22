@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil, Folder, FolderPlus, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSavedDiagnostics, useDeleteSavedDiagnostic, SavedDiagnostic } from "@/hooks/useSavedDiagnostics";
 import { groupCampaignsByFunnel, extractFunnelCode } from "@/lib/funnelGrouping";
 import { DiagnosticoPresentMode } from "./DiagnosticoPresentMode";
@@ -26,11 +28,80 @@ interface Props {
 }
 
 export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currencySymbol = "R$" }: Props) {
-  const { data: list, isLoading } = useSavedDiagnostics(clientId);
+  const { data: list = [], isLoading } = useSavedDiagnostics(clientId);
   const del = useDeleteSavedDiagnostic();
   const [viewing, setViewing] = useState<SavedDiagnostic | null>(null);
   const [sharing, setSharing] = useState<SavedDiagnostic | null>(null);
   const [editing, setEditing] = useState<SavedDiagnostic | null>(null);
+
+  // Pastas customizadas
+  const foldersStorageKey = `diagnostic_folders_${clientId}`;
+  const itemFoldersStorageKey = `diagnostic_item_folders_${clientId}`;
+
+  const [folders, setFolders] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(foldersStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return ["Apresentação do Diagnóstico", "Reuniões"];
+  });
+
+  const [itemFolders, setItemFolders] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(itemFoldersStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+  });
+
+  const [activeFolderFilter, setActiveFolderFilter] = useState<string>("all");
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const handleCreateFolder = () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    if (folders.includes(name)) {
+      toast.error("Já existe uma pasta com este nome.");
+      return;
+    }
+    const next = [...folders, name];
+    setFolders(next);
+    try { localStorage.setItem(foldersStorageKey, JSON.stringify(next)); } catch {}
+    setNewFolderName("");
+    setIsCreateFolderOpen(false);
+    setActiveFolderFilter(name);
+    toast.success(`Pasta "${name}" criada com sucesso!`);
+  };
+
+  const handleDeleteFolder = (folderName: string) => {
+    if (!confirm(`Excluir a pasta "${folderName}"? Os diagnósticos nela continuarão salvos, mas ficarão sem pasta.`)) return;
+    const nextFolders = folders.filter(f => f !== folderName);
+    setFolders(nextFolders);
+    try { localStorage.setItem(foldersStorageKey, JSON.stringify(nextFolders)); } catch {}
+
+    const nextItems = { ...itemFolders };
+    Object.keys(nextItems).forEach(id => {
+      if (nextItems[id] === folderName) delete nextItems[id];
+    });
+    setItemFolders(nextItems);
+    try { localStorage.setItem(itemFoldersStorageKey, JSON.stringify(nextItems)); } catch {}
+
+    if (activeFolderFilter === folderName) setActiveFolderFilter("all");
+    toast.success(`Pasta "${folderName}" excluída.`);
+  };
+
+  const handleSetItemFolder = (itemId: string, folderName: string) => {
+    const next = { ...itemFolders };
+    if (!folderName || folderName === "none") {
+      delete next[itemId];
+    } else {
+      next[itemId] = folderName;
+    }
+    setItemFolders(next);
+    try { localStorage.setItem(itemFoldersStorageKey, JSON.stringify(next)); } catch {}
+    toast.success("Pasta atualizada!");
+  };
 
   if (isLoading) {
     return (
@@ -58,55 +129,192 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     }
   };
 
+  const filteredList = list.filter(item => {
+    if (activeFolderFilter === "all") return true;
+    if (activeFolderFilter === "none") return !itemFolders[item.id];
+    return itemFolders[item.id] === activeFolderFilter;
+  });
+
   return (
     <>
-      <div className="space-y-3">
-        {list.map(item => {
-          const created = new Date(item.created_at).toLocaleDateString("pt-BR", {
-            day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-          });
-          return (
-            <div key={item.id} className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-card-foreground truncate">{item.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {item.snapshot?.periodRange || item.date_preset} • Salvo em {created}
+      <div className="space-y-4">
+        {/* Barra de Controle de Pastas */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-muted-foreground mr-1 flex items-center gap-1">
+              <Folder className="h-3.5 w-3.5 text-primary" /> Pastas:
+            </span>
+            <button
+              onClick={() => setActiveFolderFilter("all")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                activeFolderFilter === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Todas ({list.length})
+            </button>
+            <button
+              onClick={() => setActiveFolderFilter("none")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                activeFolderFilter === "none"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Sem pasta ({list.filter(i => !itemFolders[i.id]).length})
+            </button>
+
+            {folders.map(folder => {
+              const count = list.filter(i => itemFolders[i.id] === folder).length;
+              const isActive = activeFolderFilter === folder;
+              return (
+                <div key={folder} className="inline-flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveFolderFilter(folder)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card border border-border text-card-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Folder className="h-3 w-3" />
+                    {folder}
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      {count}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFolder(folder)}
+                    className="text-muted-foreground hover:text-destructive p-0.5"
+                    title="Excluir pasta"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
-                  <Eye className="h-4 w-4" /> Visualizar
-                </Button>
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
-                  <Pencil className="h-4 w-4" /> Editar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => {
-                    const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
-                    const url = `${window.location.origin}${path}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success("Link público copiado!");
-                  }}
-                >
-                  <Link2 className="h-4 w-4" /> Copiar link
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
-                  onClick={() => setSharing(item)}
-                >
-                  <MessageCircle className="h-4 w-4" /> WhatsApp
-                </Button>
-                <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              );
+            })}
+          </div>
+
+          <Button size="sm" variant="outline" onClick={() => setIsCreateFolderOpen(true)} className="gap-1.5 h-8 text-xs">
+            <FolderPlus className="h-3.5 w-3.5 text-primary" /> Nova Pasta
+          </Button>
+        </div>
+
+        {/* Form para Criar Pasta */}
+        {isCreateFolderOpen && (
+          <div className="rounded-xl border border-primary/40 bg-card p-4 space-y-3 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-card-foreground flex items-center gap-2">
+                <FolderPlus className="h-4 w-4 text-primary" /> Criar nova pasta
+              </h4>
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setIsCreateFolderOpen(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          );
-        })}
+            <p className="text-xs text-muted-foreground">
+              Digite o nome para organizar seus diagnósticos e reuniões.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Nome da pasta (ex: Reuniões de Alinhamento)"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreateFolder();
+                  if (e.key === "Escape") setIsCreateFolderOpen(false);
+                }}
+                className="h-8 text-xs flex-1"
+                autoFocus
+              />
+              <Button size="sm" onClick={handleCreateFolder} className="h-8 text-xs gap-1">
+                <Check className="h-3.5 w-3.5" /> Salvar Pasta
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Diagnósticos */}
+        {filteredList.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm italic">
+            Nenhum diagnóstico nesta pasta.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredList.map(item => {
+              const created = new Date(item.created_at).toLocaleDateString("pt-BR", {
+                day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+              });
+              const currentFolder = itemFolders[item.id];
+
+              return (
+                <div key={item.id} className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-card-foreground truncate">{item.title}</span>
+                      {currentFolder && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          <Folder className="h-3 w-3" /> {currentFolder}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {item.snapshot?.periodRange || item.date_preset} • Salvo em {created}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={currentFolder || "none"}
+                      onValueChange={(val) => handleSetItemFolder(item.id, val)}
+                    >
+                      <SelectTrigger className="h-8 text-xs border-border bg-background w-[150px]">
+                        <SelectValue placeholder="Mover p/ pasta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">Sem pasta</SelectItem>
+                        {folders.map(f => (
+                          <SelectItem key={f} value={f} className="text-xs">
+                            📁 {f}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
+                      <Eye className="h-4 w-4" /> Visualizar
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
+                      <Pencil className="h-4 w-4" /> Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => {
+                        const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
+                        const url = `${window.location.origin}${path}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link público copiado!");
+                      }}
+                    >
+                      <Link2 className="h-4 w-4" /> Copiar link
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
+                      onClick={() => setSharing(item)}
+                    >
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
+                    </Button>
+                    <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {viewing && (

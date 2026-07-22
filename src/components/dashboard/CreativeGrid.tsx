@@ -98,6 +98,10 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     if (activeMetric === "impressions") return ov.impressions;
     if (activeMetric === "spend") return ov.spend;
     if (activeMetric === "roas") return ov.roas;
+    if (activeMetric === "ctr") return ov.ctr;
+    if (activeMetric === "cpc") return ov.clicks > 0 ? ov.spend / ov.clicks : 0;
+    if (activeMetric === "cpa") return ov.conversions > 0 ? ov.spend / ov.conversions : 0;
+    if (activeMetric === "link_click") return ov.linkClicks || ov.clicks;
     return ov.conversions;
   };
 
@@ -261,10 +265,15 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
               <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
                 <SelectValue placeholder="Métrica" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border">
+              <SelectContent className="bg-popover border border-border max-h-[300px] overflow-y-auto">
                 <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaign.primaryResultLabel || "Conversões"})</SelectItem>
-                <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+                <SelectItem value="conversions" className="text-xs">Métrica: Resultados</SelectItem>
                 <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
+                <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+                <SelectItem value="clicks" className="text-xs">Métrica: Cliques</SelectItem>
+                <SelectItem value="ctr" className="text-xs">Métrica: CTR (%)</SelectItem>
+                <SelectItem value="cpc" className="text-xs">Métrica: CPC</SelectItem>
+                <SelectItem value="cpa" className="text-xs">Métrica: CPA</SelectItem>
                 <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
                 {PRIMARY_METRIC_OPTIONS.map(opt => (
                   <SelectItem key={opt.key} value={opt.key} className="text-xs">

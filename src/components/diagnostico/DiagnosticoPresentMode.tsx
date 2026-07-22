@@ -18,6 +18,7 @@ import {
   useDiagnosticMetricsConfig,
   MetricsConfig,
 } from "@/hooks/useDiagnosticMetricsConfig";
+import { MetricsCustomizer } from "./MetricsCustomizer";
 import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
@@ -130,6 +131,18 @@ export function DiagnosticoPresentMode({
 
   const slide = slides[idx];
 
+  const displayPeriod = useMemo(() => {
+    if (!periodRange) return datePreset;
+    if (!datePreset || datePreset.trim() === periodRange.trim()) return periodRange;
+    return `${datePreset} • ${periodRange}`;
+  }, [periodRange, datePreset]);
+
+  const displayHeaderPeriod = useMemo(() => {
+    if (!periodRange) return datePreset;
+    if (!datePreset || datePreset.trim() === periodRange.trim()) return periodRange;
+    return `${periodRange} (${datePreset})`;
+  }, [periodRange, datePreset]);
+
   return (
     <Portal.Root>
       <div
@@ -139,7 +152,7 @@ export function DiagnosticoPresentMode({
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/40 backdrop-blur">
         <div className="text-xs text-muted-foreground">
-          {clientName} • {periodRange ? `${periodRange} (${datePreset})` : datePreset} • Slide {idx + 1} / {slides.length}
+          {clientName} • {displayHeaderPeriod} • Slide {idx + 1} / {slides.length}
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={enterFullscreen} className="gap-2">
@@ -171,7 +184,7 @@ export function DiagnosticoPresentMode({
                 </p>
                 <h1 className="text-6xl md:text-7xl font-extrabold text-card-foreground mt-4">{clientName}</h1>
                 <p className="text-2xl text-muted-foreground mt-4">
-                  {periodRange ? `${datePreset} • ${periodRange}` : datePreset}
+                  {displayPeriod}
                 </p>
                 <p className="text-base text-muted-foreground mt-12">{groups.length} funil(s) / campanha(s) com investimento no período</p>
               </div>
@@ -387,15 +400,20 @@ function GroupSlide({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-4xl font-bold text-card-foreground flex items-center gap-3">
           {displayTitle}
         </h2>
-        {!group.isFunnel && group.campaigns.length > 1 && (
-          <p className="text-sm font-semibold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-            {group.campaigns.length} campanhas agrupadas
-          </p>
-        )}
+        <div className="flex items-center gap-2">
+          {!group.isFunnel && group.campaigns.length > 1 && (
+            <p className="text-sm font-semibold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+              {group.campaigns.length} campanhas agrupadas
+            </p>
+          )}
+          {clientId && (
+            <MetricsCustomizer clientId={clientId} datePreset={datePreset} groupKey={group.key} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
