@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil, Folder, FolderPlus, X, Check, ChevronDown } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil, Folder, FolderPlus, X, Check, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,6 +37,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
   // Pastas customizadas
   const foldersStorageKey = `diagnostic_folders_${clientId}`;
   const itemFoldersStorageKey = `diagnostic_item_folders_${clientId}`;
+  const trashStorageKey = `diagnostic_trash_${clientId}`;
 
   const [folders, setFolders] = useState<string[]>(() => {
     try {
@@ -52,6 +53,15 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
       if (saved) return JSON.parse(saved);
     } catch {}
     return {};
+  });
+
+  // Lixeira (Recycle Bin) - guarda IDs de itens excluidos temporariamente
+  const [trashedIds, setTrashedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(trashStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
   });
 
   // Estado de controle de abertura de cada sanfona/pasta (fechadas por padrão)
@@ -128,6 +138,55 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     toast.success("Pasta atualizada!");
   };
 
+  // Funções da Lixeira
+  const handleMoveToTrash = (item: SavedDiagnostic) => {
+    const next = [...trashedIds, item.id];
+    setTrashedIds(next);
+    try { localStorage.setItem(trashStorageKey, JSON.stringify(next)); } catch {}
+
+    toast.success(`"${item.title}" movido para a Lixeira!`, {
+      action: {
+        label: "Desfazer",
+        onClick: () => handleRestoreFromTrash(item.id),
+      },
+    });
+  };
+
+  const handleRestoreFromTrash = (itemId: string) => {
+    const next = trashedIds.filter(id => id !== itemId);
+    setTrashedIds(next);
+    try { localStorage.setItem(trashStorageKey, JSON.stringify(next)); } catch {}
+    toast.success("Diagnóstico restaurado com sucesso!");
+  };
+
+  const handlePermanentDelete = async (itemId: string) => {
+    if (!confirm("Excluir este diagnóstico PERMANENTEMENTE? Esta ação não pode ser desfeita.")) return;
+    try {
+      await del.mutateAsync({ id: itemId, client_id: clientId });
+      const next = trashedIds.filter(id => id !== itemId);
+      setTrashedIds(next);
+      try { localStorage.setItem(trashStorageKey, JSON.stringify(next)); } catch {}
+      toast.success("Diagnóstico excluído permanentemente.");
+    } catch {
+      toast.error("Erro ao excluir permanentemente.");
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!trashedIds.length) return;
+    if (!confirm(`Esvaziar a lixeira e excluir permanentemente todos os ${trashedIds.length} diagnósticos?`)) return;
+    try {
+      for (const id of trashedIds) {
+        await del.mutateAsync({ id, client_id: clientId });
+      }
+      setTrashedIds([]);
+      try { localStorage.setItem(trashStorageKey, JSON.stringify([])); } catch {}
+      toast.success("Lixeira esvaziada com sucesso.");
+    } catch {
+      toast.error("Erro ao esvaziar lixeira.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 py-12 justify-center text-muted-foreground text-sm">
@@ -144,17 +203,10 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     );
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Excluir este diagnóstico salvo? Essa ação não pode ser desfeita.")) return;
-    try {
-      await del.mutateAsync({ id, client_id: clientId });
-      toast.success("Diagnóstico excluído");
-    } catch {
-      toast.error("Erro ao excluir");
-    }
-  };
+  const activeList = list.filter(item => !trashedIds.includes(item.id));
+  const trashedList = list.filter(item => trashedIds.includes(item.id));
 
-  const renderDiagnosticItem = (item: SavedDiagnostic) => {
+  const renderDiagnosticItem = (item: SavedDiagnostic, isTrash = false) => {
     const created = new Date(item.created_at).toLocaleDateString("pt-BR", {
       day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
@@ -165,9 +217,14 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-card-foreground truncate">{item.title}</span>
-            {currentFolder && (
+            {currentFolder && !isTrash && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 <Folder className="h-3 w-3" /> {currentFolder}
+              </span>
+            )}
+            {isTrash && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
+                <Trash2 className="h-3 w-3" /> Na Lixeira
               </span>
             )}
           </div>
@@ -176,63 +233,69 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Select
-            value={currentFolder || "none"}
-            onValueChange={(val) => handleSetItemFolder(item.id, val)}
-          >
-            <SelectTrigger className="h-8 text-xs border-border bg-background w-[160px]">
-              <SelectValue placeholder="Mover p/ pasta" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none" className="text-xs">Sem pasta</SelectItem>
-              {folders.map(f => (
-                <SelectItem key={f} value={f} className="text-xs">
-                  📁 {f}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isTrash ? (
+            <>
+              <Select
+                value={currentFolder || "none"}
+                onValueChange={(val) => handleSetItemFolder(item.id, val)}
+              >
+                <SelectTrigger className="h-8 text-xs border-border bg-background w-[160px]">
+                  <SelectValue placeholder="Mover p/ pasta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-xs">Sem pasta</SelectItem>
+                  {folders.map(f => (
+                    <SelectItem key={f} value={f} className="text-xs">
+                      📁 {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
-            <Eye className="h-4 w-4" /> Visualizar
-          </Button>
-          <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
-            <Pencil className="h-4 w-4" /> Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
-              const url = `${window.location.origin}${path}`;
-              navigator.clipboard.writeText(url);
-              toast.success("Link público copiado!");
-            }}
-          >
-            <Link2 className="h-4 w-4" /> Copiar link
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
-            onClick={() => setSharing(item)}
-          >
-            <MessageCircle className="h-4 w-4" /> WhatsApp
-          </Button>
-          <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
+                <Eye className="h-4 w-4" /> Visualizar
+              </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
+                <Pencil className="h-4 w-4" /> Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
+                  const url = `${window.location.origin}${path}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Link público copiado!");
+                }}
+              >
+                <Link2 className="h-4 w-4" /> Copiar link
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
+                onClick={() => setSharing(item)}
+              >
+                <MessageCircle className="h-4 w-4" /> WhatsApp
+              </Button>
+              <Button size="sm" variant="ghost" className="gap-2 text-destructive hover:bg-destructive/10" title="Mover para Lixeira" onClick={() => handleMoveToTrash(item)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/10" onClick={() => handleRestoreFromTrash(item.id)}>
+                <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+              </Button>
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-destructive hover:bg-destructive/10" onClick={() => handlePermanentDelete(item.id)}>
+                <Trash2 className="h-3.5 w-3.5" /> Excluir definitivamente
+              </Button>
+            </>
+          )}
         </div>
       </div>
     );
   };
-
-  const filteredList = list.filter(item => {
-    const itemFolder = getItemFolder(item);
-    if (activeFolderFilter === "all") return true;
-    if (activeFolderFilter === "none") return !itemFolder;
-    return itemFolder === activeFolderFilter;
-  });
 
   return (
     <>
@@ -251,7 +314,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              Todas ({list.length})
+              Todas ({activeList.length})
             </button>
             <button
               onClick={() => {
@@ -264,11 +327,11 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              Sem pasta ({list.filter(i => !getItemFolder(i)).length})
+              Sem pasta ({activeList.filter(i => !getItemFolder(i)).length})
             </button>
 
             {folders.map(folder => {
-              const count = list.filter(i => getItemFolder(i) === folder).length;
+              const count = activeList.filter(i => getItemFolder(i) === folder).length;
               const isActive = activeFolderFilter === folder;
               return (
                 <div key={folder} className="inline-flex items-center gap-1">
@@ -299,6 +362,22 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                 </div>
               );
             })}
+
+            {/* Botão da Lixeira */}
+            <button
+              onClick={() => setActiveFolderFilter("trash")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ml-2 ${
+                activeFolderFilter === "trash"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+              }`}
+            >
+              <Trash2 className="h-3 w-3" />
+              Lixeira
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeFolderFilter === "trash" ? "bg-destructive-foreground/20 text-destructive-foreground" : "bg-destructive/20 text-destructive"}`}>
+                {trashedList.length}
+              </span>
+            </button>
           </div>
 
           <Button size="sm" variant="outline" onClick={() => setIsCreateFolderOpen(true)} className="gap-1.5 h-8 text-xs">
@@ -339,16 +418,41 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           </div>
         )}
 
-        {/* Lista de Diagnósticos em modo Sanfona (Accordion por Pasta) */}
-        {filteredList.length === 0 ? (
+        {/* Visualização da Lixeira */}
+        {activeFolderFilter === "trash" ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-destructive/10 border border-destructive/30 p-3.5 rounded-xl">
+              <div className="flex items-center gap-2 text-destructive font-bold text-sm">
+                <Trash2 className="h-4 w-4" />
+                <span>Lixeira de Diagnósticos ({trashedList.length})</span>
+              </div>
+              {trashedList.length > 0 && (
+                <Button size="sm" variant="destructive" className="h-8 text-xs gap-1.5" onClick={handleEmptyTrash}>
+                  <Trash2 className="h-3.5 w-3.5" /> Esvaziar Lixeira
+                </Button>
+              )}
+            </div>
+
+            {trashedList.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground text-sm italic">
+                A lixeira está vazia. Itens excluídos aparecerão aqui antes de serem apagados definitivamente.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {trashedList.map(item => renderDiagnosticItem(item, true))}
+              </div>
+            )}
+          </div>
+        ) : activeList.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm italic">
             Nenhum diagnóstico nesta pasta.
           </div>
         ) : (
+          /* Lista de Diagnósticos em modo Sanfona (Accordion por Pasta) */
           <div className="space-y-4">
             {folders.map(folder => {
               const itemsInFolder = (activeFolderFilter === "all" || activeFolderFilter === folder)
-                ? list.filter(i => getItemFolder(i) === folder)
+                ? activeList.filter(i => getItemFolder(i) === folder)
                 : [];
               if (itemsInFolder.length === 0) return null;
               const isOpen = !!openFolders[folder];
@@ -388,8 +492,8 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
             })}
 
             {/* Sem pasta */}
-            {(activeFolderFilter === "all" || activeFolderFilter === "none") && list.filter(i => !getItemFolder(i)).length > 0 && (() => {
-              const unassignedItems = list.filter(i => !getItemFolder(i));
+            {(activeFolderFilter === "all" || activeFolderFilter === "none") && activeList.filter(i => !getItemFolder(i)).length > 0 && (() => {
+              const unassignedItems = activeList.filter(i => !getItemFolder(i));
               const isOpen = !!openFolders["none"];
               return (
                 <div className="rounded-xl border border-border overflow-hidden bg-card transition-all">
