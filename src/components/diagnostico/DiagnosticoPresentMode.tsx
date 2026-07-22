@@ -335,6 +335,14 @@ function GroupSlide({
     const isOverridden = !!override;
     let originalRaw = getMetricValue(totals, key);
     
+    if ((key === "lead" || key === "leads") && originalRaw === 0) {
+      originalRaw = totals.leads || totals.conversions || 0;
+    }
+    if ((key === "cpl" || key === "cpLead") && originalRaw === 0) {
+      const l = totals.leads || totals.conversions || 0;
+      originalRaw = l > 0 ? totals.spend / l : 0;
+    }
+
     // Auto-calculate cps (Custo por Seguidor) using manual followers input if available
     if ((key === "cps" || key === "cpFollow") && !isOverridden) {
       const fv = config.custom_metrics.find(m => m.id === "followers");
@@ -360,14 +368,16 @@ function GroupSlide({
       const follows = fv ? Number(String(fv.value).replace(",", ".")) : (getMetricValue(totals, "followers") || getMetricValue(totals, "follows"));
       return follows > 0 ? getMetricValue(totals, "spend") / follows : 0;
     }
-    return getMetricValue(totals, key);
+    const val = getMetricValue(totals, key);
+    if ((key === "lead" || key === "leads") && val === 0) return totals.leads || totals.conversions || 0;
+    return val;
   };
 
   const metricLabel = (key: string) =>
     key === "conversions"
       ? resultLabel
       : findMetricDef(key)?.label || AVAILABLE_METRICS.find(m => m.key === key)?.label || key;
-  const isHighlight = (key: string) => key === "spend" || key === "conversions";
+  const isHighlight = (key: string) => key === "spend" || key === "conversions" || key === selectedMetric;
 
   const displayTitle = useMemo(() => {
     if (group.isFunnel) {
@@ -408,6 +418,14 @@ function GroupSlide({
 
   // State do seletor de métrica ativa no slide da apresentação
   const [selectedMetric, setSelectedMetric] = useState<string>("auto");
+
+  const displayMetrics = useMemo(() => {
+    const list = [...config.visible_metrics];
+    if (selectedMetric && selectedMetric !== "auto" && !list.includes(selectedMetric)) {
+      list.unshift(selectedMetric);
+    }
+    return list;
+  }, [config.visible_metrics, selectedMetric]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -454,14 +472,14 @@ function GroupSlide({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {config.visible_metrics.map(key => {
+        {displayMetrics.map(key => {
           const { value, isOverridden } = getMetricValueAndOverride(key);
           return (
             <BigKpi
               key={key}
               label={metricLabel(key)}
               value={value}
-              highlight={isHighlight(key)}
+              highlight={key === selectedMetric || isHighlight(key)}
               custom={isOverridden}
             />
           );

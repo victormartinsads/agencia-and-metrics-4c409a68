@@ -121,6 +121,9 @@ export function aggregateCampaignMetrics(
   // numbers match what the Meta gerenciador shows as "Leads".
   const DEFAULT_LEAD_TYPES = [
     "lead",
+    "leads",
+    "offsite_conversion.fb_pixel_lead",
+    "onsite_conversion.lead_grouped",
   ];
   const leadActions =
     sum("lead_actions") ||
@@ -131,7 +134,8 @@ export function aggregateCampaignMetrics(
     options?.leadActionTypes && options.leadActionTypes.length > 0
       ? options.leadActionTypes
       : DEFAULT_LEAD_TYPES;
-  const leads = sumActions(leadActionTypesUsed);
+  const rawLeads = sum("leads") || sum("lead") || sumActions(leadActionTypesUsed);
+  const leads = rawLeads > 0 ? rawLeads : (conversions > 0 ? conversions : 0);
   const DEFAULT_FOLLOW_TYPES = ["follow", "onsite_conversion.follow"];
   const followActionTypesUsed =
     options?.followActionTypes && options.followActionTypes.length > 0
