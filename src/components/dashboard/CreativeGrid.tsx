@@ -110,14 +110,17 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       return cr.primaryResult ?? cr.conversions;
     }
     const campaignTotal = getCustomPrimaryMetricValue(campaign, activeMetric);
-    const campaignConvs = campaign.conversions || 1;
-    const campaignClicks = campaign.clicks || 1;
-    if (campaignTotal === 0) {
-      return campaign.conversions > 0 ? (cr.primaryResult ?? cr.conversions) : 0;
+    if (campaignTotal > 0) {
+      const campaignConvs = campaign.conversions || 1;
+      const campaignClicks = campaign.clicks || 1;
+      return cr.conversions > 0
+        ? (cr.conversions / campaignConvs) * campaignTotal
+        : (cr.clicks / campaignClicks) * campaignTotal;
     }
-    return cr.conversions > 0
-      ? (cr.conversions / campaignConvs) * campaignTotal
-      : (cr.clicks / campaignClicks) * campaignTotal;
+    if ((activeMetric === "lead" || activeMetric === "leads") && ((cr as any).leads || (cr as any).lead)) {
+      return (cr as any).leads || (cr as any).lead;
+    }
+    return 0;
   };
 
   const campaignClicksForRatio = campaign.clicks || 1;

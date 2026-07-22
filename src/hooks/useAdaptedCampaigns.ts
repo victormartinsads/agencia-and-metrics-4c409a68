@@ -5,7 +5,10 @@ import { extractFunnelCode } from "@/lib/funnelGrouping";
 import { PRIMARY_METRIC_OPTIONS } from "./useFunnelPrimaryMetric";
 
 export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
-  if (!key || key === "conversions" || key === "auto") {
+  if (!key || key === "auto") {
+    return c.primaryResult ?? c.conversions;
+  }
+  if (key === "conversions") {
     return c.conversions;
   }
   if (key === "_profile_visit") {
@@ -13,18 +16,28 @@ export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
     return isProfileVisit ? (c.conversions || c.linkClicks || 0) : (c.actionBreakdown?.["link_click"] || c.linkClicks || 0);
   }
 
-  // 1. Try action breakdown with aliases (especially for leads)
+  // 1. Leads specific lookup
+  if (key === "lead" || key === "leads") {
+    if ((c as any).leads !== undefined && Number((c as any).leads) > 0) return Number((c as any).leads);
+    if ((c as any).lead !== undefined && Number((c as any).lead) > 0) return Number((c as any).lead);
+    if ((c as any).leadActions !== undefined && Number((c as any).leadActions) > 0) return Number((c as any).leadActions);
+    if (c.actionBreakdown) {
+      const leadVal = c.actionBreakdown["lead"] ?? c.actionBreakdown["leads"] ?? c.actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? c.actionBreakdown["onsite_conversion.lead_grouped"];
+      if (leadVal !== undefined && Number(leadVal) > 0) return Number(leadVal);
+    }
+    if (c.primaryResultLabel?.toLowerCase()?.includes("lead") && (c as any).primaryResult !== undefined) {
+      return Number((c as any).primaryResult);
+    }
+  }
+
+  // 2. Try action breakdown with key
   if (c.actionBreakdown) {
     if (c.actionBreakdown[key] !== undefined && Number(c.actionBreakdown[key]) > 0) {
       return Number(c.actionBreakdown[key]);
     }
-    if (key === "lead" || key === "leads") {
-      const leadVal = c.actionBreakdown["lead"] ?? c.actionBreakdown["leads"] ?? c.actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? c.actionBreakdown["onsite_conversion.lead_grouped"];
-      if (leadVal !== undefined && Number(leadVal) > 0) return Number(leadVal);
-    }
   }
 
-  // 2. Direct property on campaign
+  // 3. Direct property on campaign
   const canonical = resolveMetricKey(key);
   if ((c as any)[canonical] !== undefined && Number((c as any)[canonical]) > 0) {
     return Number((c as any)[canonical]);
@@ -32,18 +45,10 @@ export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
   if ((c as any)[key] !== undefined && Number((c as any)[key]) > 0) {
     return Number((c as any)[key]);
   }
-  if ((key === "lead" || key === "leads") && (c as any).leads !== undefined && Number((c as any).leads) > 0) {
-    return Number((c as any).leads);
-  }
 
-  // 3. Metric Catalog lookup
+  // 4. Metric Catalog lookup
   const catalogVal = getMetricValue(c, key);
   if (catalogVal > 0) return catalogVal;
-
-  // 4. Fallback: if campaign has conversions, return campaign conversions (e.g. 133 leads)
-  if (c.conversions > 0) {
-    return c.conversions;
-  }
 
   return 0;
 }
