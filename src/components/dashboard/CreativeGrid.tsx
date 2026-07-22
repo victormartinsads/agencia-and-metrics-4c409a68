@@ -275,7 +275,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                 <SelectItem value="cpc" className="text-xs">Métrica: CPC</SelectItem>
                 <SelectItem value="cpa" className="text-xs">Métrica: CPA</SelectItem>
                 <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
-                {PRIMARY_METRIC_OPTIONS.map(opt => (
+                {PRIMARY_METRIC_OPTIONS.filter(opt => opt.key !== "conversions").map(opt => (
                   <SelectItem key={opt.key} value={opt.key} className="text-xs">
                     Métrica: {opt.label}
                   </SelectItem>

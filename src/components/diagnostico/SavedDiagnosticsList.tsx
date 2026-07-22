@@ -43,7 +43,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
       const saved = localStorage.getItem(foldersStorageKey);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return ["Apresentação do Diagnóstico", "Reuniões"];
+    return ["Apresentação do Diagnóstico", "Reuniões", "Como estamos"];
   });
 
   const [itemFolders, setItemFolders] = useState<Record<string, string>>(() => {
@@ -53,6 +53,23 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     } catch {}
     return {};
   });
+
+  const getItemFolder = (item: SavedDiagnostic): string => {
+    if (itemFolders[item.id]) return itemFolders[item.id];
+    
+    // Categorização automática por título se o usuário não definiu manualmente
+    const titleLower = item.title.toLowerCase();
+    if (titleLower.includes("reunião") || titleLower.includes("reuniao")) {
+      return "Reuniões";
+    }
+    if (titleLower.includes("como estamos")) {
+      return "Como estamos";
+    }
+    if (titleLower.includes("apresentação") || titleLower.includes("apresentacao") || titleLower.includes("diagnóstico") || titleLower.includes("diagnostico")) {
+      return "Apresentação do Diagnóstico";
+    }
+    return "";
+  };
 
   const [activeFolderFilter, setActiveFolderFilter] = useState<string>("all");
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
@@ -129,10 +146,84 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     }
   };
 
+  const renderDiagnosticItem = (item: SavedDiagnostic) => {
+    const created = new Date(item.created_at).toLocaleDateString("pt-BR", {
+      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    const currentFolder = getItemFolder(item);
+
+    return (
+      <div key={item.id} className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center justify-between gap-3 hover:border-primary/30 transition-colors">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-card-foreground truncate">{item.title}</span>
+            {currentFolder && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                <Folder className="h-3 w-3" /> {currentFolder}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {item.snapshot?.periodRange || item.date_preset} • Salvo em {created}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={currentFolder || "none"}
+            onValueChange={(val) => handleSetItemFolder(item.id, val)}
+          >
+            <SelectTrigger className="h-8 text-xs border-border bg-background w-[160px]">
+              <SelectValue placeholder="Mover p/ pasta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" className="text-xs">Sem pasta</SelectItem>
+              {folders.map(f => (
+                <SelectItem key={f} value={f} className="text-xs">
+                  📁 {f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
+            <Eye className="h-4 w-4" /> Visualizar
+          </Button>
+          <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
+            <Pencil className="h-4 w-4" /> Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => {
+              const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
+              const url = `${window.location.origin}${path}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Link público copiado!");
+            }}
+          >
+            <Link2 className="h-4 w-4" /> Copiar link
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
+            onClick={() => setSharing(item)}
+          >
+            <MessageCircle className="h-4 w-4" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const filteredList = list.filter(item => {
+    const itemFolder = getItemFolder(item);
     if (activeFolderFilter === "all") return true;
-    if (activeFolderFilter === "none") return !itemFolders[item.id];
-    return itemFolders[item.id] === activeFolderFilter;
+    if (activeFolderFilter === "none") return !itemFolder;
+    return itemFolder === activeFolderFilter;
   });
 
   return (
@@ -162,11 +253,11 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              Sem pasta ({list.filter(i => !itemFolders[i.id]).length})
+              Sem pasta ({list.filter(i => !getItemFolder(i)).length})
             </button>
 
             {folders.map(folder => {
-              const count = list.filter(i => itemFolders[i.id] === folder).length;
+              const count = list.filter(i => getItemFolder(i) === folder).length;
               const isActive = activeFolderFilter === folder;
               return (
                 <div key={folder} className="inline-flex items-center gap-1">
@@ -239,80 +330,41 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm italic">
             Nenhum diagnóstico nesta pasta.
           </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredList.map(item => {
-              const created = new Date(item.created_at).toLocaleDateString("pt-BR", {
-                day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-              });
-              const currentFolder = itemFolders[item.id];
-
+        ) : activeFolderFilter === "all" ? (
+          <div className="space-y-6">
+            {folders.map(folder => {
+              const itemsInFolder = list.filter(i => getItemFolder(i) === folder);
+              if (itemsInFolder.length === 0) return null;
               return (
-                <div key={item.id} className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-card-foreground truncate">{item.title}</span>
-                      {currentFolder && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                          <Folder className="h-3 w-3" /> {currentFolder}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {item.snapshot?.periodRange || item.date_preset} • Salvo em {created}
-                    </div>
+                <div key={folder} className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-border text-sm font-bold text-card-foreground">
+                    <Folder className="h-4 w-4 text-primary" />
+                    <span>{folder}</span>
+                    <span className="text-xs font-normal text-muted-foreground">({itemsInFolder.length})</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={currentFolder || "none"}
-                      onValueChange={(val) => handleSetItemFolder(item.id, val)}
-                    >
-                      <SelectTrigger className="h-8 text-xs border-border bg-background w-[150px]">
-                        <SelectValue placeholder="Mover p/ pasta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none" className="text-xs">Sem pasta</SelectItem>
-                        {folders.map(f => (
-                          <SelectItem key={f} value={f} className="text-xs">
-                            📁 {f}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setViewing(item)}>
-                      <Eye className="h-4 w-4" /> Visualizar
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(item)}>
-                      <Pencil className="h-4 w-4" /> Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => {
-                        const path = item.slug ? `/como-estamos/${item.slug}` : `/diagnostico/${item.id}`;
-                        const url = `${window.location.origin}${path}`;
-                        navigator.clipboard.writeText(url);
-                        toast.success("Link público copiado!");
-                      }}
-                    >
-                      <Link2 className="h-4 w-4" /> Copiar link
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="gap-2 bg-[#25D366] hover:bg-[#1da851] text-white"
-                      onClick={() => setSharing(item)}
-                    >
-                      <MessageCircle className="h-4 w-4" /> WhatsApp
-                    </Button>
-                    <Button size="sm" variant="ghost" className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-3">
+                    {itemsInFolder.map(item => renderDiagnosticItem(item))}
                   </div>
                 </div>
               );
             })}
+
+            {list.filter(i => !getItemFolder(i)).length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-border text-sm font-bold text-muted-foreground">
+                  <Folder className="h-4 w-4" />
+                  <span>Sem pasta</span>
+                  <span className="text-xs font-normal">({list.filter(i => !getItemFolder(i)).length})</span>
+                </div>
+                <div className="space-y-3">
+                  {list.filter(i => !getItemFolder(i)).map(item => renderDiagnosticItem(item))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredList.map(item => renderDiagnosticItem(item))}
           </div>
         )}
       </div>

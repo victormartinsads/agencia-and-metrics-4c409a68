@@ -253,12 +253,17 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
               <SelectTrigger className="h-6 text-[10px] font-medium bg-primary/15 hover:bg-primary/20 text-primary border-0 rounded-full px-2.5 py-0 focus:ring-0 focus:ring-offset-0 flex items-center gap-1 select-none cursor-pointer w-auto min-w-[120px]">
                 <SelectValue placeholder="Métrica" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border border-border">
+              <SelectContent className="bg-popover border border-border max-h-[300px] overflow-y-auto">
                 <SelectItem value="auto" className="text-xs">Métrica: Padrão ({campaigns[0]?.primaryResultLabel || "Conversões"})</SelectItem>
-                <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+                <SelectItem value="conversions" className="text-xs">Métrica: Resultados</SelectItem>
                 <SelectItem value="spend" className="text-xs">Métrica: Investimento</SelectItem>
+                <SelectItem value="impressions" className="text-xs">Métrica: Impressões</SelectItem>
+                <SelectItem value="clicks" className="text-xs">Métrica: Cliques</SelectItem>
+                <SelectItem value="ctr" className="text-xs">Métrica: CTR (%)</SelectItem>
+                <SelectItem value="cpc" className="text-xs">Métrica: CPC</SelectItem>
+                <SelectItem value="cpa" className="text-xs">Métrica: CPA</SelectItem>
                 <SelectItem value="roas" className="text-xs">Métrica: ROAS</SelectItem>
-                {PRIMARY_METRIC_OPTIONS.map(opt => (
+                {PRIMARY_METRIC_OPTIONS.filter(opt => opt.key !== "conversions").map(opt => (
                   <SelectItem key={opt.key} value={opt.key} className="text-xs">
                     Métrica: {opt.label}
                   </SelectItem>
