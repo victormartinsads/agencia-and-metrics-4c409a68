@@ -89,7 +89,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
            const campaignConvs = camp.conversions || 1;
            const campaignClicks = camp.clicks || 1;
            if (campaignTotal === 0) {
-             computedConversions = 0;
+             computedConversions = camp.conversions > 0 ? cr.conversions : 0;
            } else {
              computedConversions = cr.conversions > 0 
                ? (cr.conversions / campaignConvs) * campaignTotal

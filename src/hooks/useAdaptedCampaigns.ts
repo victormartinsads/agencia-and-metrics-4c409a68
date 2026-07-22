@@ -5,7 +5,7 @@ import { extractFunnelCode } from "@/lib/funnelGrouping";
 import { PRIMARY_METRIC_OPTIONS } from "./useFunnelPrimaryMetric";
 
 export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
-  if (!key || key === "conversions") {
+  if (!key || key === "conversions" || key === "auto") {
     return c.conversions;
   }
   if (key === "_profile_visit") {
@@ -13,17 +13,39 @@ export function getCustomPrimaryMetricValue(c: Campaign, key: string): number {
     return isProfileVisit ? (c.conversions || c.linkClicks || 0) : (c.actionBreakdown?.["link_click"] || c.linkClicks || 0);
   }
 
-  // Try raw breakdown first
-  if (c.actionBreakdown && c.actionBreakdown[key] !== undefined) {
-    return Number(c.actionBreakdown[key] || 0);
+  // 1. Try action breakdown with aliases (especially for leads)
+  if (c.actionBreakdown) {
+    if (c.actionBreakdown[key] !== undefined && Number(c.actionBreakdown[key]) > 0) {
+      return Number(c.actionBreakdown[key]);
+    }
+    if (key === "lead" || key === "leads") {
+      const leadVal = c.actionBreakdown["lead"] ?? c.actionBreakdown["leads"] ?? c.actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? c.actionBreakdown["onsite_conversion.lead_grouped"];
+      if (leadVal !== undefined && Number(leadVal) > 0) return Number(leadVal);
+    }
   }
 
-  // Try campaign property (e.g. c.purchases, c.linkClicks)
+  // 2. Direct property on campaign
   const canonical = resolveMetricKey(key);
-  if ((c as any)[canonical] !== undefined) return Number((c as any)[canonical] || 0);
-  if ((c as any)[key] !== undefined) return Number((c as any)[key] || 0);
+  if ((c as any)[canonical] !== undefined && Number((c as any)[canonical]) > 0) {
+    return Number((c as any)[canonical]);
+  }
+  if ((c as any)[key] !== undefined && Number((c as any)[key]) > 0) {
+    return Number((c as any)[key]);
+  }
+  if ((key === "lead" || key === "leads") && (c as any).leads !== undefined && Number((c as any).leads) > 0) {
+    return Number((c as any).leads);
+  }
 
-  return getMetricValue(c, key);
+  // 3. Metric Catalog lookup
+  const catalogVal = getMetricValue(c, key);
+  if (catalogVal > 0) return catalogVal;
+
+  // 4. Fallback: if campaign has conversions, return campaign conversions (e.g. 133 leads)
+  if (c.conversions > 0) {
+    return c.conversions;
+  }
+
+  return 0;
 }
 
 export function useAdaptedCampaigns(
