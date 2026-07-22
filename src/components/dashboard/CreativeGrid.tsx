@@ -106,21 +106,23 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
   };
 
   const getComputedConversions = (cr: any) => {
-    if (activeMetric === "clicks" || activeMetric === "impressions" || activeMetric === "spend" || activeMetric === "roas" || activeMetric === "conversions" || activeMetric === "auto") {
-      return cr.primaryResult ?? cr.conversions;
+    if (activeMetric === "clicks") return cr.clicks ?? 0;
+    if (activeMetric === "impressions") return cr.impressions ?? 0;
+    if (activeMetric === "spend") return cr.spend ?? 0;
+    if (activeMetric === "roas") return cr.roas ?? 0;
+    if (activeMetric === "conversions" || activeMetric === "auto") {
+      return cr.primaryResult ?? cr.conversions ?? 0;
     }
     const campaignTotal = getCustomPrimaryMetricValue(campaign, activeMetric);
     if (campaignTotal > 0) {
-      const campaignConvs = campaign.conversions || 1;
+      const campaignConvs = (campaign.primaryResult ?? campaign.conversions) || 1;
       const campaignClicks = campaign.clicks || 1;
-      return cr.conversions > 0
-        ? (cr.conversions / campaignConvs) * campaignTotal
+      const crBase = cr.primaryResult ?? cr.conversions ?? 0;
+      return crBase > 0
+        ? (crBase / campaignConvs) * campaignTotal
         : (cr.clicks / campaignClicks) * campaignTotal;
     }
-    if ((activeMetric === "lead" || activeMetric === "leads") && ((cr as any).leads || (cr as any).lead)) {
-      return (cr as any).leads || (cr as any).lead;
-    }
-    return 0;
+    return cr.primaryResult ?? cr.conversions ?? 0;
   };
 
   const campaignClicksForRatio = campaign.clicks || 1;
