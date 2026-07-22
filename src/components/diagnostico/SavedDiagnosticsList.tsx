@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
-import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil, Folder, FolderPlus, X, Check } from "lucide-react";
+import { Loader2, Trash2, Eye, FileDown, Presentation, Link2, MessageCircle, Pencil, Folder, FolderPlus, X, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -54,6 +54,13 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     return {};
   });
 
+  // Estado de controle de abertura de cada sanfona/pasta (fechadas por padrão)
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+
+  const toggleFolderOpen = (folderName: string) => {
+    setOpenFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
+  };
+
   const getItemFolder = (item: SavedDiagnostic): string => {
     if (itemFolders[item.id]) return itemFolders[item.id];
     
@@ -88,6 +95,7 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
     setNewFolderName("");
     setIsCreateFolderOpen(false);
     setActiveFolderFilter(name);
+    setOpenFolders(prev => ({ ...prev, [name]: true }));
     toast.success(`Pasta "${name}" criada com sucesso!`);
   };
 
@@ -246,7 +254,10 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
               Todas ({list.length})
             </button>
             <button
-              onClick={() => setActiveFolderFilter("none")}
+              onClick={() => {
+                setActiveFolderFilter("none");
+                setOpenFolders(prev => ({ ...prev, none: true }));
+              }}
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
                 activeFolderFilter === "none"
                   ? "bg-primary text-primary-foreground"
@@ -262,7 +273,10 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
               return (
                 <div key={folder} className="inline-flex items-center gap-1">
                   <button
-                    onClick={() => setActiveFolderFilter(folder)}
+                    onClick={() => {
+                      setActiveFolderFilter(folder);
+                      setOpenFolders(prev => ({ ...prev, [folder]: true }));
+                    }}
                     className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                       isActive
                         ? "bg-primary text-primary-foreground"
@@ -325,46 +339,91 @@ export function SavedDiagnosticsList({ clientId, clientName = "Cliente", currenc
           </div>
         )}
 
-        {/* Lista de Diagnósticos */}
+        {/* Lista de Diagnósticos em modo Sanfona (Accordion por Pasta) */}
         {filteredList.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground text-sm italic">
             Nenhum diagnóstico nesta pasta.
           </div>
-        ) : activeFolderFilter === "all" ? (
-          <div className="space-y-6">
+        ) : (
+          <div className="space-y-4">
             {folders.map(folder => {
-              const itemsInFolder = list.filter(i => getItemFolder(i) === folder);
+              const itemsInFolder = (activeFolderFilter === "all" || activeFolderFilter === folder)
+                ? list.filter(i => getItemFolder(i) === folder)
+                : [];
               if (itemsInFolder.length === 0) return null;
+              const isOpen = !!openFolders[folder];
+
               return (
-                <div key={folder} className="space-y-3">
-                  <div className="flex items-center gap-2 pb-1 border-b border-border text-sm font-bold text-card-foreground">
-                    <Folder className="h-4 w-4 text-primary" />
-                    <span>{folder}</span>
-                    <span className="text-xs font-normal text-muted-foreground">({itemsInFolder.length})</span>
-                  </div>
-                  <div className="space-y-3">
-                    {itemsInFolder.map(item => renderDiagnosticItem(item))}
-                  </div>
+                <div key={folder} className="rounded-xl border border-border overflow-hidden bg-card transition-all">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolderOpen(folder)}
+                    className="w-full flex items-center justify-between px-5 py-4 bg-muted/30 hover:bg-muted/50 transition-colors text-left select-none cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Folder className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-base font-bold text-card-foreground">{folder}</span>
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-primary/15 text-primary text-xs font-bold">
+                        {itemsInFolder.length} {itemsInFolder.length === 1 ? "diagnóstico" : "diagnósticos"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {isOpen ? "Ocultar" : "Expandir"}
+                      </span>
+                      <ChevronDown
+                        className={`h-5 w-5 text-primary transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : "rotate-0"
+                        }`}
+                      />
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div className="p-4 space-y-3 border-t border-border/50 bg-background/50 animate-in fade-in duration-200">
+                      {itemsInFolder.map(item => renderDiagnosticItem(item))}
+                    </div>
+                  )}
                 </div>
               );
             })}
 
-            {list.filter(i => !getItemFolder(i)).length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-1 border-b border-border text-sm font-bold text-muted-foreground">
-                  <Folder className="h-4 w-4" />
-                  <span>Sem pasta</span>
-                  <span className="text-xs font-normal">({list.filter(i => !getItemFolder(i)).length})</span>
+            {/* Sem pasta */}
+            {(activeFolderFilter === "all" || activeFolderFilter === "none") && list.filter(i => !getItemFolder(i)).length > 0 && (() => {
+              const unassignedItems = list.filter(i => !getItemFolder(i));
+              const isOpen = !!openFolders["none"];
+              return (
+                <div className="rounded-xl border border-border overflow-hidden bg-card transition-all">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolderOpen("none")}
+                    className="w-full flex items-center justify-between px-5 py-4 bg-muted/30 hover:bg-muted/50 transition-colors text-left select-none cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Folder className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <span className="text-base font-bold text-card-foreground">Sem pasta</span>
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-bold">
+                        {unassignedItems.length} {unassignedItems.length === 1 ? "diagnóstico" : "diagnósticos"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {isOpen ? "Ocultar" : "Expandir"}
+                      </span>
+                      <ChevronDown
+                        className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : "rotate-0"
+                        }`}
+                      />
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div className="p-4 space-y-3 border-t border-border/50 bg-background/50 animate-in fade-in duration-200">
+                      {unassignedItems.map(item => renderDiagnosticItem(item))}
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-3">
-                  {list.filter(i => !getItemFolder(i)).map(item => renderDiagnosticItem(item))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredList.map(item => renderDiagnosticItem(item))}
+              );
+            })()}
           </div>
         )}
       </div>
