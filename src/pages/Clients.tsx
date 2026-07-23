@@ -141,8 +141,8 @@ export default function ClientsPage() {
     setForm({ ...form, ad_account_ids: form.ad_account_ids.filter((_, i) => i !== idx) });
 
   const saveClient = async () => {
-    if (!form.name.trim() || !form.meta_access_token.trim())
-      return toast.error("Preencha o nome e o token");
+    if (!form.name.trim())
+      return toast.error("Preencha o nome do cliente");
     const cleanIds = form.ad_account_ids.filter((id) => id.trim() !== "");
     if (cleanIds.length === 0) return toast.error("Adicione ao menos uma conta de anúncio");
     try {
@@ -577,19 +577,6 @@ export default function ClientsPage() {
             </TabsContent>
 
             <TabsContent value="integ" className="mt-6 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="meta" className="flex items-center gap-1.5">
-                  <Key className="h-3.5 w-3.5" /> Meta access token
-                </Label>
-                <Input
-                  id="meta"
-                  type="password"
-                  placeholder="EAAB..."
-                  value={form.meta_access_token}
-                  onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })}
-                  className="bg-background border-border font-mono text-sm"
-                />
-              </div>
               <div className="space-y-1.5">
                 <Label className="flex items-center gap-1.5">
                   <Hash className="h-3.5 w-3.5" /> Contas de anúncio (act_…) — máx. 5
