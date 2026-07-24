@@ -136,25 +136,6 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       }, overrides);
       return { ...cr, _ov: ov };
     })
-    .filter((cr) => {
-      // 1. Filtro de status ativo/pausado
-      if (localStatusFilter === "active" && cr.status === "paused") {
-        return false;
-      }
-      if (localStatusFilter === "paused" && cr.status !== "paused") {
-        return false;
-      }
-      // 2. Se exibindo apenas o Top 3, exige entrega real
-      if (!localShowAll) {
-        const hasDelivery =
-          (cr._ov.impressions || 0) > 0 ||
-          (cr._ov.clicks || 0) > 0 ||
-          (cr._ov.conversions || 0) > 0 ||
-          (cr._ov.spend || 0) > 0;
-        return hasDelivery;
-      }
-      return true;
-    })
     .sort((a, b) => {
       const valA = getMetricValue(a._ov);
       const valB = getMetricValue(b._ov);
@@ -168,7 +149,22 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return b._ov.clicks - a._ov.clicks;
     });
 
-  const displayCreatives = localShowAll ? sortedAll : sortedAll.slice(0, 3);
+  const filteredAll = sortedAll.filter((cr) => {
+    if (localStatusFilter === "active" && cr.status === "paused") return false;
+    if (localStatusFilter === "paused" && cr.status !== "paused") return false;
+    if (!localShowAll) {
+      const hasDelivery =
+        (cr._ov.impressions || 0) > 0 ||
+        (cr._ov.clicks || 0) > 0 ||
+        (cr._ov.conversions || 0) > 0 ||
+        (cr._ov.spend || 0) > 0;
+      return hasDelivery;
+    }
+    return true;
+  });
+
+  const finalCreativesList = filteredAll.length > 0 ? filteredAll : sortedAll;
+  const displayCreatives = localShowAll ? finalCreativesList : finalCreativesList.slice(0, 3);
 
   const totalMetric = allCreatives.reduce((sum, cr) => {
     const baseline = { ...cr, conversions: (cr as any)._computedConversions };

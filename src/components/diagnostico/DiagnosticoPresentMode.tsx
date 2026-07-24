@@ -521,7 +521,7 @@ function GroupSlide({
         </PresentSectionAccordion>
       )}
 
-      {group.campaigns.flatMap(c => c.creatives).filter(cr => cr.spend > 0 || cr.impressions > 0).length > 0 && (
+      {group.campaigns.some(c => Array.isArray(c.creatives) && c.creatives.length > 0) && (
         <PresentSectionAccordion
           icon={<Film className="h-4 w-4" />}
           title="Criativos"
@@ -547,7 +547,7 @@ function GroupSlide({
               } as any}
               clientId={clientId || ""}
               currencySymbol={currencySymbol}
-              readOnly={false}
+              readOnly={true}
               selectedMetricKey={selectedMetric === "auto" ? undefined : (selectedMetric as any)}
               showAll={false}
             />

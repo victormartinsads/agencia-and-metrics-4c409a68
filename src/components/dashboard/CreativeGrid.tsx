@@ -154,27 +154,6 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       }, overrides);
       return { ...cr, _ov: ov, _computedConversions: computedConv };
     })
-    // Só entram criativos que tiveram entrega real (impressões/cliques/conversões/investimento > 0).
-    // Evita "pódio zerado" quando criativos pausados sem entrega seriam preenchidos só pra completar 3.
-    .filter((cr) => {
-      // 1. Filtro de status ativo/pausado
-      if (localStatusFilter === "active" && cr.status === "paused") {
-        return false;
-      }
-      if (localStatusFilter === "paused" && cr.status !== "paused") {
-        return false;
-      }
-      // 2. Se exibindo apenas o Top 3, exige entrega real
-      if (!localShowAll) {
-        const hasDelivery =
-          (cr._ov.impressions || 0) > 0 ||
-          (cr._ov.clicks || 0) > 0 ||
-          (cr._ov.conversions || 0) > 0 ||
-          (cr._ov.spend || 0) > 0;
-        return hasDelivery;
-      }
-      return true;
-    })
     .sort((a, b) => {
       const valA = getMetricValue(a._ov);
       const valB = getMetricValue(b._ov);
@@ -189,7 +168,22 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       return b._ov.clicks - a._ov.clicks;
     });
 
-  const displayCreatives = localShowAll ? sortedAll : sortedAll.slice(0, 3);
+  const filteredAll = sortedAll.filter((cr) => {
+    if (localStatusFilter === "active" && cr.status === "paused") return false;
+    if (localStatusFilter === "paused" && cr.status !== "paused") return false;
+    if (!localShowAll) {
+      const hasDelivery =
+        (cr._ov.impressions || 0) > 0 ||
+        (cr._ov.clicks || 0) > 0 ||
+        (cr._ov.conversions || 0) > 0 ||
+        (cr._ov.spend || 0) > 0;
+      return hasDelivery;
+    }
+    return true;
+  });
+
+  const finalCreativesList = filteredAll.length > 0 ? filteredAll : sortedAll;
+  const displayCreatives = localShowAll ? finalCreativesList : finalCreativesList.slice(0, 3);
 
   const top3Total = displayCreatives.reduce((sum, cr) => sum + getMetricValue(cr._ov), 0);
   const totalMetric = campaign.creatives.reduce((sum, cr) => {
