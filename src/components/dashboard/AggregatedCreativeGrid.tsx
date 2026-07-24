@@ -286,15 +286,6 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                   i === 0 ? "border-primary/40 shadow-md" : "border-border hover:shadow-md"
                 }`}
               >
-                {clientId && !readOnly && (
-                  <button
-                    onClick={() => setEditingCreative(cr.id)}
-                    className="absolute top-2 right-10 z-10 bg-card/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
-                    title="Editar métricas"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-primary" />
-                  </button>
-                )}
                 {hasOverride && (
                   <div className="absolute bottom-2 right-2 z-10">
                     <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full font-medium">editado</span>
@@ -360,7 +351,18 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                   )}
                   <div className="space-y-1.5">
                     <div className="bg-primary/10 rounded-md p-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{resultLabel}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">{resultLabel}</span>
+                        {clientId && !readOnly && (
+                          <button
+                            onClick={() => setEditingCreative(cr.id)}
+                            className="p-0.5 rounded hover:bg-primary/20 transition-colors text-primary"
+                            title="Editar resultado do criativo"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                       <p className="font-bold text-primary text-base">
                         {activeMetric === "spend"
                           ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
