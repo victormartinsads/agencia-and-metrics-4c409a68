@@ -446,10 +446,6 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
           metrics={[
             { key: "conversions", label: resultLabel, original: editCreative.primaryResult ?? editCreative.conversions },
             { key: "spend", label: "Investimento", original: editCreative.spend },
-            { key: "ctr", label: "CTR (%)", original: editCreative.ctr },
-            { key: "impressions", label: "Impressões", original: editCreative.impressions },
-            { key: "clicks", label: "Cliques", original: editCreative.clicks },
-            { key: "roas", label: "ROAS", original: editCreative.roas },
           ]}
         />
       )}

@@ -150,10 +150,6 @@ export function CreativePodium({ byCPA, byCTR, byConversions, clientId, currency
           metrics={[
             { key: "conversions", label: "Conversões", original: editingCreative.conversions },
             { key: "spend", label: "Investimento", original: editingCreative.spend },
-            { key: "ctr", label: "CTR (%)", original: editingCreative.ctr },
-            { key: "impressions", label: "Impressões", original: editingCreative.impressions },
-            { key: "clicks", label: "Cliques", original: editingCreative.clicks },
-            { key: "roas", label: "ROAS", original: editingCreative.roas },
           ]}
         />
       )}
