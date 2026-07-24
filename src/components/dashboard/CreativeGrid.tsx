@@ -361,7 +361,9 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
                   </div>
                 </div>
                 <div className="p-3 space-y-2">
-                  <p className="text-sm font-medium text-card-foreground truncate">{cr.name}</p>
+                  <p className="text-sm font-medium text-card-foreground truncate">
+                    {localStorage.getItem(`creative_name_${cr.id}`) || cr.name}
+                  </p>
                   <p className="text-[10px] text-muted-foreground truncate" title={cr.adsetName || undefined}>
                     Conjunto: {cr.adsetName || "—"}
                   </p>

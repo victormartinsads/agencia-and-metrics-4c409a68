@@ -39,8 +39,18 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
     return init;
   });
 
+  const [nameOverride, setNameOverride] = useState(() => {
+    return localStorage.getItem(`creative_name_${creativeId}`) || creativeName;
+  });
+
   const handleSave = async () => {
     try {
+      if (nameOverride.trim() && nameOverride.trim() !== creativeName) {
+        localStorage.setItem(`creative_name_${creativeId}`, nameOverride.trim());
+      } else {
+        localStorage.removeItem(`creative_name_${creativeId}`);
+      }
+
       for (const m of metrics) {
         const num = parseFloat(values[m.key]);
         if (isNaN(num)) continue;
@@ -64,13 +74,41 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
     setValues(prev => ({ ...prev, [key]: String(original) }));
   };
 
+  const handleResetName = () => {
+    setNameOverride(creativeName);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-sm">Editar Métricas — {creativeName}</DialogTitle>
+          <DialogTitle className="text-sm">Editar Criativo</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 mt-2">
+          <div className="space-y-1">
+            <Label className="text-xs flex items-center justify-between">
+              <span>Nome do Criativo</span>
+              <button
+                type="button"
+                onClick={handleResetName}
+                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <RotateCcw className="h-3 w-3" /> Restaurar original
+              </button>
+            </Label>
+            <Input
+              type="text"
+              value={nameOverride}
+              onChange={(e) => setNameOverride(e.target.value)}
+              className="h-8 text-sm"
+              placeholder="Nome do criativo..."
+            />
+          </div>
+          
+          <div className="pt-2 border-t border-border mt-2 mb-2">
+            <p className="text-xs font-semibold text-muted-foreground">Métricas</p>
+          </div>
+
           {metrics.map((m) => (
             <div key={m.key} className="space-y-1">
               <Label className="text-xs flex items-center justify-between">

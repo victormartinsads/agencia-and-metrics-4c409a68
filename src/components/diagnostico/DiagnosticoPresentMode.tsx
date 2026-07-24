@@ -547,7 +547,7 @@ function GroupSlide({
               } as any}
               clientId={clientId || ""}
               currencySymbol={currencySymbol}
-              readOnly={true}
+              readOnly={false}
               selectedMetricKey={selectedMetric === "auto" ? undefined : (selectedMetric as any)}
               showAll={false}
             />
