@@ -35,15 +35,6 @@ function PodiumCard({ creative, rank, metric, metricLabel, onEdit, hasOverride }
       transition={{ delay: rank * 0.1 }}
       className={`flex flex-col items-center gap-2 relative group ${rank === 0 ? "order-2" : rank === 1 ? "order-1 mt-4" : "order-3 mt-6"}`}
     >
-      {onEdit && (
-        <button
-          onClick={onEdit}
-          className="absolute -top-1 -right-1 z-10 bg-card/80 backdrop-blur-sm rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
-          title="Editar métricas"
-        >
-          <Pencil className="h-3 w-3 text-primary" />
-        </button>
-      )}
       {hasOverride && (
         <span className="absolute -top-1 -left-1 z-10 text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full font-medium">editado</span>
       )}
@@ -57,9 +48,22 @@ function PodiumCard({ creative, rank, metric, metricLabel, onEdit, hasOverride }
         <span className="absolute -top-2 -right-2 text-xl">{medals[rank]}</span>
       </div>
       <div className="text-center">
-        <p className="text-xs font-medium text-card-foreground truncate max-w-[120px]">{creative.name}</p>
+        <p className="text-xs font-medium text-card-foreground truncate max-w-[120px]">
+          {localStorage.getItem(`creative_name_${creative.id}`) || creative.name}
+        </p>
         <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{creative.campaignName}</p>
-        <p className="text-sm font-bold text-primary mt-1">{metric}</p>
+        <div className="flex items-center justify-center gap-1 mt-1">
+          <p className="text-sm font-bold text-primary">{metric}</p>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="p-0.5 rounded text-primary hover:bg-primary/20 transition-colors"
+              title="Editar resultado do criativo"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          )}
+        </div>
         <p className="text-[10px] text-muted-foreground">{metricLabel}</p>
       </div>
     </motion.div>
