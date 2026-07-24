@@ -8,6 +8,11 @@ export interface Subpage {
   icon_emoji?: string | null;
   cover_url?: string | null;
   content?: any;
+  status?: string | null;
+  assignee?: string | null;
+  tags?: string[] | null;
+  due_date?: string | null;
+  is_full_width?: boolean | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

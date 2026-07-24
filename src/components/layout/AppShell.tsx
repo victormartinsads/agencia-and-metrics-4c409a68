@@ -26,7 +26,7 @@ import {
   Plus,
   FilePlus,
 } from "lucide-react";
-import { useCreateSubpage } from "@/hooks/useSubpages";
+import { useCreateSubpage, useSubpages } from "@/hooks/useSubpages";
 import { NotionSidebarTree } from "@/components/notion/NotionSidebarTree";
 import { Button } from "@/components/ui/button";
 import {
@@ -251,6 +251,7 @@ export default function AppShell({
   const userAvatar = profile?.avatar_url || null;
 
   const createSubpage = useCreateSubpage();
+  const { data: subpagesList = [] } = useSubpages();
 
   const handleCreatePageClick = async () => {
     try {
@@ -544,6 +545,21 @@ export default function AppShell({
               >
                 <Users className="h-3.5 w-3.5 mr-2" />
                 <span className="uppercase">{c.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Páginas do Notion">
+            {subpagesList.slice(0, 30).map((p) => (
+              <CommandItem
+                key={p.id}
+                value={`${p.title} ${p.id}`}
+                onSelect={() => {
+                  setSearchOpen(false);
+                  navigate(`/processos/pagina/${p.id}`);
+                }}
+              >
+                <span className="mr-2 text-xs">{p.icon_emoji || "📄"}</span>
+                <span className="truncate">{p.title || "Sem título"}</span>
               </CommandItem>
             ))}
           </CommandGroup>

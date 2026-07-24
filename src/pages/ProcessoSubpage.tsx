@@ -99,6 +99,31 @@ export default function ProcessoSubpage() {
     upsert.mutate({ ...page, cover_url: url });
   };
 
+  const handleUpdateStatus = (st: string | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, status: st });
+  };
+
+  const handleUpdateAssignee = (ass: string | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, assignee: ass });
+  };
+
+  const handleUpdateTags = (t: string[] | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, tags: t });
+  };
+
+  const handleUpdateDueDate = (d: string | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, due_date: d });
+  };
+
+  const handleToggleFullWidth = () => {
+    if (!page) return;
+    upsert.mutate({ ...page, is_full_width: !page.is_full_width });
+  };
+
   const createSubpage = useCreateSubpage();
 
   const handleAddChildSubpage = async () => {
@@ -212,7 +237,7 @@ export default function ProcessoSubpage() {
           </div>
         </div>
 
-        {/* Notion Header Component (Cover & Emoji Selector) */}
+        {/* Notion Header Component (Cover, Emoji Selector & Notion Pro Properties) */}
         <NotionPageHeader
           iconEmoji={page.icon_emoji}
           coverUrl={page.cover_url}
@@ -223,10 +248,20 @@ export default function ProcessoSubpage() {
           onTitleBlur={handleTitleBlur}
           subtitle="Sub-página de Processo Operacional"
           createdAt={page.created_at}
+          status={page.status}
+          onUpdateStatus={handleUpdateStatus}
+          assignee={page.assignee}
+          onUpdateAssignee={handleUpdateAssignee}
+          tags={page.tags}
+          onUpdateTags={handleUpdateTags}
+          dueDate={page.due_date}
+          onUpdateDueDate={handleUpdateDueDate}
+          isFullWidth={!!page.is_full_width}
+          onToggleFullWidth={handleToggleFullWidth}
         />
 
         {/* Page Body Editor */}
-        <div className="max-w-4xl mx-auto px-6 md:px-16 pt-4">
+        <div className={cn("mx-auto px-6 md:px-16 pt-4 transition-all duration-300", page.is_full_width ? "max-w-full" : "max-w-4xl")}>
           <SubpageEditor
             key={page.id}
             initialContent={page.content}

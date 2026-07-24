@@ -1,8 +1,24 @@
 import { useState } from "react";
-import { Image, Smile, Trash2, Sparkles, Link as LinkIcon, Check } from "lucide-react";
+import {
+  Image,
+  Smile,
+  Trash2,
+  Sparkles,
+  Link as LinkIcon,
+  Check,
+  User,
+  Tag,
+  Calendar,
+  Maximize2,
+  Minimize2,
+  Plus,
+  X,
+  Circle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const EMOJI_PRESETS = [
   "📄", "📋", "⚡", "🎯", "🚀", "💡", "📁", "⚙️", 
@@ -34,6 +50,13 @@ const COVER_PRESETS = [
   },
 ];
 
+const STATUS_OPTIONS = [
+  { label: "Rascunho", value: "RASCUNHO", color: "bg-gray-500/20 text-gray-400 border-gray-500/40", icon: "⚪" },
+  { label: "Em Andamento", value: "EM_ANDAMENTO", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40", icon: "🟢" },
+  { label: "Em Revisão", value: "EM_REVISAO", color: "bg-amber-500/20 text-amber-400 border-amber-500/40", icon: "🟡" },
+  { label: "Concluído", value: "CONCLUIDO", color: "bg-blue-500/20 text-blue-400 border-blue-500/40", icon: "✅" },
+];
+
 interface NotionPageHeaderProps {
   iconEmoji?: string | null;
   coverUrl?: string | null;
@@ -44,6 +67,18 @@ interface NotionPageHeaderProps {
   onTitleBlur?: () => void;
   subtitle?: string;
   createdAt?: string;
+
+  // New Notion Pro Properties
+  status?: string | null;
+  onUpdateStatus?: (status: string | null) => void;
+  assignee?: string | null;
+  onUpdateAssignee?: (assignee: string | null) => void;
+  tags?: string[] | null;
+  onUpdateTags?: (tags: string[] | null) => void;
+  dueDate?: string | null;
+  onUpdateDueDate?: (date: string | null) => void;
+  isFullWidth?: boolean;
+  onToggleFullWidth?: () => void;
 }
 
 export function NotionPageHeader({
@@ -56,9 +91,37 @@ export function NotionPageHeader({
   onTitleBlur,
   subtitle = "Página de Processo Operacional",
   createdAt,
+  status = "EM_ANDAMENTO",
+  onUpdateStatus,
+  assignee = "",
+  onUpdateAssignee,
+  tags = [],
+  onUpdateTags,
+  dueDate = "",
+  onUpdateDueDate,
+  isFullWidth = false,
+  onToggleFullWidth,
 }: NotionPageHeaderProps) {
   const [customUrl, setCustomUrl] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
+
+  const currentStatusObj = STATUS_OPTIONS.find((s) => s.value === status) || STATUS_OPTIONS[1];
+
+  const handleAddTag = () => {
+    if (!newTagInput.trim() || !onUpdateTags) return;
+    const currentTags = tags || [];
+    if (!currentTags.includes(newTagInput.trim())) {
+      onUpdateTags([...currentTags, newTagInput.trim()]);
+    }
+    setNewTagInput("");
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    if (!onUpdateTags) return;
+    const currentTags = tags || [];
+    onUpdateTags(currentTags.filter((t) => t !== tagToRemove));
+  };
 
   const renderCoverBg = () => {
     if (!coverUrl) {
@@ -92,8 +155,27 @@ export function NotionPageHeader({
       <div className="h-44 md:h-52 w-full relative group overflow-hidden border-b border-[#2c2c2b]">
         {renderCoverBg()}
 
-        {/* Hover Controls for Cover */}
+        {/* Top Controls on Banner */}
         <div className="absolute bottom-3 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2 z-10">
+          {onToggleFullWidth && (
+            <Button
+              size="sm"
+              onClick={onToggleFullWidth}
+              className="h-7 text-xs bg-black/70 hover:bg-black text-[#e3e2e0] border border-white/20 px-2.5 rounded-[4px] backdrop-blur-md"
+              title={isFullWidth ? "Modo leitura (centralizado)" : "Modo largura total"}
+            >
+              {isFullWidth ? (
+                <>
+                  <Minimize2 className="h-3.5 w-3.5 mr-1 text-[#7a9d96]" /> Leitura
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="h-3.5 w-3.5 mr-1 text-[#7a9d96]" /> Largura Total
+                </>
+              )}
+            </Button>
+          )}
+
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -173,8 +255,8 @@ export function NotionPageHeader({
         </div>
       </div>
 
-      {/* Main Title & Emoji Section */}
-      <div className="max-w-4xl mx-auto px-6 md:px-16 relative">
+      {/* Main Title & Properties Section */}
+      <div className={cn("mx-auto px-6 md:px-16 relative transition-all duration-300", isFullWidth ? "max-w-full" : "max-w-4xl")}>
         {/* Emoji Icon Container */}
         <div className="-mt-9 mb-4 flex items-center gap-3">
           <Popover>
@@ -233,7 +315,7 @@ export function NotionPageHeader({
         </div>
 
         {/* Title Input */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <input
             type="text"
             value={title}
@@ -243,16 +325,108 @@ export function NotionPageHeader({
             className="w-full bg-transparent border-none text-4xl font-bold text-white focus:ring-0 outline-none p-0 tracking-tight"
           />
 
-          {/* Metadata Bar */}
-          <div className="flex items-center gap-4 text-xs text-[#5f5e5b] border-b border-[#2c2c2b]/30 pb-4">
-            <span className="flex items-center gap-1.5 font-medium text-[#7a9d96]">
-              {iconEmoji || "📄"} {subtitle}
-            </span>
-            {createdAt && (
-              <span>
-                Criado em {new Date(createdAt).toLocaleDateString("pt-BR")}
+          {/* Notion Pro Properties Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 py-3 border-y border-[#2c2c2b]/40 text-xs">
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              <span className="text-[#5f5e5b] text-[11px] font-medium w-24 shrink-0 flex items-center gap-1">
+                <Circle className="h-3 w-3 text-[#7a9d96]" /> Status:
               </span>
-            )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "px-2 py-0.5 rounded border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer",
+                      currentStatusObj.color
+                    )}
+                  >
+                    <span>{currentStatusObj.icon}</span>
+                    <span>{currentStatusObj.label}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-44 p-1.5 bg-[#202020] border-[#2c2c2b] space-y-1">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onUpdateStatus?.(opt.value)}
+                      className="w-full flex items-center gap-2 px-2 py-1 rounded text-xs text-[#e3e2e0] hover:bg-[#2c2c2b] transition-colors text-left"
+                    >
+                      <span>{opt.icon}</span>
+                      <span className="font-semibold">{opt.label}</span>
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Responsável */}
+            <div className="flex items-center gap-2">
+              <span className="text-[#5f5e5b] text-[11px] font-medium w-24 shrink-0 flex items-center gap-1">
+                <User className="h-3 w-3 text-[#7a9d96]" /> Responsável:
+              </span>
+              <input
+                type="text"
+                value={assignee || ""}
+                onChange={(e) => onUpdateAssignee?.(e.target.value)}
+                placeholder="Definir..."
+                className="bg-transparent border-b border-transparent hover:border-[#2c2c2b] focus:border-[#7a9d96] text-xs text-[#e3e2e0] focus:ring-0 outline-none px-1 py-0.5 transition-colors w-full"
+              />
+            </div>
+
+            {/* Prazo / Due Date */}
+            <div className="flex items-center gap-2">
+              <span className="text-[#5f5e5b] text-[11px] font-medium w-24 shrink-0 flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-[#7a9d96]" /> Prazo:
+              </span>
+              <input
+                type="date"
+                value={dueDate || ""}
+                onChange={(e) => onUpdateDueDate?.(e.target.value)}
+                className="bg-[#191919] border border-[#2c2c2b] rounded px-1.5 py-0.5 text-[11px] text-[#e3e2e0] focus:ring-0 outline-none"
+              />
+            </div>
+
+            {/* Tags */}
+            <div className="flex items-center gap-2">
+              <span className="text-[#5f5e5b] text-[11px] font-medium w-24 shrink-0 flex items-center gap-1">
+                <Tag className="h-3 w-3 text-[#7a9d96]" /> Tags:
+              </span>
+              <div className="flex items-center gap-1 flex-wrap min-w-0">
+                {(tags || []).map((t) => (
+                  <span
+                    key={t}
+                    className="bg-[#7a9d96]/15 text-[#7a9d96] border border-[#7a9d96]/30 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1"
+                  >
+                    <span>{t}</span>
+                    <button onClick={() => handleRemoveTag(t)} className="hover:text-red-400">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="p-1 text-[#9b9a97] hover:text-[#7a9d96] rounded hover:bg-[#2c2c2b]">
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-48 p-2 bg-[#202020] border-[#2c2c2b]">
+                    <div className="flex gap-1">
+                      <Input
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                        placeholder="Nova tag..."
+                        className="h-6 text-xs bg-[#191919] border-[#2c2c2b] text-[#e3e2e0]"
+                      />
+                      <Button size="sm" onClick={handleAddTag} className="h-6 text-xs bg-[#7a9d96] text-black font-bold px-2">
+                        +
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
           </div>
         </div>
       </div>
