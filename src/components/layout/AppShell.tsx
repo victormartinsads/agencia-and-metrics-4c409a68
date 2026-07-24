@@ -27,6 +27,7 @@ import {
   FilePlus,
 } from "lucide-react";
 import { useCreateSubpage } from "@/hooks/useSubpages";
+import { NotionSidebarTree } from "@/components/notion/NotionSidebarTree";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -338,6 +339,9 @@ export default function AppShell({
               })}
             </div>
           ))}
+
+          {/* Notion Interactive Tree View */}
+          <NotionSidebarTree isSidebarOpen={open} />
         </nav>
 
         {/* Footer / user */}
