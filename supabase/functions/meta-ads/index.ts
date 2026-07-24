@@ -957,6 +957,10 @@ Deno.serve(async (req) => {
             roas: adSpend > 0 ? Number((adRevenue / adSpend).toFixed(2)) : 0,
             linkClicks: adLinkClicks,
             linkCtr: adLinkCtr,
+            actionBreakdown: (adInsight?.actions || []).reduce((acc: any, act: any) => {
+              acc[act.action_type] = Number(act.value || 0);
+              return acc;
+            }, {}),
           };
         });
 

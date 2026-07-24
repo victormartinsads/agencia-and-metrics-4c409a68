@@ -113,6 +113,23 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
     if (activeMetric === "conversions" || activeMetric === "auto") {
       return cr.primaryResult ?? cr.conversions ?? 0;
     }
+
+    let directVal: number | undefined = undefined;
+    if (cr.actionBreakdown) {
+      if (activeMetric === "lead" || activeMetric === "leads") {
+        directVal = cr.actionBreakdown["lead"] ?? cr.actionBreakdown["leads"] ?? cr.actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? cr.actionBreakdown["onsite_conversion.lead_grouped"];
+      } else {
+        directVal = cr.actionBreakdown[activeMetric];
+      }
+    }
+    if (directVal === undefined && cr.leads !== undefined && (activeMetric === "lead" || activeMetric === "leads")) {
+      directVal = cr.leads;
+    }
+
+    if (directVal !== undefined && Number(directVal) >= 0) {
+      return Number(directVal);
+    }
+
     const campaignTotal = getCustomPrimaryMetricValue(campaign, activeMetric);
     if (campaignTotal > 0) {
       const campaignConvs = (campaign.primaryResult ?? campaign.conversions) || 1;

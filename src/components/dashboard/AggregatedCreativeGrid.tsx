@@ -85,15 +85,31 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       camp.creatives.map(cr => {
         let computedConversions = cr.conversions;
         if (activeMetric !== "clicks" && activeMetric !== "impressions" && activeMetric !== "spend" && activeMetric !== "roas" && activeMetric !== "conversions") {
-           const campaignTotal = getCustomPrimaryMetricValue(camp, activeMetric);
-           const campaignConvs = camp.conversions || 1;
-           const campaignClicks = camp.clicks || 1;
-           if (campaignTotal === 0) {
-             computedConversions = camp.conversions > 0 ? cr.conversions : 0;
+           let directVal: number | undefined = undefined;
+           if ((cr as any).actionBreakdown) {
+             if (activeMetric === "lead" || activeMetric === "leads") {
+               directVal = (cr as any).actionBreakdown["lead"] ?? (cr as any).actionBreakdown["leads"] ?? (cr as any).actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? (cr as any).actionBreakdown["onsite_conversion.lead_grouped"];
+             } else {
+               directVal = (cr as any).actionBreakdown[activeMetric];
+             }
+           }
+           if (directVal === undefined && (cr as any).leads !== undefined && (activeMetric === "lead" || activeMetric === "leads")) {
+             directVal = (cr as any).leads;
+           }
+
+           if (directVal !== undefined && Number(directVal) >= 0) {
+             computedConversions = Number(directVal);
            } else {
-             computedConversions = cr.conversions > 0 
-               ? (cr.conversions / campaignConvs) * campaignTotal
-               : (cr.clicks / campaignClicks) * campaignTotal;
+             const campaignTotal = getCustomPrimaryMetricValue(camp, activeMetric);
+             const campaignConvs = (camp.primaryResult ?? camp.conversions) || 1;
+             const campaignClicks = camp.clicks || 1;
+             if (campaignTotal === 0) {
+               computedConversions = camp.conversions > 0 ? cr.conversions : 0;
+             } else {
+               computedConversions = cr.conversions > 0 
+                 ? (cr.conversions / campaignConvs) * campaignTotal
+                 : (cr.clicks / campaignClicks) * campaignTotal;
+             }
            }
         }
         

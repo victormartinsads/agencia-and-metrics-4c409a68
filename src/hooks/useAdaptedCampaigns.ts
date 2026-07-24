@@ -73,12 +73,28 @@ export function useAdaptedCampaigns(
         } else if (customKey === "spend") {
           crConv = cr.spend;
         } else {
-          // Proportional estimate
-          const campaignConvs = c.conversions || 1;
-          const campaignClicks = c.clicks || 1;
-          crConv = cr.conversions > 0
-            ? (cr.conversions / campaignConvs) * value
-            : (cr.clicks / campaignClicks) * value;
+          let directVal: number | undefined = undefined;
+          if ((cr as any).actionBreakdown) {
+            if (customKey === "lead" || customKey === "leads") {
+              directVal = (cr as any).actionBreakdown["lead"] ?? (cr as any).actionBreakdown["leads"] ?? (cr as any).actionBreakdown["offsite_conversion.fb_pixel_lead"] ?? (cr as any).actionBreakdown["onsite_conversion.lead_grouped"];
+            } else {
+              directVal = (cr as any).actionBreakdown[customKey];
+            }
+          }
+          if (directVal === undefined && (cr as any).leads !== undefined && (customKey === "lead" || customKey === "leads")) {
+            directVal = (cr as any).leads;
+          }
+
+          if (directVal !== undefined && Number(directVal) >= 0) {
+            crConv = Number(directVal);
+          } else {
+            // Proportional estimate
+            const campaignConvs = (c.primaryResult ?? c.conversions) || 1;
+            const campaignClicks = c.clicks || 1;
+            crConv = cr.conversions > 0
+              ? (cr.conversions / campaignConvs) * value
+              : (cr.clicks / campaignClicks) * value;
+          }
         }
         return {
           ...cr,
