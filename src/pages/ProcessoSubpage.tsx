@@ -18,6 +18,7 @@ import { useCreateBlockNote } from "@blocknote/react";
 import * as locales from "@blocknote/core/locales";
 import "@blocknote/shadcn/style.css";
 import { v4 as uuidv4 } from "uuid";
+import { cn } from "@/lib/utils";
 
 // Editor component for sub-page content
 function SubpageEditor({
