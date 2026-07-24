@@ -23,6 +23,9 @@ import { aggregateCampaignMetrics, formatMetricValue } from "@/lib/metaMetrics";
 import { findMetricDef, getMetricValue } from "@/lib/metaMetricCatalog";
 import { FunnelHealthDiagnosticPanel } from "@/components/funnel/FunnelHealthDiagnosticPanel";
 import { CreativeGrid } from "@/components/dashboard/CreativeGrid";
+import { AggregatedCreativeGrid } from "@/components/dashboard/AggregatedCreativeGrid";
+import { useAdaptedCampaigns } from "@/hooks/useAdaptedCampaigns";
+import { useFunnelPrimaryMetrics } from "@/hooks/useFunnelPrimaryMetric";
 import {
   Select,
   SelectContent,
@@ -321,14 +324,21 @@ function GroupSlide({
   datePreset: string;
   overrideConfig?: MetricsConfig;
   resolvedLabels?: Record<string, string>;
-  snapshotData?: any;
 }) {
   const totals = aggregateCampaignMetrics(group.campaigns);
-  const resultLabel =
-    group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
-
   const { config: liveConfig } = useDiagnosticMetricsConfig(clientId || "", datePreset, group.key);
   const config = overrideConfig || liveConfig;
+
+  const { data: primaryMetrics } = useFunnelPrimaryMetrics(clientId);
+  const sectionCode = group.isFunnel
+    ? (extractFunnelCode(group.campaigns[0]?.name) || group.key)
+    : (group.campaigns[0]?.id || group.key);
+  const selectedMetricKey = primaryMetrics?.[sectionCode] || "conversions";
+  const customPrimaryMetricValue = config?.custom_metrics?.find(m => m.id === "conversions")?.value;
+  const adaptedCampaigns = useAdaptedCampaigns(group.campaigns, selectedMetricKey, customPrimaryMetricValue);
+
+  const resultLabel =
+    group.campaigns.find(c => c.primaryResultLabel)?.primaryResultLabel || "Resultados";
 
   const getMetricValueAndOverride = (key: string) => {
     const override = config.custom_metrics.find((m) => m.id === key);
@@ -521,36 +531,33 @@ function GroupSlide({
         </PresentSectionAccordion>
       )}
 
-      {group.campaigns.some(c => Array.isArray(c.creatives) && c.creatives.length > 0) && (
+      {adaptedCampaigns.some(c => Array.isArray(c.creatives) && c.creatives.length > 0) && (
         <PresentSectionAccordion
           icon={<Film className="h-4 w-4" />}
           title="Criativos"
-          badge={top.length}
+          badge={adaptedCampaigns.reduce((sum, c) => sum + (c.creatives?.length || 0), 0)}
           isOpen={!!openSections.creatives}
           onToggle={() => toggleSection("creatives")}
         >
           <div className="bg-card">
-            <CreativeGrid 
-              campaign={{
-                id: group.key,
-                name: displayTitle,
-                primaryResultLabel: resultLabel,
-                conversions: group.campaigns.reduce((sum, c) => sum + c.conversions, 0),
-                clicks: group.campaigns.reduce((sum, c) => sum + c.clicks, 0),
-                impressions: group.campaigns.reduce((sum, c) => sum + c.impressions, 0),
-                spend: group.campaigns.reduce((sum, c) => sum + c.spend, 0),
-                roas: group.campaigns.reduce((sum, c) => sum + (c.roas || 0), 0),
-                revenue: group.campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0),
-                ctr: group.campaigns.reduce((sum, c) => sum + (c.ctr || 0), 0) / (group.campaigns.length || 1),
-                linkClicks: group.campaigns.reduce((sum, c) => sum + ((c as any).linkClicks || c.clicks), 0),
-                creatives: group.campaigns.flatMap(c => c.creatives.map(cr => ({ ...cr, _camp: resolvedLabels[c.id] || c.name }))),
-              } as any}
-              clientId={clientId || ""}
-              currencySymbol={currencySymbol}
-              readOnly={true}
-              selectedMetricKey={selectedMetric === "auto" ? undefined : (selectedMetric as any)}
-              showAll={false}
-            />
+            {group.isFunnel ? (
+              <AggregatedCreativeGrid
+                campaigns={adaptedCampaigns}
+                funnelLabel={displayTitle}
+                clientId={clientId || ""}
+                currencySymbol={currencySymbol}
+                selectedMetricKey={selectedMetric === "auto" ? selectedMetricKey : (selectedMetric as any)}
+                readOnly={true}
+              />
+            ) : (
+              <CreativeGrid 
+                campaign={adaptedCampaigns[0]}
+                clientId={clientId || ""}
+                currencySymbol={currencySymbol}
+                readOnly={true}
+                selectedMetricKey={selectedMetric === "auto" ? selectedMetricKey : (selectedMetric as any)}
+              />
+            )}
           </div>
         </PresentSectionAccordion>
       )}

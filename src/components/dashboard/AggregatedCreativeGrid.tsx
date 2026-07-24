@@ -154,6 +154,12 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       return { ...cr, _ov: ov };
     })
     .sort((a, b) => {
+      const rankA = a._ov.custom_rank && Number(a._ov.custom_rank) > 0 ? Number(a._ov.custom_rank) : undefined;
+      const rankB = b._ov.custom_rank && Number(b._ov.custom_rank) > 0 ? Number(b._ov.custom_rank) : undefined;
+      if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
+      if (rankA !== undefined) return -1;
+      if (rankB !== undefined) return 1;
+
       const valA = getMetricValue(a._ov);
       const valB = getMetricValue(b._ov);
       if (valA !== valB) return valB - valA; // Maior primeiro

@@ -43,8 +43,8 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
     return init;
   });
 
-  const [nameOverride, setNameOverride] = useState(() => {
-    return localStorage.getItem(`creative_name_${creativeId}`) || creativeName;
+  const [rankValue, setRankValue] = useState<string>(() => {
+    return String(getOverrideValue("custom_rank", 0));
   });
 
   const handleSave = async () => {
@@ -55,6 +55,7 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
         localStorage.removeItem(`creative_name_${creativeId}`);
       }
 
+      // Save metric overrides
       for (const m of metrics) {
         const num = parseFloat(values[m.key]);
         if (isNaN(num)) continue;
@@ -67,7 +68,17 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
           });
         }
       }
-      toast.success("Métricas atualizadas!");
+
+      // Save custom_rank override if selected
+      const numRank = Number(rankValue);
+      await upsert.mutateAsync({
+        client_id: clientId,
+        creative_id: creativeId,
+        metric_name: "custom_rank",
+        metric_value: numRank,
+      });
+
+      toast.success("Métricas e posição atualizadas!");
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message || "Erro ao salvar");
@@ -88,7 +99,7 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm">Editar Criativo</DialogTitle>
         </DialogHeader>
@@ -111,6 +122,25 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
               className="h-8 text-sm"
               placeholder="Nome do criativo..."
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-card-foreground">
+              Posição no Destaque (Ranking)
+            </Label>
+            <Select value={rankValue} onValueChange={setRankValue}>
+              <SelectTrigger className="h-8 text-xs bg-background border-border">
+                <SelectValue placeholder="Automático (por desempenho)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0" className="text-xs">Automático (por desempenho)</SelectItem>
+                <SelectItem value="1" className="text-xs">🥇 Forçar TOP 1</SelectItem>
+                <SelectItem value="2" className="text-xs">🥈 Forçar TOP 2</SelectItem>
+                <SelectItem value="3" className="text-xs">🥉 Forçar TOP 3</SelectItem>
+                <SelectItem value="4" className="text-xs">4º Lugar</SelectItem>
+                <SelectItem value="5" className="text-xs">5º Lugar</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="pt-2 border-t border-border mt-2 mb-2">
