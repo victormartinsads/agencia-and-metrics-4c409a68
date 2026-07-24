@@ -463,7 +463,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
           existingOverrides={overrides}
           metrics={[
             { key: "conversions", label: resultLabel, original: editCreative.primaryResult ?? editCreative.conversions },
-            { key: "cpa", label: "CPA (Custo por Resultado)", original: editCreative.conversions > 0 ? editCreative.spend / editCreative.conversions : 0 },
+            { key: "cpa", label: "CPA (Custo por Resultado)", original: editCreative.conversions > 0 ? Number((editCreative.spend / editCreative.conversions).toFixed(2)) : 0 },
             { key: "spend", label: "Investimento", original: editCreative.spend },
           ]}
         />

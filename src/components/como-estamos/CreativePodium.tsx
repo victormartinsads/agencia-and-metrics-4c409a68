@@ -149,7 +149,7 @@ export function CreativePodium({ byCPA, byCTR, byConversions, clientId, currency
           existingOverrides={overrides}
           metrics={[
             { key: "conversions", label: "Conversões", original: editingCreative.conversions },
-            { key: "cpa", label: "CPA (Custo por Resultado)", original: editingCreative.conversions > 0 ? editingCreative.spend / editingCreative.conversions : 0 },
+            { key: "cpa", label: "CPA (Custo por Resultado)", original: editingCreative.conversions > 0 ? Number((editingCreative.spend / editingCreative.conversions).toFixed(2)) : 0 },
             { key: "spend", label: "Investimento", original: editingCreative.spend },
           ]}
         />

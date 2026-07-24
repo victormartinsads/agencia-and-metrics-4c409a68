@@ -34,7 +34,11 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const m of metrics) {
-      init[m.key] = String(getOverrideValue(m.key, m.original));
+      const rawVal = getOverrideValue(m.key, m.original);
+      const num = Number(rawVal);
+      init[m.key] = !isNaN(num) && !Number.isInteger(num)
+        ? String(Number(num.toFixed(2)))
+        : String(rawVal);
     }
     return init;
   });
@@ -71,7 +75,11 @@ export function CreativeEditModal({ open, onOpenChange, clientId, creativeId, cr
   };
 
   const handleReset = (key: string, original: number) => {
-    setValues(prev => ({ ...prev, [key]: String(original) }));
+    const num = Number(original);
+    const formatted = !isNaN(num) && !Number.isInteger(num)
+      ? String(Number(num.toFixed(2)))
+      : String(original);
+    setValues(prev => ({ ...prev, [key]: formatted }));
   };
 
   const handleResetName = () => {
