@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useSubpage, useUpsertSubpage, useDeleteSubpage } from "@/hooks/useSubpages";
+import { useSubpage, useUpsertSubpage, useDeleteSubpage, useCreateSubpage } from "@/hooks/useSubpages";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
 import * as locales from "@blocknote/core/locales";
@@ -86,6 +86,21 @@ export default function ProcessoSubpage() {
   const handleTitleBlur = () => {
     if (!page || !title.trim()) return;
     upsert.mutate({ ...page, title });
+  };
+
+  const createSubpage = useCreateSubpage();
+
+  const handleAddChildSubpage = async () => {
+    try {
+      const newChild = await createSubpage.mutateAsync({
+        title: "Nova Sub-página",
+        parent_process_id: pageId,
+      });
+      toast.success("Sub-página criada!");
+      navigate(`/processos/pagina/${newChild.id}`);
+    } catch {
+      toast.error("Erro ao criar sub-página");
+    }
   };
 
   const handleDelete = async () => {
@@ -166,6 +181,13 @@ export default function ProcessoSubpage() {
                 <Save className="h-3 w-3 animate-pulse" /> Salvando...
               </span>
             )}
+            <Button
+              onClick={handleAddChildSubpage}
+              disabled={createSubpage.isPending}
+              className="h-7 text-xs bg-[#7a9d96]/15 hover:bg-[#7a9d96]/30 border border-[#7a9d96]/40 text-[#7a9d96] hover:text-white px-2.5 rounded-[4px] font-bold"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Sub-página
+            </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}

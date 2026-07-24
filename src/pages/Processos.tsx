@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProcesses, useUpsertProcess, useDeleteProcess, ProcessCard } from "@/hooks/useProcesses";
+import { useCreateSubpage } from "@/hooks/useSubpages";
 import "@blocknote/shadcn/style.css";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
@@ -108,6 +109,18 @@ export default function ProcessosPage() {
   const [newProcessName, setNewProcessName] = useState("");
   const [newProcessColumn, setNewProcessColumn] = useState<"PRE_VENDA" | "CLIENTE_ATIVO" | "CONTROLE">("PRE_VENDA");
   const [newProcessIcon, setNewProcessIcon] = useState<"logo" | "cyclone" | "stop" | "cross">("logo");
+
+  const createSubpage = useCreateSubpage();
+
+  const handleQuickCreateSubpage = async () => {
+    try {
+      const newPage = await createSubpage.mutateAsync({ title: "Nova Página" });
+      toast.success("Nova página criada!");
+      navigate(`/processos/pagina/${newPage.id}`);
+    } catch {
+      toast.error("Erro ao criar nova página");
+    }
+  };
 
   // Filter columns
   const preVendaItems = useMemo(() => processes.filter(p => p.column_name === "PRE_VENDA"), [processes]);
@@ -377,12 +390,21 @@ export default function ProcessosPage() {
                 <span>VISUALIZAÇÃO</span>
               </div>
               
-              <Button
-                onClick={() => setNewProcessOpen(true)}
-                className="h-7 text-xs bg-[#7a9d96] hover:bg-[#7a9d96]/95 text-[#191919] font-bold px-3 gap-1 rounded-[4px]"
-              >
-                <Plus className="h-3 w-3" /> Novo Processo
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleQuickCreateSubpage}
+                  disabled={createSubpage.isPending}
+                  className="h-7 text-xs bg-[#7a9d96]/15 hover:bg-[#7a9d96]/30 border border-[#7a9d96]/40 text-[#7a9d96] hover:text-white px-3 gap-1 rounded-[4px] font-bold"
+                >
+                  <FileText className="h-3.5 w-3.5" /> + Nova Página
+                </Button>
+                <Button
+                  onClick={() => setNewProcessOpen(true)}
+                  className="h-7 text-xs bg-[#7a9d96] hover:bg-[#7a9d96]/95 text-[#191919] font-bold px-3 gap-1 rounded-[4px]"
+                >
+                  <Plus className="h-3 w-3" /> Novo Processo
+                </Button>
+              </div>
             </div>
 
             {/* Kanban columns */}

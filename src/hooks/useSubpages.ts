@@ -52,7 +52,7 @@ export function useSubpage(id: string | undefined) {
           .eq("id", id)
           .maybeSingle();
         if (error) throw error;
-        return data as Subpage | null;
+        return data as unknown as Subpage | null;
       } catch (err: any) {
         if (isMissingTableError(err)) {
           const all = getLocal<Subpage[]>(LOCAL_KEY, []);
@@ -76,7 +76,7 @@ export function useSubpages() {
           .select("id, title, parent_process_id, created_at")
           .order("created_at", { ascending: true });
         if (error) throw error;
-        return (data || []) as Subpage[];
+        return (data || []) as unknown as Subpage[];
       } catch (err: any) {
         if (isMissingTableError(err)) {
           return getLocal<Subpage[]>(LOCAL_KEY, []);
@@ -117,6 +117,60 @@ export function useUpsertSubpage() {
   });
 }
 
+// Create a brand new subpage
+export function useCreateSubpage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      title = "Nova Página",
+      parent_process_id = null,
+    }: {
+      title?: string;
+      parent_process_id?: string | null;
+    }) => {
+      const newPage: Subpage = {
+        id: crypto.randomUUID(),
+        title: title.trim() || "Nova Página",
+        parent_process_id,
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "Escreva aqui o conteúdo desta página...",
+                styles: { italic: true },
+              },
+            ],
+          },
+        ],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      try {
+        const { error } = await supabase
+          .from("notion_subpages" as any)
+          .insert(newPage);
+        if (error) throw error;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const all = getLocal<Subpage[]>(LOCAL_KEY, []);
+          all.push(newPage);
+          setLocal(LOCAL_KEY, all);
+        } else {
+          throw err;
+        }
+      }
+      return newPage;
+    },
+    onSuccess: (newPage) => {
+      qc.invalidateQueries({ queryKey: ["subpages"] });
+      qc.invalidateQueries({ queryKey: ["subpage", newPage.id] });
+    },
+  });
+}
+
 // Delete a subpage
 export function useDeleteSubpage() {
   const qc = useQueryClient();
@@ -142,3 +196,4 @@ export function useDeleteSubpage() {
     },
   });
 }
+

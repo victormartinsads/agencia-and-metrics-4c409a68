@@ -23,7 +23,10 @@ import {
   ChevronRight,
   Bell,
   GitMerge,
+  Plus,
+  FilePlus,
 } from "lucide-react";
+import { useCreateSubpage } from "@/hooks/useSubpages";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -246,6 +249,18 @@ export default function AppShell({
   const userName = displayName(profile, user?.email);
   const userAvatar = profile?.avatar_url || null;
 
+  const createSubpage = useCreateSubpage();
+
+  const handleCreatePageClick = async () => {
+    try {
+      const newPage = await createSubpage.mutateAsync({ title: "Nova Página" });
+      toast.success("Nova página criada!");
+      navigate(`/processos/pagina/${newPage.id}`);
+    } catch {
+      toast.error("Erro ao criar nova página");
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
@@ -280,6 +295,20 @@ export default function AppShell({
 
         {/* Nav groups */}
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          {/* Quick Create Page Button */}
+          <button
+            type="button"
+            onClick={handleCreatePageClick}
+            disabled={createSubpage.isPending}
+            title={!open ? "Nova Página" : undefined}
+            className={cn(
+              "w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer text-[#7a9d96] bg-[#7a9d96]/10 border border-[#7a9d96]/30 hover:bg-[#7a9d96]/20 hover:border-[#7a9d96]/50 mb-2",
+              !open && "justify-center px-0"
+            )}
+          >
+            <FilePlus className="h-4 w-4 shrink-0 text-[#7a9d96]" />
+            {open && <span>+ Nova Página</span>}
+          </button>
           {groups.map((g) => (
             <div key={g.label} className="space-y-1">
               {open && (
