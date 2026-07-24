@@ -10,6 +10,7 @@ export interface Subpage {
   content?: any;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 const isMissingTableError = (error: any) => {
@@ -179,7 +180,66 @@ export function useCreateSubpage() {
   });
 }
 
-// Delete a subpage
+// Delete (soft-delete) a subpage to trash
+export function useSoftDeleteSubpage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const now = new Date().toISOString();
+      try {
+        const { error } = await supabase
+          .from("notion_subpages" as any)
+          .update({ deleted_at: now })
+          .eq("id", id);
+        if (error) throw error;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const all = getLocal<Subpage[]>(LOCAL_KEY, []);
+          const p = all.find((item) => item.id === id);
+          if (p) p.deleted_at = now;
+          setLocal(LOCAL_KEY, all);
+          return;
+        }
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["subpages"] });
+      qc.invalidateQueries({ queryKey: ["trash-subpages"] });
+    },
+  });
+}
+
+// Restore subpage from trash
+export function useRestoreSubpage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const { error } = await supabase
+          .from("notion_subpages" as any)
+          .update({ deleted_at: null })
+          .eq("id", id);
+        if (error) throw error;
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const all = getLocal<Subpage[]>(LOCAL_KEY, []);
+          const p = all.find((item) => item.id === id);
+          if (p) p.deleted_at = null;
+          setLocal(LOCAL_KEY, all);
+          return;
+        }
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["subpages"] });
+      qc.invalidateQueries({ queryKey: ["trash-subpages"] });
+    },
+  });
+}
+
+// Permanently delete a subpage
 export function useDeleteSubpage() {
   const qc = useQueryClient();
   return useMutation({
@@ -201,7 +261,33 @@ export function useDeleteSubpage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["subpages"] });
+      qc.invalidateQueries({ queryKey: ["trash-subpages"] });
     },
+  });
+}
+
+// Query for trashed pages
+export function useTrashSubpages() {
+  return useQuery({
+    queryKey: ["trash-subpages"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from("notion_subpages" as any)
+          .select("id, title, icon_emoji, created_at, deleted_at")
+          .not("deleted_at", "is", null)
+          .order("deleted_at", { ascending: false });
+        if (error) throw error;
+        return (data || []) as unknown as Subpage[];
+      } catch (err: any) {
+        if (isMissingTableError(err)) {
+          const all = getLocal<Subpage[]>(LOCAL_KEY, []);
+          return all.filter((p) => !!p.deleted_at);
+        }
+        return [];
+      }
+    },
+    staleTime: 10 * 1000,
   });
 }
 

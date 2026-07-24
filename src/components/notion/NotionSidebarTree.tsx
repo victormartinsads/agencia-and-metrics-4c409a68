@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ChevronRight, ChevronDown, Plus, FileText, Folder, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, FileText, Folder, Loader2, Trash2 } from "lucide-react";
 import { useSubpages, useCreateSubpage, Subpage } from "@/hooks/useSubpages";
 import { useProcesses, ProcessCard } from "@/hooks/useProcesses";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { NotionTrashModal } from "@/components/notion/NotionTrashModal";
 
 interface NotionSidebarTreeProps {
   isSidebarOpen: boolean;
@@ -18,6 +19,7 @@ export function NotionSidebarTree({ isSidebarOpen }: NotionSidebarTreeProps) {
   const createSubpage = useCreateSubpage();
 
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -117,9 +119,18 @@ export function NotionSidebarTree({ isSidebarOpen }: NotionSidebarTreeProps) {
     <div className="space-y-1.5 pt-2 border-t border-sidebar-border/40">
       <div className="flex items-center justify-between px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         <span>Árvore do Notion</span>
-        {(loadingSubpages || loadingProcesses) && (
-          <Loader2 className="h-3 w-3 animate-spin text-[#7a9d96]" />
-        )}
+        <div className="flex items-center gap-1">
+          {(loadingSubpages || loadingProcesses) && (
+            <Loader2 className="h-3 w-3 animate-spin text-[#7a9d96]" />
+          )}
+          <button
+            onClick={() => setTrashOpen(true)}
+            title="Abrir Lixeira do Notion"
+            className="p-0.5 hover:bg-[#2c2c2b] text-muted-foreground hover:text-red-400 rounded transition-colors cursor-pointer"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
       </div>
 
       <div className="max-h-60 overflow-y-auto space-y-1 pr-1 font-sans">
@@ -178,6 +189,8 @@ export function NotionSidebarTree({ isSidebarOpen }: NotionSidebarTreeProps) {
         {/* Root Subpages (independent) */}
         {(subpagesByParent.get("root") || []).map((page) => renderSubpageTree(page, 0))}
       </div>
+
+      <NotionTrashModal open={trashOpen} onOpenChange={setTrashOpen} />
     </div>
   );
 }

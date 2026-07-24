@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useSubpage, useUpsertSubpage, useDeleteSubpage, useCreateSubpage } from "@/hooks/useSubpages";
+import { useSubpage, useUpsertSubpage, useDeleteSubpage, useCreateSubpage, useSoftDeleteSubpage } from "@/hooks/useSubpages";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { useCreateBlockNote } from "@blocknote/react";
 import * as locales from "@blocknote/core/locales";
@@ -114,11 +114,13 @@ export default function ProcessoSubpage() {
     }
   };
 
+  const softDeleteSubpage = useSoftDeleteSubpage();
+
   const handleDelete = async () => {
     if (!pageId) return;
-    if (confirm(`Excluir permanentemente esta página "${title}"?`)) {
-      await deleteSubpage.mutateAsync(pageId);
-      toast.success("Página excluída");
+    if (confirm(`Mover a página "${title}" para a lixeira?`)) {
+      await softDeleteSubpage.mutateAsync(pageId);
+      toast.success("Página movida para a Lixeira");
       navigate(-1);
     }
   };
