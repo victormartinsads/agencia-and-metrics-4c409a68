@@ -352,7 +352,8 @@ export default function NotionDashboard() {
 
   // UI State
   const [search, setSearch] = useState("");
-  const [activeSection, setActiveSection] = useState<"notion_pages" | "clients" | "archived_clients" | "team" | "global_calendar">("notion_pages");
+  const [activeSection, setActiveSection] = useState<"client_template" | "notion_pages" | "clients" | "archived_clients" | "team" | "global_calendar">("client_template");
+  const [selectedTemplateClientId, setSelectedTemplateClientId] = useState<string>("");
   const [notionPageLimit, setNotionPageLimit] = useState(30);
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
   const [createClientOpen, setCreateClientOpen] = useState(false);
@@ -554,6 +555,7 @@ export default function NotionDashboard() {
             {/* View/Tab selector exactly like Notion */}
             <div className="flex items-center gap-2 border-b border-[#2c2c2b] pb-0.5 overflow-x-auto">
               {[
+                { key: "client_template", label: "👤 Template de Cliente" },
                 { key: "notion_pages", label: `📑 Páginas do Notion (${allNotionSubpages.length})` },
                 { key: "clients", label: "📁 Clientes Ativos" },
                 { key: "archived_clients", label: "🗄️ Clientes Inativos" },
@@ -575,6 +577,26 @@ export default function NotionDashboard() {
               ))}
 
               <div className="ml-auto flex items-center gap-2 pb-1 shrink-0">
+                {activeSection === "client_template" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#9b9a97]">Cliente:</span>
+                    <Select
+                      value={selectedTemplateClientId || (globalClients[0]?.id || "")}
+                      onValueChange={setSelectedTemplateClientId}
+                    >
+                      <SelectTrigger className="h-7 text-xs bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] focus:ring-0 w-44">
+                        <SelectValue placeholder="Selecione o Cliente" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#202020] border-[#2c2c2b] text-[#e3e2e0]">
+                        {globalClients.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="hover:bg-[#2c2c2b] focus:bg-[#2c2c2b] text-xs">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {(activeSection === "clients" || activeSection === "archived_clients" || activeSection === "notion_pages") && (
                   <>
                     <div className="relative">
@@ -606,6 +628,22 @@ export default function NotionDashboard() {
                 )}
               </div>
             </div>
+
+            {/* ── CLIENT NOTION TEMPLATE VIEW (MATCHING USER SCREENSHOT) ── */}
+            {activeSection === "client_template" && (
+              <div className="bg-[#191919] pt-2">
+                {globalClients.length > 0 ? (
+                  <ClientNotionTemplate
+                    clientId={selectedTemplateClientId || globalClients[0].id}
+                    canManage={true}
+                  />
+                ) : (
+                  <div className="text-center py-16 bg-[#202020] rounded-[6px] border border-dashed border-[#2c2c2b]">
+                    <p className="text-xs text-[#9b9a97]">Nenhum cliente cadastrado.</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── NOTION PAGES GALLERY VIEW (ALL IMPORTED PAGES) ── */}
             {activeSection === "notion_pages" && (

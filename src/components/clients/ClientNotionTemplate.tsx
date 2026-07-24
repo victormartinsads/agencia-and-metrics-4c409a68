@@ -755,8 +755,9 @@ export default function ClientNotionTemplate({ clientId, canManage }: any) {
               clientId={clientId}
             >
               <div className="flex flex-col gap-2 pt-1">
-                <div className="text-[11px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-3 py-2 mb-2 font-mono">
-                  💡 Contém ICP, especificações de Produtos, Seguidores, etc.
+                <div className="text-[11px] text-[#9b9a97] bg-[#262625] border border-[#2c2c2b] rounded px-3 py-2 mb-2 font-mono flex items-center gap-1.5">
+                  <span>📍</span>
+                  <span>Contém ICP, especificações de Produtos, Seguidores, etc.</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {subSections.map((sub) => (
