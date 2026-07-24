@@ -151,6 +151,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
         roas: cr.roas,
         linkClicks: crLinkClicks,
         linkCtr: crLinkCtr,
+        cpa: (cr.conversions || baseConversions) > 0 ? cr.spend / (cr.conversions || baseConversions) : 0,
       }, overrides);
       return { ...cr, _ov: ov, _computedConversions: computedConv };
     })
@@ -161,8 +162,8 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
       
       // Desempate:
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
-      const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
-      const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
+      const aCpa = a._ov.cpa !== undefined ? a._ov.cpa : (a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity);
+      const bCpa = b._ov.cpa !== undefined ? b._ov.cpa : (b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity);
       if (aCpa !== bCpa) return aCpa - bCpa;
       if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
       return b._ov.clicks - a._ov.clicks;
@@ -289,7 +290,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
           {displayCreatives.map((cr, i) => {
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
-            const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
+            const cpa = ov.cpa !== undefined ? ov.cpa : (ov.conversions > 0 ? (ov.spend / ov.conversions) : 0);
             const badge = i < 3 ? rankBadge[i] : null;
             const hasOverride = overrides.some(o => o.creative_id === cr.id);
 
@@ -445,6 +446,7 @@ export function CreativeGrid({ campaign, clientId, currencySymbol = "R$", readOn
           existingOverrides={overrides}
           metrics={[
             { key: "conversions", label: resultLabel, original: editCreative.primaryResult ?? editCreative.conversions },
+            { key: "cpa", label: "CPA (Custo por Resultado)", original: editCreative.conversions > 0 ? editCreative.spend / editCreative.conversions : 0 },
             { key: "spend", label: "Investimento", original: editCreative.spend },
           ]}
         />

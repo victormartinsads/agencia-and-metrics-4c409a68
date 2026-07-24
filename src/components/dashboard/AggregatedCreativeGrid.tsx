@@ -133,6 +133,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
         roas: cr.roas,
         linkClicks: crLinkClicks,
         linkCtr: crLinkCtr,
+        cpa: (cr.conversions || baseConversions) > 0 ? cr.spend / (cr.conversions || baseConversions) : 0,
       }, overrides);
       return { ...cr, _ov: ov };
     })
@@ -142,8 +143,8 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
       if (valA !== valB) return valB - valA; // Maior primeiro
 
       if (b._ov.conversions !== a._ov.conversions) return b._ov.conversions - a._ov.conversions;
-      const aCpa = a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity;
-      const bCpa = b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity;
+      const aCpa = a._ov.cpa !== undefined ? a._ov.cpa : (a._ov.conversions > 0 ? a._ov.spend / a._ov.conversions : Infinity);
+      const bCpa = b._ov.cpa !== undefined ? b._ov.cpa : (b._ov.conversions > 0 ? b._ov.spend / b._ov.conversions : Infinity);
       if (aCpa !== bCpa) return aCpa - bCpa;
       if (b._ov.impressions !== a._ov.impressions) return b._ov.impressions - a._ov.impressions;
       return b._ov.clicks - a._ov.clicks;
@@ -272,7 +273,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
           {displayCreatives.map((cr, i) => {
             const Icon = typeIcon[cr.type];
             const ov = cr._ov;
-            const cpa = ov.conversions > 0 ? (ov.spend / ov.conversions) : 0;
+            const cpa = ov.cpa !== undefined ? ov.cpa : (ov.conversions > 0 ? (ov.spend / ov.conversions) : 0);
             const badge = i < 3 ? rankBadge[i] : null;
             const hasOverride = overrides.some(o => o.creative_id === cr.id);
 
@@ -368,7 +369,9 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
                           ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           : activeMetric === "roas"
                             ? `${getMetricValue(ov).toFixed(2)}x`
-                            : getMetricValue(ov).toLocaleString("pt-BR")}
+                            : activeMetric === "cpa"
+                              ? `${currencySymbol} ${getMetricValue(ov).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : getMetricValue(ov).toLocaleString("pt-BR")}
                       </p>
                     </div>
                     <div className="bg-muted/50 rounded-md p-2 flex items-center justify-between">
@@ -431,6 +434,7 @@ export function AggregatedCreativeGrid({ campaigns, funnelLabel, clientId, curre
           existingOverrides={overrides}
           metrics={[
             { key: "conversions", label: resultLabel, original: editCreative.primaryResult ?? editCreative.conversions },
+            { key: "cpa", label: "CPA (Custo por Resultado)", original: editCreative.conversions > 0 ? editCreative.spend / editCreative.conversions : 0 },
             { key: "spend", label: "Investimento", original: editCreative.spend },
           ]}
         />
