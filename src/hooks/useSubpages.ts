@@ -81,7 +81,7 @@ export function useSubpages() {
       try {
         const { data, error } = await supabase
           .from("notion_subpages" as any)
-          .select("id, title, parent_process_id, created_at")
+          .select("id, title, parent_process_id, icon_emoji, cover_url, status, assignee, tags, due_date, is_full_width, created_at, updated_at, deleted_at")
           .order("created_at", { ascending: true });
         if (error) throw error;
         return (data || []) as unknown as Subpage[];

@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useGestorDiary";
 import TeamMemberNotionTemplate from "@/components/team/TeamMemberNotionTemplate";
 import ClientNotionTemplate from "@/components/clients/ClientNotionTemplate";
+import { useSubpages } from "@/hooks/useSubpages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -347,9 +348,12 @@ export default function NotionDashboard() {
   const { data: calendarEvents = [] } = useGestorCalendar(activeGestorId);
   const { data: healthMap = {} } = useAllGestorClientMeta(activeGestorId);
 
+  const { data: allNotionSubpages = [], isLoading: subpagesLoading } = useSubpages();
+
   // UI State
   const [search, setSearch] = useState("");
-  const [activeSection, setActiveSection] = useState<"clients" | "archived_clients" | "team" | "global_calendar">("clients");
+  const [activeSection, setActiveSection] = useState<"notion_pages" | "clients" | "archived_clients" | "team" | "global_calendar">("notion_pages");
+  const [notionPageLimit, setNotionPageLimit] = useState(30);
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
   const [createClientOpen, setCreateClientOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
@@ -417,6 +421,12 @@ export default function NotionDashboard() {
     const q = search.toLowerCase();
     return archivedClients.filter((c) => c.name.toLowerCase().includes(q));
   }, [archivedClients, search]);
+
+  const filteredNotionPages = useMemo(() => {
+    if (!search.trim()) return allNotionSubpages;
+    const q = search.toLowerCase();
+    return allNotionSubpages.filter((p) => (p.title || "").toLowerCase().includes(q));
+  }, [allNotionSubpages, search]);
 
   const activeMeetings = useMemo(
     () => calendarEvents.filter((e) => e.status !== "done").slice(0, 5),
@@ -542,8 +552,9 @@ export default function NotionDashboard() {
           {/* Main area */}
           <div className="lg:col-span-2 space-y-6">
             {/* View/Tab selector exactly like Notion */}
-            <div className="flex items-center gap-2 border-b border-[#2c2c2b] pb-0.5">
+            <div className="flex items-center gap-2 border-b border-[#2c2c2b] pb-0.5 overflow-x-auto">
               {[
+                { key: "notion_pages", label: `📑 Páginas do Notion (${allNotionSubpages.length})` },
                 { key: "clients", label: "📁 Clientes Ativos" },
                 { key: "archived_clients", label: "🗄️ Clientes Inativos" },
                 { key: "global_calendar", label: "📅 Calendário Geral" },
@@ -553,7 +564,7 @@ export default function NotionDashboard() {
                 <button
                   key={item.key}
                   onClick={() => item.action ? item.action() : setActiveSection(item.key as any)}
-                  className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all ${
+                  className={`text-[13px] font-medium py-1 px-3 border-b-2 transition-all whitespace-nowrap ${
                     activeSection === item.key
                       ? "border-[#e3e2e0] text-[#e3e2e0]"
                       : "border-transparent text-[#9b9a97] hover:text-[#e3e2e0]"
@@ -563,8 +574,8 @@ export default function NotionDashboard() {
                 </button>
               ))}
 
-              <div className="ml-auto flex items-center gap-2 pb-1">
-                {(activeSection === "clients" || activeSection === "archived_clients") && (
+              <div className="ml-auto flex items-center gap-2 pb-1 shrink-0">
+                {(activeSection === "clients" || activeSection === "archived_clients" || activeSection === "notion_pages") && (
                   <>
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-[#9b9a97]" />
@@ -575,7 +586,7 @@ export default function NotionDashboard() {
                         className="h-7 pl-8 text-xs w-36 bg-[#202020] border-[#2c2c2b] text-[#e3e2e0] placeholder:text-[#5f5e5b] focus-visible:ring-0 focus-visible:border-[#3f3f3e] rounded-[4px]"
                       />
                     </div>
-                    {canManageAll && (
+                    {activeSection === "clients" && canManageAll && (
                       <Button
                         onClick={() => setCreateClientOpen(true)}
                         className="h-7 text-xs bg-primary hover:bg-primary/90 text-white px-3 gap-1 rounded-[4px]"
@@ -595,6 +606,72 @@ export default function NotionDashboard() {
                 )}
               </div>
             </div>
+
+            {/* ── NOTION PAGES GALLERY VIEW (ALL IMPORTED PAGES) ── */}
+            {activeSection === "notion_pages" && (
+              <>
+                {subpagesLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-xs text-[#9b9a97]">Carregando páginas do Notion...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-xs text-[#9b9a97]">
+                      <span>Exibindo {Math.min(notionPageLimit, filteredNotionPages.length)} de {filteredNotionPages.length} páginas</span>
+                      {filteredNotionPages.length > notionPageLimit && (
+                        <button
+                          onClick={() => setNotionPageLimit(l => l + 50)}
+                          className="text-primary hover:underline font-semibold cursor-pointer"
+                        >
+                          + Carregar mais 50 páginas
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredNotionPages.slice(0, notionPageLimit).map((page) => (
+                        <div
+                          key={page.id}
+                          onClick={() => navigate(`/processos/pagina/${page.id}`)}
+                          className="bg-[#202020] border border-[#2c2c2b] rounded-[6px] p-3.5 hover:bg-[#252525] hover:border-primary/40 transition-all duration-150 cursor-pointer flex flex-col group select-none shadow-sm"
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-xl shrink-0 leading-none">{page.icon_emoji || "📄"}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] font-semibold text-[#e3e2e0] group-hover:text-primary transition-colors truncate">
+                                {page.title || "Sem título"}
+                              </p>
+                              <div className="flex items-center gap-2 text-[10px] text-[#9b9a97] mt-1">
+                                {page.status && (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                                    {page.status}
+                                  </span>
+                                )}
+                                {page.updated_at && (
+                                  <span>Modificado: {new Date(page.updated_at).toLocaleDateString("pt-BR")}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {filteredNotionPages.length > notionPageLimit && (
+                      <div className="text-center pt-2">
+                        <Button
+                          onClick={() => setNotionPageLimit(l => l + 50)}
+                          className="h-8 text-xs bg-[#202020] border border-[#2c2c2b] text-[#e3e2e0] hover:bg-[#262625] px-6 font-semibold"
+                        >
+                          Carregar mais páginas ({filteredNotionPages.length - notionPageLimit} restantes)
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
             {/* ── CLIENTS GALLERY VIEW (ACTIVE) ── */}
             {activeSection === "clients" && (
