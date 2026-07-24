@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
+import { NotionPageHeader } from "@/components/notion/NotionPageHeader";
 import {
   ArrowLeft,
   Loader2,
@@ -88,6 +89,16 @@ export default function ProcessoSubpage() {
     upsert.mutate({ ...page, title });
   };
 
+  const handleUpdateIcon = (emoji: string | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, icon_emoji: emoji });
+  };
+
+  const handleUpdateCover = (url: string | null) => {
+    if (!page) return;
+    upsert.mutate({ ...page, cover_url: url });
+  };
+
   const createSubpage = useCreateSubpage();
 
   const handleAddChildSubpage = async () => {
@@ -170,8 +181,9 @@ export default function ProcessoSubpage() {
               Processos
             </button>
             <span className="text-[#5f5e5b] text-xs shrink-0">/</span>
-            <span className="text-xs text-[#e3e2e0] font-semibold truncate">
-              {title || page.title || "Sem título"}
+            <span className="text-xs text-[#e3e2e0] font-semibold truncate flex items-center gap-1">
+              <span>{page.icon_emoji || "📄"}</span>
+              <span>{title || page.title || "Sem título"}</span>
             </span>
           </div>
 
@@ -198,46 +210,26 @@ export default function ProcessoSubpage() {
           </div>
         </div>
 
-        {/* Cover */}
-        <div className="h-36 w-full relative overflow-hidden border-b border-[#2c2c2b]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#7a9d96]/10 via-[#191919] to-[#191919]" />
-          <div className="absolute bottom-0 left-16 md:left-24 h-12 w-12 bg-[#7a9d96]/10 border border-[#7a9d96]/40 flex items-center justify-center rounded-full shadow-lg mb-4">
-            <FileText className="h-6 w-6 text-[#7a9d96]" />
-          </div>
-        </div>
+        {/* Notion Header Component (Cover & Emoji Selector) */}
+        <NotionPageHeader
+          iconEmoji={page.icon_emoji}
+          coverUrl={page.cover_url}
+          title={title}
+          onUpdateIcon={handleUpdateIcon}
+          onUpdateCover={handleUpdateCover}
+          onUpdateTitle={setTitle}
+          onTitleBlur={handleTitleBlur}
+          subtitle="Sub-página de Processo Operacional"
+          createdAt={page.created_at}
+        />
 
-        {/* Page Content */}
-        <div className="max-w-4xl mx-auto px-6 md:px-16 pt-10 space-y-6">
-          {/* Title */}
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleTitleBlur}
-            placeholder="Sem título"
-            className="w-full bg-transparent border-none text-4xl font-bold text-white focus:ring-0 outline-none p-0 tracking-tight"
+        {/* Page Body Editor */}
+        <div className="max-w-4xl mx-auto px-6 md:px-16 pt-4">
+          <SubpageEditor
+            key={page.id}
+            initialContent={page.content}
+            onSave={handleSaveContent}
           />
-
-          {/* Metadata */}
-          <div className="flex items-center gap-4 text-xs text-[#5f5e5b] border-b border-[#2c2c2b]/30 pb-4">
-            <span>
-              📄 Sub-página de Processo
-            </span>
-            {page.created_at && (
-              <span>
-                Criado em {new Date(page.created_at).toLocaleDateString("pt-BR")}
-              </span>
-            )}
-          </div>
-
-          {/* Editor */}
-          <div className="pt-2">
-            <SubpageEditor
-              key={page.id}
-              initialContent={page.content}
-              onSave={handleSaveContent}
-            />
-          </div>
         </div>
       </div>
     </AppShell>

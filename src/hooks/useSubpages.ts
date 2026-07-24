@@ -5,6 +5,8 @@ export interface Subpage {
   id: string;
   title: string;
   parent_process_id?: string | null;
+  icon_emoji?: string | null;
+  cover_url?: string | null;
   content?: any;
   created_at?: string;
   updated_at?: string;
@@ -124,14 +126,20 @@ export function useCreateSubpage() {
     mutationFn: async ({
       title = "Nova Página",
       parent_process_id = null,
+      icon_emoji = "📄",
+      cover_url = null,
     }: {
       title?: string;
       parent_process_id?: string | null;
+      icon_emoji?: string | null;
+      cover_url?: string | null;
     }) => {
       const newPage: Subpage = {
         id: crypto.randomUUID(),
         title: title.trim() || "Nova Página",
         parent_process_id,
+        icon_emoji,
+        cover_url,
         content: [
           {
             type: "paragraph",
